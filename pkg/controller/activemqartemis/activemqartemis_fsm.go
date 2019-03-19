@@ -16,35 +16,34 @@ const (
 
 // Completion of CreatingK8sResources state
 const (
-	None = 0
+	None                   = 0
 	CreatedHeadlessService = 1 << 0
 	//CreatedPersistentVolumeClaim = 1 << 1
-	CreatedStatefulSet = 1 << 1
+	CreatedStatefulSet           = 1 << 1
 	CreatedConsoleJolokiaService = 1 << 2
-	CreatedMuxProtocolService = 1 << 3
-	CreatedPingService = 1 << 4
+	CreatedMuxProtocolService    = 1 << 3
+	CreatedPingService           = 1 << 4
 
 	//Complete = CreatedHeadlessService | CreatedConsoleJolokiaService | CreatedMuxProtocolService
-	Complete = 	CreatedHeadlessService |
-				//CreatedPersistentVolumeClaim |
-				CreatedConsoleJolokiaService |
-				CreatedMuxProtocolService |
-				CreatedStatefulSet |
-				CreatedPingService
-
+	Complete = CreatedHeadlessService |
+		//CreatedPersistentVolumeClaim |
+		CreatedConsoleJolokiaService |
+		CreatedMuxProtocolService |
+		CreatedStatefulSet |
+		CreatedPingService
 )
 
 type ActiveMQArtemisFSM struct {
-	m 				fsm.IMachine
-	namespacedName 	types.NamespacedName
-	customResource 	*brokerv1alpha1.ActiveMQArtemis
-	r 				*ReconcileActiveMQArtemis
+	m              fsm.IMachine
+	namespacedName types.NamespacedName
+	customResource *brokerv1alpha1.ActiveMQArtemis
+	r              *ReconcileActiveMQArtemis
 }
 
 // Need to deep-copy the instance?
 func MakeActiveMQArtemisFSM(instance *brokerv1alpha1.ActiveMQArtemis, _namespacedName types.NamespacedName, r *ReconcileActiveMQArtemis) ActiveMQArtemisFSM {
 
-	var someIState		fsm.IState
+	var someIState fsm.IState
 
 	amqbfsm := ActiveMQArtemisFSM{
 		m: fsm.NewMachine(),
@@ -96,7 +95,6 @@ func (amqbfsm *ActiveMQArtemisFSM) Exit(stateFrom *fsm.IState) {
 	amqbfsm.m.Exit(stateFrom)
 }
 
-
 //func (amqbfsm *ActiveMQArtemisFSM) Update(request reconcile.Request, r *ReconcileActiveMQArtemis) (reconcile.Result, error) {
 //
 //	// Log where we are and what we're doing
@@ -147,4 +145,3 @@ func (amqbfsm *ActiveMQArtemisFSM) Exit(stateFrom *fsm.IState) {
 //	return reconcileResult, err
 //
 //}
-

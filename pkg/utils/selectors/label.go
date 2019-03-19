@@ -21,9 +21,8 @@ func LabelsForActiveMQArtemis(name string) map[string]string {
 // return a selector that matches resources for a ActiveMQArtemis resource
 func ResourcesByActiveMQArtemisName(name string) labels.Selector {
 	set := map[string]string{
-		LabelAppKey:      name,
+		LabelAppKey: name,
 		//LabelResourceKey: name,
 	}
 	return labels.SelectorFromSet(set)
 }
-

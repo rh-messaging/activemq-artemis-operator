@@ -1,6 +1,5 @@
 package fsm
 
-
 type IState interface {
 	Enter(stateFrom *IState)
 	Update()
@@ -8,8 +7,8 @@ type IState interface {
 }
 
 type State struct {
-	name				string
-	active				bool
+	name   string
+	active bool
 }
 
 func MakeState(n string) State {
@@ -35,7 +34,7 @@ type Machine struct {
 	currentStateIndex  int
 	nextStateIndex     int
 	previousStateIndex int
-	numStates		   int
+	numStates          int
 	active             bool
 	states             []*IState
 }
@@ -53,9 +52,9 @@ func NewMachine() *Machine {
 
 func (m *Machine) Add(s *IState) {
 	//if m.numStates >= len(m.states) {
-		//newStatesLen := m.numStates+2
-		//m.states = make([]*State, newStatesLen, 10)
-		m.states = append(m.states, s)
+	//newStatesLen := m.numStates+2
+	//m.states = make([]*State, newStatesLen, 10)
+	m.states = append(m.states, s)
 	//}
 
 	//m.states[m.numStates] = s

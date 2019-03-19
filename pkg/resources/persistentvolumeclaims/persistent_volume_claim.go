@@ -18,7 +18,6 @@ import (
 
 var log = logf.Log.WithName("package persistentvolumeclaims")
 
-
 func newPersistentVolumeClaimForCR(cr *brokerv1alpha1.ActiveMQArtemis) *corev1.PersistentVolumeClaim {
 
 	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
@@ -26,18 +25,18 @@ func newPersistentVolumeClaimForCR(cr *brokerv1alpha1.ActiveMQArtemis) *corev1.P
 	pvc := &corev1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
-			Kind:		"PersistentVolumeClaim",
+			Kind:       "PersistentVolumeClaim",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Annotations: 	nil,
-			Labels:			labels,
-			Name:			cr.Name,
-			Namespace:		cr.Namespace,
+			Annotations: nil,
+			Labels:      labels,
+			Name:        cr.Name,
+			Namespace:   cr.Namespace,
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
-			AccessModes: 	[]corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
-			Resources:		corev1.ResourceRequirements{
-				Requests:	corev1.ResourceList{
+			AccessModes: []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
 					corev1.ResourceName(corev1.ResourceStorage): resource.MustParse("2Gi"),
 				},
 			},
@@ -85,8 +84,6 @@ func CreatePersistentVolumeClaim(cr *brokerv1alpha1.ActiveMQArtemis, client clie
 
 	return brokerPvc, err
 }
-
-
 
 //func (rs *CreatingK8sResourcesState) RetrievePersistentVolumeClaim(instance *brokerv1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, r *ReconcileActiveMQArtemis) (*corev1.PersistentVolumeClaim, error) {
 func RetrievePersistentVolumeClaim(instance *brokerv1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.PersistentVolumeClaim, error) {

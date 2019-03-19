@@ -24,6 +24,7 @@ import (
 )
 
 var log = logf.Log.WithName("controller_activemqartemis")
+
 //var namespacedNameToFSM map[types.NamespacedName]*fsm.Machine
 var namespacedNameToFSM = make(map[types.NamespacedName]*ActiveMQArtemisFSM)
 
@@ -109,8 +110,8 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 
 	instance := &brokerv1alpha1.ActiveMQArtemis{}
 	namespacedName := types.NamespacedName{
-		Name: request.Name,//"example-activemqartemis",
-		Namespace: request.Namespace,//"abo-1",
+		Name:      request.Name,      //"example-activemqartemis",
+		Namespace: request.Namespace, //"abo-1",
 	}
 
 	// Fetch the ActiveMQArtemis instance

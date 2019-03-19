@@ -110,7 +110,7 @@ func (r *ReconcileActiveMQArtemisAddress) Reconcile(request reconcile.Request) (
 	} else {
 		err = createQueue(instance, request, r.client)
 		if nil == err {
-			namespacedNameToAddressName[request.NamespacedName] = *instance//.Spec.QueueName
+			namespacedNameToAddressName[request.NamespacedName] = *instance //.Spec.QueueName
 		}
 	}
 
@@ -185,7 +185,7 @@ func getPodBrokers(instance *brokerv1alpha1.ActiveMQArtemisAddress, request reco
 
 	// Check to see if the statefulset already exists
 	ssNamespacedName := types.NamespacedName{
-		Name: instance.Spec.StatefulsetName,
+		Name:      instance.Spec.StatefulsetName,
 		Namespace: request.Namespace,
 	}
 

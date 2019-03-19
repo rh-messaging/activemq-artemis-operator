@@ -16,9 +16,9 @@ spec:
       containers:
         - name: activemq-artemis-operator
           # Replace this with the built image name
-          image: activemq-artemis-operator:latest
+          image: quay.io/ahameed/activemq-artemis-operator:latest
           command:
-          - /usr/local/bin/entrypoint
+            - /usr/local/bin/entrypoint
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE

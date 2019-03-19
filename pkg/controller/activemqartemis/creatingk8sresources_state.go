@@ -8,28 +8,26 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-
 type CreatingK8sResourcesState struct {
-
-	s				fsm.State
-	namespacedName  types.NamespacedName
-	parentFSM		*ActiveMQArtemisFSM
-	stepsComplete 	uint8
+	s              fsm.State
+	namespacedName types.NamespacedName
+	parentFSM      *ActiveMQArtemisFSM
+	stepsComplete  uint8
 }
 
-func MakeCreatingK8sResourcesState(_parentFSM *ActiveMQArtemisFSM, _namespacedName types.NamespacedName) CreatingK8sResourcesState{
+func MakeCreatingK8sResourcesState(_parentFSM *ActiveMQArtemisFSM, _namespacedName types.NamespacedName) CreatingK8sResourcesState {
 
 	rs := CreatingK8sResourcesState{
-		s: fsm.MakeState(CreatingK8sResources),
+		s:              fsm.MakeState(CreatingK8sResources),
 		namespacedName: _namespacedName,
-		parentFSM: _parentFSM,
-		stepsComplete: None,
+		parentFSM:      _parentFSM,
+		stepsComplete:  None,
 	}
 
 	return rs
 }
 
-func NewCreatingK8sResourcesState(_parentFSM *ActiveMQArtemisFSM, _namespacedName types.NamespacedName) *CreatingK8sResourcesState{
+func NewCreatingK8sResourcesState(_parentFSM *ActiveMQArtemisFSM, _namespacedName types.NamespacedName) *CreatingK8sResourcesState {
 
 	rs := MakeCreatingK8sResourcesState(_parentFSM, _namespacedName)
 
@@ -46,7 +44,7 @@ func (rs *CreatingK8sResourcesState) Enter(stateFrom *fsm.IState) {
 	var retrieveError error = nil
 
 	// Check to see if the statefulset already exists
-	if _, err := ss.RetrieveStatefulSet(rs.parentFSM.customResource.Name + "-ss", rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+	if _, err := ss.RetrieveStatefulSet(rs.parentFSM.customResource.Name+"-ss", rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
 		// err means not found, so create
 		if _, retrieveError := ss.CreateStatefulSet(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme); retrieveError == nil {
 			rs.stepsComplete |= CreatedStatefulSet
@@ -142,4 +140,3 @@ func (rs *CreatingK8sResourcesState) Exit(stateFrom *fsm.IState) {
 	//	rs.stepsComplete &^= CreatedPersistentVolumeClaim
 	//}
 }
-

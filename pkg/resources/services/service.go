@@ -18,7 +18,6 @@ import (
 
 var log = logf.Log.WithName("package services")
 
-
 // newServiceForPod returns an activemqartemis service for the pod just created
 func newHeadlessServiceForCR(cr *brokerv1alpha1.ActiveMQArtemis, servicePorts *[]corev1.ServicePort) *corev1.Service {
 
@@ -27,19 +26,19 @@ func newHeadlessServiceForCR(cr *brokerv1alpha1.ActiveMQArtemis, servicePorts *[
 	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
-			Kind:		"Service",
+			Kind:       "Service",
 		},
-		ObjectMeta: metav1.ObjectMeta {
-			Annotations: 	nil,
-			Labels: 		labels,
-			Name:			"hs",//"headless" + "-service",
-			Namespace:		cr.Namespace,
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: nil,
+			Labels:      labels,
+			Name:        "hs", //"headless" + "-service",
+			Namespace:   cr.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
-			Type: 	"ClusterIP",
-			Ports: 	*servicePorts,
-			Selector: labels,
-			ClusterIP: "None",
+			Type:                     "ClusterIP",
+			Ports:                    *servicePorts,
+			Selector:                 labels,
+			ClusterIP:                "None",
 			PublishNotReadyAddresses: true,
 		},
 	}
@@ -57,10 +56,10 @@ func newServiceForCR(cr *brokerv1alpha1.ActiveMQArtemis, name_suffix string, por
 	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
 
 	port := corev1.ServicePort{
-		Name:		cr.Name + "-" + name_suffix + "-port",
-		Protocol:	"TCP",
-		Port:		port_number,
-		TargetPort:	intstr.FromInt(int(port_number)),
+		Name:       cr.Name + "-" + name_suffix + "-port",
+		Protocol:   "TCP",
+		Port:       port_number,
+		TargetPort: intstr.FromInt(int(port_number)),
 	}
 	ports := []corev1.ServicePort{}
 	ports = append(ports, port)
@@ -68,18 +67,18 @@ func newServiceForCR(cr *brokerv1alpha1.ActiveMQArtemis, name_suffix string, por
 	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
-			Kind:		"Service",
+			Kind:       "Service",
 		},
-		ObjectMeta: metav1.ObjectMeta {
-			Annotations: 	nil,
-			Labels: 		labels,
-			Name:			cr.Name + "-" + name_suffix + "-service",
-			Namespace:		cr.Namespace,
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: nil,
+			Labels:      labels,
+			Name:        cr.Name + "-" + name_suffix + "-service",
+			Namespace:   cr.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
-			Type: 	"LoadBalancer",
-			Ports: 	ports,
-			Selector: labels,
+			Type:            "LoadBalancer",
+			Ports:           ports,
+			Selector:        labels,
 			SessionAffinity: "ClientIP",
 		},
 	}
@@ -97,9 +96,9 @@ func newPingServiceForCR(cr *brokerv1alpha1.ActiveMQArtemis) *corev1.Service {
 	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
 
 	port := corev1.ServicePort{
-		Protocol:	"TCP",
-		Port:		8888,
-		TargetPort:	intstr.FromInt(int(8888)),
+		Protocol:   "TCP",
+		Port:       8888,
+		TargetPort: intstr.FromInt(int(8888)),
 	}
 	ports := []corev1.ServicePort{}
 	ports = append(ports, port)
@@ -107,19 +106,19 @@ func newPingServiceForCR(cr *brokerv1alpha1.ActiveMQArtemis) *corev1.Service {
 	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
-			Kind:		"Service",
+			Kind:       "Service",
 		},
-		ObjectMeta: metav1.ObjectMeta {
-			Annotations: 	nil,
-			Labels: 		labels,
-			Name:			"ping",
-			Namespace:		cr.Namespace,
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: nil,
+			Labels:      labels,
+			Name:        "ping",
+			Namespace:   cr.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
-			Type: 	"ClusterIP",
-			Ports: 	ports,
-			Selector: labels,
-			ClusterIP: "None",
+			Type:                     "ClusterIP",
+			Ports:                    ports,
+			Selector:                 labels,
+			ClusterIP:                "None",
 			PublishNotReadyAddresses: true,
 		},
 	}
@@ -131,34 +130,34 @@ func GetDefaultPorts() *[]corev1.ServicePort {
 
 	ports := []corev1.ServicePort{
 		{
-			Name:		"mqtt",
-			Protocol:	"TCP",
-			Port:		1883,
-			TargetPort:	intstr.FromInt(int(1883)),
+			Name:       "mqtt",
+			Protocol:   "TCP",
+			Port:       1883,
+			TargetPort: intstr.FromInt(int(1883)),
 		},
 		{
-			Name:		"amqp",
-			Protocol:	"TCP",
-			Port:		5672,
-			TargetPort:	intstr.FromInt(int(5672)),
+			Name:       "amqp",
+			Protocol:   "TCP",
+			Port:       5672,
+			TargetPort: intstr.FromInt(int(5672)),
 		},
 		{
-			Name:		"console-jolokia",
-			Protocol:	"TCP",
-			Port:		8161,
-			TargetPort:	intstr.FromInt(int(8161)),
+			Name:       "console-jolokia",
+			Protocol:   "TCP",
+			Port:       8161,
+			TargetPort: intstr.FromInt(int(8161)),
 		},
 		{
-			Name:		"stomp",
-			Protocol:	"TCP",
-			Port:		61613,
-			TargetPort:	intstr.FromInt(int(61613)),
+			Name:       "stomp",
+			Protocol:   "TCP",
+			Port:       61613,
+			TargetPort: intstr.FromInt(int(61613)),
 		},
 		{
-			Name:		"all",
-			Protocol:	"TCP",
-			Port:		61616,
-			TargetPort:	intstr.FromInt(int(61616)),
+			Name:       "all",
+			Protocol:   "TCP",
+			Port:       61616,
+			TargetPort: intstr.FromInt(int(61616)),
 		},
 	}
 
@@ -200,7 +199,7 @@ func RetrieveConsoleJolokiaService(instance *brokerv1alpha1.ActiveMQArtemis, nam
 	reqLogger.Info("Retrieving " + "console-jolokia" + " service")
 
 	var err error = nil
-	consoleJolokiaSvc := newServiceForCR(instance,"console-jolokia", 8161)
+	consoleJolokiaSvc := newServiceForCR(instance, "console-jolokia", 8161)
 
 	// Check if the headless service already exists
 	if err = client.Get(context.TODO(), namespacedName, consoleJolokiaSvc); err != nil {
@@ -338,8 +337,6 @@ func CreateHeadlessService(cr *brokerv1alpha1.ActiveMQArtemis, client client.Cli
 	return headlessSvc, err
 }
 
-
-
 func DeleteHeadlessService(instance *brokerv1alpha1.ActiveMQArtemis) {
 	// kubectl delete cleans up kubernetes resources, just need to clean up local resources if any
 }
@@ -352,7 +349,7 @@ func RetrieveHeadlessService(instance *brokerv1alpha1.ActiveMQArtemis, namespace
 	reqLogger.Info("Retrieving " + "headless" + " service")
 
 	var err error = nil
-	headlessService := newHeadlessServiceForCR(instance, GetDefaultPorts())//&corev1.Service{}
+	headlessService := newHeadlessServiceForCR(instance, GetDefaultPorts()) //&corev1.Service{}
 
 	// Check if the headless service already exists
 	if err = client.Get(context.TODO(), namespacedName, headlessService); err != nil {
@@ -365,4 +362,3 @@ func RetrieveHeadlessService(instance *brokerv1alpha1.ActiveMQArtemis, namespace
 
 	return headlessService, err
 }
-

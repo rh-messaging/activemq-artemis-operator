@@ -21,8 +21,6 @@ import (
 
 var log = logf.Log.WithName("package statefulsets")
 
-
-
 // newPodForCR returns an activemqartemis pod with the same name/namespace as the cr
 //func newPodForCR(cr *brokerv1alpha1.ActiveMQArtemis) *corev1.Pod {
 //
@@ -208,7 +206,6 @@ func makeEnvVarArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
 
 	return envVarArray
 
-
 }
 func newEnvVarArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis) *[]corev1.EnvVar {
 
@@ -217,11 +214,10 @@ func newEnvVarArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis) *[]corev1.EnvVar {
 	return &envVarArray
 }
 
-
 func newPodTemplateSpecForCR(cr *brokerv1alpha1.ActiveMQArtemis) corev1.PodTemplateSpec {
 
 	// Log where we are and what we're doing
-	reqLogger:= log.WithName(cr.Name)
+	reqLogger := log.WithName(cr.Name)
 	reqLogger.Info("Creating new pod template spec for custom resource")
 
 	//var pts corev1.PodTemplateSpec
@@ -238,13 +234,13 @@ func newPodTemplateSpecForCR(cr *brokerv1alpha1.ActiveMQArtemis) corev1.PodTempl
 			Containers: []corev1.Container{
 				{
 					Name:    cr.Name + "-container",
-					Image:	 cr.Spec.Image,
+					Image:   cr.Spec.Image,
 					Command: []string{"/opt/amq/bin/launch.sh", "start"},
-					VolumeMounts:	[]corev1.VolumeMount{
+					VolumeMounts: []corev1.VolumeMount{
 						{
-							Name:		cr.Name,
-							MountPath:	dataPath,
-							ReadOnly:	false,
+							Name:      cr.Name,
+							MountPath: dataPath,
+							ReadOnly:  false,
 						},
 					},
 					Env: makeEnvVarArrayForCR(cr),
@@ -270,7 +266,7 @@ func newPodTemplateSpecForCR(cr *brokerv1alpha1.ActiveMQArtemis) corev1.PodTempl
 func newStatefulSetForCR(cr *brokerv1alpha1.ActiveMQArtemis) *appsv1.StatefulSet {
 
 	// Log where we are and what we're doing
-	reqLogger:= log.WithName(cr.Name)
+	reqLogger := log.WithName(cr.Name)
 	reqLogger.Info("Creating new statefulset for custom resource")
 
 	var replicas int32 = 1
@@ -279,22 +275,22 @@ func newStatefulSetForCR(cr *brokerv1alpha1.ActiveMQArtemis) *appsv1.StatefulSet
 
 	ss := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
-			Kind:		"StatefulSet",
-			APIVersion:	"v1",
+			Kind:       "StatefulSet",
+			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:			cr.Name + "-ss",//"-statefulset",
-			Namespace:		cr.Namespace,
-			Labels:			labels,
-			Annotations:	nil,
+			Name:        cr.Name + "-ss", //"-statefulset",
+			Namespace:   cr.Namespace,
+			Labels:      labels,
+			Annotations: nil,
 		},
 		Spec: appsv1.StatefulSetSpec{
-			Replicas: 		&replicas,
-			ServiceName:	"hs",//cr.Name + "-headless" + "-service",
-			Selector:		&metav1.LabelSelector{
+			Replicas:    &replicas,
+			ServiceName: "hs", //cr.Name + "-headless" + "-service",
+			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
 			},
-			Template: newPodTemplateSpecForCR(cr),
+			Template:             newPodTemplateSpecForCR(cr),
 			VolumeClaimTemplates: *pvc.NewPersistentVolumeClaimArrayForCR(cr, 1),
 		},
 	}
