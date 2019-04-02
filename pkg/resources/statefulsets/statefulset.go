@@ -76,7 +76,104 @@ func makeDataPathForCR(cr *brokerv1alpha1.ActiveMQArtemis) string {
 	return "/opt/" + cr.Name + "/data"
 }
 
+func makeVlMntCR(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.VolumeMount {
+
+	volumeMounts := []corev1.VolumeMount{}
+	basicCRVlMnt := makeBasicCRVlMnt(cr)
+	volumeMounts = append(volumeMounts, basicCRVlMnt...)
+
+	if cr.Spec.SSLEnabled && len(cr.Spec.SSLConfig.SecretName) > 0 {
+		sslCRVlMnt := makeSSLCRVlMnt(cr)
+		volumeMounts = append(volumeMounts, sslCRVlMnt...)
+
+	}
+	return volumeMounts
+
+}
+
+func makeVolumesForCR(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.Volume {
+
+	volume := []corev1.Volume{}
+	basicCRVolume := makeBasicCRVolumes(cr)
+	volume = append(volume, basicCRVolume...)
+
+	if cr.Spec.SSLEnabled && len(cr.Spec.SSLConfig.SecretName) > 0 {
+		sslCRVolume := makeSSLCRVolumes(cr)
+		volume = append(volume, sslCRVolume...)
+
+	}
+	return volume
+
+}
+
+func makeBasicCRVolumes(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.Volume {
+	volume := []corev1.Volume{
+		{
+			Name: cr.Name,
+			VolumeSource: corev1.VolumeSource{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: cr.Name,
+					ReadOnly:  false,
+				},
+			},
+		},
+	}
+
+	return volume
+}
+
+func makeSSLCRVolumes(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.Volume {
+	volume := []corev1.Volume{
+		{
+			Name: "broker-secret-volume",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: cr.Spec.SSLConfig.SecretName,
+				},
+			},
+		},
+	}
+
+	return volume
+}
+
+func makeBasicCRVlMnt(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.VolumeMount {
+	dataPath := makeDataPathForCR(cr)
+	volumeMounts := []corev1.VolumeMount{
+		{
+			Name:      cr.Name,
+			MountPath: dataPath,
+			ReadOnly:  false,
+		},
+	}
+	return volumeMounts
+
+}
+
+func makeSSLCRVlMnt(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.VolumeMount {
+
+	volumeMounts := []corev1.VolumeMount{
+		{
+			Name:      "broker-secret-volume",
+			MountPath: "/etc/amq-secret-volume",
+			ReadOnly:  true,
+		},
+	}
+	return volumeMounts
+
+}
+
 func makeEnvVarArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
+
+	if cr.Spec.SSLEnabled && len(cr.Spec.SSLConfig.SecretName) > 0 {
+		return makeEnvVarArrayForSSLCR(cr)
+	} else {
+		return makeEnvVarArrayForBasicCR(cr)
+	}
+
+}
+
+func makeEnvVarArrayForBasicCR(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
 
 	envVarArray := []corev1.EnvVar{
 		{
@@ -207,6 +304,139 @@ func makeEnvVarArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
 	return envVarArray
 
 }
+
+func makeEnvVarArrayForSSLCR(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
+
+	envVarArray := []corev1.EnvVar{
+		{
+			"AMQ_USER",
+			"admin",
+			nil,
+		},
+		{
+			"AMQ_PASSWORD",
+			"admin",
+			nil,
+		},
+		{
+			"AMQ_DATA_DIR",
+			makeDataPathForCR(cr),
+			nil,
+		},
+		{
+			"AMQ_ROLE",
+			"admin",
+			nil,
+		},
+		{
+			"AMQ_NAME",
+			"amq-broker",
+			nil,
+		},
+		{
+			"AMQ_TRANSPORTS",
+			"openwire,amqp,stomp,mqtt,hornetq",
+			nil,
+		},
+		{
+			"AMQ_QUEUES",
+			//"q0,q1,q2,q3",
+			"",
+			nil,
+		},
+		{
+			"AMQ_ADDRESSES",
+			//"a0,a1,a2,a3",
+			"",
+			nil,
+		},
+		{
+			"AMQ_KEYSTORE_TRUSTSTORE_DIR",
+			"/etc/amq-secret-volume",
+			nil,
+		},
+		{
+			"AMQ_TRUSTSTORE",
+			cr.Spec.SSLConfig.TrustStoreFilename,
+			nil,
+		},
+		{
+			"AMQ_TRUSTSTORE_PASSWORD",
+			cr.Spec.SSLConfig.TrustStorePassword,
+			nil,
+		},
+		{
+			"AMQ_KEYSTORE",
+			cr.Spec.SSLConfig.KeystoreFilename,
+			nil,
+		},
+		{
+			"AMQ_KEYSTORE_PASSWORD",
+			cr.Spec.SSLConfig.KeyStorePassword,
+			nil,
+		},
+		{
+			"AMQ_GLOBAL_MAX_SIZE",
+			"100 mb",
+			nil,
+		},
+		{
+			"AMQ_REQUIRE_LOGIN",
+			"",
+			nil,
+		},
+		{
+			"AMQ_EXTRA_ARGS",
+			"--no-autotune",
+			nil,
+		},
+		{
+			"AMQ_ANYCAST_PREFIX",
+			"",
+			nil,
+		},
+		{
+			"AMQ_MULTICAST_PREFIX",
+			"",
+			nil,
+		},
+		// included from p-c-ssl template
+		{
+			"AMQ_DATA_DIR_LOGGING",
+			"true",
+			nil,
+		},
+		{
+			"AMQ_CLUSTERED",
+			"true",
+			nil,
+		},
+		{
+			"AMQ_REPLICAS",
+			"0",
+			nil,
+		},
+		{
+			"AMQ_CLUSTER_USER",
+			"clusteruser",
+			nil,
+		},
+		{
+			"AMQ_CLUSTER_PASSWORD",
+			"clusterpass",
+			nil,
+		},
+		{
+			"POD_NAMESPACE",
+			"", // Set to the field metadata.namespace in current object
+			nil,
+		},
+	}
+
+	return envVarArray
+
+}
+
 func newEnvVarArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis) *[]corev1.EnvVar {
 
 	envVarArray := makeEnvVarArrayForCR(cr)
@@ -222,8 +452,6 @@ func newPodTemplateSpecForCR(cr *brokerv1alpha1.ActiveMQArtemis) corev1.PodTempl
 
 	//var pts corev1.PodTemplateSpec
 
-	dataPath := makeDataPathForCR(cr)
-
 	pts := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cr.Name,
@@ -236,27 +464,13 @@ func newPodTemplateSpecForCR(cr *brokerv1alpha1.ActiveMQArtemis) corev1.PodTempl
 					Name:    cr.Name + "-container",
 					Image:   cr.Spec.Image,
 					Command: []string{"/opt/amq/bin/launch.sh", "start"},
-					VolumeMounts: []corev1.VolumeMount{
-						{
-							Name:      cr.Name,
-							MountPath: dataPath,
-							ReadOnly:  false,
-						},
-					},
-					Env: makeEnvVarArrayForCR(cr),
+
+					VolumeMounts: makeVlMntCR(cr),
+					Env:          makeEnvVarArrayForCR(cr),
 				},
 			},
-			Volumes: []corev1.Volume{
-				{
-					Name: cr.Name,
-					VolumeSource: corev1.VolumeSource{
-						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-							ClaimName: cr.Name,
-							ReadOnly:  false,
-						},
-					},
-				},
-			},
+
+			Volumes: makeVolumesForCR(cr),
 		},
 	}
 

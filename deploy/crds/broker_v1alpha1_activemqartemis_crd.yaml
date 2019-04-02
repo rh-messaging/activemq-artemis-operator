@@ -29,6 +29,27 @@ spec:
           properties:
             image:
               type: string
+            sslEnabled:
+                type: boolean
+            sslConfig:
+              type: object
+              description: Configuration of the AMQ SSL deployment
+              properties:
+                secretName:
+                  type: string
+                  description:  Name of a secret containing SSL related files
+                trustStoreFilename:
+                  type: string
+                  description:  SSL trust store filename
+                trustStorePassword:
+                  type: string
+                  description:  SSL trust store password
+                keystoreFilename:
+                  type: string
+                  description:  SSL key store filename
+                keyStorePassword:
+                  type: string
+                  description:  Password for accessing SSL keystore
           required:
           - image
           type: object

@@ -126,7 +126,49 @@ func newPingServiceForCR(cr *brokerv1alpha1.ActiveMQArtemis) *corev1.Service {
 	return svc
 }
 
-func GetDefaultPorts() *[]corev1.ServicePort {
+func GetDefaultPorts(cr *brokerv1alpha1.ActiveMQArtemis) *[]corev1.ServicePort {
+
+	ports := []corev1.ServicePort{}
+	basicPorts := SetBasicPorts()
+	ports = append(ports, basicPorts...)
+
+	if cr.Spec.SSLEnabled && len(cr.Spec.SSLConfig.SecretName) > 0 {
+		sslPorts := SetSSLPorts()
+		ports = append(ports, sslPorts...)
+
+	}
+	return &ports
+
+}
+
+func SetSSLPorts() []corev1.ServicePort {
+
+	ports := []corev1.ServicePort{
+
+		{
+			Name:       "amqp-ssl",
+			Protocol:   "TCP",
+			Port:       5671,
+			TargetPort: intstr.FromInt(int(5671)),
+		},
+		{
+			Name:       "mqtt-ssl",
+			Protocol:   "TCP",
+			Port:       8883,
+			TargetPort: intstr.FromInt(int(8883)),
+		},
+		{
+			Name:       "stomp-ssl",
+			Protocol:   "TCP",
+			Port:       61612,
+			TargetPort: intstr.FromInt(int(61612)),
+		},
+	}
+
+	return ports
+}
+
+func SetBasicPorts() []corev1.ServicePort {
 
 	ports := []corev1.ServicePort{
 		{
@@ -161,9 +203,8 @@ func GetDefaultPorts() *[]corev1.ServicePort {
 		},
 	}
 
-	return &ports
+	return ports
 }
-
 func CreateConsoleJolokiaService(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*corev1.Service, error) {
 
 	// Log where we are and what we're doing
@@ -315,7 +356,7 @@ func CreateHeadlessService(cr *brokerv1alpha1.ActiveMQArtemis, client client.Cli
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Creating new " + "headless" + " service")
 
-	headlessSvc := newHeadlessServiceForCR(cr, GetDefaultPorts())
+	headlessSvc := newHeadlessServiceForCR(cr, GetDefaultPorts(cr))
 
 	// Define the headless Service for the StatefulSet
 	// Set ActiveMQArtemis instance as the owner and controller
@@ -349,7 +390,7 @@ func RetrieveHeadlessService(instance *brokerv1alpha1.ActiveMQArtemis, namespace
 	reqLogger.Info("Retrieving " + "headless" + " service")
 
 	var err error = nil
-	headlessService := newHeadlessServiceForCR(instance, GetDefaultPorts()) //&corev1.Service{}
+	headlessService := newHeadlessServiceForCR(instance, GetDefaultPorts(instance)) //&corev1.Service{}
 
 	// Check if the headless service already exists
 	if err = client.Get(context.TODO(), namespacedName, headlessService); err != nil {

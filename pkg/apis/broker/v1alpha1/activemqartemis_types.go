@@ -13,7 +13,10 @@ type ActiveMQArtemisSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
-	Image string `json:"image"`
+
+	Image      string    `json:"image"`
+	SSLEnabled bool      `json:"sslEnabled"`
+	SSLConfig  SSLConfig `json:"sslConfig,omitempty"`
 }
 
 // ActiveMQArtemisStatus defines the observed state of ActiveMQArtemis
@@ -22,6 +25,14 @@ type ActiveMQArtemisStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
+}
+
+type SSLConfig struct {
+	SecretName         string `json:"secretName,omitempty"`
+	TrustStoreFilename string `json:"trustStoreFilename,omitempty"`
+	TrustStorePassword string `json:"trustStorePassword,omitempty"`
+	KeystoreFilename   string `json:"keystoreFilename,omitempty"`
+	KeyStorePassword   string `json:"keyStorePassword,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
