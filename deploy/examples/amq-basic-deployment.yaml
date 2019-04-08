@@ -1,0 +1,11 @@
+apiVersion: broker.amq.io/v1alpha1
+kind: ActiveMQArtemis
+metadata:
+  name: example-activemqartemis
+  labels:
+    ActiveMQArtemis: example-activemqartemis
+    application: example-activemqartemis-app
+spec:
+  # Add fields here
+  size: 4
+  image: registry.access.redhat.com/amq-broker-7/amq-broker-72-openshift:1.3-4
