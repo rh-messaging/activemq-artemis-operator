@@ -10,9 +10,18 @@ spec:
   size: 4
   image: registry.access.redhat.com/amq-broker-7/amq-broker-72-openshift:1.3-4
   sslEnabled: false
+  persistent: false
+  clusterEnabled: false
   sslConfig:
     secretName: amq-app-secret
     trustStoreFilename: broker.ts
     trustStorePassword: changeit
     keystoreFilename: broker.ks
     keyStorePassword: changeit
+  clusterConfig:
+    clusterUserName: clusteruser
+    clusterPassword: clusterpass
+  commonConfig:
+    amqAdminUserName: admin
+    amqAdminPassword: admin
+

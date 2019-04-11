@@ -18,6 +18,8 @@ spec:
     status: {}
   validation:
     openAPIV3Schema:
+      required:
+        - spec
       properties:
         apiVersion:
           type: string
@@ -29,11 +31,21 @@ spec:
           properties:
             image:
               type: string
+            persistent:
+              type: boolean
             sslEnabled:
+              type: boolean
+            clusterEnabled:
               type: boolean
             sslConfig:
               type: object
               description: Configuration of the AMQ SSL deployment
+              required:
+                - secretName
+                - trustStoreFilename
+                - trustStorePassword
+                - keystoreFilename
+                - keyStorePassword
               properties:
                 secretName:
                   type: string
@@ -50,8 +62,35 @@ spec:
                 keyStorePassword:
                   type: string
                   description:  Password for accessing SSL keystore
+            clusterConfig:
+              type: object
+              description: Configuration of the AMQ cluster deployment
+              required:
+                - clusterUserName
+                - clusterPassword
+              properties:
+                clusterUserName:
+                  type: string
+                  description:  Cluster user
+                clusterPassword:
+                  type: string
+                  description: Cluster password
+            commonConfig:
+              type: object
+              description: Common configuration of the AMQ
+              required:
+                - amqAdminUserName
+                - amqAdminPassword
+              properties:
+                amqAdminUserName:
+                  type: string
+                  description: User name for standard broker user. It is required for connecting to the broker. If left empty, it will be generated.
+                amqAdminPassword:
+                  type: string
+                  description: Password for standard broker user. It is required for connecting to the broker. If left empty, it will be generated.
           required:
           - image
+          - commonConfig
           type: object
         status:
           type: object

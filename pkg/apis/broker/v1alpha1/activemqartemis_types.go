@@ -14,9 +14,18 @@ type ActiveMQArtemisSpec struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
 
-	Image      string    `json:"image"`
-	SSLEnabled bool      `json:"sslEnabled"`
-	SSLConfig  SSLConfig `json:"sslConfig,omitempty"`
+	Image          string        `json:"image"`
+	SSLEnabled     bool          `json:"sslEnabled"`
+	Persistent     bool          `json:"persistent"`
+	ClusterEnabled bool          `json:"clusterEnabled"`
+	ClusterConfig  ClusterConfig `json:"clusterConfig,omitempty"`
+	SSLConfig      SSLConfig     `json:"sslConfig,omitempty"`
+	CommonConfig   CommonConfig  `json:"commonConfig,omitempty"`
+}
+
+type CommonConfig struct {
+	AMQAdminUserName string `json:"amqAdminUserName,omitempty"`
+	AMQAdminPassword string `json:"amqAdminPassword,omitempty"`
 }
 
 // ActiveMQArtemisStatus defines the observed state of ActiveMQArtemis
@@ -33,6 +42,11 @@ type SSLConfig struct {
 	TrustStorePassword string `json:"trustStorePassword,omitempty"`
 	KeystoreFilename   string `json:"keystoreFilename,omitempty"`
 	KeyStorePassword   string `json:"keyStorePassword,omitempty"`
+}
+
+type ClusterConfig struct {
+	ClusterUserName string `json:"clusterUserName,omitempty"`
+	ClusterPassword string `json:"clusterPassword,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
