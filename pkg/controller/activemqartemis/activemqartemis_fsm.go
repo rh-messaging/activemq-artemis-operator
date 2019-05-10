@@ -23,7 +23,7 @@ const (
 	CreatedConsoleJolokiaService = 1 << 2
 	CreatedMuxProtocolService    = 1 << 3
 	CreatedPingService           = 1 << 4
-	CreatedRouteOrIngress                = 1 << 5
+	CreatedRouteOrIngress        = 1 << 5
 
 	//Complete = CreatedHeadlessService | CreatedConsoleJolokiaService | CreatedMuxProtocolService
 	Complete = CreatedHeadlessService |

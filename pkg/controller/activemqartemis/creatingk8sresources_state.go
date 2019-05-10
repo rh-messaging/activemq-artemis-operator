@@ -1,12 +1,14 @@
 package activemqartemis
 
 import (
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/routes"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/ingresses"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/routes"
 	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
 	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/env"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
 	"k8s.io/apimachinery/pkg/types"
+	"os"
 )
 
 type CreatingK8sResourcesState struct {
@@ -84,19 +86,33 @@ func (rs *CreatingK8sResourcesState) Enter(stateFrom *fsm.IState) {
 		}
 	}
 
-	// Check to see if the routes already exists
-	if _, err = routes.RetrieveRoute(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
-		// err means not found, so create routes
-		if _, retrieveError = routes.CreateNewRoute(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme); retrieveError == nil {
-			rs.stepsComplete |= CreatedRouteOrIngress
-		}
+	isOpenshift, err1 := env.DetectOpenshift()
+	if err1 != nil {
+		log.Error(err1, "Failed to get env")
+		os.Exit(1)
 	}
 
-	if _, err = ingresses.RetrieveIngress(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
-		// err means not found, so create routes
-		if _, retrieveError = ingresses.CreateNewIngress(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme); retrieveError == nil {
-			rs.stepsComplete |= CreatedRouteOrIngress
+	if isOpenshift {
+		log.Info("evnironment is openshift")
+		if _, err = routes.RetrieveRoute(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+			// err means not found, so create routes
+			if _, retrieveError = routes.CreateNewRoute(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme); retrieveError == nil {
+				rs.stepsComplete |= CreatedRouteOrIngress
+			}
 		}
+	} else {
+		log.Info("environment is not openshift")
+
+		if _, err = ingresses.RetrieveIngress(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+			// err means not found, so create routes
+			if _, retrieveError = ingresses.CreateNewIngress(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme); retrieveError == nil {
+				rs.stepsComplete |= CreatedRouteOrIngress
+			}
+
+		}
+
+		// Check to see if the routes already exists
+
 	}
 
 	// Check to see if the persistent volume claim already exists

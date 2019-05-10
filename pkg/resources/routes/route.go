@@ -42,7 +42,6 @@ func NewRouteForCR(cr *v1alpha1.ActiveMQArtemis, target string) *routev1.Route {
 				Name: "hs",
 			},
 		},
-
 	}
 	if len(cr.Spec.SSLConfig.SecretName) != 0 && len(cr.Spec.SSLConfig.KeyStorePassword) != 0 && len(cr.Spec.SSLConfig.KeystoreFilename) != 0 && len(cr.Spec.SSLConfig.TrustStorePassword) != 0 && len(cr.Spec.SSLConfig.TrustStoreFilename) != 0 {
 
@@ -57,7 +56,6 @@ func NewRouteForCR(cr *v1alpha1.ActiveMQArtemis, target string) *routev1.Route {
 
 func CreateNewRoute(cr *v1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*routev1.Route, error) {
 
-
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Creating new route")
 
@@ -68,12 +66,12 @@ func CreateNewRoute(cr *v1alpha1.ActiveMQArtemis, client client.Client, scheme *
 	// Set ActiveMQArtemis instance as the owner and controller
 	reqLogger.Info("Set controller reference for new  route")
 	if err = controllerutil.SetControllerReference(cr, route, scheme); err != nil {
-		reqLogger.Error(err,"Failed to set controller reference for new route" )
+		reqLogger.Error(err, "Failed to set controller reference for new route")
 	}
 
 	// Call k8s create for route
 	if err = client.Create(context.TODO(), route); err != nil {
-		reqLogger.Error(err,"Failed to creating new route")
+		reqLogger.Error(err, "Failed to creating new route")
 	}
 	reqLogger.Info("End of Route Creation")
 

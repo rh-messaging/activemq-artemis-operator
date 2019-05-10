@@ -23,10 +23,14 @@ metadata:
        			}
        		},
        		"spec": {
-       			"size": "4",
-       			"image": "registry.access.redhat.com/amq-broker-7/amq-broker-72-openshift:1.3-4"
-       		}
-       	},
+         		"size": 4,
+         		"image": "registry.access.redhat.com/amq-broker-7/amq-broker-72-openshift:1.3-4",
+         		"commonConfig": {
+         			"amqAdminUserName": "admin",
+         			"amqAdminPassword": "admin"
+         		}
+         	}
+         },
        	{
        		"apiVersion": "broker.amq.io/v1alpha1",
        		"kind": "ActiveMQArtemisAddress",
@@ -141,6 +145,7 @@ spec:
                 - events
                 - configmaps
                 - secrets
+                - routes
               verbs:
                 - '*'
             - apiGroups:
@@ -171,6 +176,19 @@ spec:
                 - '*'
               verbs:
                 - '*'
+            - apiGroups:
+                - "route.openshift.io"
+              resources:
+                - routes
+                - routes/custom-host
+                - routes/status
+              verbs:
+                - get
+                - list
+                - watch
+                - create
+                - delete
+
       deployments:
         - name: activemq-artemis-operator
           spec:
@@ -187,9 +205,9 @@ spec:
                 containers:
                   - name: activemq-artemis-operator
                     # Replace this with the built image name
-                    image: activemq-artemis-operator:latest
+                    image: quay.io/rh_messaging/activemq-artemis-operator:0.4.0
                     command:
-                      - /usr/local/bin/entrypoint
+                      -  /home/activemq-artemis-operator/bin/entrypoint
                     imagePullPolicy: Always
                     env:
                       - name: WATCH_NAMESPACE

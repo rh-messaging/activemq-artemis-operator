@@ -1,7 +1,6 @@
 package env
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
@@ -54,7 +53,7 @@ func DetectOpenshift() (bool, error) {
 		return false, err
 	}
 
-	body, err := client.Get().DoRaw()
+	_, err = client.Get().DoRaw()
 
 	return err == nil, nil
 }

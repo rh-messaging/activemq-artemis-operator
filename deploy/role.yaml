@@ -45,3 +45,15 @@ rules:
   - activemqartemisaddresses
   verbs:
   - '*'
+- apiGroups:
+    - "route.openshift.io"
+  resources:
+    - routes
+    - routes/custom-host
+    - routes/status
+  verbs:
+    - get
+    - list
+    - watch
+    - create
+    - delete
