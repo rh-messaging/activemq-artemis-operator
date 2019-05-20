@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -74,6 +75,11 @@ var log = logf.Log.WithName("package statefulsets")
 //func makeDataPathForCR(cr *brokerv1alpha1.ActiveMQArtemis) string {
 //return "/opt/" + cr.Name + "/data"
 //}
+
+const (
+	graceTime        = 30
+	HttpLivenessPort = 8161
+)
 
 func makeVolumeMounts(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.VolumeMount {
 
@@ -415,6 +421,28 @@ func newPodTemplateSpecForCR(cr *brokerv1alpha1.ActiveMQArtemis) corev1.PodTempl
 		Image:   cr.Spec.Image,
 		Command: []string{"/opt/amq/bin/launch.sh", "start"},
 		Env:     makeEnvVarArrayForCR(cr),
+		ReadinessProbe: &corev1.Probe{
+			InitialDelaySeconds: graceTime,
+			TimeoutSeconds:      5,
+			Handler: corev1.Handler{
+				Exec: &corev1.ExecAction{
+					Command: []string{
+						"/bin/bash",
+						"-c",
+						"/opt/amq/bin/readinessProbe.sh",
+					},
+				},
+			},
+		},
+		LivenessProbe: &corev1.Probe{
+			InitialDelaySeconds: graceTime,
+			TimeoutSeconds:      5,
+			Handler: corev1.Handler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Port: intstr.FromInt(HttpLivenessPort),
+				},
+			},
+		},
 	}
 	volumeMounts := makeVolumeMounts(cr)
 	if len(volumeMounts) > 0 {
@@ -435,7 +463,7 @@ func newStatefulSetForCR(cr *brokerv1alpha1.ActiveMQArtemis) *appsv1.StatefulSet
 	// Log where we are and what we're doing
 	reqLogger := log.WithName(cr.Name)
 	reqLogger.Info("Creating new statefulset for custom resource")
-	var replicas int32 = 1
+	replicas := cr.Spec.Size
 
 	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
 

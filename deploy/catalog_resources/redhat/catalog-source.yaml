@@ -264,6 +264,11 @@ items:
                     properties:
                       image:
                         type: string
+                      size:
+                        type: integer
+                        minimum: 1
+                        maximum: 16
+                        description: The number of activemqartemis pods to deploy
                       persistent:
                         type: boolean
                       sslConfig:

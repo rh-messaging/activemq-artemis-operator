@@ -158,6 +158,26 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 		amqbfsm.Enter(nil)
 	}
 
+	found := &appsv1.StatefulSet{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, found)
+	if err != nil && errors.IsNotFound(err) {
+
+		return reconcile.Result{Requeue: true}, nil
+	}
+
+	// Ensure the StatefulSet size is the same as the spec
+	size := instance.Spec.Size
+	if *found.Spec.Replicas != size {
+		found.Spec.Replicas = &size
+		err = r.client.Update(context.TODO(), found)
+		if err != nil {
+			reqLogger.Error(err, "Failed to update StatefulSet.", "Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
+			return reconcile.Result{}, err
+		}
+		// Spec updated - return and requeue
+		return reconcile.Result{Requeue: true}, nil
+	}
+
 	// Single exit, return the result and error condition
 	return reconcileResult, err
 }

@@ -15,6 +15,7 @@ type ActiveMQArtemisSpec struct {
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
 
 	Image         string        `json:"image"`
+	Size          int32         `json:"size,omitempty"`
 	Persistent    bool          `json:"persistent"`
 	ClusterConfig ClusterConfig `json:"clusterConfig,omitempty"`
 	SSLConfig     SSLConfig     `json:"sslConfig,omitempty"`
