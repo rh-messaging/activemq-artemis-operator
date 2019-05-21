@@ -1,0 +1,56 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: activemqartemisscaledowns.broker.amq.io
+spec:
+  group: broker.amq.io
+  names:
+    kind: ActiveMQArtemisScaledown
+    listKind: ActiveMQArtemisScaledownList
+    plural: activemqartemisscaledowns
+    singular: activemqartemisscaledown
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          properties:
+            masterURL:
+              description: 'The address of the Kubernetes API server. Overrides any 
+                value in kubeconfig. Only required if out-of-cluster.'
+              type: string
+            kubeconfig:
+              description: 'Path to a kubeconfig. Only required if out-of-cluster.'
+              type: string
+            namespace:
+              description: 'Only used with --localOnly. When specified, the controller
+                only handles StatefulSets in the specified namespace. If left empty,
+                the controller defaults to the namespace it is running in (read from
+                /var/run/secrets/kubernetes.io/serviceaccount/namespace).'
+              type: string
+            localOnly:
+              description: 'If enabled, the controller only handles StatefulSets in a
+                single namespace instead of across all namespaces.'
+              type: boolean
+          type: object
+        status:
+          type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true

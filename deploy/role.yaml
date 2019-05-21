@@ -43,6 +43,7 @@ rules:
   resources:
   - '*'
   - activemqartemisaddresses
+  - activemqartemisscaledowns
   verbs:
   - '*'
 - apiGroups:
@@ -51,6 +52,16 @@ rules:
     - routes
     - routes/custom-host
     - routes/status
+  verbs:
+    - get
+    - list
+    - watch
+    - create
+    - delete
+- apiGroups:
+    - "extensions"
+  resources:
+    - ingresses
   verbs:
     - get
     - list

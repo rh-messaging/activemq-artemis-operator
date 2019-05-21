@@ -1,0 +1,113 @@
+apiVersion: broker.amq.io/v1alpha1
+kind: ActiveMQArtemis
+metadata:
+  name: example-activemqartemis
+  labels:
+    ActiveMQArtemis: example-activemqartemis
+    application: example-activemqartemis-app
+  annotations:
+    statefulsets.kubernetes.io/drainer-pod-template: |
+        {
+          "metadata": {
+            "labels": {
+              "app": "example-activemqartemis-amq-drainer"
+            }
+          },
+          "spec": {
+            "serviceAccount": "activemq-artemis-operator",
+            "serviceAccountName": "activemq-artemis-operator",
+            "terminationGracePeriodSeconds": 5,
+            "containers": [
+              {
+                "env": [
+                  {
+                    "name": "AMQ_EXTRA_ARGS",
+                    "value": "--no-autotune"
+                  },
+                  {
+                    "name": "AMQ_USER",
+                    "value": "admin"
+                  },
+                  {
+                    "name": "AMQ_PASSWORD",
+                    "value": "admin"
+                  },
+                  {
+                    "name": "AMQ_ROLE",
+                    "value": "admin"
+                  },
+                  {
+                    "name": "AMQ_NAME",
+                    "value": "amq-broker"
+                  },
+                  {
+                    "name": "AMQ_TRANSPORTS",
+                    "value": "openwire,amqp,stomp,mqtt,hornetq"
+                  },
+                  {
+                    "name": "AMQ_GLOBAL_MAX_SIZE",
+                    "value": "100mb"
+                  },
+                  {
+                    "name": "AMQ_DATA_DIR",
+                    "value": "/opt/example-activemqartemis/data"
+                  },
+                  {
+                    "name": "AMQ_DATA_DIR_LOGGING",
+                    "value": "true"
+                  },
+                  {
+                    "name": "AMQ_CLUSTERED",
+                    "value": "true"
+                  },
+                  {
+                    "name": "AMQ_REPLICAS",
+                    "value": "2"
+                  },
+                  {
+                    "name": "AMQ_CLUSTER_USER",
+                    "value": "clusterpoduser"
+                  },
+                  {
+                    "name": "AMQ_CLUSTER_PASSWORD",
+                    "value": "clusterpodpassword"
+                  },
+                  {
+                    "name": "POD_NAMESPACE",
+                    "valueFrom": {
+                      "fieldRef": {
+                        "fieldPath": "metadata.namespace"
+                      }
+                    }
+                  },
+                  {
+                    "name": "OPENSHIFT_DNS_PING_SERVICE_PORT",
+                    "value": "8888"
+                  }
+                ],
+                "image": "registry.access.redhat.com/amq-broker-7/amq-broker-72-openshift:1.3-4",
+                "name": "drainer-amq",
+
+                "command": ["/bin/sh", "-c", "echo \"Starting the drainer\" ; /opt/amq/bin/drain.sh; echo \"Drain completed! Exit code $?\""],
+                "volumeMounts": [
+                  {
+                    "name": "example-activemqartemis",
+                    "mountPath": "/opt/example-activemqartemis/data"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+spec:
+  # Add fields here
+  size: 4
+  image: registry.access.redhat.com/amq-broker-7/amq-broker-72-openshift:1.3-4
+  persistent: true
+  clusterConfig:
+    clusterUserName: clusterpoduser
+    clusterPassword: clusterpodpassword
+  commonConfig:
+    amqAdminUserName: admin
+    amqAdminPassword: admin
+

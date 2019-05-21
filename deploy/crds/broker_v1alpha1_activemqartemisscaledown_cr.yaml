@@ -1,0 +1,11 @@
+apiVersion: broker.amq.io/v1alpha1
+kind: ActiveMQArtemisScaledown
+metadata:
+  name: example-activemqartemisscaledown
+  labels:
+    ActiveMQArtemis: example-activemqartemis
+    application: example-activemqartemis-app
+spec:
+  # Add fields here
+  localOnly: true
+  

@@ -13,12 +13,15 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemis":              schema_pkg_apis_broker_v1alpha1_ActiveMQArtemis(ref),
-		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemisAddress":       schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisAddress(ref),
-		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemisAddressSpec":   schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisAddressSpec(ref),
-		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemisAddressStatus": schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisAddressStatus(ref),
-		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemisSpec":          schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisSpec(ref),
-		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemisStatus":        schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisStatus(ref),
+		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemis":                schema_pkg_apis_broker_v1alpha1_ActiveMQArtemis(ref),
+		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemisAddress":         schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisAddress(ref),
+		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemisAddressSpec":     schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisAddressSpec(ref),
+		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemisAddressStatus":   schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisAddressStatus(ref),
+		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemisScaledown":       schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisScaledown(ref),
+		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemisScaledownSpec":   schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisScaledownSpec(ref),
+		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemisScaledownStatus": schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisScaledownStatus(ref),
+		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemisSpec":            schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisSpec(ref),
+		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemisStatus":          schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisStatus(ref),
 	}
 }
 
@@ -113,7 +116,34 @@ func schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisAddressSpec(ref common.Refer
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "ActiveMQArtemisAddressSpec defines the desired state of ActiveMQArtemisAddress",
-				Properties:  map[string]spec.Schema{},
+				Properties: map[string]spec.Schema{
+					"addressName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "INSERT ADDITIONAL SPEC FIELDS - desired state of cluster Important: Run \"operator-sdk generate k8s\" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"queueName": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"routingType": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"statefulsetName": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+				},
+				Required: []string{"addressName", "queueName", "routingType", "statefulsetName"},
 			},
 		},
 		Dependencies: []string{},
@@ -132,6 +162,73 @@ func schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisAddressStatus(ref common.Ref
 	}
 }
 
+func schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisScaledown(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ActiveMQArtemisScaledown is the Schema for the activemqartemisscaledowns API",
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemisScaledownSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemisScaledownStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemisScaledownSpec", "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemisScaledownStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisScaledownSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ActiveMQArtemisScaledownSpec defines the desired state of ActiveMQArtemisScaledown",
+				Properties:  map[string]spec.Schema{},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
+func schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisScaledownStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ActiveMQArtemisScaledownStatus defines the observed state of ActiveMQArtemisScaledown",
+				Properties:  map[string]spec.Schema{},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
 func schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -140,16 +237,49 @@ func schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisSpec(ref common.ReferenceCal
 				Properties: map[string]spec.Schema{
 					"image": {
 						SchemaProps: spec.SchemaProps{
-							Description: "INSERT ADDITIONAL SPEC FIELDS - desired state of cluster Important: Run \"operator-sdk generate k8s\" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html",
-							Type:        []string{"string"},
-							Format:      "",
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"sslEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
+						},
+					},
+					"persistent": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
+						},
+					},
+					"clusterEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
+						},
+					},
+					"clusterConfig": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ClusterConfig"),
+						},
+					},
+					"sslConfig": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.SSLConfig"),
+						},
+					},
+					"commonConfig": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.CommonConfig"),
 						},
 					},
 				},
-				Required: []string{"image"},
+				Required: []string{"image", "sslEnabled", "persistent", "clusterEnabled"},
 			},
 		},
-		Dependencies: []string{},
+		Dependencies: []string{
+			"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ClusterConfig", "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.CommonConfig", "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.SSLConfig"},
 	}
 }
 

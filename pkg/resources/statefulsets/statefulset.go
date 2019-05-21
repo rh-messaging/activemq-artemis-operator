@@ -393,6 +393,7 @@ func newEnvVarArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis) *[]corev1.EnvVar {
 
 	return &envVarArray
 }
+
 func newPodTemplateSpecForCR(cr *brokerv1alpha1.ActiveMQArtemis) corev1.PodTemplateSpec {
 
 	// Log where we are and what we're doing
@@ -448,12 +449,12 @@ func newStatefulSetForCR(cr *brokerv1alpha1.ActiveMQArtemis) *appsv1.StatefulSet
 			Name:        cr.Name + "-ss", //"-statefulset",
 			Namespace:   cr.Namespace,
 			Labels:      labels,
-			Annotations: nil,
+			Annotations: cr.Annotations,
 		},
 	}
 	Spec := appsv1.StatefulSetSpec{
 		Replicas:    &replicas,
-		ServiceName: "hs", //cr.Name + "-headless" + "-service",
+		ServiceName: "amq-broker-amq-headless", //cr.Name + "-headless" + "-service",
 		Selector: &metav1.LabelSelector{
 			MatchLabels: labels,
 		},

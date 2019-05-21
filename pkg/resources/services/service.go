@@ -31,7 +31,7 @@ func newHeadlessServiceForCR(cr *brokerv1alpha1.ActiveMQArtemis, servicePorts *[
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: nil,
 			Labels:      labels,
-			Name:        "hs", //"headless" + "-service",
+			Name:        "amq-broker-amq-headless", //"amq-broker-headless" + "-service",
 			Namespace:   cr.Namespace,
 		},
 		Spec: corev1.ServiceSpec{

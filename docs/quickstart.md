@@ -330,3 +330,94 @@ Deleting a queue deployed via an ActiveMQArtemisAddress custom resource is strai
 ```$xslt
 kubectl delete -f deploy/crds/broker_v1alpha1_activemqartemisaddress_cr.yaml
 ```
+
+## Draining messages on scale down
+
+A scaledown controller can be deployed with the operator that supports message draining on scale down.
+The custom scale down resource definition is in `deploy/crds/broker_v1alpha1_activemqartemisscaledown_crd.yaml`.
+
+When a broker pod is scaled down, the scale down controller detects the event and started a drainer pod.
+The drainer pod will contact one of the live pods in the cluster and drain the messages over to it.
+After the draining is complete it shuts down itself.
+
+To demonstrate, following the steps below (assuming that minikube is used).
+
+* Deploy related CRDs:
+
+```$xslt
+# Setup Service Account
+$ kubectl create -f deploy/service_account.yaml
+# Setup RBAC
+$ kubectl create -f deploy/role.yaml
+$ kubectl create -f deploy/role_binding.yaml
+# Setup the ActiveMQArtemis CRD
+$ kubectl create -f deploy/crds/broker_v1alpha1_activemqartemis_crd.yaml
+# Setup the ActiveMQArtemisScaledown CRD
+$ kubectl create -f deploy/crds/broker_v1alpha1_activemqartemisscaledown_crd.yaml
+```
+
+* Deploy the operator
+
+```$xslt
+$ kubectl create -f deploy/operator.yaml
+```
+
+* Deploy the clustered broker
+
+```$xslt
+kubectl create -f deploy/crds/broker_v1alpha1_activemqartemis_drainpod.yaml
+```
+
+* Once the broker pod is up, scale it to 2.
+
+```$xslt
+kubectl scale statefulset example-activemqartemis-ss --replicas 2
+```
+
+* Now if you list the pods using `kubectl get pod` you will see 3 pods
+are running. The output is like:
+
+```$xslt
+activemq-artemis-operator-8566d9bf58-9g25l   1/1     Running   0          3m38s
+example-activemqartemis-ss-0                 1/1     Running   0          112s
+example-activemqartemis-ss-1                 1/1     Running   0          8s
+```
+
+* Log into each pod and send some messages to each broker.
+
+On pod example-activemqartemis-ss-0 (suppose it's cluster IP is 172.17.0.6) run the following command
+
+```$xslt
+/opt/amq-broker/bin/artemis producer --url tcp://172.17.0.6:61616 --user admin --password admin
+```
+On pod example-activemqartemis-ss-1 (suppose it's cluster IP is 172.17.0.7) run the following command
+
+```$xslt
+/opt/amq-broker/bin/artemis producer --url tcp://172.17.0.7:61616 --user admin --password admin
+```
+
+* Checking each broker has a queue named TEST and each has 1000 messages added.
+
+* Now scale down the cluster from 2 to 1
+
+```$xslt
+kubectl scale statefulset example-activemqartemis-ss --replicas 1
+```
+
+* Observe that the pod example-activemqartemis-ss-1 is shutdown and soon after a new drainer pod
+of the same name is started by the controller. This drainer pod will shutdown itself once the 
+messages have been drained to the other pod (namely example-activemqartemis-ss-0).
+
+* Wait until the drainer pos is shutdown. Then check on the message count on TEST queue at 
+pod example-activemqartemis-ss-0 and you will see the the messages at the queue is 2000, which
+means the drainer pod has done its work.
+
+
+
+
+
+
+
+
+
+
