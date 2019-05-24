@@ -236,6 +236,10 @@ func getPropertyForCR(propName string, cr *brokerv1alpha1.ActiveMQArtemis, defau
 		if checkSSLEnabled(cr) && len(cr.Spec.SSLConfig.SecretName) > 0 {
 			result = cr.Spec.SSLConfig.KeyStorePassword
 		}
+	case "AMQ_EXTRA_ARGS":
+		if cr.Spec.Aio {
+			result = "--aio"
+		}
 	}
 	return result
 }

@@ -38,6 +38,8 @@ spec:
               description: The number of activemqartemis pods to deploy
             persistent:
               type: boolean
+            aio:
+              type: boolean
             sslConfig:
               type: object
               description: Configuration of the AMQ SSL deployment

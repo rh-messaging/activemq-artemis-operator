@@ -17,6 +17,7 @@ type ActiveMQArtemisSpec struct {
 	Image         string        `json:"image"`
 	Size          int32         `json:"size,omitempty"`
 	Persistent    bool          `json:"persistent"`
+	Aio           bool          `json:"aio"`
 	ClusterConfig ClusterConfig `json:"clusterConfig,omitempty"`
 	SSLConfig     SSLConfig     `json:"sslConfig,omitempty"`
 	CommonConfig  CommonConfig  `json:"commonConfig,omitempty"`
