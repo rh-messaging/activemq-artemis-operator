@@ -20,12 +20,12 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/draincontroller"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/signals"
+	"io/ioutil"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/signals"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/draincontroller"
-	"io/ioutil"
 )
 
 var log = logf.Log.WithName("controller_activemqartemisscaledown")
@@ -115,15 +115,15 @@ func (r *ReconcileActiveMQArtemisScaledown) Reconcile(request reconcile.Request)
 		return reconcile.Result{}, err
 	}
 	//the drain controller code
-    masterURL = instance.Spec.MasterURL
-    kubeconfig = instance.Spec.Kubeconfig
-    namespace = instance.Spec.Namespace
-    localOnly = instance.Spec.LocalOnly
-    
-    reqLogger.Info("====", "masterUrl:", masterURL)
-    reqLogger.Info("====", "kubeconfig:", kubeconfig)
-    reqLogger.Info("====", "namespace:", namespace)
-    reqLogger.Info("====", "localOnly:", localOnly)
+	masterURL = instance.Spec.MasterURL
+	kubeconfig = instance.Spec.Kubeconfig
+	namespace = instance.Spec.Namespace
+	localOnly = instance.Spec.LocalOnly
+
+	reqLogger.Info("====", "masterUrl:", masterURL)
+	reqLogger.Info("====", "kubeconfig:", kubeconfig)
+	reqLogger.Info("====", "namespace:", namespace)
+	reqLogger.Info("====", "localOnly:", localOnly)
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
@@ -149,7 +149,7 @@ func (r *ReconcileActiveMQArtemisScaledown) Reconcile(request reconcile.Request)
 			namespace = string(bytes)
 			reqLogger.Info("====reading ns from file", "namespace", namespace)
 		}
-        reqLogger.Info("==== creating namespace wide factory")
+		reqLogger.Info("==== creating namespace wide factory")
 		glog.Infof("Configured to only operate on StatefulSets in namespace %s", namespace)
 		kubeInformerFactory = kubeinformers.NewFilteredSharedInformerFactory(kubeClient, time.Second*30, namespace, nil)
 	} else {
@@ -157,20 +157,20 @@ func (r *ReconcileActiveMQArtemisScaledown) Reconcile(request reconcile.Request)
 		kubeInformerFactory = kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
 	}
 
-    reqLogger.Info("==== new drain controller...")
+	reqLogger.Info("==== new drain controller...")
 	drainControllerInstance := draincontroller.NewController(kubeClient, kubeInformerFactory, namespace, localOnly)
 
-    reqLogger.Info("====Starting async factory...")
+	reqLogger.Info("====Starting async factory...")
 	go kubeInformerFactory.Start(stopCh)
 
-    reqLogger.Info("====Running drain controller...")
+	reqLogger.Info("====Running drain controller...")
 	if err = drainControllerInstance.Run(1, stopCh); err != nil {
 		reqLogger.Info("=======failed to run drainer", "error", err.Error())
 		glog.Fatalf("Error running controller: %s", err.Error())
 		return reconcile.Result{}, err
 	}
 
-    reqLogger.Info("====OK, return result")
+	reqLogger.Info("====OK, return result")
 	return reconcile.Result{}, nil
 }
 

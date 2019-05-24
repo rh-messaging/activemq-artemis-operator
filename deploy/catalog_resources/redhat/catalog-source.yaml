@@ -271,6 +271,8 @@ items:
                         description: The number of activemqartemis pods to deploy
                       persistent:
                         type: boolean
+                      aio:
+                        type: boolean
                       sslConfig:
                         type: object
                         description: Configuration of the AMQ SSL deployment
@@ -324,6 +326,7 @@ items:
                             description: Password for standard broker user. It is required for connecting to the broker. If left empty, it will be generated.
                     required:
                     - image
+                    - size
                     - commonConfig
                     type: object
                   status:

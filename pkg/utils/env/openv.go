@@ -4,13 +4,13 @@ import (
 	"os"
 	"strings"
 
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 	v1 "k8s.io/apimachinery/pkg/runtime/schema"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
-	runtime "k8s.io/apimachinery/pkg/runtime"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 var log = logf.Log.WithName("env")
@@ -57,4 +57,3 @@ func DetectOpenshift() (bool, error) {
 
 	return err == nil, nil
 }
-

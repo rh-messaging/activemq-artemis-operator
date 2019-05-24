@@ -11,15 +11,17 @@ import (
 )
 
 var crNameMap = map[string]string{
-	"activemqartemis_cr.yaml":                     "broker_v1alpha1_activemqartemis_crd.yaml",
-	"activemqartemisaddress_cr.yaml":              "broker_v1alpha1_activemqartemisaddress_crd.yaml",
-	"address-queue-create.yaml":                   "broker_v1alpha1_activemqartemisaddress_crd.yaml",
-	"amq-basic-deployment.yaml":                   "broker_v1alpha1_activemqartemis_crd.yaml",
-	"amq-ssl-deployment.yaml":                     "broker_v1alpha1_activemqartemis_crd.yaml",
-	"amq-cluster-deployment.yaml":                 "broker_v1alpha1_activemqartemis_crd.yaml",
-	"amq-persistence-deployment.yaml":             "broker_v1alpha1_activemqartemis_crd.yaml",
-	"amq-ssl-persistence-cluster-deployment.yaml": "broker_v1alpha1_activemqartemis_crd.yaml",
-	"amq-ssl-persistence-deployment.yaml":         "broker_v1alpha1_activemqartemis_crd.yaml",
+	"activemqartemis_cr.yaml":                          "broker_v1alpha1_activemqartemis_crd.yaml",
+	"activemqartemisaddress_cr.yaml":                   "broker_v1alpha1_activemqartemisaddress_crd.yaml",
+	"address-queue-create.yaml":                        "broker_v1alpha1_activemqartemisaddress_crd.yaml",
+	"amq-basic-deployment.yaml":                        "broker_v1alpha1_activemqartemis_crd.yaml",
+	"amq-ssl-deployment.yaml":                          "broker_v1alpha1_activemqartemis_crd.yaml",
+	"amq-cluster-deployment.yaml":                      "broker_v1alpha1_activemqartemis_crd.yaml",
+	"amq-persistence-deployment.yaml":                  "broker_v1alpha1_activemqartemis_crd.yaml",
+	"amq-ssl-persistence-cluster-deployment.yaml":      "broker_v1alpha1_activemqartemis_crd.yaml",
+	"amq-ssl-persistence-deployment.yaml":              "broker_v1alpha1_activemqartemis_crd.yaml",
+	"amq-aio-journal.yaml":                             "broker_v1alpha1_activemqartemis_crd.yaml",
+	"broker_v1alpha1_activemqartemisscaledown_cr.yaml": "broker_v1alpha1_activemqartemisscaledown_crd.yaml",
 }
 
 var crdTypeMap = map[string]interface{}{
@@ -45,15 +47,15 @@ func TestCRDSchemas(t *testing.T) {
 func TestSampleCustomResources(t *testing.T) {
 
 	// fetch list of all CRD files
-	fileList, err := ioutil.ReadDir("../deploy/crds")
+	fileList, err := ioutil.ReadDir("../deploy/crs")
 	assert.NoError(t, err, "Error reading CR Files %v", fileList)
 
 	var input map[string]interface{}
 	for _, file := range fileList {
 
-		if !strings.HasSuffix(file.Name(), "cr.yaml") {
-			continue // if we move cr.yaml and crd.yaml files into sep directories, this check can go away
-		}
+		//if !strings.HasSuffix(file.Name(), "cr.yaml") {
+		//	continue // if we move cr.yaml and crd.yaml files into sep directories, this check can go away
+		//}
 
 		// determine which cr/crd pairing in use for all *cr.yaml files
 		var crFileName, crdFileName string
@@ -64,10 +66,10 @@ func TestSampleCustomResources(t *testing.T) {
 			}
 
 		}
-
+		println(crFileName, crdFileName)
 		assert.NotEmpty(t, crdFileName, "No matching CRD file found for CR suffixed: %s", crFileName)
 		schema := getSchema(t, crdFileName)
-		yamlString, err := ioutil.ReadFile("../deploy/crds/" + crFileName)
+		yamlString, err := ioutil.ReadFile("../deploy/crs/" + crFileName)
 		assert.NoError(t, err, "Error reading %v CR yaml", crFileName)
 		assert.NoError(t, yaml.Unmarshal([]byte(yamlString), &input))
 		assert.NoError(t, schema.Validate(input), "File %v does not validate against the CRD schema", file)

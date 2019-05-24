@@ -411,7 +411,7 @@ func newPodTemplateSpecForCR(cr *brokerv1alpha1.ActiveMQArtemis) corev1.PodTempl
 	reqLogger.Info("Creating new pod template spec for custom resource")
 
 	//var pts corev1.PodTemplateSpec
-
+	terminationGracePeriodSeconds := int64(60)
 	pts := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cr.Name,
@@ -458,6 +458,7 @@ func newPodTemplateSpecForCR(cr *brokerv1alpha1.ActiveMQArtemis) corev1.PodTempl
 	if len(volumes) > 0 {
 		Spec.Volumes = volumes
 	}
+	Spec.TerminationGracePeriodSeconds = &terminationGracePeriodSeconds
 	pts.Spec = Spec
 
 	return pts

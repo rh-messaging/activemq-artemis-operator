@@ -39,10 +39,10 @@ import (
 
 	"encoding/json"
 	"k8s.io/apimachinery/pkg/labels"
-	"sort"
-	"strings"
-	"strconv"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	"sort"
+	"strconv"
+	"strings"
 )
 
 var log = logf.Log.WithName("controller_activemqartemisscaledown")
@@ -54,8 +54,8 @@ const AnnotationDrainerPodTemplate = "statefulsets.kubernetes.io/drainer-pod-tem
 const LabelDrainPod = "drain-pod"
 
 const (
-	SuccessCreate = "SuccessfulCreate"
-	DrainSuccess = "DrainSuccess"
+	SuccessCreate    = "SuccessfulCreate"
+	DrainSuccess     = "DrainSuccess"
 	PVCDeleteSuccess = "SuccessfulPVCDelete"
 	PodDeleteSuccess = "SuccessfulDelete"
 
@@ -86,7 +86,7 @@ type Controller struct {
 	// Kubernetes API.
 	recorder record.EventRecorder
 
-	localOnly		   bool
+	localOnly bool
 }
 
 // NewController returns a new sample controller
@@ -259,7 +259,7 @@ func (c *Controller) syncHandler(key string) error {
 
 	// Convert the namespace/name string into a distinct namespace and name
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	
+
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
 		return nil
@@ -267,7 +267,7 @@ func (c *Controller) syncHandler(key string) error {
 
 	// Get the StatefulSet resource with this namespace/name
 	sts, err := c.statefulSetLister.StatefulSets(namespace).Get(name)
-	
+
 	if err != nil {
 		// The StatefulSet may no longer exist, in which case we stop
 		// processing.
@@ -285,7 +285,7 @@ func (c *Controller) syncHandler(key string) error {
 func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 	// TODO: think about scale-down during a rolling upgrade
 
-	if (0 == *sts.Spec.Replicas) {
+	if 0 == *sts.Spec.Replicas {
 		// Ensure data is not touched in the case of complete scaledown
 		glog.V(5).Infof("Ignoring StatefulSet '%s' because replicas set to 0.", sts.Name)
 		return nil
@@ -319,7 +319,7 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 
 	for _, ordinal := range ordinals {
 
-        if (0 == ordinal) {
+		if 0 == ordinal {
 			// This assumes order on scale up and down is enforced, i.e. the system waits for n, n-1,... 2, 1 to scaledown before attempting 0
 			glog.V(5).Infof("Ignoring ordinal 0 as no other pod to drain to.")
 			continue
@@ -372,7 +372,7 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 				}
 
 				// Ensure that at least the ordinal zero pod is running
-				if (corev1.PodRunning != ordinalZeroPod.Status.Phase) {
+				if corev1.PodRunning != ordinalZeroPod.Status.Phase {
 					//glog.Infof("Ordinal zero pod '%s' status phase '%s', waiting for it to be Running.", sts.Name, pod.Status.Phase)
 					glog.Infof("Ordinal zero pod '%s' status phase not PodRunning, waiting for it to be Running.", sts.Name)
 					continue
@@ -384,18 +384,18 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 				ordinalZeroPodReady := false
 				for _, podCondition := range podConditions {
 					glog.V(5).Infof("Ordinal zero pod condition %s", podCondition)
-					if (corev1.PodReady == podCondition.Type) {
-						if (corev1.ConditionTrue != podCondition.Status) {
+					if corev1.PodReady == podCondition.Type {
+						if corev1.ConditionTrue != podCondition.Status {
 							glog.Infof("Ordinal zero pod '%s' podCondition Ready not True, waiting for it to True.", sts.Name)
 						}
-						if (corev1.ConditionTrue == podCondition.Status) {
+						if corev1.ConditionTrue == podCondition.Status {
 							glog.Infof("Ordinal zero pod '%s' podCondition Ready True, proceeding to create drainer pod.", sts.Name)
 							ordinalZeroPodReady = true
 						}
 					}
 				}
 
-				if (false == ordinalZeroPodReady) {
+				if false == ordinalZeroPodReady {
 					continue
 				}
 
@@ -413,7 +413,7 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 					return err
 				}
 
-                if (!c.localOnly) {
+				if !c.localOnly {
 					c.recorder.Event(sts, corev1.EventTypeNormal, SuccessCreate, fmt.Sprintf(MessageDrainPodCreated, podName, sts.Name))
 				}
 
@@ -466,43 +466,43 @@ func (c *Controller) cleanUpDrainPodIfNeeded(sts *appsv1.StatefulSet, pod *corev
 	// Drain Pod already exists. Check if it's done draining.
 	podName := getPodName(sts, ordinal)
 
-	switch (pod.Status.Phase) {
-		case (corev1.PodSucceeded):
-			glog.Infof("Drain pod '%s' finished.", podName)
-			if (!c.localOnly) {
-				c.recorder.Event(sts, corev1.EventTypeNormal, DrainSuccess, fmt.Sprintf(MessageDrainPodFinished, podName, sts.Name))
-			}
+	switch pod.Status.Phase {
+	case (corev1.PodSucceeded):
+		glog.Infof("Drain pod '%s' finished.", podName)
+		if !c.localOnly {
+			c.recorder.Event(sts, corev1.EventTypeNormal, DrainSuccess, fmt.Sprintf(MessageDrainPodFinished, podName, sts.Name))
+		}
 
-			for _, pvcTemplate := range sts.Spec.VolumeClaimTemplates {
-				pvcName := getPVCName(sts, pvcTemplate.Name, int32(ordinal))
-				glog.Infof("Deleting PVC %s", pvcName)
-				err := c.kubeclientset.CoreV1().PersistentVolumeClaims(sts.Namespace).Delete(pvcName, nil)
-				if err != nil {
-					return err
-				}
-				if (!c.localOnly) {
-					c.recorder.Event(sts, corev1.EventTypeNormal, PVCDeleteSuccess, fmt.Sprintf(MessagePVCDeleted, pvcName, sts.Name))
-				}
-			}
-
-			// TODO what if the user scales up the statefulset and the statefulset controller creates the new pod after we delete the pod but before we delete the PVC
-			// TODO what if we crash after we delete the PVC, but before we delete the pod?
-
-			glog.Infof("Deleting drain pod %s", podName)
-			err := c.kubeclientset.CoreV1().Pods(sts.Namespace).Delete(podName, nil)
+		for _, pvcTemplate := range sts.Spec.VolumeClaimTemplates {
+			pvcName := getPVCName(sts, pvcTemplate.Name, int32(ordinal))
+			glog.Infof("Deleting PVC %s", pvcName)
+			err := c.kubeclientset.CoreV1().PersistentVolumeClaims(sts.Namespace).Delete(pvcName, nil)
 			if err != nil {
 				return err
 			}
-			if (!c.localOnly) {
-				c.recorder.Event(sts, corev1.EventTypeNormal, PodDeleteSuccess, fmt.Sprintf(MessageDrainPodDeleted, podName, sts.Name))
+			if !c.localOnly {
+				c.recorder.Event(sts, corev1.EventTypeNormal, PVCDeleteSuccess, fmt.Sprintf(MessagePVCDeleted, pvcName, sts.Name))
 			}
-			break
-		case (corev1.PodFailed):
-			glog.Infof("Drain pod '%s' failed.", podName)
-			break
-		default:
-			glog.Infof("Drain pod Phase was %s", pod.Status.Phase)
-			break
+		}
+
+		// TODO what if the user scales up the statefulset and the statefulset controller creates the new pod after we delete the pod but before we delete the PVC
+		// TODO what if we crash after we delete the PVC, but before we delete the pod?
+
+		glog.Infof("Deleting drain pod %s", podName)
+		err := c.kubeclientset.CoreV1().Pods(sts.Namespace).Delete(podName, nil)
+		if err != nil {
+			return err
+		}
+		if !c.localOnly {
+			c.recorder.Event(sts, corev1.EventTypeNormal, PodDeleteSuccess, fmt.Sprintf(MessageDrainPodDeleted, podName, sts.Name))
+		}
+		break
+	case (corev1.PodFailed):
+		glog.Infof("Drain pod '%s' failed.", podName)
+		break
+	default:
+		glog.Infof("Drain pod Phase was %s", pod.Status.Phase)
+		break
 	}
 
 	return nil
@@ -562,7 +562,7 @@ func (c *Controller) handlePod(obj interface{}) {
 			return
 		}
 
-		if (0 == *sts.Spec.Replicas) {
+		if 0 == *sts.Spec.Replicas {
 			glog.V(5).Infof("NameFromAnnotation not enqueueing Statefulset '%s' as Spec.Replicas is 0.", sts.Name)
 			return
 		}
@@ -584,7 +584,7 @@ func (c *Controller) handlePod(obj interface{}) {
 			return
 		}
 
-		if (0 == *sts.Spec.Replicas) {
+		if 0 == *sts.Spec.Replicas {
 			glog.V(5).Infof("Name from ownerRef.Name not enqueueing Statefulset '%s' as Spec.Replicas is 0.", sts.Name)
 			return
 		}
@@ -595,7 +595,7 @@ func (c *Controller) handlePod(obj interface{}) {
 }
 
 func (c *Controller) cachesSynced() bool {
-	return true; // TODO do we even need this?
+	return true // TODO do we even need this?
 }
 
 func newPod(sts *appsv1.StatefulSet, ordinal int) (*corev1.Pod, error) {
@@ -616,7 +616,7 @@ func newPod(sts *appsv1.StatefulSet, ordinal int) (*corev1.Pod, error) {
 	if pod.Labels == nil {
 		pod.Labels = map[string]string{}
 	}
-	pod.Labels[LabelDrainPod] = pod.Name;
+	pod.Labels[LabelDrainPod] = pod.Name
 	if pod.Annotations == nil {
 		pod.Annotations = map[string]string{}
 	}
