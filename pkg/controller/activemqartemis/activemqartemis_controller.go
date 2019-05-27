@@ -112,7 +112,7 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 		Name:      request.Name,
 		Namespace: request.Namespace,
 	}
-	reconcileResult := reconcile.Result{Requeue:false}
+	reconcileResult := reconcile.Result{Requeue: false}
 
 	// Fetch the ActiveMQArtemis instance
 	// When first creating this will have err == nil
@@ -159,7 +159,6 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 		err, _ = amqbfsm.Update()
 		// if err need reconcile result as before
 	}
-
 
 	// Single exit, return the result and error condition
 	return reconcileResult, err

@@ -8,9 +8,9 @@ import (
 	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/env"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	appsv1 "k8s.io/api/apps/v1"
 )
 
 type CreatingK8sResourcesState struct {

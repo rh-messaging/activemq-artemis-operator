@@ -101,7 +101,7 @@ which identifies the container image to use to launch the AMQ Broker. Ignore the
 To deploy the broker we simply execute
 
 ```$xslt
-kubectl create -f deploy/crds/broker_v1alpha1_activemqartemis_cr.yaml
+kubectl create -f deploy/crs/broker_v1alpha1_activemqartemis_cr.yaml
 ```
 
 at which point you should now see the statefulset 'example-activemqartemis-ss' under Overview in the web console.
@@ -267,7 +267,7 @@ broker 1
 To undeploy the broker we simply execute
 
 ```$xslt
-kubectl delete -f deploy/crds/broker_v1alpha1_activemqartemis_cr.yaml
+kubectl delete -f deploy/crs/broker_v1alpha1_activemqartemis_cr.yaml
 ```
 
 at which point you should no longer see the statefulset 'example-activemqartemis-ss' under Overview in the web console.
@@ -316,7 +316,7 @@ via the operator FIRST. With the running broker cluster you can utilize the incl
 create an address on every RUNNING broker via:
 
 ```$xslt
-kubectl create -f deploy/crds/broker_v1alpha1_activemqartemisaddress_cr.yaml
+kubectl create -f deploy/crs/broker_v1alpha1_activemqartemisaddress_cr.yaml
 ```
 
 This will create an address 'myAddress0' with an 'anycast' routed queue named 'myQueue0' on every RUNNING broker. NOTE
@@ -328,7 +328,7 @@ the operator. This requires further development.
 Deleting a queue deployed via an ActiveMQArtemisAddress custom resource is straightforward:
 
 ```$xslt
-kubectl delete -f deploy/crds/broker_v1alpha1_activemqartemisaddress_cr.yaml
+kubectl delete -f deploy/crs/broker_v1alpha1_activemqartemisaddress_cr.yaml
 ```
 
 ## Draining messages on scale down

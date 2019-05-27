@@ -1,33 +1,32 @@
 package activemqartemis
 
-
 import (
 	"context"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
-	"k8s.io/apimachinery/pkg/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 const (
-	statefulSetSizeUpdated 			= 1 << 0
+	statefulSetSizeUpdated          = 1 << 0
 	statefulSetClusterConfigUpdated = 1 << 1
-	statefulSetSSLConfigUpdated 	= 1 << 2
+	statefulSetSSLConfigUpdated     = 1 << 2
 )
 
 type ContainerRunningState struct {
-	s 				fsm.State
-	namespacedName	types.NamespacedName
-	parentFSM		*ActiveMQArtemisFSM
+	s              fsm.State
+	namespacedName types.NamespacedName
+	parentFSM      *ActiveMQArtemisFSM
 }
 
 func MakeContainerRunningState(_parentFSM *ActiveMQArtemisFSM, _namespacedName types.NamespacedName) ContainerRunningState {
 
 	rs := ContainerRunningState{
-		s:					fsm.MakeState(ContainerRunning, ContainerRunningID),
-		namespacedName: 	_namespacedName,
-		parentFSM: 	_parentFSM,
+		s:              fsm.MakeState(ContainerRunning, ContainerRunningID),
+		namespacedName: _namespacedName,
+		parentFSM:      _parentFSM,
 	}
 
 	return rs
@@ -59,7 +58,7 @@ func (rs *ContainerRunningState) Update() (error, int) {
 	reqLogger := log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
 	reqLogger.Info("Updating ContainerRunningState")
 
-	var err 		error = nil
+	var err error = nil
 	var nextStateID int = ContainerRunningID
 	var statefulSetUpdates uint32 = 0
 
@@ -109,15 +108,15 @@ func remove(s []corev1.EnvVar, i int) []corev1.EnvVar {
 
 func (rs *ContainerRunningState) clusterConfigSyncCausedUpdateOn(currentStatefulSet *appsv1.StatefulSet) bool {
 
-	foundClustered 				:= false
-	foundClusterUser 			:= false
-	foundClusterPassword 		:= false
+	foundClustered := false
+	foundClusterUser := false
+	foundClusterPassword := false
 
-	clusteredNeedsUpdate 		:= false
-	clusterUserNeedsUpdate 		:= false
-	clusterPasswordNeedsUpdate 	:= false
+	clusteredNeedsUpdate := false
+	clusterUserNeedsUpdate := false
+	clusterPasswordNeedsUpdate := false
 
-	statefulSetUpdated 			:= false
+	statefulSetUpdated := false
 
 	// TODO: Remove yuck
 	// ensure password and username are valid if can't via openapi validation?
@@ -191,7 +190,7 @@ func (rs *ContainerRunningState) clusterConfigSyncCausedUpdateOn(currentStateful
 	} else {
 
 		for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
-			for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env)-1; j >= 0; j-- {
+			for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
 				if "AMQ_CLUSTERED" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name ||
 					"AMQ_CLUSTER_USER" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name ||
 					"AMQ_CLUSTER_PASSWORD" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name {
@@ -207,19 +206,19 @@ func (rs *ContainerRunningState) clusterConfigSyncCausedUpdateOn(currentStateful
 
 func (rs *ContainerRunningState) sslConfigSyncCausedUpdateOn(currentStatefulSet *appsv1.StatefulSet) bool {
 
-	foundKeystore 					:= false
-	foundKeystorePassword 			:= false
-	foundKeystoreTruststoreDir 		:= false
-	foundTruststore 				:= false
-	foundTruststorePassword 		:= false
+	foundKeystore := false
+	foundKeystorePassword := false
+	foundKeystoreTruststoreDir := false
+	foundTruststore := false
+	foundTruststorePassword := false
 
-	keystoreNeedsUpdate 			:= false
-	keystorePasswordNeedsUpdate 	:= false
+	keystoreNeedsUpdate := false
+	keystorePasswordNeedsUpdate := false
 	keystoreTruststoreDirNeedsUpdate := false
-	truststoreNeedsUpdate 			:= false
-	truststorePasswordNeedsUpdate 	:= false
+	truststoreNeedsUpdate := false
+	truststorePasswordNeedsUpdate := false
 
-	statefulSetUpdated 				:= false
+	statefulSetUpdated := false
 
 	// TODO: Remove yuck
 	// ensure password and username are valid if can't via openapi validation?
@@ -293,7 +292,7 @@ func (rs *ContainerRunningState) sslConfigSyncCausedUpdateOn(currentStatefulSet 
 	} else {
 
 		for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
-			for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env)-1; j >= 0; j-- {
+			for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
 				if "AMQ_KEYSTORE" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name ||
 					"AMQ_KEYSTORE_PASSWORD" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name ||
 					"AMQ_KEYSTORE_TRUSTSTORE_DIR" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name {
@@ -358,7 +357,7 @@ func (rs *ContainerRunningState) sslConfigSyncCausedUpdateOn(currentStatefulSet 
 	} else {
 
 		for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
-			for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env)-1; j >= 0; j-- {
+			for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
 				if "AMQ_TRUSTSTORE" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name ||
 					"AMQ_TRUSTSTORE_PASSWORD" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name {
 					currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
@@ -371,10 +370,10 @@ func (rs *ContainerRunningState) sslConfigSyncCausedUpdateOn(currentStatefulSet 
 	if statefulSetUpdated {
 		rs.sslConfigSyncEnsureSecretVolumeMountExists(currentStatefulSet)
 
-		if ((rs.parentFSM.customResource.Spec.SSLConfig.KeyStorePassword != "" &&
+		if (rs.parentFSM.customResource.Spec.SSLConfig.KeyStorePassword != "" &&
 			rs.parentFSM.customResource.Spec.SSLConfig.KeystoreFilename != "") ||
 			(rs.parentFSM.customResource.Spec.SSLConfig.TrustStorePassword != "" &&
-			rs.parentFSM.customResource.Spec.SSLConfig.TrustStoreFilename != "")) {
+				rs.parentFSM.customResource.Spec.SSLConfig.TrustStoreFilename != "") {
 			for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
 				currentStatefulSet.Spec.Template.Spec.Containers[i].LivenessProbe.HTTPGet.Scheme = corev1.URISchemeHTTPS
 			}

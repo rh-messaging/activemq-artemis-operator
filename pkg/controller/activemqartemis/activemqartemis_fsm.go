@@ -16,11 +16,11 @@ const (
 
 // IDs of states
 const (
-	InvalidState				= -1
-	CreatingK8sResourcesID   	= 0
+	InvalidState           = -1
+	CreatingK8sResourcesID = 0
 	//ConfiguringEnvironment = "configuring_broker_environment"
 	//CreatingContainer      = "creating_container"
-	ContainerRunningID       	= 1
+	ContainerRunningID          = 1
 	NumActiveMQArtemisFSMStates = 2
 )
 

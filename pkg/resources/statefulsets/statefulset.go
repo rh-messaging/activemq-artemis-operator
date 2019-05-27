@@ -78,7 +78,7 @@ var log = logf.Log.WithName("package statefulsets")
 
 const (
 	graceTime        = 30
-	HttpLivenessPort = 8161
+	TCPLivenessPort = 8161
 )
 
 func makeVolumeMounts(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.VolumeMount {
@@ -440,8 +440,8 @@ func newPodTemplateSpecForCR(cr *brokerv1alpha1.ActiveMQArtemis) corev1.PodTempl
 			InitialDelaySeconds: graceTime,
 			TimeoutSeconds:      5,
 			Handler: corev1.Handler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Port: intstr.FromInt(HttpLivenessPort),
+				TCPSocket: &corev1.TCPSocketAction{
+					Port: intstr.FromInt(TCPLivenessPort),
 				},
 			},
 		},

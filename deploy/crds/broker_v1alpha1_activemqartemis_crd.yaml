@@ -33,7 +33,7 @@ spec:
               type: string
             size:
               type: integer
-              minimum: 1
+              minimum: 0
               maximum: 16
               description: The number of activemqartemis pods to deploy
             persistent:

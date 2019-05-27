@@ -8,15 +8,15 @@ type IState interface {
 }
 
 type State struct {
-	name   	string
-	id		int
-	active 	bool
+	name   string
+	id     int
+	active bool
 }
 
 func MakeState(n string, i int) State {
 	return State{
-		name: n,
-		id: i,
+		name:   n,
+		id:     i,
 		active: false,
 	}
 }
@@ -29,7 +29,7 @@ func NewState(n string, i int) *State {
 type IMachine interface {
 	Add(s *IState)
 	Remove(s *IState)
-//	ID() int
+	//	ID() int
 	Enter(previousStateID int) error
 	Update() (error, int)
 	Transition() error
@@ -38,13 +38,13 @@ type IMachine interface {
 
 type Machine struct {
 	//id					int
-	currentStateID  	int
-	nextStateID     	int
-	previousStateID 	int
-	numStates          	int
-	active             	bool
-	states             	[]*IState
-	currentState		IState
+	currentStateID  int
+	nextStateID     int
+	previousStateID int
+	numStates       int
+	active          bool
+	states          []*IState
+	currentState    IState
 }
 
 func MakeMachine() Machine {

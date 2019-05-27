@@ -39,7 +39,7 @@ func NewRouteForCR(cr *v1alpha1.ActiveMQArtemis, target string) *routev1.Route {
 			},
 			To: routev1.RouteTargetReference{
 				Kind: "Service",
-				Name: "hs",
+				Name: "amq-broker-amq-headless",
 			},
 		},
 	}

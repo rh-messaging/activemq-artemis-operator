@@ -64,12 +64,12 @@ Use the console to `Create Broker` or create one manually as seen below. Ensure 
 custom resource file.
 
 ```bash
-$ oc create -f deploy/crds/broker_v1alpha1_activemqartemis_cr.yaml
+$ oc create -f deploy/crs/broker_v1alpha1_activemqartemis_cr.yaml
 ```
 
 ## Clean up an ActiveMQ Artemis deployment
 
 ```bash
-oc delete -f deploy/crds/broker_v1alpha1_activemqartemis_cr.yaml
+oc delete -f deploy/crs/broker_v1alpha1_activemqartemis_cr.yaml
 ```
 
