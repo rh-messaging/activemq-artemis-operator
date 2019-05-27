@@ -239,6 +239,8 @@ func getPropertyForCR(propName string, cr *brokerv1alpha1.ActiveMQArtemis, defau
 	case "AMQ_EXTRA_ARGS":
 		if cr.Spec.Aio {
 			result = "--aio"
+		} else {
+			result = "--nio"
 		}
 	}
 	return result
