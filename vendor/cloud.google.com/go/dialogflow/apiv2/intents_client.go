@@ -60,6 +60,7 @@ func defaultIntentsCallOptions() *IntentsCallOptions {
 		{"default", "idempotent"}: {
 			gax.WithRetry(func() gax.Retryer {
 				return gax.OnCodes([]codes.Code{
+					codes.DeadlineExceeded,
 					codes.Unavailable,
 				}, gax.Backoff{
 					Initial:    100 * time.Millisecond,
@@ -135,7 +136,7 @@ type IntentsClient struct {
 //
 // For more information about intents, see the
 // [Dialogflow
-// documentation](https://cloud.google.com/dialogflow-enterprise/docs/intents-overview).
+// documentation](https://cloud.google.com/dialogflow/docs/intents-overview).
 func NewIntentsClient(ctx context.Context, opts ...option.ClientOption) (*IntentsClient, error) {
 	conn, err := transport.DialGRPC(ctx, append(defaultIntentsClientOptions(), opts...)...)
 	if err != nil {

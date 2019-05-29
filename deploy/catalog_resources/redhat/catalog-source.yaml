@@ -166,8 +166,12 @@ items:
                       displayName: Master URL
                       path: masterURL
                     - description: Path to a kubeconfig. Only required if out-of-cluster.
-                      displayName: Queue Name
+                      displayName: Kube config
                       path: kubeconfig
+                    - description: The controller only handles StatefulSets in a single namespace instead of across all namespaces
+                      displayName: Local Only
+                      path: localOnly
+          
           
             install:
               strategy: deployment

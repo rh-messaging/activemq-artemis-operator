@@ -55,6 +55,7 @@ func defaultContextsCallOptions() *ContextsCallOptions {
 		{"default", "idempotent"}: {
 			gax.WithRetry(func() gax.Retryer {
 				return gax.OnCodes([]codes.Code{
+					codes.DeadlineExceeded,
 					codes.Unavailable,
 				}, gax.Backoff{
 					Initial:    100 * time.Millisecond,
@@ -110,7 +111,7 @@ type ContextsClient struct {
 //
 // For more information about contexts, see the
 // Dialogflow
-// documentation (at https://cloud.google.com/dialogflow-enterprise/docs/contexts-overview).
+// documentation (at https://cloud.google.com/dialogflow/docs/contexts-overview).
 func NewContextsClient(ctx context.Context, opts ...option.ClientOption) (*ContextsClient, error) {
 	conn, err := transport.DialGRPC(ctx, append(defaultContextsClientOptions(), opts...)...)
 	if err != nil {

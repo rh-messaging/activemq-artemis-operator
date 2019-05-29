@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	"github.com/RHsyseng/operator-utils/pkg/olm"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -31,7 +32,7 @@ type CommonConfig struct {
 // ActiveMQArtemisStatus defines the observed state of ActiveMQArtemis
 // +k8s:openapi-gen=true
 type ActiveMQArtemisStatus struct {
-	PodStatus AMQPodStatus `json:"pods"`
+	PodStatus olm.DeploymentStatus `json:"pods"`
 }
 
 type SSLConfig struct {
@@ -70,9 +71,4 @@ type ActiveMQArtemisList struct {
 
 func init() {
 	SchemeBuilder.Register(&ActiveMQArtemis{}, &ActiveMQArtemisList{})
-}
-
-type AMQPodStatus struct {
-	Ready       []string `json:"ready,omitempty"`
-	Unavailable []string `json:"unavailable,omitempty"`
 }

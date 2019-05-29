@@ -2,14 +2,16 @@ package activemqartemis
 
 import (
 	"context"
+	"github.com/RHsyseng/operator-utils/pkg/olm"
 	brokerv1alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
 	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
 	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
-	"reflect"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"reflect"
+
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"strconv"
 	"time"
@@ -157,29 +159,18 @@ func (rs *CreatingK8sResourcesState) Exit() error {
 	return nil
 }
 
-/*func getPodNamesObj(pods []corev1.Pod) brokerv1alpha1.AMQPodNames {
-var ready, unavailable, names []string
-ready = append(ready, "---")
-unavailable = append(unavailable, "---")
-
-return brokerv1alpha1.AMQPodNames{
-PodName:     names,
-Ready:       ready,
-Unavailable: unavailable,
-}
-}
-*/
 
 func updataPodStatus(rs *CreatingK8sResourcesState) error {
 
 	reqLogger := log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
-	reqLogger.Info("Updating Pod Satus")
+	reqLogger.Info("Updating pods status")
 
-	podStatus := getPodDeploymentStatus(rs.parentFSM.r, rs.parentFSM.customResource)
+	podStatus := getPodStatus(rs.parentFSM.r, rs.parentFSM.customResource)
 
 	reqLogger.Info("PpodStatus are to be updated.............................", "info:", podStatus)
 	reqLogger.Info("Ready Count........................", "info:", len(podStatus.Ready))
-	reqLogger.Info("Unavailable Count.............................", "info:", len(podStatus.Unavailable))
+	reqLogger.Info("Stopped Count........................", "info:", len(podStatus.Stopped))
+	reqLogger.Info("Starting Count........................", "info:", len(podStatus.Starting))
 
 	if !reflect.DeepEqual(podStatus, rs.parentFSM.customResource.Status.PodStatus) {
 
@@ -187,51 +178,32 @@ func updataPodStatus(rs *CreatingK8sResourcesState) error {
 
 		err := rs.parentFSM.r.client.Status().Update(context.TODO(), rs.parentFSM.customResource)
 		if err != nil {
-			reqLogger.Error(err, "Failed to update pod status")
+			reqLogger.Error(err, "Failed to update pods status")
 			return err
 		}
-		reqLogger.Info("Pod names updated")
+		reqLogger.Info("Pods status updated")
 		return nil
 	}
 
 	return nil
 
 }
-func getPodDeploymentStatus(r *ReconcileActiveMQArtemis, instance *brokerv1alpha1.ActiveMQArtemis) brokerv1alpha1.AMQPodStatus {
+
+
+
+func getPodStatus(r *ReconcileActiveMQArtemis, instance *brokerv1alpha1.ActiveMQArtemis) olm.DeploymentStatus {
 	// List the pods for this deployment
-	log.Info("making", " method", " call")
-
-	var ready, unavailable []string
-	var startCnt int32 = 0
-	var readyCnt int32 = 0
-
-	depFound := &appsv1.StatefulSet{}
-	err := r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name + "-ss", Namespace: instance.Namespace}, depFound)
+	var status olm.DeploymentStatus
+	sfsFound := &appsv1.StatefulSet{}
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name + "-ss", Namespace: instance.Namespace}, sfsFound)
 	if err == nil {
-		log.Info("--Replicas--------------", "ReadyReplicas: ", depFound.Status.ReadyReplicas, " Total Replicas ", depFound.Status.Replicas)
-		readyCnt = depFound.Status.ReadyReplicas
-		startCnt = depFound.Status.Replicas - readyCnt
+		status = olm.GetSingleStatefulSetStatus(*sfsFound)
 	} else {
 		dsFound := &appsv1.DaemonSet{}
 		err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, dsFound)
 		if err == nil {
-			log.Info("daemonset exist:", " replias: ", dsFound.Status.NumberReady, " - ", dsFound.Status.NumberAvailable)
-			readyCnt = dsFound.Status.NumberReady
-			startCnt = dsFound.Status.NumberAvailable - readyCnt
+			status = olm.GetSingleDaemonSetStatus(*dsFound)
 		}
 	}
-	for i := int32(0); i < startCnt; {
-		unavailable = append(unavailable, "pod")
-		i++
-	}
-	for i := int32(0); i < readyCnt; {
-		ready = append(ready, "pod")
-		i++
-	}
-	return brokerv1alpha1.AMQPodStatus{
-
-		Ready:       ready,
-		Unavailable: unavailable,
-	}
+	return status
 }
-

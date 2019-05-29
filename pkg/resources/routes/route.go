@@ -85,7 +85,7 @@ func RetrieveRoute(cr *v1alpha1.ActiveMQArtemis, namespacedName types.Namespaced
 	// Check if the headless route already exists
 	if err = client.Get(context.TODO(), namespacedName, route); err != nil {
 		if errors.IsNotFound(err) {
-			reqLogger.Error(err, "Route Not Found", "Namespace", cr.Namespace, "Name", cr.Name)
+			//reqLogger.Error(err, "Route Not Found", "Namespace", cr.Namespace, "Name", cr.Name)
 		} else {
 			reqLogger.Error(err, "Route found", "Namespace", cr.Namespace, "Name", cr.Name)
 		}

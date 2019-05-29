@@ -63,6 +63,7 @@ func defaultEntityTypesCallOptions() *EntityTypesCallOptions {
 		{"default", "idempotent"}: {
 			gax.WithRetry(func() gax.Retryer {
 				return gax.OnCodes([]codes.Code{
+					codes.DeadlineExceeded,
 					codes.Unavailable,
 				}, gax.Backoff{
 					Initial:    100 * time.Millisecond,
@@ -137,7 +138,7 @@ type EntityTypesClient struct {
 //
 // For more information about entity types, see the
 // [Dialogflow
-// documentation](https://cloud.google.com/dialogflow-enterprise/docs/entities-overview).
+// documentation](https://cloud.google.com/dialogflow/docs/entities-overview).
 func NewEntityTypesClient(ctx context.Context, opts ...option.ClientOption) (*EntityTypesClient, error) {
 	conn, err := transport.DialGRPC(ctx, append(defaultEntityTypesClientOptions(), opts...)...)
 	if err != nil {

@@ -48,6 +48,7 @@ package unix
 #include <sys/utsname.h>
 #include <sys/wait.h>
 #include <linux/bpf.h>
+#include <linux/capability.h>
 #include <linux/errqueue.h>
 #include <linux/fanotify.h>
 #include <linux/filter.h>
@@ -803,6 +804,8 @@ const (
 )
 
 type Sigset_t C.sigset_t
+
+const _C__NSIG = C._NSIG
 
 type SignalfdSiginfo C.struct_signalfd_siginfo
 
@@ -1988,4 +1991,16 @@ const (
 	BPF_FD_TYPE_KRETPROBE               = C.BPF_FD_TYPE_KRETPROBE
 	BPF_FD_TYPE_UPROBE                  = C.BPF_FD_TYPE_UPROBE
 	BPF_FD_TYPE_URETPROBE               = C.BPF_FD_TYPE_URETPROBE
+)
+
+// Capabilities
+
+type CapUserHeader C.struct___user_cap_header_struct
+
+type CapUserData C.struct___user_cap_data_struct
+
+const (
+	LINUX_CAPABILITY_VERSION_1 = C._LINUX_CAPABILITY_VERSION_1
+	LINUX_CAPABILITY_VERSION_2 = C._LINUX_CAPABILITY_VERSION_2
+	LINUX_CAPABILITY_VERSION_3 = C._LINUX_CAPABILITY_VERSION_3
 )
