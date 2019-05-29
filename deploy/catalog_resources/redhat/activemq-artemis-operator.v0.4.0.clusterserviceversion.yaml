@@ -47,7 +47,21 @@ metadata:
        			"queueName": "myQueue0",
        			"routingType": "anycast"
        		}
-       	}
+       	},
+      {
+      	"apiVersion": "broker.amq.io/v1alpha1",
+      	"kind": "ActiveMQArtemisScaledown",
+      	"metadata": {
+      		"name": "example-activemqartemisscaledown",
+      		"labels": {
+      			"ActiveMQArtemis": "example-activemqartemis",
+      			"application": "example-activemqartemis-app"
+      		}
+      	},
+      	"spec": {
+      		"localOnly": true
+      	}
+      }
        ]
 
   labels:
@@ -103,12 +117,17 @@ spec:
           - kind: Deployment
             version: v1
         specDescriptors:
-          - description: The desired number of member pods for ActiveMQArtemis mesh
+          - description: The desired number of member pods for ActiveMQArtemis
             displayName: Size
             path: size
-          - description: The Image
-            displayName: Image
-            path: image
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:podCount'
+        statusDescriptors:
+          - description: The current pods
+            displayName: Pods Status
+            path: pods
+            x-descriptors:
+              - "urn:alm:descriptor:com.tectonic.ui:podStatuses"
       - name: activemqartemisaddresses.broker.amq.io
         version: v1alpha1
         kind: ActiveMQArtemisAddress
@@ -127,6 +146,21 @@ spec:
           - description: The Routing Type
             displayName: Routing Type
             path: routingType
+      - name: activemqartemisscaledowns.broker.amq.io
+        version: v1alpha1
+        kind: ActiveMQArtemisScaledown
+        description: amq-broker-scaledown-controller-openshift-deployment
+        displayName: ActiveMQ Artemis scaledown controller
+        specDescriptors:
+          - description: The address of the Kubernetes API server.
+            displayName: Master URL
+            path: masterURL
+          - description: Path to a kubeconfig. Only required if out-of-cluster.
+            displayName: Kube config
+            path: kubeconfig
+          - description: The controller only handles StatefulSets in a single namespace instead of across all namespaces
+            displayName: Local Only
+            path: localOnly
 
 
   install:
