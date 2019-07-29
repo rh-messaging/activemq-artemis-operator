@@ -81,7 +81,7 @@ exec /activemq-artemis-operator/activemq-artemis-operator
 ## Deploying the broker
 
 Now that the operator is running and listening for changes related to our crd we can deploy our basic broker custom
-resource instance for 'example-activemqartemis' from [broker_v1alpha1_activemqartemis_cr.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.6.3/deploy/crds/broker_v1alpha1_activemqartemis_cr.yaml)
+resource instance for 'example-activemqartemis' from [broker_v1alpha1_activemqartemis_cr.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.6.3/deploy/crs/broker_v1alpha1_activemqartemis_cr.yaml)
 which looks like
 
 ```$xslt
@@ -95,7 +95,7 @@ spec:
   image: registry.redhat.io/amq7/amq-broker:7.4
 ```  
 
-Note in particular the [spec.image:](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.6.3/deploy/crds/broker_v1alpha1_activemqartemis_cr.yaml#L8)
+Note in particular the [spec.image:](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.6.3/deploy/crs/broker_v1alpha1_activemqartemis_cr.yaml#L8)
 which identifies the container image to use to launch the AMQ Broker. Ignore the size as its unused at the moment.
 
 To deploy the broker we simply execute
@@ -284,20 +284,19 @@ activemqartemis.broker.amq.io "example-activemqartemis" deleted
 Very basic, non-robust, functionality for adding and removing queues via custom resource definitions has been added. Of interest are two
 additional yaml files, [broker_v1alpha1_activemqartemisaddress_crd.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/master/deploy/crds/broker_v1alpha1_activemqartemisaddress_crd.yaml)
 which provides the custom resource definition for an ActiveMQArtemisAddress and an example implementation of a custom
-resource based on this crd, [broker_v1alpha1_activemqartemisaddress_cr.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/master/deploy/crds/broker_v1alpha1_activemqartemisaddress_cr.yaml)
+resource based on this crd, [broker_v1alpha1_activemqartemisaddress_cr.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/master/deploy/crs/broker_v1alpha1_activemqartemisaddress_cr.yaml)
 
 In the implemented custom resource you will note the following of interest:
 
 ```$xslt
 spec:
   # Add fields here
-  statefulsetName: example-activemqartemis-ss
   addressName: myAddress0
   queueName: myQueue0
   routingType: anycast
 ```
 
-Note that for the moment in this initial implementation each of the four fields; statefulsetName, addressName, queueName,
+Note that for the moment in this initial implementation each of the three fields; addressName, queueName,
 and routingType are required as per the [crd](https://github.com/rh-messaging/activemq-artemis-operator/blob/master/deploy/crds/broker_v1alpha1_activemqartemisaddress_crd.yaml#L35-L39).
 This will possibly be relaxed in the future when the feature is more mature.
 

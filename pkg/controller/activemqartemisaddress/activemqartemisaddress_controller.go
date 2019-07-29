@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	brokerv1alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
+	aa "github.com/rh-messaging/activemq-artemis-operator/pkg/controller/activemqartemis"
 	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 	mgmt "github.com/roddiekieley/activemq-artemis-management"
 	corev1 "k8s.io/api/core/v1"
@@ -183,22 +184,27 @@ func getPodBrokers(instance *brokerv1alpha1.ActiveMQArtemisAddress, request reco
 	var artemisArray []*mgmt.Artemis = nil
 	var err error = nil
 
+	ssName, err := aa.GetStatefulSetName(request.Namespace)
+	if err != nil {
+		reqLogger.Error(err, "Failed to ge the statefulset name")
+	}
+
 	// Check to see if the statefulset already exists
 	ssNamespacedName := types.NamespacedName{
-		Name:      instance.Spec.StatefulsetName,
+		Name:      ssName + "-ss",
 		Namespace: request.Namespace,
 	}
 
-	statefulset, err := ss.RetrieveStatefulSet(instance.Spec.StatefulsetName, ssNamespacedName, client)
+	statefulset, err := ss.RetrieveStatefulSet(ssName, ssNamespacedName, client)
 	if nil != err {
-		reqLogger.Info("Statefulset: " + instance.Spec.StatefulsetName + " not found")
+		reqLogger.Info("Statefulset: " + ssNamespacedName.Name + " not found")
 	} else {
-		reqLogger.Info("Statefulset: " + instance.Spec.StatefulsetName + " found")
+		reqLogger.Info("Statefulset: " + ssNamespacedName.Name + " found")
 		fmt.Printf("%v+", statefulset)
 
 		pod := &corev1.Pod{}
 		podNamespacedName := types.NamespacedName{
-			Name:      instance.Spec.StatefulsetName + "-0",
+			Name:      statefulset.Name + "-0",
 			Namespace: request.Namespace,
 		}
 
@@ -207,7 +213,7 @@ func getPodBrokers(instance *brokerv1alpha1.ActiveMQArtemisAddress, request reco
 		var replicas int = int(*statefulset.Spec.Replicas)
 		artemisArray = make([]*mgmt.Artemis, 0, replicas)
 		for i = 0; i < replicas; i++ {
-			s := instance.Spec.StatefulsetName + "-" + strconv.Itoa(i)
+			s := statefulset.Name + "-" + strconv.Itoa(i)
 			podNamespacedName.Name = s
 			if err = client.Get(context.TODO(), podNamespacedName, pod); err != nil {
 				if errors.IsNotFound(err) {

@@ -2,6 +2,8 @@ package activemqartemis
 
 import (
 	"context"
+	syserr "errors"
+
 	brokerv1alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -21,6 +23,15 @@ var log = logf.Log.WithName("controller_activemqartemis")
 
 //var namespacedNameToFSM map[types.NamespacedName]*fsm.Machine
 var namespacedNameToFSM = make(map[types.NamespacedName]*ActiveMQArtemisFSM)
+
+func GetStatefulSetName(namespace string) (string, error) {
+	for k := range namespacedNameToFSM {
+		if k.Namespace == namespace {
+			return k.Name, nil
+		}
+	}
+	return "", syserr.New("Couldn't find the StatefulSet in ns " + namespace)
+}
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller

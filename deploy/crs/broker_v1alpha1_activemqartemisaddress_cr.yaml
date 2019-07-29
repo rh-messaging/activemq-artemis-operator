@@ -7,7 +7,6 @@ metadata:
     application: example-activemqartemis-app
 spec:
   # Add fields here
-  statefulsetName: example-activemqartemis-ss
   addressName: myAddress0
   queueName: myQueue0
   routingType: anycast

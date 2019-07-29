@@ -11,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -511,7 +510,6 @@ func RetrieveStatefulSet(statefulsetName string, namespacedName types.Namespaced
 
 	// TODO: Remove this hack
 	var crName string = statefulsetName
-	strings.TrimSuffix(crName, "-ss")
 
 	labels := selectors.LabelsForActiveMQArtemis(crName)
 

@@ -24,8 +24,6 @@ spec:
           type: object
         spec:
           properties:
-            statefulsetName:
-              type: string
             addressName:
               type: string
             queueName:
@@ -36,7 +34,6 @@ spec:
             - addressName
             - queueName
             - routingType
-            - statefulsetName
           type: object
         status:
           type: object
