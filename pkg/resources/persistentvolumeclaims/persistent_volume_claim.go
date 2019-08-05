@@ -2,7 +2,7 @@ package persistentvolumeclaims
 
 import (
 	"context"
-	brokerv1alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
+	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -18,7 +18,7 @@ import (
 
 var log = logf.Log.WithName("package persistentvolumeclaims")
 
-func newPersistentVolumeClaimForCR(cr *brokerv1alpha1.ActiveMQArtemis) *corev1.PersistentVolumeClaim {
+func newPersistentVolumeClaimForCR(cr *brokerv2alpha1.ActiveMQArtemis) *corev1.PersistentVolumeClaim {
 
 	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
 
@@ -45,7 +45,7 @@ func newPersistentVolumeClaimForCR(cr *brokerv1alpha1.ActiveMQArtemis) *corev1.P
 
 	return pvc
 }
-func NewPersistentVolumeClaimArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis, arrayLength int) *[]corev1.PersistentVolumeClaim {
+func NewPersistentVolumeClaimArrayForCR(cr *brokerv2alpha1.ActiveMQArtemis, arrayLength int) *[]corev1.PersistentVolumeClaim {
 
 	pvcArray := make([]corev1.PersistentVolumeClaim, 0, arrayLength)
 
@@ -58,7 +58,7 @@ func NewPersistentVolumeClaimArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis, arra
 	return &pvcArray
 }
 
-func CreatePersistentVolumeClaim(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*corev1.PersistentVolumeClaim, error) {
+func CreatePersistentVolumeClaim(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*corev1.PersistentVolumeClaim, error) {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
@@ -85,8 +85,8 @@ func CreatePersistentVolumeClaim(cr *brokerv1alpha1.ActiveMQArtemis, client clie
 	return brokerPvc, err
 }
 
-//func (rs *CreatingK8sResourcesState) RetrievePersistentVolumeClaim(instance *brokerv1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, r *ReconcileActiveMQArtemis) (*corev1.PersistentVolumeClaim, error) {
-func RetrievePersistentVolumeClaim(instance *brokerv1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.PersistentVolumeClaim, error) {
+//func (rs *CreatingK8sResourcesState) RetrievePersistentVolumeClaim(instance *brokerv2alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, r *ReconcileActiveMQArtemis) (*corev1.PersistentVolumeClaim, error) {
+func RetrievePersistentVolumeClaim(instance *brokerv2alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.PersistentVolumeClaim, error) {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", instance.Name)

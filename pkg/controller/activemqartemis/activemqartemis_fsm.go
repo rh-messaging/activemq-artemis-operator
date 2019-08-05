@@ -1,7 +1,7 @@
 package activemqartemis
 
 import (
-	brokerv1alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
+	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -55,12 +55,12 @@ const (
 type ActiveMQArtemisFSM struct {
 	m              fsm.IMachine
 	namespacedName types.NamespacedName
-	customResource *brokerv1alpha1.ActiveMQArtemis
+	customResource *brokerv2alpha1.ActiveMQArtemis
 	r              *ReconcileActiveMQArtemis
 }
 
 // Need to deep-copy the instance?
-func MakeActiveMQArtemisFSM(instance *brokerv1alpha1.ActiveMQArtemis, _namespacedName types.NamespacedName, r *ReconcileActiveMQArtemis) ActiveMQArtemisFSM {
+func MakeActiveMQArtemisFSM(instance *brokerv2alpha1.ActiveMQArtemis, _namespacedName types.NamespacedName, r *ReconcileActiveMQArtemis) ActiveMQArtemisFSM {
 
 	var creatingK8sResourceIState fsm.IState
 	var containerRunningIState fsm.IState
@@ -90,7 +90,7 @@ func MakeActiveMQArtemisFSM(instance *brokerv1alpha1.ActiveMQArtemis, _namespace
 	return amqbfsm
 }
 
-func NewActiveMQArtemisFSM(instance *brokerv1alpha1.ActiveMQArtemis, _namespacedName types.NamespacedName, r *ReconcileActiveMQArtemis) *ActiveMQArtemisFSM {
+func NewActiveMQArtemisFSM(instance *brokerv2alpha1.ActiveMQArtemis, _namespacedName types.NamespacedName, r *ReconcileActiveMQArtemis) *ActiveMQArtemisFSM {
 
 	amqbfsm := MakeActiveMQArtemisFSM(instance, _namespacedName, r)
 

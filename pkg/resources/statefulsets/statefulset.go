@@ -2,7 +2,7 @@ package statefulsets
 
 import (
 	"context"
-	brokerv1alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
+	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	pvc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/persistentvolumeclaims"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
 	corev1 "k8s.io/api/core/v1"
@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -26,10 +27,10 @@ const (
 	TCPLivenessPort = 8161
 )
 
-func makeVolumeMounts(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.VolumeMount {
+func makeVolumeMounts(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.VolumeMount {
 
 	volumeMounts := []corev1.VolumeMount{}
-	if cr.Spec.Persistent {
+	if cr.Spec.DeploymentPlan.PersistenceEnabled {
 		persistentCRVlMnt := makePersistentVolumeMount(cr)
 		volumeMounts = append(volumeMounts, persistentCRVlMnt...)
 	}
@@ -41,10 +42,10 @@ func makeVolumeMounts(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.VolumeMount {
 
 }
 
-func makeVolumes(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.Volume {
+func makeVolumes(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.Volume {
 
 	volume := []corev1.Volume{}
-	if cr.Spec.Persistent {
+	if cr.Spec.DeploymentPlan.PersistenceEnabled {
 		basicCRVolume := makePersistentVolume(cr)
 		volume = append(volume, basicCRVolume...)
 	}
@@ -55,7 +56,7 @@ func makeVolumes(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.Volume {
 	return volume
 }
 
-func makePersistentVolume(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.Volume {
+func makePersistentVolume(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.Volume {
 
 	volume := []corev1.Volume{
 		{
@@ -72,14 +73,14 @@ func makePersistentVolume(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.Volume {
 	return volume
 }
 
-func makeSSLSecretVolume(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.Volume {
+func makeSSLSecretVolume(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.Volume {
 
 	volume := []corev1.Volume{
 		{
 			Name: "broker-secret-volume",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: cr.Spec.SSLConfig.SecretName,
+					SecretName: "TODO-FIX-REPLACE",//cr.Spec.SSLConfig.SecretName,
 				},
 			},
 		},
@@ -88,7 +89,7 @@ func makeSSLSecretVolume(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.Volume {
 	return volume
 }
 
-func makePersistentVolumeMount(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.VolumeMount {
+func makePersistentVolumeMount(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.VolumeMount {
 
 	dataPath := getPropertyForCR("AMQ_DATA_DIR", cr, "/opt/"+cr.Name+"/data")
 	volumeMounts := []corev1.VolumeMount{
@@ -101,7 +102,7 @@ func makePersistentVolumeMount(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.Volu
 	return volumeMounts
 }
 
-func makeSSLVolumeMount(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.VolumeMount {
+func makeSSLVolumeMount(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.VolumeMount {
 
 	volumeMounts := []corev1.VolumeMount{
 		{
@@ -113,7 +114,7 @@ func makeSSLVolumeMount(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.VolumeMount
 	return volumeMounts
 }
 
-func makeEnvVarArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
+func makeEnvVarArrayForCR(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
 
 	reqLogger := log.WithName(cr.Name)
 	reqLogger.Info("Adding Env varibale ")
@@ -125,7 +126,7 @@ func makeEnvVarArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
 		envVarArrayForSSL := addEnvVarForSSL(cr)
 		envVar = append(envVar, envVarArrayForSSL...)
 	}
-	if cr.Spec.Persistent {
+	if cr.Spec.DeploymentPlan.PersistenceEnabled {
 		envVarArrayForPresistent := addEnvVarForPersistent(cr)
 		envVar = append(envVar, envVarArrayForPresistent...)
 	}
@@ -137,7 +138,7 @@ func makeEnvVarArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
 	return envVar
 }
 
-//func makeEnvVarArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
+//func makeEnvVarArrayForCR(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
 //return makeEnvVarArrayForBasicCR(cr)
 //}
 
@@ -145,50 +146,55 @@ func makeEnvVarArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
 var GLOBAL_AMQ_CLUSTER_USER string = ""
 var GLOBAL_AMQ_CLUSTER_PASSWORD string = ""
 
-func getPropertyForCR(propName string, cr *brokerv1alpha1.ActiveMQArtemis, defaultValue string) string {
+func getPropertyForCR(propName string, cr *brokerv2alpha1.ActiveMQArtemis, defaultValue string) string {
 
 	result := defaultValue
 	switch propName {
 	case "AMQ_USER":
-		if len(cr.Spec.CommonConfig.UserName) > 0 {
-			result = cr.Spec.CommonConfig.UserName
+		if len(cr.Spec.DeploymentPlan.User) > 0 {
+			result = cr.Spec.DeploymentPlan.User
 		}
 	case "AMQ_PASSWORD":
-		if len(cr.Spec.CommonConfig.Password) > 0 {
-			result = cr.Spec.CommonConfig.Password
+		if len(cr.Spec.DeploymentPlan.Password) > 0 {
+			result = cr.Spec.DeploymentPlan.Password
 		}
 	case "AMQ_CLUSTER_USER":
-		if len(cr.Spec.ClusterConfig.ClusterUserName) > 0 {
-			result = cr.Spec.ClusterConfig.ClusterUserName
+		if len(cr.Spec.DeploymentPlan.ClusterUser) > 0 {
+			result = cr.Spec.DeploymentPlan.ClusterUser
 			GLOBAL_AMQ_CLUSTER_USER = result
 		}
 	case "AMQ_CLUSTER_PASSWORD":
-		if len(cr.Spec.ClusterConfig.ClusterPassword) > 0 {
-			result = cr.Spec.ClusterConfig.ClusterPassword
+		if len(cr.Spec.DeploymentPlan.ClusterPassword) > 0 {
+			result = cr.Spec.DeploymentPlan.ClusterPassword
 			GLOBAL_AMQ_CLUSTER_PASSWORD = result
 		}
 	case "AMQ_KEYSTORE_TRUSTSTORE_DIR":
-		if checkSSLEnabled(cr) && len(cr.Spec.SSLConfig.SecretName) > 0 {
-			result = "/etc/amq-secret-volume"
+		//if checkSSLEnabled(cr) && len(cr.Spec.SSLConfig.SecretName) > 0 {
+		if false { // "TODO-FIX-REPLACE"
+			//result = "/etc/amq-secret-volume"
 		}
 	case "AMQ_TRUSTSTORE":
-		if checkSSLEnabled(cr) && len(cr.Spec.SSLConfig.SecretName) > 0 {
-			result = cr.Spec.SSLConfig.TrustStoreFilename
+		//if checkSSLEnabled(cr) && len(cr.Spec.SSLConfig.SecretName) > 0 {
+		if false { // "TODO-FIX-REPLACE"
+			//result = cr.Spec.SSLConfig.TrustStoreFilename
 		}
 	case "AMQ_TRUSTSTORE_PASSWORD":
-		if checkSSLEnabled(cr) && len(cr.Spec.SSLConfig.SecretName) > 0 {
-			result = cr.Spec.SSLConfig.TrustStorePassword
+		//if checkSSLEnabled(cr) && len(cr.Spec.SSLConfig.SecretName) > 0 {
+		if false { // "TODO-FIX-REPLACE"
+			//result = cr.Spec.SSLConfig.TrustStorePassword
 		}
 	case "AMQ_KEYSTORE":
-		if checkSSLEnabled(cr) && len(cr.Spec.SSLConfig.SecretName) > 0 {
-			result = cr.Spec.SSLConfig.KeystoreFilename
+		//if checkSSLEnabled(cr) && len(cr.Spec.SSLConfig.SecretName) > 0 {
+		if false { // "TODO-FIX-REPLACE"
+			//result = cr.Spec.SSLConfig.KeystoreFilename
 		}
 	case "AMQ_KEYSTORE_PASSWORD":
-		if checkSSLEnabled(cr) && len(cr.Spec.SSLConfig.SecretName) > 0 {
-			result = cr.Spec.SSLConfig.KeyStorePassword
+		//if checkSSLEnabled(cr) && len(cr.Spec.SSLConfig.SecretName) > 0 {
+		if false { // "TODO-FIX-REPLACE"
+			//result = cr.Spec.SSLConfig.KeyStorePassword
 		}
 	case "AMQ_EXTRA_ARGS":
-		if cr.Spec.Aio {
+		if "aio" == strings.ToLower(cr.Spec.DeploymentPlan.JournalType) {
 			result = "--aio"
 		} else {
 			result = "--nio"
@@ -197,7 +203,7 @@ func getPropertyForCR(propName string, cr *brokerv1alpha1.ActiveMQArtemis, defau
 	return result
 }
 
-func addEnvVarForBasic(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
+func addEnvVarForBasic(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
 
 	envVarArray := []corev1.EnvVar{
 		{
@@ -270,7 +276,7 @@ func addEnvVarForBasic(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
 	return envVarArray
 }
 
-func addEnvVarForPersistent(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
+func addEnvVarForPersistent(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
 
 	envVarArray := []corev1.EnvVar{
 		{
@@ -288,7 +294,7 @@ func addEnvVarForPersistent(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar 
 	return envVarArray
 }
 
-func addEnvVarForSSL(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
+func addEnvVarForSSL(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
 
 	envVarArray := []corev1.EnvVar{
 		{
@@ -321,7 +327,7 @@ func addEnvVarForSSL(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
 	return envVarArray
 
 }
-func addEnvVarForCluster(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
+func addEnvVarForCluster(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
 
 	envVarArray := []corev1.EnvVar{
 
@@ -345,14 +351,14 @@ func addEnvVarForCluster(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
 	return envVarArray
 }
 
-func newEnvVarArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis) *[]corev1.EnvVar {
+func newEnvVarArrayForCR(cr *brokerv2alpha1.ActiveMQArtemis) *[]corev1.EnvVar {
 
 	envVarArray := makeEnvVarArrayForCR(cr)
 
 	return &envVarArray
 }
 
-func newPodTemplateSpecForCR(cr *brokerv1alpha1.ActiveMQArtemis) corev1.PodTemplateSpec {
+func newPodTemplateSpecForCR(cr *brokerv2alpha1.ActiveMQArtemis) corev1.PodTemplateSpec {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithName(cr.Name)
@@ -371,7 +377,7 @@ func newPodTemplateSpecForCR(cr *brokerv1alpha1.ActiveMQArtemis) corev1.PodTempl
 	Containers := []corev1.Container{}
 	container := corev1.Container{
 		Name:    cr.Name + "-container",
-		Image:   cr.Spec.Image,
+		Image:   cr.Spec.DeploymentPlan.Image,
 		Command: []string{"/opt/amq/bin/launch.sh", "start"},
 		Env:     makeEnvVarArrayForCR(cr),
 		ReadinessProbe: &corev1.Probe{
@@ -412,12 +418,12 @@ func newPodTemplateSpecForCR(cr *brokerv1alpha1.ActiveMQArtemis) corev1.PodTempl
 	return pts
 }
 
-func newStatefulSetForCR(cr *brokerv1alpha1.ActiveMQArtemis) *appsv1.StatefulSet {
+func newStatefulSetForCR(cr *brokerv2alpha1.ActiveMQArtemis) *appsv1.StatefulSet {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithName(cr.Name)
 	reqLogger.Info("Creating new statefulset for custom resource")
-	replicas := cr.Spec.Size
+	replicas := cr.Spec.DeploymentPlan.Size
 
 	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
 
@@ -442,7 +448,7 @@ func newStatefulSetForCR(cr *brokerv1alpha1.ActiveMQArtemis) *appsv1.StatefulSet
 		Template: newPodTemplateSpecForCR(cr),
 	}
 
-	if cr.Spec.Persistent {
+	if cr.Spec.DeploymentPlan.PersistenceEnabled {
 		Spec.VolumeClaimTemplates = *pvc.NewPersistentVolumeClaimArrayForCR(cr, 1)
 	}
 	ss.Spec = Spec
@@ -450,19 +456,21 @@ func newStatefulSetForCR(cr *brokerv1alpha1.ActiveMQArtemis) *appsv1.StatefulSet
 	return ss
 }
 
-func checkSSLEnabled(cr *brokerv1alpha1.ActiveMQArtemis) bool {
+func checkSSLEnabled(cr *brokerv2alpha1.ActiveMQArtemis) bool {
 	reqLogger := log.WithName(cr.Name)
 	var sslEnabled = false
-	if len(cr.Spec.SSLConfig.SecretName) != 0 && len(cr.Spec.SSLConfig.KeyStorePassword) != 0 && len(cr.Spec.SSLConfig.KeystoreFilename) != 0 && len(cr.Spec.SSLConfig.TrustStorePassword) != 0 && len(cr.Spec.SSLConfig.TrustStoreFilename) != 0 {
+	//if len(cr.Spec.SSLConfig.SecretName) != 0 && len(cr.Spec.SSLConfig.KeyStorePassword) != 0 && len(cr.Spec.SSLConfig.KeystoreFilename) != 0 && len(cr.Spec.SSLConfig.TrustStorePassword) != 0 && len(cr.Spec.SSLConfig.TrustStoreFilename) != 0 {
+	if false { // "TODO-FIX-REPLACE"
 		reqLogger.Info("SSL enabled and SSLConfig Section Provided")
 		sslEnabled = true
 	}
 	return sslEnabled
 }
-func checkClusterEnabled(cr *brokerv1alpha1.ActiveMQArtemis) bool {
+func checkClusterEnabled(cr *brokerv2alpha1.ActiveMQArtemis) bool {
 	reqLogger := log.WithName(cr.Name)
 	var clusterEnabled = false
-	if len(cr.Spec.ClusterConfig.ClusterUserName) != 0 && len(cr.Spec.ClusterConfig.ClusterPassword) != 0 {
+	//if len(cr.Spec.DeploymentPlan.ClusterUser) != 0 && len(cr.Spec.DeploymentPlan.ClusterPassword) != 0 {
+	if false { // "TODO-FIX-REPLACE"
 		reqLogger.Info("clustering enabled ")
 		clusterEnabled = true
 	}
@@ -471,7 +479,7 @@ func checkClusterEnabled(cr *brokerv1alpha1.ActiveMQArtemis) bool {
 
 var GLOBAL_CRNAME string = ""
 
-func CreateStatefulSet(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*appsv1.StatefulSet, error) {
+func CreateStatefulSet(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*appsv1.StatefulSet, error) {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)

@@ -3,7 +3,7 @@ package test
 import (
 	"github.com/RHsyseng/operator-utils/pkg/validation"
 	"github.com/ghodss/yaml"
-	brokerv1alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
+	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"strings"
@@ -25,8 +25,8 @@ var crNameMap = map[string]string{
 }
 
 var crdTypeMap = map[string]interface{}{
-	"broker_v1alpha1_activemqartemis_crd.yaml":        &brokerv1alpha1.ActiveMQArtemis{},
-	"broker_v1alpha1_activemqartemisaddress_crd.yaml": &brokerv1alpha1.ActiveMQArtemisAddress{},
+	"broker_v1alpha1_activemqartemis_crd.yaml":        &brokerv2alpha1.ActiveMQArtemis{},
+	"broker_v1alpha1_activemqartemisaddress_crd.yaml": &brokerv2alpha1.ActiveMQArtemisAddress{},
 }
 
 func TestCRDSchemas(t *testing.T) {

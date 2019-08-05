@@ -4,7 +4,7 @@ import (
 	"context"
 
 	routev1 "github.com/openshift/api/route/v1"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -18,7 +18,7 @@ import (
 var log = logf.Log.WithName("package routes")
 
 // Create newRouteForCR method to create exposed route
-func NewRouteDefinitionForCR(cr *v1alpha1.ActiveMQArtemis, labels map[string]string, targetServiceName string, targetPortName string, passthroughTLS bool) *routev1.Route {
+func NewRouteDefinitionForCR(cr *v2alpha1.ActiveMQArtemis, labels map[string]string, targetServiceName string, targetPortName string, passthroughTLS bool) *routev1.Route {
 
 	route := &routev1.Route{
 		TypeMeta: metav1.TypeMeta{
@@ -51,7 +51,7 @@ func NewRouteDefinitionForCR(cr *v1alpha1.ActiveMQArtemis, labels map[string]str
 	return route
 }
 
-func CreateNewRoute(cr *v1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, route *routev1.Route) error {
+func CreateNewRoute(cr *v2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, route *routev1.Route) error {
 
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Creating new route")
@@ -74,7 +74,7 @@ func CreateNewRoute(cr *v1alpha1.ActiveMQArtemis, client client.Client, scheme *
 	return err
 }
 
-func RetrieveRoute(cr *v1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client, route *routev1.Route) error {
+func RetrieveRoute(cr *v2alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client, route *routev1.Route) error {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
@@ -94,7 +94,7 @@ func RetrieveRoute(cr *v1alpha1.ActiveMQArtemis, namespacedName types.Namespaced
 	return err
 }
 
-func UpdateRoute(cr *v1alpha1.ActiveMQArtemis, client client.Client, route *routev1.Route) error {
+func UpdateRoute(cr *v2alpha1.ActiveMQArtemis, client client.Client, route *routev1.Route) error {
 
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Updating route")
@@ -107,7 +107,7 @@ func UpdateRoute(cr *v1alpha1.ActiveMQArtemis, client client.Client, route *rout
 	return err
 }
 
-func DeleteRoute(cr *v1alpha1.ActiveMQArtemis, client client.Client, route *routev1.Route) error {
+func DeleteRoute(cr *v2alpha1.ActiveMQArtemis, client client.Client, route *routev1.Route) error {
 
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Deleting route")

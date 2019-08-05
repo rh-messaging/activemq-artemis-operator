@@ -1,7 +1,7 @@
 package activemqartemis
 
 import (
-	brokerv1alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
+	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"strings"
@@ -22,14 +22,15 @@ type ActiveMQArtemisReconciler struct {
 }
 
 type ActiveMQArtemisIReconciler interface {
-	Process(customResource *brokerv1alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) uint32
+	Process(customResource *brokerv2alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) uint32
+	//Process(customResource *brokerv2alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) uint32
 }
 
-func (reconciler *ActiveMQArtemisReconciler) Process(customResource *brokerv1alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) uint32 {
+func (reconciler *ActiveMQArtemisReconciler) Process(customResource *brokerv2alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) uint32 {
 
 	// Ensure the StatefulSet size is the same as the spec
-	if *currentStatefulSet.Spec.Replicas != customResource.Spec.Size {
-		currentStatefulSet.Spec.Replicas = &customResource.Spec.Size
+	if *currentStatefulSet.Spec.Replicas != customResource.Spec.DeploymentPlan.Size {
+		currentStatefulSet.Spec.Replicas = &customResource.Spec.DeploymentPlan.Size
 		reconciler.statefulSetUpdates |= statefulSetSizeUpdated
 	}
 
@@ -67,7 +68,7 @@ func remove(s []corev1.EnvVar, i int) []corev1.EnvVar {
 	return s[:len(s)-1]
 }
 
-func clusterConfigSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
+func clusterConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
 
 	foundClustered := false
 	foundClusterUser := false
@@ -81,8 +82,8 @@ func clusterConfigSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArte
 
 	// TODO: Remove yuck
 	// ensure password and username are valid if can't via openapi validation?
-	if customResource.Spec.ClusterConfig.ClusterPassword != "" &&
-		customResource.Spec.ClusterConfig.ClusterUserName != "" {
+	if customResource.Spec.DeploymentPlan.ClusterPassword != "" &&
+		customResource.Spec.DeploymentPlan.ClusterUser != "" {
 
 		envVarArray := []corev1.EnvVar{}
 		// Find the existing values
@@ -95,13 +96,13 @@ func clusterConfigSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArte
 			}
 			if v.Name == "AMQ_CLUSTER_USER" {
 				foundClusterUser = true
-				if v.Value != customResource.Spec.ClusterConfig.ClusterUserName {
+				if v.Value != customResource.Spec.DeploymentPlan.ClusterUser {
 					clusterUserNeedsUpdate = true
 				}
 			}
 			if v.Name == "AMQ_CLUSTER_PASSWORD" {
 				foundClusterPassword = true
-				if v.Value != customResource.Spec.ClusterConfig.ClusterPassword {
+				if v.Value != customResource.Spec.DeploymentPlan.ClusterPassword {
 					clusterPasswordNeedsUpdate = true
 				}
 			}
@@ -120,7 +121,7 @@ func clusterConfigSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArte
 		if !foundClusterUser || clusterUserNeedsUpdate {
 			newClusteredValue := corev1.EnvVar{
 				"AMQ_CLUSTER_USER",
-				customResource.Spec.ClusterConfig.ClusterUserName,
+				customResource.Spec.DeploymentPlan.ClusterUser,
 				nil,
 			}
 			envVarArray = append(envVarArray, newClusteredValue)
@@ -130,7 +131,7 @@ func clusterConfigSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArte
 		if !foundClusterPassword || clusterPasswordNeedsUpdate {
 			newClusteredValue := corev1.EnvVar{
 				"AMQ_CLUSTER_PASSWORD",
-				customResource.Spec.ClusterConfig.ClusterPassword,
+				customResource.Spec.DeploymentPlan.ClusterPassword,
 				nil,
 			}
 			envVarArray = append(envVarArray, newClusteredValue)
@@ -174,7 +175,7 @@ func clusterConfigSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArte
 	return statefulSetUpdated
 }
 
-func sslConfigSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
+func sslConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
 
 	foundKeystore := false
 	foundKeystorePassword := false
@@ -192,21 +193,24 @@ func sslConfigSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis,
 
 	// TODO: Remove yuck
 	// ensure password and username are valid if can't via openapi validation?
-	if customResource.Spec.SSLConfig.KeyStorePassword != "" &&
-		customResource.Spec.SSLConfig.KeystoreFilename != "" {
+	//if customResource.Spec.SSLConfig.KeyStorePassword != "" &&
+	//	customResource.Spec.SSLConfig.KeystoreFilename != "" {
+	if false { // "TODO-FIX-REPLACE"
 
 		envVarArray := []corev1.EnvVar{}
 		// Find the existing values
 		for _, v := range currentStatefulSet.Spec.Template.Spec.Containers[0].Env {
 			if v.Name == "AMQ_KEYSTORE" {
 				foundKeystore = true
-				if v.Value != customResource.Spec.SSLConfig.KeystoreFilename {
+				//if v.Value != customResource.Spec.SSLConfig.KeystoreFilename {
+				if false { // "TODO-FIX-REPLACE"
 					keystoreNeedsUpdate = true
 				}
 			}
 			if v.Name == "AMQ_KEYSTORE_PASSWORD" {
 				foundKeystorePassword = true
-				if v.Value != customResource.Spec.SSLConfig.KeyStorePassword {
+				//if v.Value != customResource.Spec.SSLConfig.KeyStorePassword {
+				if false { // "TODO-FIX-REPLACE"
 					keystorePasswordNeedsUpdate = true
 				}
 			}
@@ -221,7 +225,7 @@ func sslConfigSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis,
 		if !foundKeystore || keystoreNeedsUpdate {
 			newClusteredValue := corev1.EnvVar{
 				"AMQ_KEYSTORE",
-				customResource.Spec.SSLConfig.KeystoreFilename,
+				"TODO-FIX-REPLACE",//customResource.Spec.SSLConfig.KeystoreFilename,
 				nil,
 			}
 			envVarArray = append(envVarArray, newClusteredValue)
@@ -231,7 +235,7 @@ func sslConfigSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis,
 		if !foundKeystorePassword || keystorePasswordNeedsUpdate {
 			newClusteredValue := corev1.EnvVar{
 				"AMQ_KEYSTORE_PASSWORD",
-				customResource.Spec.SSLConfig.KeyStorePassword,
+				"TODO-FIX-REPLACE", //customResource.Spec.SSLConfig.KeyStorePassword,
 				nil,
 			}
 			envVarArray = append(envVarArray, newClusteredValue)
@@ -282,21 +286,23 @@ func sslConfigSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis,
 		}
 	}
 
-	if customResource.Spec.SSLConfig.TrustStorePassword != "" &&
-		customResource.Spec.SSLConfig.TrustStoreFilename != "" {
-
+	//if customResource.Spec.SSLConfig.TrustStorePassword != "" &&
+	//	customResource.Spec.SSLConfig.TrustStoreFilename != "" {
+	if false { // "TODO-FIX-REPLACE"
 		envVarArray := []corev1.EnvVar{}
 		// Find the existing values
 		for _, v := range currentStatefulSet.Spec.Template.Spec.Containers[0].Env {
 			if v.Name == "AMQ_TRUSTSTORE" {
 				foundTruststore = true
-				if v.Value != customResource.Spec.SSLConfig.TrustStoreFilename {
+				//if v.Value != customResource.Spec.SSLConfig.TrustStoreFilename {
+				if false { // "TODO-FIX-REPLACE"
 					truststoreNeedsUpdate = true
 				}
 			}
 			if v.Name == "AMQ_TRUSTSTORE_PASSWORD" {
 				foundTruststorePassword = true
-				if v.Value != customResource.Spec.SSLConfig.TrustStorePassword {
+				//if v.Value != customResource.Spec.SSLConfig.TrustStorePassword {
+				if false { // "TODO-FIX-REPLACE"
 					truststorePasswordNeedsUpdate = true
 				}
 			}
@@ -305,7 +311,7 @@ func sslConfigSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis,
 		if !foundTruststore || truststoreNeedsUpdate {
 			newClusteredValue := corev1.EnvVar{
 				"AMQ_TRUSTSTORE",
-				customResource.Spec.SSLConfig.TrustStoreFilename,
+				"TODO-FIX-REPLACE", //customResource.Spec.SSLConfig.TrustStoreFilename,
 				nil,
 			}
 			envVarArray = append(envVarArray, newClusteredValue)
@@ -315,7 +321,7 @@ func sslConfigSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis,
 		if !foundTruststorePassword || truststorePasswordNeedsUpdate {
 			newClusteredValue := corev1.EnvVar{
 				"AMQ_TRUSTSTORE_PASSWORD",
-				customResource.Spec.SSLConfig.TrustStorePassword,
+				"TODO-FIX-REPLACE", //customResource.Spec.SSLConfig.TrustStorePassword,
 				nil,
 			}
 			envVarArray = append(envVarArray, newClusteredValue)
@@ -361,13 +367,14 @@ func sslConfigSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis,
 	return statefulSetUpdated
 }
 
-func sslConfigSyncEnsureSecretVolumeMountExists(customResource *brokerv1alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) {
+func sslConfigSyncEnsureSecretVolumeMountExists(customResource *brokerv2alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) {
 
 	secretVolumeExists := false
 	secretVolumeMountExists := false
 
 	for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Volumes); i++ {
-		if currentStatefulSet.Spec.Template.Spec.Volumes[i].Name == customResource.Spec.SSLConfig.SecretName {
+		//if currentStatefulSet.Spec.Template.Spec.Volumes[i].Name == customResource.Spec.SSLConfig.SecretName {
+		if false { // "TODO-FIX-REPLACE"
 			secretVolumeExists = true
 			break
 		}
@@ -377,7 +384,7 @@ func sslConfigSyncEnsureSecretVolumeMountExists(customResource *brokerv1alpha1.A
 			Name: "broker-secret-volume",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: customResource.Spec.SSLConfig.SecretName,
+					SecretName: "TODO-FIX-REPLACE", //customResource.Spec.SSLConfig.SecretName,
 				},
 			},
 		}
@@ -403,7 +410,7 @@ func sslConfigSyncEnsureSecretVolumeMountExists(customResource *brokerv1alpha1.A
 	}
 }
 
-func aioSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
+func aioSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
 
 	foundAio := false
 	foundNio := false
@@ -424,12 +431,12 @@ func aioSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis, curre
 		}
 	}
 
-	if customResource.Spec.Aio && foundNio {
+	if "aio" == strings.ToLower(customResource.Spec.DeploymentPlan.JournalType) && foundNio {
 		extraArgs = strings.Replace(extraArgs, "--nio", "--aio", 1)
 		extraArgsNeedsUpdate = true
 	}
 
-	if !customResource.Spec.Aio && foundAio {
+	if !("aio" == strings.ToLower(customResource.Spec.DeploymentPlan.JournalType)) && foundAio {
 		extraArgs = strings.Replace(extraArgs, "--aio", "--nio", 1)
 		extraArgsNeedsUpdate = true
 	}
@@ -458,7 +465,7 @@ func aioSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis, curre
 	return extraArgsNeedsUpdate
 }
 
-func persistentSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
+func persistentSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
 
 	foundDataDir := false
 	foundDataDirLogging := false
@@ -470,7 +477,7 @@ func persistentSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis
 
 	// TODO: Remove yuck
 	// ensure password and username are valid if can't via openapi validation?
-	if customResource.Spec.Persistent {
+	if customResource.Spec.DeploymentPlan.PersistenceEnabled {
 
 		envVarArray := []corev1.EnvVar{}
 		// Find the existing values
@@ -545,13 +552,13 @@ func persistentSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis
 	return statefulSetUpdated
 }
 
-func imageSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
+func imageSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
 
 	// At implementation time only one container
-	if strings.Compare(currentStatefulSet.Spec.Template.Spec.Containers[0].Image, customResource.Spec.Image) != 0 {
+	if strings.Compare(currentStatefulSet.Spec.Template.Spec.Containers[0].Image, customResource.Spec.DeploymentPlan.Image) != 0 {
 		containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
 		for i := 0; i < containerArrayLen; i++ {
-			currentStatefulSet.Spec.Template.Spec.Containers[i].Image = customResource.Spec.Image
+			currentStatefulSet.Spec.Template.Spec.Containers[i].Image = customResource.Spec.DeploymentPlan.Image
 		}
 		return true
 	}
@@ -559,7 +566,7 @@ func imageSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis, cur
 	return false
 }
 
-func commonConfigSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
+func commonConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
 
 	foundCommonUser := false
 	foundCommonPassword := false
@@ -571,21 +578,21 @@ func commonConfigSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtem
 
 	// TODO: Remove yuck
 	// ensure password and username are valid if can't via openapi validation?
-	if customResource.Spec.CommonConfig.Password != "" &&
-		customResource.Spec.CommonConfig.UserName != "" {
+	if customResource.Spec.DeploymentPlan.Password != "" &&
+		customResource.Spec.DeploymentPlan.User != "" {
 
 		envVarArray := []corev1.EnvVar{}
 		// Find the existing values
 		for _, v := range currentStatefulSet.Spec.Template.Spec.Containers[0].Env {
 			if v.Name == "AMQ_USER" {
 				foundCommonUser = true
-				if v.Value != customResource.Spec.CommonConfig.UserName {
+				if v.Value != customResource.Spec.DeploymentPlan.User {
 					commonUserNeedsUpdate = true
 				}
 			}
 			if v.Name == "AMQ_PASSWORD" {
 				foundCommonPassword = true
-				if v.Value != customResource.Spec.CommonConfig.Password {
+				if v.Value != customResource.Spec.DeploymentPlan.Password {
 					commonPasswordNeedsUpdate = true
 				}
 			}
@@ -594,7 +601,7 @@ func commonConfigSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtem
 		if !foundCommonUser || commonUserNeedsUpdate {
 			newCommonedValue := corev1.EnvVar{
 				"AMQ_USER",
-				customResource.Spec.CommonConfig.UserName,
+				customResource.Spec.DeploymentPlan.User,
 				nil,
 			}
 			envVarArray = append(envVarArray, newCommonedValue)
@@ -604,7 +611,7 @@ func commonConfigSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtem
 		if !foundCommonPassword || commonPasswordNeedsUpdate {
 			newCommonedValue := corev1.EnvVar{
 				"AMQ_PASSWORD",
-				customResource.Spec.CommonConfig.Password,
+				customResource.Spec.DeploymentPlan.Password,
 				nil,
 			}
 			envVarArray = append(envVarArray, newCommonedValue)

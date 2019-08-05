@@ -1,0 +1,81 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  creationTimestamp: null
+  name: activemqartemises.broker.amq.io
+spec:
+  group: broker.amq.io
+  names:
+    kind: ActiveMQArtemis
+    listKind: ActiveMQArtemisList
+    plural: activemqartemises
+    singular: activemqartemis
+  scope: Namespaced
+  subresources:
+    scale:
+      specReplicasPath: .spec.replicas
+      statusReplicasPath: .status.replicas
+    status: {}
+  validation:
+    openAPIV3Schema:
+      required:
+        - spec
+      properties:
+        apiVersion:
+          type: string
+        kind:
+          type: string
+        metadata:
+          type: object
+        spec:
+          deploymentPlan:
+            type: object
+            properties:
+              image:
+                type: string
+                description: The image used for the broker deployment
+              size:
+                type: integer
+                minimum: 0
+                maximum: 16
+                description: The number of broker pods to deploy
+              user:
+                type: string
+                description: User name for standard broker user. It is required for connecting to the broker. If left empty, it will be generated.
+              password:
+                type: string
+                description: Password for standard broker user. It is required for connecting to the broker. If left empty, it will be generated.
+              role:
+                type: string
+                description: Rolename for the given user
+              requireLogin:
+                type: boolean
+                description: If true require user password login credentials for broker protocol ports
+              clustered:
+                type: boolean
+                description: If true brokers will cluster when scale > 1
+              clusterUser:
+                type: string
+                description: Username used for clustering
+              clusterPassword:
+                type: string
+                description: Password used for clustering
+              persistenceEnabled:
+                type: boolean
+                description: If true use persistent volume via persistent volume claim for journal storage
+              journalType:
+                type: string
+                description: If aio use ASYNCIO, if nio use NIO for journal IO
+              messageMigration:
+                type: boolean
+                description: If true migrate messages on scaledown
+        status:
+          type: object
+  version: v2alpha1
+  versions:
+  - name: v2alpha1
+    served: true
+    storage: true
+  - name: v1alpha1
+    served: false
+    storage: false

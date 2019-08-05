@@ -3,7 +3,7 @@ package activemqartemisscaledown
 import (
 	"context"
 
-	brokerv1alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
+	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -60,7 +60,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource ActiveMQArtemisScaledown
-	err = c.Watch(&source.Kind{Type: &brokerv1alpha1.ActiveMQArtemisScaledown{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &brokerv2alpha1.ActiveMQArtemisScaledown{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to secondary resource Pods and requeue the owner ActiveMQArtemisScaledown
 	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &brokerv1alpha1.ActiveMQArtemisScaledown{},
+		OwnerType:    &brokerv2alpha1.ActiveMQArtemisScaledown{},
 	})
 	if err != nil {
 		return err
@@ -100,7 +100,7 @@ func (r *ReconcileActiveMQArtemisScaledown) Reconcile(request reconcile.Request)
 	reqLogger.Info("Reconciling ActiveMQArtemisScaledown")
 
 	// Fetch the ActiveMQArtemisScaledown instance
-	instance := &brokerv1alpha1.ActiveMQArtemisScaledown{}
+	instance := &brokerv2alpha1.ActiveMQArtemisScaledown{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {

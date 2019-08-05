@@ -2,7 +2,7 @@ package services
 
 import (
 	"context"
-	brokerv1alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
+	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -20,7 +20,7 @@ import (
 var log = logf.Log.WithName("package services")
 
 // newServiceForPod returns an activemqartemis service for the pod just created
-func newHeadlessServiceForCR(cr *brokerv1alpha1.ActiveMQArtemis, servicePorts *[]corev1.ServicePort) *corev1.Service {
+func newHeadlessServiceForCR(cr *brokerv2alpha1.ActiveMQArtemis, servicePorts *[]corev1.ServicePort) *corev1.Service {
 
 	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
 
@@ -48,7 +48,7 @@ func newHeadlessServiceForCR(cr *brokerv1alpha1.ActiveMQArtemis, servicePorts *[
 }
 
 // newServiceForPod returns an activemqartemis service for the pod just created
-func NewServiceDefinitionForCR(cr *brokerv1alpha1.ActiveMQArtemis, nameSuffix string, portNumber int32, selectorLabels map[string]string) *corev1.Service {
+func NewServiceDefinitionForCR(cr *brokerv2alpha1.ActiveMQArtemis, nameSuffix string, portNumber int32, selectorLabels map[string]string) *corev1.Service {
 
 	port := corev1.ServicePort{
 		//Name:       cr.Name + "-" + nameSuffix + "-port",
@@ -84,7 +84,7 @@ func NewServiceDefinitionForCR(cr *brokerv1alpha1.ActiveMQArtemis, nameSuffix st
 }
 
 // newServiceForPod returns an activemqartemis service for the pod just created
-func newPingServiceDefinitionForCR(cr *brokerv1alpha1.ActiveMQArtemis, labels map[string]string, selectorLabels map[string]string) *corev1.Service {
+func newPingServiceDefinitionForCR(cr *brokerv2alpha1.ActiveMQArtemis, labels map[string]string, selectorLabels map[string]string) *corev1.Service {
 
 	port := corev1.ServicePort{
 		Protocol:   "TCP",
@@ -117,13 +117,14 @@ func newPingServiceDefinitionForCR(cr *brokerv1alpha1.ActiveMQArtemis, labels ma
 	return svc
 }
 
-func GetDefaultPorts(cr *brokerv1alpha1.ActiveMQArtemis) *[]corev1.ServicePort {
+func GetDefaultPorts(cr *brokerv2alpha1.ActiveMQArtemis) *[]corev1.ServicePort {
 
 	ports := []corev1.ServicePort{}
 	basicPorts := SetBasicPorts()
 	ports = append(ports, basicPorts...)
 
-	if len(cr.Spec.SSLConfig.SecretName) != 0 && len(cr.Spec.SSLConfig.KeyStorePassword) != 0 && len(cr.Spec.SSLConfig.KeystoreFilename) != 0 && len(cr.Spec.SSLConfig.TrustStorePassword) != 0 && len(cr.Spec.SSLConfig.TrustStoreFilename) != 0 {
+	// if len(cr.Spec.SSLConfig.SecretName) != 0 && len(cr.Spec.SSLConfig.KeyStorePassword) != 0 && len(cr.Spec.SSLConfig.KeystoreFilename) != 0 && len(cr.Spec.SSLConfig.TrustStorePassword) != 0 && len(cr.Spec.SSLConfig.TrustStoreFilename) != 0 {
+	if false { // "TODO-FIX-REPLACE"
 		sslPorts := SetSSLPorts()
 		ports = append(ports, sslPorts...)
 
@@ -197,7 +198,7 @@ func SetBasicPorts() []corev1.ServicePort {
 	return ports
 }
 
-func CreateService(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, serviceToCreate *corev1.Service) error {
+func CreateService(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, serviceToCreate *corev1.Service) error {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
@@ -222,7 +223,7 @@ func CreateService(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, sch
 	return err
 }
 
-func RetrieveService(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, namespacedName types.NamespacedName, serviceToRetrieve *corev1.Service) error {
+func RetrieveService(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, namespacedName types.NamespacedName, serviceToRetrieve *corev1.Service) error {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
@@ -237,7 +238,7 @@ func RetrieveService(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, n
 	return err
 }
 
-func CreateServices(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, baseServiceName string, portNumber int32) error {
+func CreateServices(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, baseServiceName string, portNumber int32) error {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
@@ -246,7 +247,7 @@ func CreateServices(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, sc
 	var err error = nil
 	var i int32 = 0
 	ordinalString := ""
-	for ; i < cr.Spec.Size; i++ {
+	for ; i < cr.Spec.DeploymentPlan.Size; i++ {
 		labels := selectors.LabelsForActiveMQArtemis(cr.Name)
 		ordinalString = strconv.Itoa(int(i))
 		labels["statefulset.kubernetes.io/pod-name"] = cr.Name + "-ss" + "-" + ordinalString
@@ -260,7 +261,7 @@ func CreateServices(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, sc
 	return err
 }
 
-func RetrieveConsoleJolokiaService(cr *brokerv1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.Service, error) {
+func RetrieveConsoleJolokiaService(cr *brokerv2alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.Service, error) {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
@@ -281,7 +282,7 @@ func RetrieveConsoleJolokiaService(cr *brokerv1alpha1.ActiveMQArtemis, namespace
 	return consoleJolokiaSvc, err
 }
 
-func RetrieveAllProtocolService(cr *brokerv1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.Service, error) {
+func RetrieveAllProtocolService(cr *brokerv2alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.Service, error) {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
@@ -302,7 +303,7 @@ func RetrieveAllProtocolService(cr *brokerv1alpha1.ActiveMQArtemis, namespacedNa
 	return allProtocolSvc, err
 }
 
-func CreatePingService(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*corev1.Service, error) {
+func CreatePingService(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*corev1.Service, error) {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
@@ -330,7 +331,7 @@ func CreatePingService(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client,
 
 	return pingSvc, err
 }
-func RetrievePingService(cr *brokerv1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.Service, error) {
+func RetrievePingService(cr *brokerv2alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.Service, error) {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
@@ -352,7 +353,7 @@ func RetrievePingService(cr *brokerv1alpha1.ActiveMQArtemis, namespacedName type
 	return pingSvc, err
 }
 
-func CreateHeadlessService(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*corev1.Service, error) {
+func CreateHeadlessService(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*corev1.Service, error) {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
@@ -380,12 +381,12 @@ func CreateHeadlessService(cr *brokerv1alpha1.ActiveMQArtemis, client client.Cli
 	return headlessSvc, err
 }
 
-func DeleteHeadlessService(instance *brokerv1alpha1.ActiveMQArtemis) {
+func DeleteHeadlessService(instance *brokerv2alpha1.ActiveMQArtemis) {
 	// kubectl delete cleans up kubernetes resources, just need to clean up local resources if any
 }
 
 //r *ReconcileActiveMQArtemis
-func RetrieveHeadlessService(cr *brokerv1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.Service, error) {
+func RetrieveHeadlessService(cr *brokerv2alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.Service, error) {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)

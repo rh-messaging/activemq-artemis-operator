@@ -1,0 +1,16 @@
+apiVersion: broker.amq.io/v2alpha1
+kind: ActiveMQArtemis
+metadata:
+  name: example-activemqartemis
+  application: example-activemqartemis-app
+  labels:
+    ActiveMQArtemis: example-activemqartemis
+    application: example-activemqartemis-app
+spec:
+  deploymentPlan:
+    size: 2
+    image: registry.redhat.io/amq7/amq-broker:7.4
+    persistenceEnabled: false
+    journalType: aio
+    user: admin
+    password: admin

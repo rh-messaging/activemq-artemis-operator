@@ -9,7 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	v1alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
+	v2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	selectors "github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
 
 	extv1b1 "k8s.io/api/extensions/v1beta1"
@@ -21,7 +21,7 @@ import (
 var log = logf.Log.WithName("package ingresses")
 
 // Create newIngressForCR method to create exposed ingress
-func NewIngressForCR(cr *v1alpha1.ActiveMQArtemis, target string) *extv1b1.Ingress {
+func NewIngressForCR(cr *v2alpha1.ActiveMQArtemis, target string) *extv1b1.Ingress {
 
 	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
 
@@ -59,7 +59,7 @@ func NewIngressForCR(cr *v1alpha1.ActiveMQArtemis, target string) *extv1b1.Ingre
 	return ingress
 }
 
-func CreateNewIngress(cr *v1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*extv1b1.Ingress, error) {
+func CreateNewIngress(cr *v2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*extv1b1.Ingress, error) {
 
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Creating new ingress")
@@ -83,7 +83,7 @@ func CreateNewIngress(cr *v1alpha1.ActiveMQArtemis, client client.Client, scheme
 	return ingress, err
 }
 
-func RetrieveIngress(cr *v1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*extv1b1.Ingress, error) {
+func RetrieveIngress(cr *v2alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*extv1b1.Ingress, error) {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)

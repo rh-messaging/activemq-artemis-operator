@@ -44,27 +44,28 @@ rules:
   - '*'
   - activemqartemisaddresses
   - activemqartemisscaledowns
+  - activemqartemis
   verbs:
   - '*'
 - apiGroups:
-    - "route.openshift.io"
+  - route.openshift.io
   resources:
-    - routes
-    - routes/custom-host
-    - routes/status
+  - routes
+  - routes/custom-host
+  - routes/status
   verbs:
-    - get
-    - list
-    - watch
-    - create
-    - delete
+  - get
+  - list
+  - watch
+  - create
+  - delete
 - apiGroups:
-    - "extensions"
+  - extensions
   resources:
-    - ingresses
+  - ingresses
   verbs:
-    - get
-    - list
-    - watch
-    - create
-    - delete
+  - get
+  - list
+  - watch
+  - create
+  - delete

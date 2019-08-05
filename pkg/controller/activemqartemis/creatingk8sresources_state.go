@@ -3,7 +3,7 @@ package activemqartemis
 import (
 	"context"
 	"github.com/RHsyseng/operator-utils/pkg/olm"
-	brokerv1alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
+	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
 	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
@@ -135,7 +135,7 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 					break
 				}
 			}
-			if rs.parentFSM.customResource.Spec.Size > 0 {
+			if rs.parentFSM.customResource.Spec.DeploymentPlan.Size > 0 {
 				nextStateID = ScalingID
 			}
 		} else {
@@ -190,7 +190,7 @@ func updataPodStatus(rs *CreatingK8sResourcesState) error {
 
 }
 
-func getPodStatus(r *ReconcileActiveMQArtemis, instance *brokerv1alpha1.ActiveMQArtemis) olm.DeploymentStatus {
+func getPodStatus(r *ReconcileActiveMQArtemis, instance *brokerv2alpha1.ActiveMQArtemis) olm.DeploymentStatus {
 	// List the pods for this deployment
 	var status olm.DeploymentStatus
 	sfsFound := &appsv1.StatefulSet{}

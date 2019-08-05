@@ -16,14 +16,15 @@ spec:
       containers:
         - name: activemq-artemis-operator
           # Replace this with the built image name
-          image: registry.redhat.io/amq7-tech-preview/amq-broker-operator:0.6.3
+          #image: registry.redhat.io/amq7-tech-preview/amq-broker-operator:0.6.3
+          image: docker-registry.default.svc:5000/entmqbr-2687-0/activemq-artemis-operator:latest-debug
           command:
             - /home/activemq-artemis-operator/bin/entrypoint
           args:
             # Explicitly set the logging level.
             # Valid values are debug, info, and error
             # from most to least
-            - '--zap-level info'
+            - '--zap-level debug'
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE

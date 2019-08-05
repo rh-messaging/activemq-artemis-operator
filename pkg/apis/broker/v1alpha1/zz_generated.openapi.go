@@ -136,14 +136,8 @@ func schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisAddressSpec(ref common.Refer
 							Format: "",
 						},
 					},
-					"statefulsetName": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
 				},
-				Required: []string{"addressName", "queueName", "routingType", "statefulsetName"},
+				Required: []string{"addressName", "queueName", "routingType"},
 			},
 		},
 		Dependencies: []string{},
@@ -315,9 +309,17 @@ func schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisStatus(ref common.ReferenceC
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "ActiveMQArtemisStatus defines the observed state of ActiveMQArtemis",
-				Properties:  map[string]spec.Schema{},
+				Properties: map[string]spec.Schema{
+					"podStatus": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/RHsyseng/operator-utils/pkg/olm.DeploymentStatus"),
+						},
+					},
+				},
+				Required: []string{"podStatus"},
 			},
 		},
-		Dependencies: []string{},
+		Dependencies: []string{
+			"github.com/RHsyseng/operator-utils/pkg/olm.DeploymentStatus"},
 	}
 }

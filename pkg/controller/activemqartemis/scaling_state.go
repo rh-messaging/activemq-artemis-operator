@@ -144,7 +144,7 @@ func (rs *ScalingState) configureServices() error {
 	client := rs.parentFSM.r.client
 	scheme := rs.parentFSM.r.scheme
 	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
-	for ; i < cr.Spec.Size; i++ {
+	for ; i < cr.Spec.DeploymentPlan.Size; i++ {
 		ordinalString = strconv.Itoa(int(i))
 		labels["statefulset.kubernetes.io/pod-name"] = cr.Name + "-ss" + "-" + ordinalString
 
@@ -204,7 +204,7 @@ func (rs *ScalingState) configureRoutes() error {
 	var err error = nil
 	var passthroughTLS bool
 
-	for i := 0; i < int(rs.parentFSM.customResource.Spec.Size); i++ {
+	for i := 0; i < int(rs.parentFSM.customResource.Spec.DeploymentPlan.Size); i++ {
 		passthroughTLS = false
 		targetPortName := "console-jolokia" + "-" + strconv.Itoa(i)
 		targetServiceName := rs.parentFSM.customResource.Name + "-service-" + targetPortName
