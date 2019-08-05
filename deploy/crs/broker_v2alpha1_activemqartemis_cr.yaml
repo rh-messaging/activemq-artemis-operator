@@ -8,9 +8,13 @@ metadata:
     application: example-activemqartemis-app
 spec:
   deploymentPlan:
-    size: 2
+    size: 0
     image: registry.redhat.io/amq7/amq-broker:7.4
     persistenceEnabled: false
-    journalType: aio
-    user: admin
-    password: admin
+    journalType: nio
+    user: adminUser
+    password: adminPass
+    role: adminRole
+    clustered: true
+    clusterUser: clusterUser
+    clusterPass: clusterPass

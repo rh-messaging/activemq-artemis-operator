@@ -1,0 +1,275 @@
+package environments
+
+import (
+	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	corev1 "k8s.io/api/core/v1"
+	"strings"
+
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+)
+
+var log = logf.Log.WithName("package environments")
+
+//TODO: Remove this blatant hack
+var GLOBAL_AMQ_CLUSTER_USER string = ""
+var GLOBAL_AMQ_CLUSTER_PASSWORD string = ""
+
+func GetPropertyForCR(propName string, cr *brokerv2alpha1.ActiveMQArtemis, defaultValue string) string {
+
+	result := defaultValue
+	switch propName {
+	case "AMQ_USER":
+		if len(cr.Spec.DeploymentPlan.User) > 0 {
+			result = cr.Spec.DeploymentPlan.User
+		}
+	case "AMQ_PASSWORD":
+		if len(cr.Spec.DeploymentPlan.Password) > 0 {
+			result = cr.Spec.DeploymentPlan.Password
+		}
+	case "AMQ_CLUSTER_USER":
+		if len(cr.Spec.DeploymentPlan.ClusterUser) > 0 {
+			result = cr.Spec.DeploymentPlan.ClusterUser
+			GLOBAL_AMQ_CLUSTER_USER = result
+		}
+	case "AMQ_CLUSTER_PASSWORD":
+		if len(cr.Spec.DeploymentPlan.ClusterPassword) > 0 {
+			result = cr.Spec.DeploymentPlan.ClusterPassword
+			GLOBAL_AMQ_CLUSTER_PASSWORD = result
+		}
+	case "AMQ_KEYSTORE_TRUSTSTORE_DIR":
+		//if checkSSLEnabled(cr) && len(cr.Spec.SSLConfig.SecretName) > 0 {
+		if false { // "TODO-FIX-REPLACE"
+			//result = "/etc/amq-secret-volume"
+		}
+	case "AMQ_TRUSTSTORE":
+		//if checkSSLEnabled(cr) && len(cr.Spec.SSLConfig.SecretName) > 0 {
+		if false { // "TODO-FIX-REPLACE"
+			//result = cr.Spec.SSLConfig.TrustStoreFilename
+		}
+	case "AMQ_TRUSTSTORE_PASSWORD":
+		//if checkSSLEnabled(cr) && len(cr.Spec.SSLConfig.SecretName) > 0 {
+		if false { // "TODO-FIX-REPLACE"
+			//result = cr.Spec.SSLConfig.TrustStorePassword
+		}
+	case "AMQ_KEYSTORE":
+		//if checkSSLEnabled(cr) && len(cr.Spec.SSLConfig.SecretName) > 0 {
+		if false { // "TODO-FIX-REPLACE"
+			//result = cr.Spec.SSLConfig.KeystoreFilename
+		}
+	case "AMQ_KEYSTORE_PASSWORD":
+		//if checkSSLEnabled(cr) && len(cr.Spec.SSLConfig.SecretName) > 0 {
+		if false { // "TODO-FIX-REPLACE"
+			//result = cr.Spec.SSLConfig.KeyStorePassword
+		}
+	case "AMQ_EXTRA_ARGS":
+		if "aio" == strings.ToLower(cr.Spec.DeploymentPlan.JournalType) {
+			result = "--aio"
+		} else {
+			result = "--nio"
+		}
+	}
+	return result
+}
+
+func CheckSSLEnabled(cr *brokerv2alpha1.ActiveMQArtemis) bool {
+	reqLogger := log.WithName(cr.Name)
+	var sslEnabled = false
+	//if len(cr.Spec.SSLConfig.SecretName) != 0 && len(cr.Spec.SSLConfig.KeyStorePassword) != 0 && len(cr.Spec.SSLConfig.KeystoreFilename) != 0 && len(cr.Spec.SSLConfig.TrustStorePassword) != 0 && len(cr.Spec.SSLConfig.TrustStoreFilename) != 0 {
+	if false { // "TODO-FIX-REPLACE"
+		reqLogger.Info("SSL enabled and SSLConfig Section Provided")
+		sslEnabled = true
+	}
+	return sslEnabled
+}
+
+func CheckClusterEnabled(cr *brokerv2alpha1.ActiveMQArtemis) bool {
+	reqLogger := log.WithName(cr.Name)
+	var clusterEnabled = false
+	//if len(cr.Spec.DeploymentPlan.ClusterUser) != 0 && len(cr.Spec.DeploymentPlan.ClusterPassword) != 0 {
+	if false { // "TODO-FIX-REPLACE"
+		reqLogger.Info("clustering enabled ")
+		clusterEnabled = true
+	}
+	return clusterEnabled
+}
+
+func MakeEnvVarArrayForCR(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
+
+	reqLogger := log.WithName(cr.Name)
+	reqLogger.Info("Adding Env varibale ")
+	envVar := []corev1.EnvVar{}
+	envVarArrayForBasic := addEnvVarForBasic(cr)
+	envVar = append(envVar, envVarArrayForBasic...)
+
+	if CheckSSLEnabled(cr) {
+		envVarArrayForSSL := addEnvVarForSSL(cr)
+		envVar = append(envVar, envVarArrayForSSL...)
+	}
+	if cr.Spec.DeploymentPlan.PersistenceEnabled {
+		envVarArrayForPresistent := addEnvVarForPersistent(cr)
+		envVar = append(envVar, envVarArrayForPresistent...)
+	}
+	if CheckClusterEnabled(cr) {
+		envVarArrayForCluster := addEnvVarForCluster(cr)
+		envVar = append(envVar, envVarArrayForCluster...)
+	}
+
+	return envVar
+}
+
+func addEnvVarForBasic(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
+
+	envVarArray := []corev1.EnvVar{
+		{
+			"AMQ_USER",
+			GetPropertyForCR("AMQ_USER", cr, "admin"),
+			nil,
+		},
+		{
+			"AMQ_PASSWORD",
+			GetPropertyForCR("AMQ_PASSWORD", cr, "admin"),
+			nil,
+		},
+		{
+			"AMQ_ROLE",
+			GetPropertyForCR("AMQ_ROLE", cr, "admin"),
+			nil,
+		},
+		{
+			"AMQ_NAME",
+			GetPropertyForCR("AMQ_NAME", cr, "amq-broker"),
+			nil,
+		},
+		{
+			"AMQ_TRANSPORTS",
+			GetPropertyForCR("AMQ_TRANSPORTS", cr, "openwire,amqp,stomp,mqtt,hornetq"),
+			nil,
+		},
+		{
+			"AMQ_QUEUES",
+			GetPropertyForCR("AMQ_QUEUES", cr, ""),
+			nil,
+		},
+		{
+			"AMQ_ADDRESSES",
+			GetPropertyForCR("AMQ_ADDRESSES", cr, ""),
+			nil,
+		},
+		{
+			"AMQ_GLOBAL_MAX_SIZE",
+			GetPropertyForCR("AMQ_GLOBAL_MAX_SIZE", cr, "100 mb"),
+			nil,
+		},
+		{
+			"AMQ_REQUIRE_LOGIN",
+			GetPropertyForCR("AMQ_REQUIRE_LOGIN", cr, ""),
+			nil,
+		},
+		{
+			"AMQ_EXTRA_ARGS",
+			GetPropertyForCR("AMQ_EXTRA_ARGS", cr, "--no-autotune"),
+			nil,
+		},
+		{
+			"AMQ_ANYCAST_PREFIX",
+			GetPropertyForCR("AMQ_ANYCAST_PREFIX", cr, ""),
+			nil,
+		},
+		{
+			"AMQ_MULTICAST_PREFIX",
+			GetPropertyForCR("AMQ_MULTICAST_PREFIX", cr, ""),
+			nil,
+		},
+		{
+			"POD_NAMESPACE",
+			"", // Set to the field metadata.namespace in current object
+			nil,
+		},
+	}
+
+	return envVarArray
+}
+
+func addEnvVarForPersistent(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
+
+	envVarArray := []corev1.EnvVar{
+		{
+			"AMQ_DATA_DIR",
+			GetPropertyForCR("AMQ_DATA_DIR", cr, "/opt/"+cr.Name+"/data"),
+			nil,
+		},
+		{
+			"AMQ_DATA_DIR_LOGGING",
+			GetPropertyForCR("AMQ_DATA_DIR_LOGGING", cr, "true"),
+			nil,
+		},
+	}
+
+	return envVarArray
+}
+
+func addEnvVarForSSL(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
+
+	envVarArray := []corev1.EnvVar{
+		{
+			"AMQ_KEYSTORE_TRUSTSTORE_DIR",
+			GetPropertyForCR("AMQ_KEYSTORE_TRUSTSTORE_DIR", cr, "/etc/amq-secret-volume"),
+			nil,
+		},
+		{
+			"AMQ_TRUSTSTORE",
+			GetPropertyForCR("AMQ_TRUSTSTORE", cr, ""),
+			nil,
+		},
+		{
+			"AMQ_TRUSTSTORE_PASSWORD",
+			GetPropertyForCR("AMQ_TRUSTSTORE_PASSWORD", cr, ""),
+			nil,
+		},
+		{
+			"AMQ_KEYSTORE",
+			GetPropertyForCR("AMQ_KEYSTORE", cr, ""),
+			nil,
+		},
+		{
+			"AMQ_KEYSTORE_PASSWORD",
+			GetPropertyForCR("AMQ_KEYSTORE_PASSWORD", cr, ""),
+			nil,
+		},
+	}
+
+	return envVarArray
+
+}
+
+func addEnvVarForCluster(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
+
+	envVarArray := []corev1.EnvVar{
+
+		{
+			"AMQ_CLUSTERED",
+			GetPropertyForCR("AMQ_CLUSTERED", cr, "true"),
+			nil,
+		},
+		{
+			"AMQ_CLUSTER_USER",
+			GetPropertyForCR("AMQ_CLUSTER_USER", cr, "clusteruser"),
+			nil,
+		},
+		{
+			"AMQ_CLUSTER_PASSWORD",
+			GetPropertyForCR("AMQ_CLUSTER_PASSWORD", cr, "clusterpass"),
+			nil,
+		},
+	}
+
+	return envVarArray
+}
+
+func newEnvVarArrayForCR(cr *brokerv2alpha1.ActiveMQArtemis) *[]corev1.EnvVar {
+
+	envVarArray := MakeEnvVarArrayForCR(cr)
+
+	return &envVarArray
+}
+

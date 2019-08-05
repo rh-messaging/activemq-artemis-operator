@@ -18,6 +18,7 @@ package draincontroller
 
 import (
 	"fmt"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 	"time"
 
@@ -609,8 +610,8 @@ func newPod(sts *appsv1.StatefulSet, ordinal int) (*corev1.Pod, error) {
 	//TODO: Remove this blatant hack
 	podTemplateJson := globalPodTemplateJson
 	podTemplateJson = strings.Replace(podTemplateJson, "CRNAME", statefulsets.GLOBAL_CRNAME, -1)
-	podTemplateJson = strings.Replace(podTemplateJson, "CLUSTERUSER", statefulsets.GLOBAL_AMQ_CLUSTER_USER, 1)
-	podTemplateJson = strings.Replace(podTemplateJson, "CLUSTERPASS", statefulsets.GLOBAL_AMQ_CLUSTER_PASSWORD, 1)
+	podTemplateJson = strings.Replace(podTemplateJson, "CLUSTERUSER", environments.GLOBAL_AMQ_CLUSTER_USER, 1)
+	podTemplateJson = strings.Replace(podTemplateJson, "CLUSTERPASS", environments.GLOBAL_AMQ_CLUSTER_PASSWORD, 1)
 	if podTemplateJson == "" {
 		return nil, fmt.Errorf("No drain pod template configured for StatefulSet " + sts.Name)
 	}
