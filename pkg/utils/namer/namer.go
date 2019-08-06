@@ -16,7 +16,14 @@ type NamerData struct {
 }
 
 func (n *NamerData) Generate() {
-	n.name = n.prefix + n.baseName + n.suffix
+	if len(n.prefix) > 0 {
+		n.name = n.prefix + "-" + n.baseName
+	} else {
+		n.name = n.baseName
+	}
+	if len(n.suffix) > 0 {
+		n.name = n.name + "-" + n.suffix
+	}
 }
 
 //func NewNamer() *NamerData {

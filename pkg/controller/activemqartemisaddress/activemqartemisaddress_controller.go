@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
-	aa "github.com/rh-messaging/activemq-artemis-operator/pkg/controller/activemqartemis"
 	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 	mgmt "github.com/roddiekieley/activemq-artemis-management"
 	corev1 "k8s.io/api/core/v1"
@@ -184,7 +183,7 @@ func getPodBrokers(instance *brokerv2alpha1.ActiveMQArtemisAddress, request reco
 	var artemisArray []*mgmt.Artemis = nil
 	var err error = nil
 
-	ssName, err := aa.GetStatefulSetName(request.Namespace)
+	ss.NameBuilder.Name()
 	if err != nil {
 		reqLogger.Error(err, "Failed to ge the statefulset name")
 	}
@@ -195,7 +194,7 @@ func getPodBrokers(instance *brokerv2alpha1.ActiveMQArtemisAddress, request reco
 		Namespace: request.Namespace,
 	}
 
-	statefulset, err := ss.RetrieveStatefulSet(ssName, ssNamespacedName, client)
+	statefulset, err := ss.RetrieveStatefulSet(ss.NameBuilder.Name(), ssNamespacedName, client)
 	if nil != err {
 		reqLogger.Info("Statefulset: " + ssNamespacedName.Name + " not found")
 	} else {

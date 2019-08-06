@@ -181,18 +181,6 @@ func clusterConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArte
 			}
 		}
 	}
-	//else {
-	//	for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
-	//		for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
-	//			if "AMQ_CLUSTERED" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name ||
-	//				"AMQ_CLUSTER_USER" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name ||
-	//				"AMQ_CLUSTER_PASSWORD" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name {
-	//				currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
-	//				statefulSetUpdated = true
-	//			}
-	//		}
-	//	}
-	//}
 
 	return statefulSetUpdated
 }

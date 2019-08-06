@@ -144,7 +144,7 @@ func (rs *ScalingState) configureServices() error {
 	cr := rs.parentFSM.customResource
 	client := rs.parentFSM.r.client
 	scheme := rs.parentFSM.r.scheme
-	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
+	labels := selectors.LabelBuilder.Labels()
 	for ; i < cr.Spec.DeploymentPlan.Size; i++ {
 		ordinalString = strconv.Itoa(int(i))
 		labels["statefulset.kubernetes.io/pod-name"] = statefulsets.NameBuilder.Name() + "-" + ordinalString
@@ -211,7 +211,7 @@ func (rs *ScalingState) configureRoutes() error {
 		targetServiceName := rs.parentFSM.customResource.Name + "-service-" + targetPortName
 		log.Info("Checking route for " + targetPortName)
 
-		consoleJolokiaRoute := routes.NewRouteDefinitionForCR(rs.parentFSM.customResource, selectors.LabelsForActiveMQArtemis(rs.parentFSM.customResource.Name), targetServiceName, targetPortName, passthroughTLS)
+		consoleJolokiaRoute := routes.NewRouteDefinitionForCR(rs.parentFSM.customResource, selectors.LabelBuilder.Labels(), targetServiceName, targetPortName, passthroughTLS)
 		if err = routes.RetrieveRoute(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, consoleJolokiaRoute); err != nil {
 			routes.DeleteRoute(rs.parentFSM.customResource, rs.parentFSM.r.client, consoleJolokiaRoute)
 		}
@@ -222,7 +222,7 @@ func (rs *ScalingState) configureRoutes() error {
 		targetServiceName = rs.parentFSM.customResource.Name + "-service-" + targetPortName
 		log.Info("Checking route for " + targetPortName)
 		passthroughTLS = true
-		allProtocolRoute := routes.NewRouteDefinitionForCR(rs.parentFSM.customResource, selectors.LabelsForActiveMQArtemis(rs.parentFSM.customResource.Name), targetServiceName, targetPortName, passthroughTLS)
+		allProtocolRoute := routes.NewRouteDefinitionForCR(rs.parentFSM.customResource, selectors.LabelBuilder.Labels(), targetServiceName, targetPortName, passthroughTLS)
 		if err = routes.RetrieveRoute(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, allProtocolRoute); err != nil {
 			routes.DeleteRoute(rs.parentFSM.customResource, rs.parentFSM.r.client, allProtocolRoute)
 		}

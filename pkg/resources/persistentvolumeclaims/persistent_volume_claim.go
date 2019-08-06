@@ -3,6 +3,7 @@ package persistentvolumeclaims
 import (
 	"context"
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -10,7 +11,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -20,8 +20,6 @@ var log = logf.Log.WithName("package persistentvolumeclaims")
 
 func newPersistentVolumeClaimForCR(cr *brokerv2alpha1.ActiveMQArtemis) *corev1.PersistentVolumeClaim {
 
-	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
-
 	pvc := &corev1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -29,7 +27,7 @@ func newPersistentVolumeClaimForCR(cr *brokerv2alpha1.ActiveMQArtemis) *corev1.P
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: nil,
-			Labels:      labels,
+			Labels:      selectors.LabelBuilder.Labels(),
 			Name:        cr.Name,
 			Namespace:   cr.Namespace,
 		},

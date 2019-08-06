@@ -6,6 +6,7 @@ import (
 	pvc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/persistentvolumeclaims"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/namer"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
+	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,11 +29,6 @@ const (
 	graceTime       = 30
 	TCPLivenessPort = 8161
 )
-
-
-
-
-
 
 func makeVolumeMounts(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.VolumeMount {
 
@@ -188,7 +184,7 @@ func NewStatefulSetForCR(cr *brokerv2alpha1.ActiveMQArtemis) *appsv1.StatefulSet
 	reqLogger.Info("Creating new statefulset for custom resource")
 	replicas := cr.Spec.DeploymentPlan.Size
 
-	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
+	labels := selectors.LabelBuilder.Labels()
 
 	ss := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
@@ -204,7 +200,7 @@ func NewStatefulSetForCR(cr *brokerv2alpha1.ActiveMQArtemis) *appsv1.StatefulSet
 	}
 	Spec := appsv1.StatefulSetSpec{
 		Replicas:    &replicas,
-		ServiceName: "amq-broker-amq-headless", //cr.Name + "-headless" + "-service",
+		ServiceName: svc.HeadlessNameBuilder.Name(),
 		Selector: &metav1.LabelSelector{
 			MatchLabels: labels,
 		},
@@ -221,35 +217,6 @@ func NewStatefulSetForCR(cr *brokerv2alpha1.ActiveMQArtemis) *appsv1.StatefulSet
 
 var GLOBAL_CRNAME string = ""
 
-//func CreateStatefulSet(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*appsv1.StatefulSet, error) {
-//
-//	// Log where we are and what we're doing
-//	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
-//	reqLogger.Info("Creating new statefulset")
-//	var err error = nil
-//
-//	// Define the StatefulSet
-//	ss := NewStatefulSetForCR(cr)
-//
-//	// Set ActiveMQArtemis instance as the owner and controller
-//	if err = controllerutil.SetControllerReference(cr, ss, scheme); err != nil {
-//		// Add error detail for use later
-//		reqLogger.Info("Failed to set controller reference for new " + "statefulset")
-//	}
-//	reqLogger.Info("Set controller reference for new " + "statefulset")
-//
-//	// Call k8s create for statefulset
-//	if err = client.Create(context.TODO(), ss); err != nil {
-//		// Add error detail for use later
-//		reqLogger.Info("Failed to creating new " + "statefulset")
-//	}
-//	reqLogger.Info("Created new " + "statefulset")
-//
-//	//TODO: Remove this blatant hack
-//	GLOBAL_CRNAME = cr.Name
-//
-//	return ss, err
-//}
 func Create(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, ss *appsv1.StatefulSet) error {
 
 	// Log where we are and what we're doing
@@ -284,10 +251,8 @@ func RetrieveStatefulSet(statefulsetName string, namespacedName types.Namespaced
 
 	var err error = nil
 
-	// TODO: Remove this hack
-	var crName string = statefulsetName
-
-	labels := selectors.LabelsForActiveMQArtemis(crName)
+	//// TODO: Remove this hack
+	//var crName string = statefulsetName
 
 	ss := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
@@ -297,7 +262,7 @@ func RetrieveStatefulSet(statefulsetName string, namespacedName types.Namespaced
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        statefulsetName,
 			Namespace:   namespacedName.Namespace,
-			Labels:      labels,
+			Labels:      selectors.LabelBuilder.Labels(),
 			Annotations: nil,
 		},
 	}
@@ -311,4 +276,23 @@ func RetrieveStatefulSet(statefulsetName string, namespacedName types.Namespaced
 	}
 
 	return ss, err
+}
+
+func Retrieve(namespacedName types.NamespacedName, client client.Client, statefulset *appsv1.StatefulSet) error {
+
+	// Log where we are and what we're doing
+	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
+	reqLogger.Info("Retrieving " + "statefulset " + statefulset.Name)
+
+	// Check if the headless service already exists
+	var err error = nil
+	if err = client.Get(context.TODO(), namespacedName, statefulset); err != nil {
+		if errors.IsNotFound(err) {
+			reqLogger.Info("Statefulset claim IsNotFound", "Namespace", namespacedName.Namespace, "Name", namespacedName.Name)
+		} else {
+			reqLogger.Info("Statefulset claim found", "Namespace", namespacedName.Namespace, "Name", namespacedName.Name)
+		}
+	}
+
+	return err
 }

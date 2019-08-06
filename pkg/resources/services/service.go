@@ -3,42 +3,31 @@ package services
 import (
 	"context"
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/namer"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"strconv"
 
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 )
 
 var log = logf.Log.WithName("package services")
 
-//var names []string
-//
-//const  (
-//	HeadlessService = iota,
-//
-//
-//)
-//
-//func GenerateNames(baseName string) {
-//
-//}
-
-
+var HeadlessNameBuilder namer.NamerData
+//var ServiceNameBuilderArray []namer.NamerData
+//var RouteNameBuilderArray []namer.NamerData
 
 
 // newServiceForPod returns an activemqartemis service for the pod just created
-func newHeadlessServiceForCR(cr *brokerv2alpha1.ActiveMQArtemis, servicePorts *[]corev1.ServicePort) *corev1.Service {
+func NewHeadlessServiceForCR(cr *brokerv2alpha1.ActiveMQArtemis, servicePorts *[]corev1.ServicePort) *corev1.Service {
 
-	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
+	labels := selectors.LabelBuilder.Labels()
 
 	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -48,7 +37,7 @@ func newHeadlessServiceForCR(cr *brokerv2alpha1.ActiveMQArtemis, servicePorts *[
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: nil,
 			Labels:      labels,
-			Name:        "amq-broker-amq-headless", //"amq-broker-headless" + "-service",
+			Name:        HeadlessNameBuilder.Name(),
 			Namespace:   cr.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
@@ -67,7 +56,6 @@ func newHeadlessServiceForCR(cr *brokerv2alpha1.ActiveMQArtemis, servicePorts *[
 func NewServiceDefinitionForCR(cr *brokerv2alpha1.ActiveMQArtemis, nameSuffix string, portNumber int32, selectorLabels map[string]string) *corev1.Service {
 
 	port := corev1.ServicePort{
-		//Name:       cr.Name + "-" + nameSuffix + "-port",
 		Name:       nameSuffix,
 		Protocol:   "TCP",
 		Port:       portNumber,
@@ -83,7 +71,7 @@ func NewServiceDefinitionForCR(cr *brokerv2alpha1.ActiveMQArtemis, nameSuffix st
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: nil,
-			Labels:      selectors.LabelsForActiveMQArtemis(cr.Name),
+			Labels:      selectors.LabelBuilder.Labels(),
 			Name:        cr.Name + "-service" + "-" + nameSuffix,
 			Namespace:   cr.Namespace,
 		},
@@ -254,28 +242,28 @@ func RetrieveService(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, n
 	return err
 }
 
-func CreateServices(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, baseServiceName string, portNumber int32) error {
-
-	// Log where we are and what we're doing
-	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
-	reqLogger.Info("Creating " + baseServiceName + " services")
-
-	var err error = nil
-	var i int32 = 0
-	ordinalString := ""
-	for ; i < cr.Spec.DeploymentPlan.Size; i++ {
-		labels := selectors.LabelsForActiveMQArtemis(cr.Name)
-		ordinalString = strconv.Itoa(int(i))
-		labels["statefulset.kubernetes.io/pod-name"] = ss.NameBuilder.Name() + "-" + ordinalString
-		consoleJolokiaService := NewServiceDefinitionForCR(cr, baseServiceName+"-"+ordinalString, portNumber, labels)
-		if err = CreateService(cr, client, scheme, consoleJolokiaService); err != nil {
-			reqLogger.Info("Failure to create " + baseServiceName + " service " + ordinalString)
-			break
-		}
-	}
-
-	return err
-}
+//func CreateServices(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, baseServiceName string, portNumber int32) error {
+//
+//	// Log where we are and what we're doing
+//	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
+//	reqLogger.Info("Creating " + baseServiceName + " services")
+//
+//	var err error = nil
+//	var i int32 = 0
+//	ordinalString := ""
+//	for ; i < cr.Spec.DeploymentPlan.Size; i++ {
+//		labels := selectors.LabelBuilder.Labels()
+//		ordinalString = strconv.Itoa(int(i))
+//		labels["statefulset.kubernetes.io/pod-name"] = ss.NameBuilder.Name() + "-" + ordinalString
+//		consoleJolokiaService := NewServiceDefinitionForCR(cr, baseServiceName+"-"+ordinalString, portNumber, labels)
+//		if err = CreateService(cr, client, scheme, consoleJolokiaService); err != nil {
+//			reqLogger.Info("Failure to create " + baseServiceName + " service " + ordinalString)
+//			break
+//		}
+//	}
+//
+//	return err
+//}
 
 func RetrieveConsoleJolokiaService(cr *brokerv2alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.Service, error) {
 
@@ -284,7 +272,7 @@ func RetrieveConsoleJolokiaService(cr *brokerv2alpha1.ActiveMQArtemis, namespace
 	reqLogger.Info("Retrieving " + "console-jolokia" + " service")
 
 	var err error = nil
-	consoleJolokiaSvc := NewServiceDefinitionForCR(cr, "console-jolokia", 8161, selectors.LabelsForActiveMQArtemis(cr.Name))
+	consoleJolokiaSvc := NewServiceDefinitionForCR(cr, "console-jolokia", 8161, selectors.LabelBuilder.Labels())
 
 	// Check if the headless service already exists
 	if err = client.Get(context.TODO(), namespacedName, consoleJolokiaSvc); err != nil {
@@ -305,7 +293,7 @@ func RetrieveAllProtocolService(cr *brokerv2alpha1.ActiveMQArtemis, namespacedNa
 	reqLogger.Info("Retrieving " + "all-protocol" + " service")
 
 	var err error = nil
-	allProtocolSvc := NewServiceDefinitionForCR(cr, "all-protocol", 61616, selectors.LabelsForActiveMQArtemis(cr.Name))
+	allProtocolSvc := NewServiceDefinitionForCR(cr, "all-protocol", 61616, selectors.LabelBuilder.Labels())
 
 	// Check if the headless service already exists
 	if err = client.Get(context.TODO(), namespacedName, allProtocolSvc); err != nil {
@@ -325,7 +313,7 @@ func CreatePingService(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client,
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Creating new " + "ping" + " service")
 
-	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
+	labels := selectors.LabelBuilder.Labels()
 	pingSvc := newPingServiceDefinitionForCR(cr, labels, labels)
 
 	// Define the headless Service for the StatefulSet
@@ -354,7 +342,7 @@ func RetrievePingService(cr *brokerv2alpha1.ActiveMQArtemis, namespacedName type
 	reqLogger.Info("Retrieving " + "ping" + " service")
 
 	var err error = nil
-	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
+	labels := selectors.LabelBuilder.Labels()
 	pingSvc := newPingServiceDefinitionForCR(cr, labels, labels)
 
 	// Check if the headless service already exists
@@ -369,13 +357,13 @@ func RetrievePingService(cr *brokerv2alpha1.ActiveMQArtemis, namespacedName type
 	return pingSvc, err
 }
 
-func CreateHeadlessService(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*corev1.Service, error) {
+func Create(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, headlessSvc *corev1.Service) error {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Creating new " + "headless" + " service")
 
-	headlessSvc := newHeadlessServiceForCR(cr, GetDefaultPorts(cr))
+	//headlessSvc := newHeadlessServiceForCR(cr, GetDefaultPorts(cr))
 
 	// Define the headless Service for the StatefulSet
 	// Set ActiveMQArtemis instance as the owner and controller
@@ -394,7 +382,7 @@ func CreateHeadlessService(cr *brokerv2alpha1.ActiveMQArtemis, client client.Cli
 	}
 	reqLogger.Info("Created new " + "headless" + " service")
 
-	return headlessSvc, err
+	return err
 }
 
 func DeleteHeadlessService(instance *brokerv2alpha1.ActiveMQArtemis) {
@@ -409,7 +397,7 @@ func RetrieveHeadlessService(cr *brokerv2alpha1.ActiveMQArtemis, namespacedName 
 	reqLogger.Info("Retrieving " + "headless" + " service")
 
 	var err error = nil
-	headlessService := newHeadlessServiceForCR(cr, GetDefaultPorts(cr))
+	headlessService := NewHeadlessServiceForCR(cr, GetDefaultPorts(cr))
 
 	// Check if the headless service already exists
 	if err = client.Get(context.TODO(), namespacedName, headlessService); err != nil {
@@ -421,4 +409,25 @@ func RetrieveHeadlessService(cr *brokerv2alpha1.ActiveMQArtemis, namespacedName 
 	}
 
 	return headlessService, err
+}
+
+func Retrieve(cr *brokerv2alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client, headlessService *corev1.Service) error {
+
+	// Log where we are and what we're doing
+	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
+	reqLogger.Info("Retrieving " + "headless" + " service")
+
+	var err error = nil
+	//headlessService := NewHeadlessServiceForCR(cr, GetDefaultPorts(cr))
+
+	// Check if the headless service already exists
+	if err = client.Get(context.TODO(), namespacedName, headlessService); err != nil {
+		if errors.IsNotFound(err) {
+			reqLogger.Info("Headless service IsNotFound", "Namespace", cr.Namespace, "Name", cr.Name)
+		} else {
+			reqLogger.Info("Headless service found", "Namespace", cr.Namespace, "Name", cr.Name)
+		}
+	}
+
+	return err
 }

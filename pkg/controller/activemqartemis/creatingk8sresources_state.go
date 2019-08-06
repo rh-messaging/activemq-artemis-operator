@@ -8,6 +8,7 @@ import (
 	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
 	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -57,20 +58,24 @@ func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 	var retrieveError error = nil
 
 	// Initialize the kubernetes names
-	ss.NameBuilder.Base(rs.parentFSM.customResource.Name).Suffix("-ss").Generate()
+	ss.NameBuilder.Base(rs.parentFSM.customResource.Name).Suffix("ss").Generate()
+	selectors.LabelBuilder.Base(rs.parentFSM.customResource.Name).Suffix("app").Generate()
+	svc.HeadlessNameBuilder.Prefix("amq-broker").Base("amq").Suffix("headless").Generate()
+	statefulsetDefinition := ss.NewStatefulSetForCR(rs.parentFSM.customResource)
 
 	// Check to see if the statefulset already exists
-	if _, err := ss.RetrieveStatefulSet(ss.NameBuilder.Name(), rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+	if err := ss.Retrieve(rs.parentFSM.namespacedName, rs.parentFSM.r.client, statefulsetDefinition); err != nil {
 		// err means not found, so create
-		if retrieveError := ss.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, ss.NewStatefulSetForCR(rs.parentFSM.customResource)); retrieveError == nil {
+		if retrieveError := ss.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, statefulsetDefinition); retrieveError == nil {
 			rs.stepsComplete |= CreatedStatefulSet
 		}
 	}
 
+	headlessServiceDefinition := svc.NewHeadlessServiceForCR(rs.parentFSM.customResource, svc.GetDefaultPorts(rs.parentFSM.customResource))
 	// Check to see if the headless service already exists
-	if _, err = svc.RetrieveHeadlessService(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+	if err = svc.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, headlessServiceDefinition); err != nil {
 		// err means not found, so create
-		if _, retrieveError = svc.CreateHeadlessService(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme); retrieveError == nil {
+		if retrieveError = svc.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, headlessServiceDefinition); retrieveError == nil {
 			rs.stepsComplete |= CreatedHeadlessService
 		}
 	}

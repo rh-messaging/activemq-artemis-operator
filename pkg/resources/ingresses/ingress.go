@@ -2,6 +2,7 @@ package ingresses
 
 import (
 	"context"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -9,9 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	v2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
-	selectors "github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
-
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	extv1b1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -23,15 +22,13 @@ var log = logf.Log.WithName("package ingresses")
 // Create newIngressForCR method to create exposed ingress
 func NewIngressForCR(cr *v2alpha1.ActiveMQArtemis, target string) *extv1b1.Ingress {
 
-	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
-
 	ingress := &extv1b1.Ingress{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Ingress",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:    labels,
+			Labels:    selectors.LabelBuilder.Labels(),
 			Name:      cr.Name + "-" + target,
 			Namespace: cr.Namespace,
 		},
