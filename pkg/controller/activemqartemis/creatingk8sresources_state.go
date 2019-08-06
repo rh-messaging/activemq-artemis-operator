@@ -56,10 +56,13 @@ func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 	var err error = nil
 	var retrieveError error = nil
 
+	// Initialize the kubernetes names
+	ss.NameBuilder.Base(rs.parentFSM.customResource.Name).Suffix("-ss").Generate()
+
 	// Check to see if the statefulset already exists
-	if _, err := ss.RetrieveStatefulSet(rs.parentFSM.customResource.Name+"-ss", rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+	if _, err := ss.RetrieveStatefulSet(ss.NameBuilder.Name(), rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
 		// err means not found, so create
-		if _, retrieveError := ss.CreateStatefulSet(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme); retrieveError == nil {
+		if retrieveError := ss.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, ss.NewStatefulSetForCR(rs.parentFSM.customResource)); retrieveError == nil {
 			rs.stepsComplete |= CreatedStatefulSet
 		}
 	}
@@ -129,7 +132,7 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 	}
 
 	currentStatefulSet := &appsv1.StatefulSet{}
-	err = rs.parentFSM.r.client.Get(context.TODO(), types.NamespacedName{Name: rs.parentFSM.customResource.Name + "-ss", Namespace: rs.parentFSM.customResource.Namespace}, currentStatefulSet)
+	err = rs.parentFSM.r.client.Get(context.TODO(), types.NamespacedName{Name: ss.NameBuilder.Name(), Namespace: rs.parentFSM.customResource.Namespace}, currentStatefulSet)
 	for {
 		if err != nil && errors.IsNotFound(err) {
 			reqLogger.Error(err, "Failed to get StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
@@ -210,7 +213,7 @@ func getPodStatus(r *ReconcileActiveMQArtemis, instance *brokerv2alpha1.ActiveMQ
 	var status olm.DeploymentStatus
 	sfsFound := &appsv1.StatefulSet{}
 
-	err := r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name + "-ss", Namespace: instance.Namespace}, sfsFound)
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: ss.NameBuilder.Name(), Namespace: instance.Namespace}, sfsFound)
 	if err == nil {
 		status = olm.GetSingleStatefulSetStatus(*sfsFound)
 	} else {

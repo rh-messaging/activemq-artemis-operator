@@ -15,9 +15,25 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 )
 
 var log = logf.Log.WithName("package services")
+
+//var names []string
+//
+//const  (
+//	HeadlessService = iota,
+//
+//
+//)
+//
+//func GenerateNames(baseName string) {
+//
+//}
+
+
+
 
 // newServiceForPod returns an activemqartemis service for the pod just created
 func newHeadlessServiceForCR(cr *brokerv2alpha1.ActiveMQArtemis, servicePorts *[]corev1.ServicePort) *corev1.Service {
@@ -250,7 +266,7 @@ func CreateServices(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, sc
 	for ; i < cr.Spec.DeploymentPlan.Size; i++ {
 		labels := selectors.LabelsForActiveMQArtemis(cr.Name)
 		ordinalString = strconv.Itoa(int(i))
-		labels["statefulset.kubernetes.io/pod-name"] = cr.Name + "-ss" + "-" + ordinalString
+		labels["statefulset.kubernetes.io/pod-name"] = ss.NameBuilder.Name() + "-" + ordinalString
 		consoleJolokiaService := NewServiceDefinitionForCR(cr, baseServiceName+"-"+ordinalString, portNumber, labels)
 		if err = CreateService(cr, client, scheme, consoleJolokiaService); err != nil {
 			reqLogger.Info("Failure to create " + baseServiceName + " service " + ordinalString)

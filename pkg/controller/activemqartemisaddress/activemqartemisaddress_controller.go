@@ -191,7 +191,7 @@ func getPodBrokers(instance *brokerv2alpha1.ActiveMQArtemisAddress, request reco
 
 	// Check to see if the statefulset already exists
 	ssNamespacedName := types.NamespacedName{
-		Name:      ssName + "-ss",
+		Name:      ss.NameBuilder.Name(),
 		Namespace: request.Namespace,
 	}
 

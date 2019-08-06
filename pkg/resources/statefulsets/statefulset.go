@@ -4,6 +4,7 @@ import (
 	"context"
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	pvc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/persistentvolumeclaims"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/namer"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -21,11 +22,17 @@ import (
 )
 
 var log = logf.Log.WithName("package statefulsets")
+var NameBuilder namer.NamerData
 
 const (
 	graceTime       = 30
 	TCPLivenessPort = 8161
 )
+
+
+
+
+
 
 func makeVolumeMounts(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.VolumeMount {
 
@@ -174,7 +181,7 @@ func newPodTemplateSpecForCR(cr *brokerv2alpha1.ActiveMQArtemis) corev1.PodTempl
 	return pts
 }
 
-func newStatefulSetForCR(cr *brokerv2alpha1.ActiveMQArtemis) *appsv1.StatefulSet {
+func NewStatefulSetForCR(cr *brokerv2alpha1.ActiveMQArtemis) *appsv1.StatefulSet {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithName(cr.Name)
@@ -189,7 +196,7 @@ func newStatefulSetForCR(cr *brokerv2alpha1.ActiveMQArtemis) *appsv1.StatefulSet
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        cr.Name + "-ss", //"-statefulset",
+			Name:        NameBuilder.Name(),
 			Namespace:   cr.Namespace,
 			Labels:      labels,
 			Annotations: cr.Annotations,
@@ -214,15 +221,41 @@ func newStatefulSetForCR(cr *brokerv2alpha1.ActiveMQArtemis) *appsv1.StatefulSet
 
 var GLOBAL_CRNAME string = ""
 
-func CreateStatefulSet(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*appsv1.StatefulSet, error) {
+//func CreateStatefulSet(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*appsv1.StatefulSet, error) {
+//
+//	// Log where we are and what we're doing
+//	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
+//	reqLogger.Info("Creating new statefulset")
+//	var err error = nil
+//
+//	// Define the StatefulSet
+//	ss := NewStatefulSetForCR(cr)
+//
+//	// Set ActiveMQArtemis instance as the owner and controller
+//	if err = controllerutil.SetControllerReference(cr, ss, scheme); err != nil {
+//		// Add error detail for use later
+//		reqLogger.Info("Failed to set controller reference for new " + "statefulset")
+//	}
+//	reqLogger.Info("Set controller reference for new " + "statefulset")
+//
+//	// Call k8s create for statefulset
+//	if err = client.Create(context.TODO(), ss); err != nil {
+//		// Add error detail for use later
+//		reqLogger.Info("Failed to creating new " + "statefulset")
+//	}
+//	reqLogger.Info("Created new " + "statefulset")
+//
+//	//TODO: Remove this blatant hack
+//	GLOBAL_CRNAME = cr.Name
+//
+//	return ss, err
+//}
+func Create(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, ss *appsv1.StatefulSet) error {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Creating new statefulset")
 	var err error = nil
-
-	// Define the StatefulSet
-	ss := newStatefulSetForCR(cr)
 
 	// Set ActiveMQArtemis instance as the owner and controller
 	if err = controllerutil.SetControllerReference(cr, ss, scheme); err != nil {
@@ -241,7 +274,7 @@ func CreateStatefulSet(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client,
 	//TODO: Remove this blatant hack
 	GLOBAL_CRNAME = cr.Name
 
-	return ss, err
+	return err
 }
 func RetrieveStatefulSet(statefulsetName string, namespacedName types.NamespacedName, client client.Client) (*appsv1.StatefulSet, error) {
 

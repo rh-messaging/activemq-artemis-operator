@@ -38,7 +38,7 @@ const (
 	CreatedPingService           = 1 << 4
 	CreatedRouteOrIngress        = 1 << 5
 	CreatedUserPasswordSecret    = 1 << 6
-	CreatedClusterUserPasswordSecret    = 1 << 6
+	CreatedClusterUserPasswordSecret    = 1 << 7
 
 	Complete = CreatedHeadlessService |
 		//CreatedPersistentVolumeClaim |

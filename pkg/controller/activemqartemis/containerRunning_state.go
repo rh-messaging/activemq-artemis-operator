@@ -6,6 +6,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 )
 
 // This is the state we should be in whenever kubernetes
@@ -66,7 +67,7 @@ func (rs *ContainerRunningState) Update() (error, int) {
 	}
 
 	currentStatefulSet := &appsv1.StatefulSet{}
-	err = rs.parentFSM.r.client.Get(context.TODO(), types.NamespacedName{Name: rs.parentFSM.customResource.Name + "-ss", Namespace: rs.parentFSM.customResource.Namespace}, currentStatefulSet)
+	err = rs.parentFSM.r.client.Get(context.TODO(), types.NamespacedName{Name: ss.NameBuilder.Name(), Namespace: rs.parentFSM.customResource.Namespace}, currentStatefulSet)
 	for {
 		if err != nil && errors.IsNotFound(err) {
 			reqLogger.Error(err, "Failed to get StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)

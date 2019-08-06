@@ -5,6 +5,7 @@ import (
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/ingresses"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/routes"
 	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/env"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
@@ -49,7 +50,7 @@ func (ss *ScalingState) Enter(previousStateID int) error {
 	var err error = nil
 
 	currentStatefulSet := &appsv1.StatefulSet{}
-	err = ss.parentFSM.r.client.Get(context.TODO(), types.NamespacedName{Name: ss.parentFSM.customResource.Name + "-ss", Namespace: ss.parentFSM.customResource.Namespace}, currentStatefulSet)
+	err = ss.parentFSM.r.client.Get(context.TODO(), types.NamespacedName{Name: statefulsets.NameBuilder.Name(), Namespace: ss.parentFSM.customResource.Namespace}, currentStatefulSet)
 	for {
 		if err != nil && errors.IsNotFound(err) {
 			reqLogger.Error(err, "Failed to get StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
@@ -77,7 +78,7 @@ func (ss *ScalingState) Update() (error, int) {
 	var nextStateID int = ScalingID
 
 	currentStatefulSet := &appsv1.StatefulSet{}
-	err = ss.parentFSM.r.client.Get(context.TODO(), types.NamespacedName{Name: ss.parentFSM.customResource.Name + "-ss", Namespace: ss.parentFSM.customResource.Namespace}, currentStatefulSet)
+	err = ss.parentFSM.r.client.Get(context.TODO(), types.NamespacedName{Name: statefulsets.NameBuilder.Name(), Namespace: ss.parentFSM.customResource.Namespace}, currentStatefulSet)
 	for {
 		if err != nil && errors.IsNotFound(err) {
 			reqLogger.Error(err, "Failed to get StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
@@ -146,7 +147,7 @@ func (rs *ScalingState) configureServices() error {
 	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
 	for ; i < cr.Spec.DeploymentPlan.Size; i++ {
 		ordinalString = strconv.Itoa(int(i))
-		labels["statefulset.kubernetes.io/pod-name"] = cr.Name + "-ss" + "-" + ordinalString
+		labels["statefulset.kubernetes.io/pod-name"] = statefulsets.NameBuilder.Name() + "-" + ordinalString
 
 		baseServiceName := "console-jolokia"
 		serviceDefinition := svc.NewServiceDefinitionForCR(cr, baseServiceName+"-"+ordinalString, portNumber, labels)
