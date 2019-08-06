@@ -37,6 +37,7 @@ const (
 	CreatedMuxProtocolService    = 1 << 3
 	CreatedPingService           = 1 << 4
 	CreatedRouteOrIngress        = 1 << 5
+	CreatedSecrets				 = 1 << 6
 
 	Complete = CreatedHeadlessService |
 		//CreatedPersistentVolumeClaim |
@@ -44,7 +45,8 @@ const (
 		CreatedMuxProtocolService |
 		CreatedStatefulSet |
 		CreatedPingService |
-		CreatedRouteOrIngress
+		CreatedRouteOrIngress |
+		CreatedSecrets
 )
 
 // Machine id

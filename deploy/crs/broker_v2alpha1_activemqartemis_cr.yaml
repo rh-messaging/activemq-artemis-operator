@@ -12,8 +12,8 @@ spec:
     image: registry.redhat.io/amq7/amq-broker:7.4
     persistenceEnabled: false
     journalType: nio
-    user: adminUser
-    password: adminPass
+    #user: adminUser
+    #password: adminPass
     role: adminRole
     clustered: true
     clusterUser: clusterUser

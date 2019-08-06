@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/RHsyseng/operator-utils/pkg/olm"
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/secrets"
 	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
 	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
@@ -76,6 +77,13 @@ func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 		// err means not found, so create
 		if _, retrieveError = svc.CreatePingService(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme); retrieveError == nil {
 			rs.stepsComplete |= CreatedPingService
+		}
+	}
+
+	if _, err = secrets.RetrieveUserPasswordSecret(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+		// err means not found so create
+		if _, retrieveError = secrets.CreateUserPasswordSecret(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme); retrieveError == nil {
+			rs.stepsComplete |= CreatedSecrets
 		}
 	}
 
