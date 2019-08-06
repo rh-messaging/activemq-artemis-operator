@@ -83,7 +83,14 @@ func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 	if _, err = secrets.RetrieveUserPasswordSecret(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
 		// err means not found so create
 		if _, retrieveError = secrets.CreateUserPasswordSecret(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme); retrieveError == nil {
-			rs.stepsComplete |= CreatedSecrets
+			rs.stepsComplete |= CreatedUserPasswordSecret
+		}
+	}
+
+	if _, err = secrets.RetrieveClusterUserPasswordSecret(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+		// err means not found so create
+		if _, retrieveError = secrets.CreateClusterUserPasswordSecret(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme); retrieveError == nil {
+			rs.stepsComplete |= CreatedClusterUserPasswordSecret
 		}
 	}
 

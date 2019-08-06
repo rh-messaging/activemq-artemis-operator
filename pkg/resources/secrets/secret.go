@@ -108,9 +108,59 @@ func CreateUserPasswordSecret(cr *brokerv2alpha1.ActiveMQArtemis, client client.
 	if err = client.Create(context.TODO(), userPasswordSecret); err != nil {
 		// Add error detail for use later
 		reqLogger.Info("Failed to creating new " + "UserPassword" + " secret")
-
 	}
 	reqLogger.Info("Created new " + "UserPassword" + " secret")
+
+	return userPasswordSecret, err
+}
+
+func RetrieveClusterUserPasswordSecret(cr *brokerv2alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.Secret, error) {
+
+	// Log where we are and what we're doing
+	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
+	reqLogger.Info("Retrieving " + "ClusterUserPassword" + " secret")
+
+	var err error = nil
+
+	userPasswordStringData := makeUserPasswordStringData("clusterUser", "clusterPassword", cr.Spec.DeploymentPlan.ClusterUser, cr.Spec.DeploymentPlan.ClusterPassword)
+	userPasswordSecret := newUserPasswordSecret(cr, "amq-credentials-secret", userPasswordStringData)
+
+	if err = client.Get(context.TODO(), namespacedName, userPasswordSecret); err != nil {
+		if errors.IsNotFound(err) {
+			reqLogger.Info("ClusterUserPassword secret IsNotFound", "Namespace", cr.Namespace, "Name", cr.Name)
+		} else {
+			reqLogger.Info("ClusterUserPassword secret found", "Namespace", cr.Namespace, "Name", cr.Name)
+		}
+	}
+
+	return userPasswordSecret, err
+}
+
+func CreateClusterUserPasswordSecret(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*corev1.Secret, error) {
+
+	// Log where we are and what we're doing
+	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
+	reqLogger.Info("Creating new " + "ClusterUserPassword" + " secret")
+
+	//labels := selectors.LabelsForActiveMQArtemis(cr.Name)
+	userPasswordStringData := makeUserPasswordStringData("clusterUser", "clusterPassword", cr.Spec.DeploymentPlan.ClusterUser, cr.Spec.DeploymentPlan.ClusterPassword)
+	userPasswordSecret := newUserPasswordSecret(cr, "amq-credentials-secret", userPasswordStringData)
+
+	// Define the headless Service for the StatefulSet
+	// Set ActiveMQArtemis instance as the owner and controller
+	var err error = nil
+	if err = controllerutil.SetControllerReference(cr, userPasswordSecret, scheme); err != nil {
+		// Add error detail for use later
+		reqLogger.Info("Failed to set controller reference for new " + "ClusterUserPassword" + " secret")
+	}
+	reqLogger.Info("Set controller reference for new " + "ClusterUserPassword" + " secret")
+
+	// Call k8s create for service
+	if err = client.Create(context.TODO(), userPasswordSecret); err != nil {
+		// Add error detail for use later
+		reqLogger.Info("Failed to creating new " + "ClusterUserPassword" + " secret")
+	}
+	reqLogger.Info("Created new " + "ClusterUserPassword" + " secret")
 
 	return userPasswordSecret, err
 }

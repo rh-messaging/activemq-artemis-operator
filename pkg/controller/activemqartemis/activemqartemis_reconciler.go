@@ -4,6 +4,7 @@ import (
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"strconv"
 	"strings"
 )
 
@@ -80,17 +81,37 @@ func clusterConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArte
 
 	statefulSetUpdated := false
 
+	clusterUserEnvVarSource := &corev1.EnvVarSource {
+		SecretKeyRef: &corev1.SecretKeySelector{
+			LocalObjectReference: corev1.LocalObjectReference{
+				Name: "amq-credentials-secret",
+			},
+			Key:                  "clusterUser",
+			Optional:             nil,
+		},
+	}
+
+	clusterPasswordEnvVarSource := &corev1.EnvVarSource {
+		SecretKeyRef: &corev1.SecretKeySelector{
+			LocalObjectReference: corev1.LocalObjectReference{
+				Name: "amq-credentials-secret",
+			},
+			Key:                  "clusterPassword",
+			Optional:             nil,
+		},
+	}
+
 	// TODO: Remove yuck
 	// ensure password and username are valid if can't via openapi validation?
-	if customResource.Spec.DeploymentPlan.ClusterPassword != "" &&
-		customResource.Spec.DeploymentPlan.ClusterUser != "" {
-
+	{
 		envVarArray := []corev1.EnvVar{}
 		// Find the existing values
 		for _, v := range currentStatefulSet.Spec.Template.Spec.Containers[0].Env {
 			if v.Name == "AMQ_CLUSTERED" {
 				foundClustered = true
-				if v.Value == "false" {
+				//if v.Value == "false" {
+				boolValue, _ := strconv.ParseBool(v.Value)
+				if boolValue != customResource.Spec.DeploymentPlan.Clustered {
 					clusteredNeedsUpdate = true
 				}
 			}
@@ -111,7 +132,7 @@ func clusterConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArte
 		if !foundClustered || clusteredNeedsUpdate {
 			newClusteredValue := corev1.EnvVar{
 				"AMQ_CLUSTERED",
-				"true",
+				strconv.FormatBool(customResource.Spec.DeploymentPlan.Clustered),
 				nil,
 			}
 			envVarArray = append(envVarArray, newClusteredValue)
@@ -121,8 +142,8 @@ func clusterConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArte
 		if !foundClusterUser || clusterUserNeedsUpdate {
 			newClusteredValue := corev1.EnvVar{
 				"AMQ_CLUSTER_USER",
-				customResource.Spec.DeploymentPlan.ClusterUser,
-				nil,
+				"",
+				clusterUserEnvVarSource,
 			}
 			envVarArray = append(envVarArray, newClusteredValue)
 			statefulSetUpdated = true
@@ -131,8 +152,8 @@ func clusterConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArte
 		if !foundClusterPassword || clusterPasswordNeedsUpdate {
 			newClusteredValue := corev1.EnvVar{
 				"AMQ_CLUSTER_PASSWORD",
-				customResource.Spec.DeploymentPlan.ClusterPassword,
-				nil,
+				"",
+				clusterPasswordEnvVarSource, //nil,
 			}
 			envVarArray = append(envVarArray, newClusteredValue)
 			statefulSetUpdated = true
@@ -159,18 +180,19 @@ func clusterConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArte
 				}
 			}
 		}
-	} else {
-		for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
-			for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
-				if "AMQ_CLUSTERED" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name ||
-					"AMQ_CLUSTER_USER" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name ||
-					"AMQ_CLUSTER_PASSWORD" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name {
-					currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
-					statefulSetUpdated = true
-				}
-			}
-		}
 	}
+	//else {
+	//	for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
+	//		for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
+	//			if "AMQ_CLUSTERED" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name ||
+	//				"AMQ_CLUSTER_USER" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name ||
+	//				"AMQ_CLUSTER_PASSWORD" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name {
+	//				currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
+	//				statefulSetUpdated = true
+	//			}
+	//		}
+	//	}
+	//}
 
 	return statefulSetUpdated
 }

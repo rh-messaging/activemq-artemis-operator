@@ -16,5 +16,5 @@ spec:
     #password: adminPass
     role: adminRole
     clustered: true
-    clusterUser: clusterUser
-    clusterPass: clusterPass
+    #clusterUser: clusterUser
+    #clusterPass: clusterPass
