@@ -12,10 +12,11 @@ spec:
     image: registry.redhat.io/amq7/amq-broker:7.4
     #user: adminUser
     #password: adminPass
-    role: adminRole
+    role: admin
     requireLogin: true
     clustered: true
     #clusterUser: clusterUser
     #clusterPass: clusterPass
     persistenceEnabled: false
     journalType: nio
+    messageMigration: false

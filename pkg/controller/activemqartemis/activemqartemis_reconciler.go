@@ -1,11 +1,19 @@
 package activemqartemis
 
 import (
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
+	"k8s.io/apimachinery/pkg/types"
+
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
+
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/volumes"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strconv"
 	"strings"
 )
@@ -35,6 +43,50 @@ func (reconciler *ActiveMQArtemisReconciler) Process(customResource *brokerv2alp
 	statefulSetUpdates := reconciler.ProcessDeploymentPlan(&customResource.Spec.DeploymentPlan, currentStatefulSet)
 
 	return statefulSetUpdates
+}
+
+func (reconciler *ActiveMQArtemisReconciler) SyncMessageMigration(customResource *brokerv2alpha1.ActiveMQArtemis, r *ReconcileActiveMQArtemis) {
+
+	var err error = nil
+	var retrieveError error = nil
+
+	namespacedName := types.NamespacedName{
+		Name:      customResource.Name,
+		Namespace: customResource.Namespace,
+	}
+
+	scaledown := &v1alpha1.ActiveMQArtemisScaledown{
+		TypeMeta:   metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind: "ActiveMQArtemisScaledown",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: selectors.LabelBuilder.Labels(),
+			Name: customResource.Name,
+			Namespace: customResource.Namespace,
+		},
+		Spec:       v1alpha1.ActiveMQArtemisScaledownSpec{
+			MasterURL: "",
+			Kubeconfig: "",
+			Namespace: customResource.Namespace,
+			LocalOnly: true,
+		},
+		Status:     v1alpha1.ActiveMQArtemisScaledownStatus{},
+	}
+
+	if customResource.Spec.DeploymentPlan.MessageMigration {
+		if err = resources.Retrieve(customResource, namespacedName, r.client, scaledown); err != nil {
+			// err means not found so create
+			if retrieveError = resources.Create(customResource, r.client, r.scheme, scaledown); retrieveError == nil {
+			}
+		}
+	} else {
+		if err = resources.Retrieve(customResource, namespacedName, r.client, scaledown); err == nil {
+			// err means not found so create
+			if retrieveError = resources.Delete(customResource, r.client, scaledown); retrieveError == nil {
+			}
+		}
+	}
 }
 
 func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) uint32 {

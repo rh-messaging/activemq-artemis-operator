@@ -2,6 +2,8 @@ package activemqartemis
 
 import (
 	"context"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/pods"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/secrets"
@@ -12,8 +14,12 @@ import (
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"strconv"
 	"time"
 )
@@ -117,7 +123,50 @@ func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 		}
 	}
 
+	//rs.syncMessageMigration(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme)
+
 	return err
+}
+
+func (rs *CreatingK8sResourcesState) syncMessageMigration(cr *v2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) {
+
+	var err error = nil
+	var retrieveError error = nil
+
+	scaledown := &v1alpha1.ActiveMQArtemisScaledown{
+		TypeMeta:   metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind: "ActiveMQArtemisScaledown",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: selectors.LabelBuilder.Labels(),
+			Name: "scaledown",
+			Namespace: cr.Namespace,
+		},
+		Spec:       v1alpha1.ActiveMQArtemisScaledownSpec{
+			MasterURL: "",
+			Kubeconfig: "",
+			Namespace: cr.Namespace,
+			LocalOnly: true,
+		},
+		Status:     v1alpha1.ActiveMQArtemisScaledownStatus{},
+	}
+
+	if rs.parentFSM.customResource.Spec.DeploymentPlan.MessageMigration {
+		//resources.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, &scaledown)
+		if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, scaledown); err != nil {
+			// err means not found so create
+			if retrieveError = resources.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, scaledown); retrieveError == nil {
+			}
+		}
+	} else {
+		//resources.Delete(rs.parentFSM.customResource, rs.parentFSM.r.client, &scaledown)
+		if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, scaledown); err == nil {
+			// err means not found so create
+			if retrieveError = resources.Delete(rs.parentFSM.customResource, rs.parentFSM.r.client, scaledown); retrieveError == nil {
+			}
+		}
+	}
 }
 
 func (rs *CreatingK8sResourcesState) Enter(previousStateID int) error {
@@ -175,6 +224,7 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 			if rs.parentFSM.customResource.Spec.DeploymentPlan.Size > 0 {
 				nextStateID = ScalingID
 			}
+			reconciler.SyncMessageMigration(rs.parentFSM.customResource, rs.parentFSM.r)
 		} else {
 			// Not ready... requeue to wait? What other action is required - try to recreate?
 			rs.parentFSM.r.result = reconcile.Result{Requeue: true, RequeueAfter: time.Second * 5}
