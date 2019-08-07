@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/pods"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/secrets"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/serviceports"
 	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
 	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
@@ -75,7 +76,7 @@ func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 		}
 	}
 
-	headlessServiceDefinition := svc.NewHeadlessServiceForCR(rs.parentFSM.customResource, svc.GetDefaultPorts(rs.parentFSM.customResource))
+	headlessServiceDefinition := svc.NewHeadlessServiceForCR(rs.parentFSM.customResource, serviceports.GetDefaultPorts(rs.parentFSM.customResource))
 	// Check to see if the headless service already exists
 	if err = svc.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, headlessServiceDefinition); err != nil {
 		// err means not found, so create
@@ -85,23 +86,29 @@ func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 	}
 
 	// Check to see if the ping service already exists
-	if _, err = svc.RetrievePingService(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+	labels := selectors.LabelBuilder.Labels()
+	pingServiceDefinition := svc.NewPingServiceDefinitionForCR(rs.parentFSM.customResource, labels, labels)
+	if err = svc.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, pingServiceDefinition); err != nil {
 		// err means not found, so create
-		if _, retrieveError = svc.CreatePingService(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme); retrieveError == nil {
+		if retrieveError = svc.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, pingServiceDefinition); retrieveError == nil {
 			rs.stepsComplete |= CreatedPingService
 		}
 	}
 
-	if _, err = secrets.RetrieveUserPasswordSecret(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+	userPasswordStringData := secrets.MakeUserPasswordStringData("user", "password", rs.parentFSM.customResource.Spec.DeploymentPlan.User, rs.parentFSM.customResource.Spec.DeploymentPlan.Password)
+	userPasswordSecret := secrets.NewUserPasswordSecret(rs.parentFSM.customResource, "amq-app-secret", userPasswordStringData)
+	if err = secrets.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, userPasswordSecret); err != nil {
 		// err means not found so create
-		if _, retrieveError = secrets.CreateUserPasswordSecret(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme); retrieveError == nil {
+		if retrieveError = secrets.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, userPasswordSecret); retrieveError == nil {
 			rs.stepsComplete |= CreatedUserPasswordSecret
 		}
 	}
 
-	if _, err = secrets.RetrieveClusterUserPasswordSecret(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+	clusterUserPasswordStringData := secrets.MakeUserPasswordStringData("clusterUser", "clusterPassword", rs.parentFSM.customResource.Spec.DeploymentPlan.ClusterUser, rs.parentFSM.customResource.Spec.DeploymentPlan.ClusterPassword)
+	clusterUserPasswordSecret := secrets.NewUserPasswordSecret(rs.parentFSM.customResource, "amq-credentials-secret", clusterUserPasswordStringData)
+	if err = secrets.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, clusterUserPasswordSecret); err != nil {
 		// err means not found so create
-		if _, retrieveError = secrets.CreateClusterUserPasswordSecret(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme); retrieveError == nil {
+		if retrieveError = secrets.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, clusterUserPasswordSecret); retrieveError == nil {
 			rs.stepsComplete |= CreatedClusterUserPasswordSecret
 		}
 	}

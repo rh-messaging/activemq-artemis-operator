@@ -51,7 +51,7 @@ func NewRouteDefinitionForCR(cr *v2alpha1.ActiveMQArtemis, labels map[string]str
 	return route
 }
 
-func CreateNewRoute(cr *v2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, route *routev1.Route) error {
+func Create(cr *v2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, route *routev1.Route) error {
 
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Creating new route")
@@ -74,7 +74,7 @@ func CreateNewRoute(cr *v2alpha1.ActiveMQArtemis, client client.Client, scheme *
 	return err
 }
 
-func RetrieveRoute(cr *v2alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client, route *routev1.Route) error {
+func Retrieve(cr *v2alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client, route *routev1.Route) error {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
@@ -94,7 +94,7 @@ func RetrieveRoute(cr *v2alpha1.ActiveMQArtemis, namespacedName types.Namespaced
 	return err
 }
 
-func UpdateRoute(cr *v2alpha1.ActiveMQArtemis, client client.Client, route *routev1.Route) error {
+func Update(cr *v2alpha1.ActiveMQArtemis, client client.Client, route *routev1.Route) error {
 
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Updating route")
@@ -107,7 +107,7 @@ func UpdateRoute(cr *v2alpha1.ActiveMQArtemis, client client.Client, route *rout
 	return err
 }
 
-func DeleteRoute(cr *v2alpha1.ActiveMQArtemis, client client.Client, route *routev1.Route) error {
+func Delete(cr *v2alpha1.ActiveMQArtemis, client client.Client, route *routev1.Route) error {
 
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Deleting route")

@@ -19,17 +19,7 @@ import (
 
 var log = logf.Log.WithName("controller_activemqartemis")
 
-//var namespacedNameToFSM map[types.NamespacedName]*fsm.Machine
 var namespacedNameToFSM = make(map[types.NamespacedName]*ActiveMQArtemisFSM)
-
-//func GetStatefulSetName(namespace string) (string, error) {
-//	for k := range namespacedNameToFSM {
-//		if k.Namespace == namespace {
-//			return k.Name, nil
-//		}
-//	}
-//	return "", syserr.New("Couldn't find the StatefulSet in ns " + namespace)
-//}
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller

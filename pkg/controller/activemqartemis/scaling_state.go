@@ -151,7 +151,7 @@ func (rs *ScalingState) configureServices() error {
 
 		baseServiceName := "console-jolokia"
 		serviceDefinition := svc.NewServiceDefinitionForCR(cr, baseServiceName+"-"+ordinalString, portNumber, labels)
-		if err = svc.CreateService(cr, client, scheme, serviceDefinition); err != nil {
+		if err = svc.Create(cr, client, scheme, serviceDefinition); err != nil {
 			reqLogger.Info("Failure to create " + baseServiceName + " service " + ordinalString)
 			continue
 		}
@@ -159,7 +159,7 @@ func (rs *ScalingState) configureServices() error {
 		baseServiceName = "all-protocol"
 		portNumber = int32(61616)
 		serviceDefinition = svc.NewServiceDefinitionForCR(cr, baseServiceName+"-"+ordinalString, portNumber, labels)
-		if err = svc.CreateService(cr, client, scheme, serviceDefinition); err != nil {
+		if err = svc.Create(cr, client, scheme, serviceDefinition); err != nil {
 			reqLogger.Info("Failure to create " + baseServiceName + " service " + ordinalString)
 			continue
 		}
@@ -191,9 +191,12 @@ func (rs *ScalingState) configureIngress() error {
 
 	var err error = nil
 
-	if _, err = ingresses.RetrieveIngress(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+	// Define the console-jolokia ingress for this Pod
+	ingress := ingresses.NewIngressForCR(rs.parentFSM.customResource, "console-jolokia")
+
+	if err = ingresses.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, ingress); err != nil {
 		// err means not found, so create routes
-		if _, err = ingresses.CreateNewIngress(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme); err == nil {
+		if err = ingresses.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, ingress); err == nil {
 		}
 	}
 
@@ -212,10 +215,10 @@ func (rs *ScalingState) configureRoutes() error {
 		log.Info("Checking route for " + targetPortName)
 
 		consoleJolokiaRoute := routes.NewRouteDefinitionForCR(rs.parentFSM.customResource, selectors.LabelBuilder.Labels(), targetServiceName, targetPortName, passthroughTLS)
-		if err = routes.RetrieveRoute(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, consoleJolokiaRoute); err != nil {
-			routes.DeleteRoute(rs.parentFSM.customResource, rs.parentFSM.r.client, consoleJolokiaRoute)
+		if err = routes.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, consoleJolokiaRoute); err != nil {
+			routes.Delete(rs.parentFSM.customResource, rs.parentFSM.r.client, consoleJolokiaRoute)
 		}
-		if err = routes.CreateNewRoute(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, consoleJolokiaRoute); err == nil {
+		if err = routes.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, consoleJolokiaRoute); err == nil {
 		}
 
 		targetPortName = "all-protocol" + "-" + strconv.Itoa(i)
@@ -223,10 +226,10 @@ func (rs *ScalingState) configureRoutes() error {
 		log.Info("Checking route for " + targetPortName)
 		passthroughTLS = true
 		allProtocolRoute := routes.NewRouteDefinitionForCR(rs.parentFSM.customResource, selectors.LabelBuilder.Labels(), targetServiceName, targetPortName, passthroughTLS)
-		if err = routes.RetrieveRoute(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, allProtocolRoute); err != nil {
-			routes.DeleteRoute(rs.parentFSM.customResource, rs.parentFSM.r.client, allProtocolRoute)
+		if err = routes.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, allProtocolRoute); err != nil {
+			routes.Delete(rs.parentFSM.customResource, rs.parentFSM.r.client, allProtocolRoute)
 		}
-		if err = routes.CreateNewRoute(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, allProtocolRoute); err == nil {
+		if err = routes.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, allProtocolRoute); err == nil {
 		}
 	}
 

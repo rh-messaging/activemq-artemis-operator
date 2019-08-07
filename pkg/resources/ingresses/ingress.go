@@ -56,13 +56,10 @@ func NewIngressForCR(cr *v2alpha1.ActiveMQArtemis, target string) *extv1b1.Ingre
 	return ingress
 }
 
-func CreateNewIngress(cr *v2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*extv1b1.Ingress, error) {
+func Create(cr *v2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, ingress *extv1b1.Ingress) error {
 
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Creating new ingress")
-
-	// Define the console-jolokia ingress for this Pod
-	ingress := NewIngressForCR(cr, "console-jolokia")
 
 	var err error = nil
 	// Set ActiveMQArtemis instance as the owner and controller
@@ -77,17 +74,16 @@ func CreateNewIngress(cr *v2alpha1.ActiveMQArtemis, client client.Client, scheme
 	}
 	reqLogger.Info("End of ingress Creation")
 
-	return ingress, err
+	return err
 }
 
-func RetrieveIngress(cr *v2alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*extv1b1.Ingress, error) {
+func Retrieve(cr *v2alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client, ingress *extv1b1.Ingress) error {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Retrieving the ingress ")
 
 	var err error = nil
-	ingress := NewIngressForCR(cr, "console-jolokia")
 
 	// Check if the headless ingress already exists
 	if err = client.Get(context.TODO(), namespacedName, ingress); err != nil {
@@ -98,5 +94,5 @@ func RetrieveIngress(cr *v2alpha1.ActiveMQArtemis, namespacedName types.Namespac
 		}
 	}
 
-	return ingress, err
+	return err
 }

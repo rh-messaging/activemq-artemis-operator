@@ -82,19 +82,6 @@ func CheckSSLEnabled(cr *brokerv2alpha1.ActiveMQArtemis) bool {
 	return sslEnabled
 }
 
-//func CheckClusterEnabled(cr *brokerv2alpha1.ActiveMQArtemis) bool {
-//
-//	reqLogger := log.WithName(cr.Name)
-//
-//	var clusterEnabled = false
-//
-//	if len(cr.Spec.DeploymentPlan.ClusterUser) != 0 && len(cr.Spec.DeploymentPlan.ClusterPassword) != 0 {
-//		reqLogger.Info("clustering enabled ")
-//		clusterEnabled = true
-//	}
-//	return clusterEnabled
-//}
-
 func MakeEnvVarArrayForCR(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
 
 	reqLogger := log.WithName(cr.Name)
@@ -111,7 +98,6 @@ func MakeEnvVarArrayForCR(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
 		envVarArrayForPresistent := addEnvVarForPersistent(cr)
 		envVar = append(envVar, envVarArrayForPresistent...)
 	}
-	//if CheckClusterEnabled(cr) {
 	if cr.Spec.DeploymentPlan.Clustered {
 		envVarArrayForCluster := addEnvVarForCluster(cr)
 		envVar = append(envVar, envVarArrayForCluster...)
@@ -119,7 +105,6 @@ func MakeEnvVarArrayForCR(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
 
 	return envVar
 }
-
 
 func addEnvVarForBasic(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
 
@@ -315,4 +300,3 @@ func newEnvVarArrayForCR(cr *brokerv2alpha1.ActiveMQArtemis) *[]corev1.EnvVar {
 
 	return &envVarArray
 }
-
