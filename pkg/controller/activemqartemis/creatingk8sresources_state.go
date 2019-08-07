@@ -123,8 +123,6 @@ func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 		}
 	}
 
-	//rs.syncMessageMigration(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme)
-
 	return err
 }
 
@@ -140,7 +138,7 @@ func (rs *CreatingK8sResourcesState) syncMessageMigration(cr *v2alpha1.ActiveMQA
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:    selectors.LabelBuilder.Labels(),
-			Name:      "scaledown",
+			Name:      cr.Name,
 			Namespace: cr.Namespace,
 		},
 		Spec: v1alpha1.ActiveMQArtemisScaledownSpec{
@@ -162,7 +160,7 @@ func (rs *CreatingK8sResourcesState) syncMessageMigration(cr *v2alpha1.ActiveMQA
 	} else {
 		//resources.Delete(rs.parentFSM.customResource, rs.parentFSM.r.client, &scaledown)
 		if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, scaledown); err == nil {
-			// err means not found so create
+			// no err means found so delete
 			if retrieveError = resources.Delete(rs.parentFSM.customResource, rs.parentFSM.r.client, scaledown); retrieveError == nil {
 			}
 		}

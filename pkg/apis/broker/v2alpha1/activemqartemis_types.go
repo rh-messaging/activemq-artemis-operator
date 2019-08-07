@@ -36,19 +36,19 @@ type DeploymentPlanType struct {
 }
 
 type AcceptorType struct {
-	Name       string
-	Protocols  string
-	Port       int32
-	Expose     bool
-	sslEnabled bool
-	sslSecret  string
+	Name       string `json:"name"`
+	Protocols  string `json:"protocols,omitempty"`
+	Port       int32  `json:"port,omitempty"`
+	Expose     bool   `json:"expose,omitempty"`
+	SSLEnabled bool   `json:"sslEnabled,omitempty"`
+	SSLSecret  string `json:"sslSecret,omitempty"`
 }
 
 type ConnectorType struct {
-	Name       string
-	Port       int32
-	sslEnabled bool
-	sslSecret  string
+	Name       string `json:"name"`
+	Port       int32  `json:"port,omitempty"`
+	SSLEnabled bool   `json:"sslEnabled,omitempty"`
+	SSLSecret  string `json:"sslSecret,omitempty"`
 }
 
 // ActiveMQArtemisStatus defines the observed state of ActiveMQArtemis
