@@ -14,11 +14,11 @@ import (
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"strconv"
 	"time"
@@ -134,22 +134,22 @@ func (rs *CreatingK8sResourcesState) syncMessageMigration(cr *v2alpha1.ActiveMQA
 	var retrieveError error = nil
 
 	scaledown := &v1alpha1.ActiveMQArtemisScaledown{
-		TypeMeta:   metav1.TypeMeta{
+		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
-			Kind: "ActiveMQArtemisScaledown",
+			Kind:       "ActiveMQArtemisScaledown",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Labels: selectors.LabelBuilder.Labels(),
-			Name: "scaledown",
+			Labels:    selectors.LabelBuilder.Labels(),
+			Name:      "scaledown",
 			Namespace: cr.Namespace,
 		},
-		Spec:       v1alpha1.ActiveMQArtemisScaledownSpec{
-			MasterURL: "",
+		Spec: v1alpha1.ActiveMQArtemisScaledownSpec{
+			MasterURL:  "",
 			Kubeconfig: "",
-			Namespace: cr.Namespace,
-			LocalOnly: true,
+			Namespace:  cr.Namespace,
+			LocalOnly:  true,
 		},
-		Status:     v1alpha1.ActiveMQArtemisScaledownStatus{},
+		Status: v1alpha1.ActiveMQArtemisScaledownStatus{},
 	}
 
 	if rs.parentFSM.customResource.Spec.DeploymentPlan.MessageMigration {

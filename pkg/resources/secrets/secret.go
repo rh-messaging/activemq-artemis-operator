@@ -21,8 +21,8 @@ func MakeUserPasswordStringData(keyName string, valueName string, key string, va
 		value = random.GenerateRandomString(8)
 	}
 
-	stringDataMap := map[string]string {
-		keyName: key,
+	stringDataMap := map[string]string{
+		keyName:   key,
 		valueName: value,
 	}
 
@@ -40,7 +40,6 @@ func MakeUserPasswordSecret(customResource *brokerv2alpha1.ActiveMQArtemis, secr
 			Labels:    selectors.LabelBuilder.Labels(),
 			Name:      secretName,
 			Namespace: customResource.Namespace,
-
 		},
 		StringData: stringData,
 	}

@@ -32,13 +32,13 @@ const (
 	None                   = 0
 	CreatedHeadlessService = 1 << 0
 	//CreatedPersistentVolumeClaim = 1 << 1
-	CreatedStatefulSet           = 1 << 1
-	CreatedConsoleJolokiaService = 1 << 2
-	CreatedMuxProtocolService    = 1 << 3
-	CreatedPingService           = 1 << 4
-	CreatedRouteOrIngress        = 1 << 5
-	CreatedUserPasswordSecret    = 1 << 6
-	CreatedClusterUserPasswordSecret    = 1 << 7
+	CreatedStatefulSet               = 1 << 1
+	CreatedConsoleJolokiaService     = 1 << 2
+	CreatedMuxProtocolService        = 1 << 3
+	CreatedPingService               = 1 << 4
+	CreatedRouteOrIngress            = 1 << 5
+	CreatedUserPasswordSecret        = 1 << 6
+	CreatedClusterUserPasswordSecret = 1 << 7
 
 	Complete = CreatedHeadlessService |
 		//CreatedPersistentVolumeClaim |

@@ -2,8 +2,8 @@ package volumes
 
 import (
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
-	corev1 "k8s.io/api/core/v1"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/environments"
+	corev1 "k8s.io/api/core/v1"
 
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
@@ -66,7 +66,7 @@ func makeSSLSecretVolume(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.Volume {
 			Name: "broker-secret-volume",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: "TODO-FIX-REPLACE",//cr.Spec.SSLConfig.SecretName,
+					SecretName: "TODO-FIX-REPLACE", //cr.Spec.SSLConfig.SecretName,
 				},
 			},
 		},

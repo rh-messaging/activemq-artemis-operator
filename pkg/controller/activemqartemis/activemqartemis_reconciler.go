@@ -27,7 +27,7 @@ const (
 	statefulSetAioUpdated           = 1 << 5
 	statefulSetCommonConfigUpdated  = 1 << 6
 	statefulSetRequireLoginUpdated  = 1 << 7
-	statefulSetRoleUpdated			= 1 << 8
+	statefulSetRoleUpdated          = 1 << 8
 )
 
 type ActiveMQArtemisReconciler struct {
@@ -56,22 +56,22 @@ func (reconciler *ActiveMQArtemisReconciler) SyncMessageMigration(customResource
 	}
 
 	scaledown := &v1alpha1.ActiveMQArtemisScaledown{
-		TypeMeta:   metav1.TypeMeta{
+		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
-			Kind: "ActiveMQArtemisScaledown",
+			Kind:       "ActiveMQArtemisScaledown",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Labels: selectors.LabelBuilder.Labels(),
-			Name: customResource.Name,
+			Labels:    selectors.LabelBuilder.Labels(),
+			Name:      customResource.Name,
 			Namespace: customResource.Namespace,
 		},
-		Spec:       v1alpha1.ActiveMQArtemisScaledownSpec{
-			MasterURL: "",
+		Spec: v1alpha1.ActiveMQArtemisScaledownSpec{
+			MasterURL:  "",
 			Kubeconfig: "",
-			Namespace: customResource.Namespace,
-			LocalOnly: true,
+			Namespace:  customResource.Namespace,
+			LocalOnly:  true,
 		},
-		Status:     v1alpha1.ActiveMQArtemisScaledownStatus{},
+		Status: v1alpha1.ActiveMQArtemisScaledownStatus{},
 	}
 
 	if customResource.Spec.DeploymentPlan.MessageMigration {
@@ -153,23 +153,23 @@ func clusterConfigSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPl
 
 	statefulSetUpdated := false
 
-	clusterUserEnvVarSource := &corev1.EnvVarSource {
+	clusterUserEnvVarSource := &corev1.EnvVarSource{
 		SecretKeyRef: &corev1.SecretKeySelector{
 			LocalObjectReference: corev1.LocalObjectReference{
 				Name: "amq-credentials-secret",
 			},
-			Key:                  "clusterUser",
-			Optional:             nil,
+			Key:      "clusterUser",
+			Optional: nil,
 		},
 	}
 
-	clusterPasswordEnvVarSource := &corev1.EnvVarSource {
+	clusterPasswordEnvVarSource := &corev1.EnvVarSource{
 		SecretKeyRef: &corev1.SecretKeySelector{
 			LocalObjectReference: corev1.LocalObjectReference{
 				Name: "amq-credentials-secret",
 			},
-			Key:                  "clusterPassword",
-			Optional:             nil,
+			Key:      "clusterPassword",
+			Optional: nil,
 		},
 	}
 
@@ -307,7 +307,7 @@ func sslConfigSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanTy
 		if !foundKeystore || keystoreNeedsUpdate {
 			newClusteredValue := corev1.EnvVar{
 				"AMQ_KEYSTORE",
-				"TODO-FIX-REPLACE",//customResource.Spec.SSLConfig.KeystoreFilename,
+				"TODO-FIX-REPLACE", //customResource.Spec.SSLConfig.KeystoreFilename,
 				nil,
 			}
 			envVarArray = append(envVarArray, newClusteredValue)

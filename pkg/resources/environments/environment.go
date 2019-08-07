@@ -115,23 +115,23 @@ func MakeEnvVarArrayForCR(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
 
 func addEnvVarForBasic(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
 
-	userEnvVarSource := &corev1.EnvVarSource {
+	userEnvVarSource := &corev1.EnvVarSource{
 		SecretKeyRef: &corev1.SecretKeySelector{
 			LocalObjectReference: corev1.LocalObjectReference{
 				Name: "amq-app-secret",
 			},
-			Key:                  "user",
-			Optional:             nil,
+			Key:      "user",
+			Optional: nil,
 		},
 	}
 
-	passwordEnvVarSource := &corev1.EnvVarSource {
+	passwordEnvVarSource := &corev1.EnvVarSource{
 		SecretKeyRef: &corev1.SecretKeySelector{
 			LocalObjectReference: corev1.LocalObjectReference{
 				Name: "amq-app-secret",
 			},
-			Key:                  "password",
-			Optional:             nil,
+			Key:      "password",
+			Optional: nil,
 		},
 	}
 
@@ -260,23 +260,23 @@ func addEnvVarForSSL(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
 
 func addEnvVarForCluster(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
 
-	clusterUserEnvVarSource := &corev1.EnvVarSource {
+	clusterUserEnvVarSource := &corev1.EnvVarSource{
 		SecretKeyRef: &corev1.SecretKeySelector{
 			LocalObjectReference: corev1.LocalObjectReference{
 				Name: "amq-credentials-secret",
 			},
-			Key:                  "clusterUser",
-			Optional:             nil,
+			Key:      "clusterUser",
+			Optional: nil,
 		},
 	}
 
-	clusterPasswordEnvVarSource := &corev1.EnvVarSource {
+	clusterPasswordEnvVarSource := &corev1.EnvVarSource{
 		SecretKeyRef: &corev1.SecretKeySelector{
 			LocalObjectReference: corev1.LocalObjectReference{
 				Name: "amq-credentials-secret",
 			},
-			Key:                  "clusterPassword",
-			Optional:             nil,
+			Key:      "clusterPassword",
+			Optional: nil,
 		},
 	}
 
@@ -377,7 +377,7 @@ func Update(containers []corev1.Container, envVar *corev1.EnvVar) {
 
 	for i := 0; i < len(containers); i++ {
 		for j := len(containers[i].Env) - 1; j >= 0; j-- {
-			if (envVar.Name == containers[i].Env[j].Name) {
+			if envVar.Name == containers[i].Env[j].Name {
 				containers[i].Env = remove(containers[i].Env, j)
 				containers[i].Env = append(containers[i].Env, *envVar)
 			}

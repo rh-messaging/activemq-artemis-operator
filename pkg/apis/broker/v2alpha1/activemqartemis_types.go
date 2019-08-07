@@ -15,40 +15,40 @@ type ActiveMQArtemisSpec struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
 
-	DeploymentPlan      DeploymentPlanType 	`json:"deploymentPlan,omitempty"`
-	Acceptors			[]AcceptorType 		`json:"acceptors,omitempty"`
-	Connectors			[]ConnectorType		`json:"connectors,omitempty"`
+	DeploymentPlan DeploymentPlanType `json:"deploymentPlan,omitempty"`
+	Acceptors      []AcceptorType     `json:"acceptors,omitempty"`
+	Connectors     []ConnectorType    `json:"connectors,omitempty"`
 }
 
 type DeploymentPlanType struct {
-	Image         		string        `json:"image,omitempty"`
-	Size          		int32         `json:"size,omitempty"`
-	User				string		  `json:"user,omitempty"`
-	Password			string		  `json:"password,omitempty"`
-	Role				string		  `json:"role,omitempty"`
-	RequireLogin		bool		  `json:"requireLogin,omitempty"`
-	Clustered			bool		  `json:"clustered,omitempty"`
-	ClusterUser			string		  `json:"clusterUser,omitempty"`
-	ClusterPassword		string		  `json:"clusterPassword,omitempty"`
-	PersistenceEnabled  bool          `json:"persistenceEnabled,omitempty"`
-	JournalType			string		  `json:"journalType",omitempty`
-	MessageMigration	bool		  `json:"messageMigration",omitempty"`
+	Image              string `json:"image,omitempty"`
+	Size               int32  `json:"size,omitempty"`
+	User               string `json:"user,omitempty"`
+	Password           string `json:"password,omitempty"`
+	Role               string `json:"role,omitempty"`
+	RequireLogin       bool   `json:"requireLogin,omitempty"`
+	Clustered          bool   `json:"clustered,omitempty"`
+	ClusterUser        string `json:"clusterUser,omitempty"`
+	ClusterPassword    string `json:"clusterPassword,omitempty"`
+	PersistenceEnabled bool   `json:"persistenceEnabled,omitempty"`
+	JournalType        string `json:"journalType",omitempty`
+	MessageMigration   bool   `json:"messageMigration",omitempty"`
 }
 
 type AcceptorType struct {
-	Name 				string
-	Protocols 			string
-	Port 				int32
-	Expose 				bool
-	sslEnabled 			bool
-	sslSecret 			string
+	Name       string
+	Protocols  string
+	Port       int32
+	Expose     bool
+	sslEnabled bool
+	sslSecret  string
 }
 
 type ConnectorType struct {
-	Name 				string
-	Port 				int32
-	sslEnabled 			bool
-	sslSecret 			string
+	Name       string
+	Port       int32
+	sslEnabled bool
+	sslSecret  string
 }
 
 // ActiveMQArtemisStatus defines the observed state of ActiveMQArtemis

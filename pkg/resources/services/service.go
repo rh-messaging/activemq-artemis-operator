@@ -13,9 +13,9 @@ import (
 var log = logf.Log.WithName("package services")
 
 var HeadlessNameBuilder namer.NamerData
+
 //var ServiceNameBuilderArray []namer.NamerData
 //var RouteNameBuilderArray []namer.NamerData
-
 
 // newServiceForPod returns an activemqartemis service for the pod just created
 func NewHeadlessServiceForCR(cr *brokerv2alpha1.ActiveMQArtemis, servicePorts *[]corev1.ServicePort) *corev1.Service {

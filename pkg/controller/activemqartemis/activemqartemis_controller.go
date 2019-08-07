@@ -98,7 +98,7 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 	reqLogger.Info("Reconciling ActiveMQArtemis")
 
 	var err error = nil
- 	var namespacedNameFSM *ActiveMQArtemisFSM = nil
+	var namespacedNameFSM *ActiveMQArtemisFSM = nil
 	var amqbfsm *ActiveMQArtemisFSM = nil
 
 	instance := &brokerv2alpha1.ActiveMQArtemis{}

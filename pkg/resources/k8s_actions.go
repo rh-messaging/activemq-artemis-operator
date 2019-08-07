@@ -52,9 +52,9 @@ func Retrieve(cr *brokerv2alpha1.ActiveMQArtemis, namespacedName types.Namespace
 	var err error = nil
 	if err = client.Get(context.TODO(), namespacedName, objectDefinition); err != nil {
 		if errors.IsNotFound(err) {
-			reqLogger.Info(objectTypeString + " IsNotFound", "Namespace", cr.Namespace, "Name", cr.Name)
+			reqLogger.Info(objectTypeString+" IsNotFound", "Namespace", cr.Namespace, "Name", cr.Name)
 		} else {
-			reqLogger.Info(objectTypeString + " found", "Namespace", cr.Namespace, "Name", cr.Name)
+			reqLogger.Info(objectTypeString+" found", "Namespace", cr.Namespace, "Name", cr.Name)
 		}
 	}
 
@@ -69,7 +69,7 @@ func Update(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, objectDefi
 
 	var err error = nil
 	if err = client.Update(context.TODO(), objectDefinition); err != nil {
-		reqLogger.Error(err, "Failed to update " + objectTypeString)
+		reqLogger.Error(err, "Failed to update "+objectTypeString)
 	}
 
 	return err
@@ -83,7 +83,7 @@ func Delete(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, objectDefi
 
 	var err error = nil
 	if err = client.Delete(context.TODO(), objectDefinition); err != nil {
-		reqLogger.Error(err, "Failed to delete " + objectTypeString)
+		reqLogger.Error(err, "Failed to delete "+objectTypeString)
 	}
 
 	return err

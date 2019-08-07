@@ -3,11 +3,11 @@ package activemqartemis
 import (
 	"context"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
+	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 )
 
 // This is the state we should be in whenever kubernetes

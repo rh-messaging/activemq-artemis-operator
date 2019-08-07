@@ -9,10 +9,10 @@ type NamerInterface interface {
 }
 
 type NamerData struct {
-	baseName 	string
-	prefix		string
-	suffix		string
-	name		string
+	baseName string
+	prefix   string
+	suffix   string
+	name     string
 }
 
 func (n *NamerData) Generate() {
