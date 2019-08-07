@@ -2,6 +2,7 @@ package activemqartemis
 
 import (
 	"context"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -81,8 +82,7 @@ func (rs *ContainerRunningState) Update() (error, int) {
 	}
 
 	if statefulSetUpdates > 0 {
-		err = rs.parentFSM.r.client.Update(context.TODO(), currentStatefulSet)
-		if err != nil {
+		if err := resources.Update(rs.parentFSM.customResource, rs.parentFSM.r.client, currentStatefulSet); err != nil {
 			reqLogger.Error(err, "Failed to update StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
 		}
 		nextStateID = ScalingID

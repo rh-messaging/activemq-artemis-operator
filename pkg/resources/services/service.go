@@ -1,19 +1,12 @@
 package services
 
 import (
-	"context"
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/namer"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
@@ -119,47 +112,4 @@ func NewPingServiceDefinitionForCR(cr *brokerv2alpha1.ActiveMQArtemis, labels ma
 	}
 
 	return svc
-}
-
-func Create(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, serviceToCreate *corev1.Service) error {
-
-	// Log where we are and what we're doing
-	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
-	reqLogger.Info("Creating new " + serviceToCreate.Name + " service")
-
-	// Set ActiveMQArtemis instance as the owner and controller
-	var err error = nil
-	if err = controllerutil.SetControllerReference(cr, serviceToCreate, scheme); err != nil {
-		// Add error detail for use later
-		reqLogger.Info("Failed to set controller reference for new " + serviceToCreate.Name + " service")
-	}
-	reqLogger.Info("Set controller reference for new " + serviceToCreate.Name + " service")
-
-	// Call k8s create for service
-	if err = client.Create(context.TODO(), serviceToCreate); err != nil {
-		// Add error detail for use later
-		reqLogger.Info("Failed to creating new " + serviceToCreate.Name + " service")
-	}
-	reqLogger.Info("Created new " + serviceToCreate.Name + " service")
-
-	return err
-}
-
-func Retrieve(cr *brokerv2alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client, serviceToRetrieve *corev1.Service) error {
-
-	// Log where we are and what we're doing
-	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
-	reqLogger.Info("Retrieving " + serviceToRetrieve.Name + " service")
-
-	var err error = nil
-	// Check if the headless service already exists
-	if err = client.Get(context.TODO(), namespacedName, serviceToRetrieve); err != nil {
-		if errors.IsNotFound(err) {
-			reqLogger.Info("Service " + serviceToRetrieve.Name + " IsNotFound", "Namespace", cr.Namespace, "Name", cr.Name)
-		} else {
-			reqLogger.Info("Service " + serviceToRetrieve.Name + "found", "Namespace", cr.Namespace, "Name", cr.Name)
-		}
-	}
-
-	return err
 }

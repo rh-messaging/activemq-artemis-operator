@@ -2,6 +2,7 @@ package activemqartemis
 
 import (
 	"context"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/pods"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/secrets"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/serviceports"
@@ -69,18 +70,21 @@ func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 	statefulsetDefinition := ss.NewStatefulSetForCR(rs.parentFSM.customResource)
 
 	// Check to see if the statefulset already exists
-	if err := ss.Retrieve(rs.parentFSM.namespacedName, rs.parentFSM.r.client, statefulsetDefinition); err != nil {
+	if err := resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, statefulsetDefinition); err != nil {
 		// err means not found, so create
-		if retrieveError := ss.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, statefulsetDefinition); retrieveError == nil {
+		if retrieveError := resources.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, statefulsetDefinition); retrieveError == nil {
 			rs.stepsComplete |= CreatedStatefulSet
+
+			//TODO: Remove this blatant hack
+			ss.GLOBAL_CRNAME = rs.parentFSM.customResource.Name
 		}
 	}
 
 	headlessServiceDefinition := svc.NewHeadlessServiceForCR(rs.parentFSM.customResource, serviceports.GetDefaultPorts(rs.parentFSM.customResource))
 	// Check to see if the headless service already exists
-	if err = svc.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, headlessServiceDefinition); err != nil {
+	if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, headlessServiceDefinition); err != nil {
 		// err means not found, so create
-		if retrieveError = svc.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, headlessServiceDefinition); retrieveError == nil {
+		if retrieveError = resources.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, headlessServiceDefinition); retrieveError == nil {
 			rs.stepsComplete |= CreatedHeadlessService
 		}
 	}
@@ -88,27 +92,27 @@ func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 	// Check to see if the ping service already exists
 	labels := selectors.LabelBuilder.Labels()
 	pingServiceDefinition := svc.NewPingServiceDefinitionForCR(rs.parentFSM.customResource, labels, labels)
-	if err = svc.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, pingServiceDefinition); err != nil {
+	if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, pingServiceDefinition); err != nil {
 		// err means not found, so create
-		if retrieveError = svc.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, pingServiceDefinition); retrieveError == nil {
+		if retrieveError = resources.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, pingServiceDefinition); retrieveError == nil {
 			rs.stepsComplete |= CreatedPingService
 		}
 	}
 
 	userPasswordStringData := secrets.MakeUserPasswordStringData("user", "password", rs.parentFSM.customResource.Spec.DeploymentPlan.User, rs.parentFSM.customResource.Spec.DeploymentPlan.Password)
 	userPasswordSecret := secrets.NewUserPasswordSecret(rs.parentFSM.customResource, "amq-app-secret", userPasswordStringData)
-	if err = secrets.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, userPasswordSecret); err != nil {
+	if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, userPasswordSecret); err != nil {
 		// err means not found so create
-		if retrieveError = secrets.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, userPasswordSecret); retrieveError == nil {
+		if retrieveError = resources.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, userPasswordSecret); retrieveError == nil {
 			rs.stepsComplete |= CreatedUserPasswordSecret
 		}
 	}
 
 	clusterUserPasswordStringData := secrets.MakeUserPasswordStringData("clusterUser", "clusterPassword", rs.parentFSM.customResource.Spec.DeploymentPlan.ClusterUser, rs.parentFSM.customResource.Spec.DeploymentPlan.ClusterPassword)
 	clusterUserPasswordSecret := secrets.NewUserPasswordSecret(rs.parentFSM.customResource, "amq-credentials-secret", clusterUserPasswordStringData)
-	if err = secrets.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, clusterUserPasswordSecret); err != nil {
+	if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, clusterUserPasswordSecret); err != nil {
 		// err means not found so create
-		if retrieveError = secrets.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, clusterUserPasswordSecret); retrieveError == nil {
+		if retrieveError = resources.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, clusterUserPasswordSecret); retrieveError == nil {
 			rs.stepsComplete |= CreatedClusterUserPasswordSecret
 		}
 	}
@@ -163,8 +167,7 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 
 			statefulSetUpdates = reconciler.Process(rs.parentFSM.customResource, currentStatefulSet)
 			if statefulSetUpdates > 0 {
-				err = rs.parentFSM.r.client.Update(context.TODO(), currentStatefulSet)
-				if err != nil {
+				if err := resources.Update(rs.parentFSM.customResource, rs.parentFSM.r.client, currentStatefulSet); err != nil {
 					reqLogger.Error(err, "Failed to update StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
 					break
 				}
