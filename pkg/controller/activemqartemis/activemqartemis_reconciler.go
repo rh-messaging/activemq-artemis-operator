@@ -2,6 +2,7 @@ package activemqartemis
 
 import (
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/volumes"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"strconv"
@@ -16,6 +17,7 @@ const (
 	statefulSetPersistentUpdated    = 1 << 4
 	statefulSetAioUpdated           = 1 << 5
 	statefulSetCommonConfigUpdated  = 1 << 6
+	statefulSetRequireLoginUpdated  = 1 << 7
 )
 
 type ActiveMQArtemisReconciler struct {
@@ -24,39 +26,49 @@ type ActiveMQArtemisReconciler struct {
 
 type ActiveMQArtemisIReconciler interface {
 	Process(customResource *brokerv2alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) uint32
-	//Process(customResource *brokerv2alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) uint32
+	ProcessDeploymentPlan(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) uint32
 }
 
 func (reconciler *ActiveMQArtemisReconciler) Process(customResource *brokerv2alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) uint32 {
+	statefulSetUpdates := reconciler.ProcessDeploymentPlan(&customResource.Spec.DeploymentPlan, currentStatefulSet)
+
+	return statefulSetUpdates
+}
+
+func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) uint32 {
 
 	// Ensure the StatefulSet size is the same as the spec
-	if *currentStatefulSet.Spec.Replicas != customResource.Spec.DeploymentPlan.Size {
-		currentStatefulSet.Spec.Replicas = &customResource.Spec.DeploymentPlan.Size
+	if *currentStatefulSet.Spec.Replicas != deploymentPlan.Size {
+		currentStatefulSet.Spec.Replicas = &deploymentPlan.Size
 		reconciler.statefulSetUpdates |= statefulSetSizeUpdated
 	}
 
-	if clusterConfigSyncCausedUpdateOn(customResource, currentStatefulSet) {
+	if clusterConfigSyncCausedUpdateOn(deploymentPlan, currentStatefulSet) {
 		reconciler.statefulSetUpdates |= statefulSetClusterConfigUpdated
 	}
 
-	if sslConfigSyncCausedUpdateOn(customResource, currentStatefulSet) {
+	if sslConfigSyncCausedUpdateOn(deploymentPlan, currentStatefulSet) {
 		reconciler.statefulSetUpdates |= statefulSetSSLConfigUpdated
 	}
 
-	if imageSyncCausedUpdateOn(customResource, currentStatefulSet) {
+	if imageSyncCausedUpdateOn(deploymentPlan, currentStatefulSet) {
 		reconciler.statefulSetUpdates |= statefulSetImageUpdated
 	}
 
-	if aioSyncCausedUpdateOn(customResource, currentStatefulSet) {
+	if aioSyncCausedUpdateOn(deploymentPlan, currentStatefulSet) {
 		reconciler.statefulSetUpdates |= statefulSetAioUpdated
 	}
 
-	if persistentSyncCausedUpdateOn(customResource, currentStatefulSet) {
+	if persistentSyncCausedUpdateOn(deploymentPlan, currentStatefulSet) {
 		reconciler.statefulSetUpdates |= statefulSetPersistentUpdated
 	}
 
-	if commonConfigSyncCausedUpdateOn(customResource, currentStatefulSet) {
+	if commonConfigSyncCausedUpdateOn(deploymentPlan, currentStatefulSet) {
 		reconciler.statefulSetUpdates |= statefulSetCommonConfigUpdated
+	}
+
+	if requireLoginSyncCausedUpdateOn(deploymentPlan, currentStatefulSet) {
+		reconciler.statefulSetUpdates |= statefulSetRequireLoginUpdated
 	}
 
 	return reconciler.statefulSetUpdates
@@ -69,7 +81,7 @@ func remove(s []corev1.EnvVar, i int) []corev1.EnvVar {
 	return s[:len(s)-1]
 }
 
-func clusterConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
+func clusterConfigSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
 
 	foundClustered := false
 	foundClusterUser := false
@@ -111,19 +123,19 @@ func clusterConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArte
 				foundClustered = true
 				//if v.Value == "false" {
 				boolValue, _ := strconv.ParseBool(v.Value)
-				if boolValue != customResource.Spec.DeploymentPlan.Clustered {
+				if boolValue != deploymentPlan.Clustered {
 					clusteredNeedsUpdate = true
 				}
 			}
 			if v.Name == "AMQ_CLUSTER_USER" {
 				foundClusterUser = true
-				if v.Value != customResource.Spec.DeploymentPlan.ClusterUser {
+				if v.Value != deploymentPlan.ClusterUser {
 					clusterUserNeedsUpdate = true
 				}
 			}
 			if v.Name == "AMQ_CLUSTER_PASSWORD" {
 				foundClusterPassword = true
-				if v.Value != customResource.Spec.DeploymentPlan.ClusterPassword {
+				if v.Value != deploymentPlan.ClusterPassword {
 					clusterPasswordNeedsUpdate = true
 				}
 			}
@@ -132,7 +144,7 @@ func clusterConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArte
 		if !foundClustered || clusteredNeedsUpdate {
 			newClusteredValue := corev1.EnvVar{
 				"AMQ_CLUSTERED",
-				strconv.FormatBool(customResource.Spec.DeploymentPlan.Clustered),
+				strconv.FormatBool(deploymentPlan.Clustered),
 				nil,
 			}
 			envVarArray = append(envVarArray, newClusteredValue)
@@ -185,7 +197,7 @@ func clusterConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArte
 	return statefulSetUpdated
 }
 
-func sslConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
+func sslConfigSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
 
 	foundKeystore := false
 	foundKeystorePassword := false
@@ -371,13 +383,13 @@ func sslConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtemis,
 	}
 
 	if statefulSetUpdated {
-		sslConfigSyncEnsureSecretVolumeMountExists(customResource, currentStatefulSet)
+		sslConfigSyncEnsureSecretVolumeMountExists(deploymentPlan, currentStatefulSet)
 	}
 
 	return statefulSetUpdated
 }
 
-func sslConfigSyncEnsureSecretVolumeMountExists(customResource *brokerv2alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) {
+func sslConfigSyncEnsureSecretVolumeMountExists(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) {
 
 	secretVolumeExists := false
 	secretVolumeMountExists := false
@@ -420,7 +432,7 @@ func sslConfigSyncEnsureSecretVolumeMountExists(customResource *brokerv2alpha1.A
 	}
 }
 
-func aioSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
+func aioSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
 
 	foundAio := false
 	foundNio := false
@@ -441,12 +453,12 @@ func aioSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtemis, curre
 		}
 	}
 
-	if "aio" == strings.ToLower(customResource.Spec.DeploymentPlan.JournalType) && foundNio {
+	if "aio" == strings.ToLower(deploymentPlan.JournalType) && foundNio {
 		extraArgs = strings.Replace(extraArgs, "--nio", "--aio", 1)
 		extraArgsNeedsUpdate = true
 	}
 
-	if !("aio" == strings.ToLower(customResource.Spec.DeploymentPlan.JournalType)) && foundAio {
+	if !("aio" == strings.ToLower(deploymentPlan.JournalType)) && foundAio {
 		extraArgs = strings.Replace(extraArgs, "--aio", "--nio", 1)
 		extraArgsNeedsUpdate = true
 	}
@@ -475,7 +487,7 @@ func aioSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtemis, curre
 	return extraArgsNeedsUpdate
 }
 
-func persistentSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
+func persistentSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
 
 	foundDataDir := false
 	foundDataDirLogging := false
@@ -487,7 +499,7 @@ func persistentSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtemis
 
 	// TODO: Remove yuck
 	// ensure password and username are valid if can't via openapi validation?
-	if customResource.Spec.DeploymentPlan.PersistenceEnabled {
+	if deploymentPlan.PersistenceEnabled {
 
 		envVarArray := []corev1.EnvVar{}
 		// Find the existing values
@@ -509,7 +521,7 @@ func persistentSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtemis
 		if !foundDataDir || dataDirNeedsUpdate {
 			newDataDirValue := corev1.EnvVar{
 				"AMQ_DATA_DIR",
-				"/opt/" + customResource.Name + "/data",
+				volumes.GLOBAL_DATA_PATH,
 				nil,
 			}
 			envVarArray = append(envVarArray, newDataDirValue)
@@ -562,13 +574,13 @@ func persistentSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtemis
 	return statefulSetUpdated
 }
 
-func imageSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
+func imageSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
 
 	// At implementation time only one container
-	if strings.Compare(currentStatefulSet.Spec.Template.Spec.Containers[0].Image, customResource.Spec.DeploymentPlan.Image) != 0 {
+	if strings.Compare(currentStatefulSet.Spec.Template.Spec.Containers[0].Image, deploymentPlan.Image) != 0 {
 		containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
 		for i := 0; i < containerArrayLen; i++ {
-			currentStatefulSet.Spec.Template.Spec.Containers[i].Image = customResource.Spec.DeploymentPlan.Image
+			currentStatefulSet.Spec.Template.Spec.Containers[i].Image = deploymentPlan.Image
 		}
 		return true
 	}
@@ -576,7 +588,7 @@ func imageSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtemis, cur
 	return false
 }
 
-func commonConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
+func commonConfigSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
 
 	foundCommonUser := false
 	foundCommonPassword := false
@@ -588,21 +600,21 @@ func commonConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtem
 
 	// TODO: Remove yuck
 	// ensure password and username are valid if can't via openapi validation?
-	if customResource.Spec.DeploymentPlan.Password != "" &&
-		customResource.Spec.DeploymentPlan.User != "" {
+	if deploymentPlan.Password != "" &&
+		deploymentPlan.User != "" {
 
 		envVarArray := []corev1.EnvVar{}
 		// Find the existing values
 		for _, v := range currentStatefulSet.Spec.Template.Spec.Containers[0].Env {
 			if v.Name == "AMQ_USER" {
 				foundCommonUser = true
-				if v.Value != customResource.Spec.DeploymentPlan.User {
+				if v.Value != deploymentPlan.User {
 					commonUserNeedsUpdate = true
 				}
 			}
 			if v.Name == "AMQ_PASSWORD" {
 				foundCommonPassword = true
-				if v.Value != customResource.Spec.DeploymentPlan.Password {
+				if v.Value != deploymentPlan.Password {
 					commonPasswordNeedsUpdate = true
 				}
 			}
@@ -611,7 +623,7 @@ func commonConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtem
 		if !foundCommonUser || commonUserNeedsUpdate {
 			newCommonedValue := corev1.EnvVar{
 				"AMQ_USER",
-				customResource.Spec.DeploymentPlan.User,
+				deploymentPlan.User,
 				nil,
 			}
 			envVarArray = append(envVarArray, newCommonedValue)
@@ -621,7 +633,7 @@ func commonConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtem
 		if !foundCommonPassword || commonPasswordNeedsUpdate {
 			newCommonedValue := corev1.EnvVar{
 				"AMQ_PASSWORD",
-				customResource.Spec.DeploymentPlan.Password,
+				deploymentPlan.Password,
 				nil,
 			}
 			envVarArray = append(envVarArray, newCommonedValue)
@@ -645,6 +657,58 @@ func commonConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtem
 					for j := 0; j < envVarArrayLen; j++ {
 						currentStatefulSet.Spec.Template.Spec.Containers[i].Env = append(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, envVarArray[j])
 					}
+				}
+			}
+		}
+	}
+
+	return statefulSetUpdated
+}
+
+func requireLoginSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
+
+	foundRequireLogin := false
+	requireLoginNeedsUpdate := false
+
+	statefulSetUpdated := false
+
+	// Find the existing values
+	for _, v := range currentStatefulSet.Spec.Template.Spec.Containers[0].Env {
+		if v.Name == "AMQ_REQUIRE_LOGIN" {
+			foundRequireLogin = true
+			boolValue, _ := strconv.ParseBool(v.Value)
+			if boolValue != deploymentPlan.RequireLogin {
+				requireLoginNeedsUpdate = true
+			}
+		}
+	}
+
+	envVarArray := []corev1.EnvVar{}
+	if !foundRequireLogin || requireLoginNeedsUpdate {
+		newRequireLoginValue := corev1.EnvVar{
+			"AMQ_REQUIRE_LOGIN",
+			strconv.FormatBool(deploymentPlan.RequireLogin),
+			nil,
+		}
+		envVarArray = append(envVarArray, newRequireLoginValue)
+		statefulSetUpdated = true
+	}
+
+	if statefulSetUpdated {
+		envVarArrayLen := len(envVarArray)
+		if envVarArrayLen > 0 {
+			for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
+				for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
+					if ("AMQ_REQUIRE_LOGIN" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && requireLoginNeedsUpdate) {
+						currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
+					}
+				}
+			}
+
+			containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
+			for i := 0; i < containerArrayLen; i++ {
+				for j := 0; j < envVarArrayLen; j++ {
+					currentStatefulSet.Spec.Template.Spec.Containers[i].Env = append(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, envVarArray[j])
 				}
 			}
 		}

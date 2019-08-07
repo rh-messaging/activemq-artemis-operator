@@ -10,6 +10,8 @@ import (
 
 var log = logf.Log.WithName("package volumes")
 
+// TODO: Remove this ugly hack
+var GLOBAL_DATA_PATH string
 
 func MakeVolumeMounts(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.VolumeMount {
 
@@ -75,11 +77,12 @@ func makeSSLSecretVolume(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.Volume {
 
 func makePersistentVolumeMount(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.VolumeMount {
 
-	dataPath := environments.GetPropertyForCR("AMQ_DATA_DIR", cr, "/opt/"+cr.Name+"/data")
+	// TODO: Ensure consistent path usage
+	GLOBAL_DATA_PATH := environments.GetPropertyForCR("AMQ_DATA_DIR", cr, "/opt/"+cr.Name+"/data")
 	volumeMounts := []corev1.VolumeMount{
 		{
 			Name:      cr.Name,
-			MountPath: dataPath,
+			MountPath: GLOBAL_DATA_PATH,
 			ReadOnly:  false,
 		},
 	}

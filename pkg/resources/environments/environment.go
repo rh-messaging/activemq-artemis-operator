@@ -18,6 +18,12 @@ func GetPropertyForCR(propName string, cr *brokerv2alpha1.ActiveMQArtemis, defau
 
 	result := defaultValue
 	switch propName {
+	case "AMQ_REQUIRE_LOGIN":
+		if cr.Spec.DeploymentPlan.RequireLogin {
+			result = "true"
+		} else {
+			result = "false"
+		}
 	case "AMQ_USER":
 		if len(cr.Spec.DeploymentPlan.User) > 0 {
 			result = cr.Spec.DeploymentPlan.User
@@ -171,7 +177,7 @@ func addEnvVarForBasic(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
 		},
 		{
 			"AMQ_REQUIRE_LOGIN",
-			GetPropertyForCR("AMQ_REQUIRE_LOGIN", cr, ""),
+			GetPropertyForCR("AMQ_REQUIRE_LOGIN", cr, "false"),
 			nil,
 		},
 		{

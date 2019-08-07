@@ -10,11 +10,12 @@ spec:
   deploymentPlan:
     size: 0
     image: registry.redhat.io/amq7/amq-broker:7.4
-    persistenceEnabled: false
-    journalType: nio
     #user: adminUser
     #password: adminPass
     role: adminRole
+    requireLogin: false
     clustered: true
     #clusterUser: clusterUser
     #clusterPass: clusterPass
+    persistenceEnabled: false
+    journalType: nio
