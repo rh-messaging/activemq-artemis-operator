@@ -13,7 +13,7 @@ spec:
     #user: adminUser
     #password: adminPass
     role: adminRole
-    requireLogin: false
+    requireLogin: true
     clustered: true
     #clusterUser: clusterUser
     #clusterPass: clusterPass

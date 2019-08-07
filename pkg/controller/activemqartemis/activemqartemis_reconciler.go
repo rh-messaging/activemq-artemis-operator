@@ -2,6 +2,7 @@ package activemqartemis
 
 import (
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/volumes"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -18,6 +19,7 @@ const (
 	statefulSetAioUpdated           = 1 << 5
 	statefulSetCommonConfigUpdated  = 1 << 6
 	statefulSetRequireLoginUpdated  = 1 << 7
+	statefulSetRoleUpdated			= 1 << 8
 )
 
 type ActiveMQArtemisReconciler struct {
@@ -67,8 +69,14 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(deploymentPla
 		reconciler.statefulSetUpdates |= statefulSetCommonConfigUpdated
 	}
 
-	if requireLoginSyncCausedUpdateOn(deploymentPlan, currentStatefulSet) {
+	if updatedEnvVar := environments.BoolSyncCausedUpdateOn(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_REQUIRE_LOGIN", deploymentPlan.RequireLogin); updatedEnvVar != nil {
+		environments.Update(currentStatefulSet.Spec.Template.Spec.Containers, updatedEnvVar)
 		reconciler.statefulSetUpdates |= statefulSetRequireLoginUpdated
+	}
+
+	if updatedEnvVar := environments.StringSyncCausedUpdateOn(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_ROLE", deploymentPlan.Role); updatedEnvVar != nil {
+		environments.Update(currentStatefulSet.Spec.Template.Spec.Containers, updatedEnvVar)
+		reconciler.statefulSetUpdates |= statefulSetRoleUpdated
 	}
 
 	return reconciler.statefulSetUpdates
@@ -657,58 +665,6 @@ func commonConfigSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPla
 					for j := 0; j < envVarArrayLen; j++ {
 						currentStatefulSet.Spec.Template.Spec.Containers[i].Env = append(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, envVarArray[j])
 					}
-				}
-			}
-		}
-	}
-
-	return statefulSetUpdated
-}
-
-func requireLoginSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
-
-	foundRequireLogin := false
-	requireLoginNeedsUpdate := false
-
-	statefulSetUpdated := false
-
-	// Find the existing values
-	for _, v := range currentStatefulSet.Spec.Template.Spec.Containers[0].Env {
-		if v.Name == "AMQ_REQUIRE_LOGIN" {
-			foundRequireLogin = true
-			boolValue, _ := strconv.ParseBool(v.Value)
-			if boolValue != deploymentPlan.RequireLogin {
-				requireLoginNeedsUpdate = true
-			}
-		}
-	}
-
-	envVarArray := []corev1.EnvVar{}
-	if !foundRequireLogin || requireLoginNeedsUpdate {
-		newRequireLoginValue := corev1.EnvVar{
-			"AMQ_REQUIRE_LOGIN",
-			strconv.FormatBool(deploymentPlan.RequireLogin),
-			nil,
-		}
-		envVarArray = append(envVarArray, newRequireLoginValue)
-		statefulSetUpdated = true
-	}
-
-	if statefulSetUpdated {
-		envVarArrayLen := len(envVarArray)
-		if envVarArrayLen > 0 {
-			for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
-				for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
-					if ("AMQ_REQUIRE_LOGIN" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && requireLoginNeedsUpdate) {
-						currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
-					}
-				}
-			}
-
-			containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
-			for i := 0; i < containerArrayLen; i++ {
-				for j := 0; j < envVarArrayLen; j++ {
-					currentStatefulSet.Spec.Template.Spec.Containers[i].Env = append(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, envVarArray[j])
 				}
 			}
 		}

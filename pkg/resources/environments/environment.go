@@ -3,6 +3,7 @@ package environments
 import (
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	corev1 "k8s.io/api/core/v1"
+	"strconv"
 	"strings"
 
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -305,4 +306,81 @@ func newEnvVarArrayForCR(cr *brokerv2alpha1.ActiveMQArtemis) *[]corev1.EnvVar {
 	envVarArray := MakeEnvVarArrayForCR(cr)
 
 	return &envVarArray
+}
+
+// https://stackoverflow.com/questions/37334119/how-to-delete-an-element-from-a-slice-in-golang
+func remove(s []corev1.EnvVar, i int) []corev1.EnvVar {
+	s[i] = s[len(s)-1]
+	// We do not need to put s[i] at the end, as it will be discarded anyway
+	return s[:len(s)-1]
+}
+
+func BoolSyncCausedUpdateOn(containers []corev1.Container, envVarName string, updatedValue bool) *corev1.EnvVar {
+
+	var retEnvVar *corev1.EnvVar = nil
+
+	found := false
+	needsUpdate := false
+
+	// Find the existing values
+	for _, v := range containers[0].Env {
+		if v.Name == envVarName {
+			found = true
+			currentValue, _ := strconv.ParseBool(v.Value)
+			if currentValue != updatedValue {
+				needsUpdate = true
+			}
+		}
+	}
+
+	if !found || needsUpdate {
+		retEnvVar = &corev1.EnvVar{
+			envVarName,
+			strconv.FormatBool(updatedValue),
+			nil,
+		}
+	}
+
+	return retEnvVar
+}
+
+func StringSyncCausedUpdateOn(containers []corev1.Container, envVarName string, updatedValue string) *corev1.EnvVar {
+
+	var retEnvVar *corev1.EnvVar = nil
+
+	found := false
+	needsUpdate := false
+
+	// Find the existing values
+	for _, v := range containers[0].Env {
+		if v.Name == envVarName {
+			found = true
+			currentValue := v.Value
+			if currentValue != updatedValue {
+				needsUpdate = true
+			}
+		}
+	}
+
+	if !found || needsUpdate {
+		retEnvVar = &corev1.EnvVar{
+			envVarName,
+			updatedValue,
+			nil,
+		}
+	}
+
+	return retEnvVar
+}
+
+func Update(containers []corev1.Container, envVar *corev1.EnvVar) {
+
+	for i := 0; i < len(containers); i++ {
+		for j := len(containers[i].Env) - 1; j >= 0; j-- {
+			if (envVar.Name == containers[i].Env[j].Name) {
+				containers[i].Env = remove(containers[i].Env, j)
+				containers[i].Env = append(containers[i].Env, *envVar)
+			}
+		}
+	}
 }
