@@ -1,9 +1,5 @@
 package selectors
 
-import (
-	"k8s.io/apimachinery/pkg/labels"
-)
-
 const (
 	LabelAppKey      = "application"
 	LabelResourceKey = "ActiveMQArtemis"
@@ -40,17 +36,6 @@ func (l *LabelerData) Generate() {
 	l.labels = make(map[string]string)
 	l.labels[LabelAppKey] = l.baseName + "-" + l.suffix //"-app"
 	l.labels[LabelResourceKey] = l.baseName
-}
-
-// return a selector that matches resources for a ActiveMQArtemis resource
-func ResourcesByActiveMQArtemisName(name string) labels.Selector {
-
-	set := map[string]string{
-		LabelAppKey: name,
-		//LabelResourceKey: baseName,
-	}
-
-	return labels.SelectorFromSet(set)
 }
 
 var LabelBuilder LabelerData

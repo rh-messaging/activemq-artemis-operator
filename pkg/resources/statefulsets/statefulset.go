@@ -4,16 +4,14 @@ import (
 	"context"
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	pvc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/persistentvolumeclaims"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/pods"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/namer"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
 	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/environments"
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -25,157 +23,70 @@ import (
 var log = logf.Log.WithName("package statefulsets")
 var NameBuilder namer.NamerData
 
-const (
-	graceTime       = 30
-	TCPLivenessPort = 8161
-)
+//const (
+//	graceTime       = 30
+//	TCPLivenessPort = 8161
+//)
 
-func makeVolumeMounts(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.VolumeMount {
-
-	volumeMounts := []corev1.VolumeMount{}
-	if cr.Spec.DeploymentPlan.PersistenceEnabled {
-		persistentCRVlMnt := makePersistentVolumeMount(cr)
-		volumeMounts = append(volumeMounts, persistentCRVlMnt...)
-	}
-	if environments.CheckSSLEnabled(cr) {
-		sslCRVlMnt := makeSSLVolumeMount(cr)
-		volumeMounts = append(volumeMounts, sslCRVlMnt...)
-	}
-	return volumeMounts
-
-}
-
-func makeVolumes(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.Volume {
-
-	volume := []corev1.Volume{}
-	if cr.Spec.DeploymentPlan.PersistenceEnabled {
-		basicCRVolume := makePersistentVolume(cr)
-		volume = append(volume, basicCRVolume...)
-	}
-	if environments.CheckSSLEnabled(cr) {
-		sslCRVolume := makeSSLSecretVolume(cr)
-		volume = append(volume, sslCRVolume...)
-	}
-	return volume
-}
-
-func makePersistentVolume(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.Volume {
-
-	volume := []corev1.Volume{
-		{
-			Name: cr.Name,
-			VolumeSource: corev1.VolumeSource{
-				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: cr.Name,
-					ReadOnly:  false,
-				},
-			},
-		},
-	}
-
-	return volume
-}
-
-func makeSSLSecretVolume(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.Volume {
-
-	volume := []corev1.Volume{
-		{
-			Name: "broker-secret-volume",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: "TODO-FIX-REPLACE",//cr.Spec.SSLConfig.SecretName,
-				},
-			},
-		},
-	}
-
-	return volume
-}
-
-func makePersistentVolumeMount(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.VolumeMount {
-
-	dataPath := environments.GetPropertyForCR("AMQ_DATA_DIR", cr, "/opt/"+cr.Name+"/data")
-	volumeMounts := []corev1.VolumeMount{
-		{
-			Name:      cr.Name,
-			MountPath: dataPath,
-			ReadOnly:  false,
-		},
-	}
-	return volumeMounts
-}
-
-func makeSSLVolumeMount(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.VolumeMount {
-
-	volumeMounts := []corev1.VolumeMount{
-		{
-			Name:      "broker-secret-volume",
-			MountPath: "/etc/amq-secret-volume",
-			ReadOnly:  true,
-		},
-	}
-	return volumeMounts
-}
-
-func newPodTemplateSpecForCR(cr *brokerv2alpha1.ActiveMQArtemis) corev1.PodTemplateSpec {
-
-	// Log where we are and what we're doing
-	reqLogger := log.WithName(cr.Name)
-	reqLogger.Info("Creating new pod template spec for custom resource")
-
-	//var pts corev1.PodTemplateSpec
-	terminationGracePeriodSeconds := int64(60)
-	pts := corev1.PodTemplateSpec{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name,
-			Namespace: cr.Namespace,
-			Labels:    cr.Labels,
-		},
-	}
-	Spec := corev1.PodSpec{}
-	Containers := []corev1.Container{}
-	container := corev1.Container{
-		Name:    cr.Name + "-container",
-		Image:   cr.Spec.DeploymentPlan.Image,
-		Command: []string{"/opt/amq/bin/launch.sh", "start"},
-		Env:     environments.MakeEnvVarArrayForCR(cr),
-		ReadinessProbe: &corev1.Probe{
-			InitialDelaySeconds: graceTime,
-			TimeoutSeconds:      5,
-			Handler: corev1.Handler{
-				Exec: &corev1.ExecAction{
-					Command: []string{
-						"/bin/bash",
-						"-c",
-						"/opt/amq/bin/readinessProbe.sh",
-					},
-				},
-			},
-		},
-		LivenessProbe: &corev1.Probe{
-			InitialDelaySeconds: graceTime,
-			TimeoutSeconds:      5,
-			Handler: corev1.Handler{
-				TCPSocket: &corev1.TCPSocketAction{
-					Port: intstr.FromInt(TCPLivenessPort),
-				},
-			},
-		},
-	}
-	volumeMounts := makeVolumeMounts(cr)
-	if len(volumeMounts) > 0 {
-		container.VolumeMounts = volumeMounts
-	}
-	Spec.Containers = append(Containers, container)
-	volumes := makeVolumes(cr)
-	if len(volumes) > 0 {
-		Spec.Volumes = volumes
-	}
-	Spec.TerminationGracePeriodSeconds = &terminationGracePeriodSeconds
-	pts.Spec = Spec
-
-	return pts
-}
+//func newPodTemplateSpecForCR(cr *brokerv2alpha1.ActiveMQArtemis) corev1.PodTemplateSpec {
+//
+//	// Log where we are and what we're doing
+//	reqLogger := log.WithName(cr.Name)
+//	reqLogger.Info("Creating new pod template spec for custom resource")
+//
+//	//var pts corev1.PodTemplateSpec
+//	terminationGracePeriodSeconds := int64(60)
+//	pts := corev1.PodTemplateSpec{
+//		ObjectMeta: metav1.ObjectMeta{
+//			Name:      cr.Name,
+//			Namespace: cr.Namespace,
+//			Labels:    cr.Labels,
+//		},
+//	}
+//	Spec := corev1.PodSpec{}
+//	Containers := []corev1.Container{}
+//	container := corev1.Container{
+//		Name:    cr.Name + "-container",
+//		Image:   cr.Spec.DeploymentPlan.Image,
+//		Command: []string{"/opt/amq/bin/launch.sh", "start"},
+//		Env:     environments.MakeEnvVarArrayForCR(cr),
+//		ReadinessProbe: &corev1.Probe{
+//			InitialDelaySeconds: graceTime,
+//			TimeoutSeconds:      5,
+//			Handler: corev1.Handler{
+//				Exec: &corev1.ExecAction{
+//					Command: []string{
+//						"/bin/bash",
+//						"-c",
+//						"/opt/amq/bin/readinessProbe.sh",
+//					},
+//				},
+//			},
+//		},
+//		LivenessProbe: &corev1.Probe{
+//			InitialDelaySeconds: graceTime,
+//			TimeoutSeconds:      5,
+//			Handler: corev1.Handler{
+//				TCPSocket: &corev1.TCPSocketAction{
+//					Port: intstr.FromInt(TCPLivenessPort),
+//				},
+//			},
+//		},
+//	}
+//	volumeMounts := volumes.MakeVolumeMounts(cr)
+//	if len(volumeMounts) > 0 {
+//		container.VolumeMounts = volumeMounts
+//	}
+//	Spec.Containers = append(Containers, container)
+//	volumes := volumes.MakeVolumes(cr)
+//	if len(volumes) > 0 {
+//		Spec.Volumes = volumes
+//	}
+//	Spec.TerminationGracePeriodSeconds = &terminationGracePeriodSeconds
+//	pts.Spec = Spec
+//
+//	return pts
+//}
 
 func NewStatefulSetForCR(cr *brokerv2alpha1.ActiveMQArtemis) *appsv1.StatefulSet {
 
@@ -204,7 +115,7 @@ func NewStatefulSetForCR(cr *brokerv2alpha1.ActiveMQArtemis) *appsv1.StatefulSet
 		Selector: &metav1.LabelSelector{
 			MatchLabels: labels,
 		},
-		Template: newPodTemplateSpecForCR(cr),
+		Template: pods.NewPodTemplateSpecForCR(cr),
 	}
 
 	if cr.Spec.DeploymentPlan.PersistenceEnabled {

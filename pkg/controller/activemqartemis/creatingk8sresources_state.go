@@ -2,8 +2,7 @@ package activemqartemis
 
 import (
 	"context"
-	"github.com/RHsyseng/operator-utils/pkg/olm"
-	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/pods"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/secrets"
 	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
 	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
@@ -12,7 +11,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"strconv"
 	"time"
@@ -51,16 +49,22 @@ func (rs *CreatingK8sResourcesState) ID() int {
 	return CreatingK8sResourcesID
 }
 
+func (rs *CreatingK8sResourcesState) generateNames() {
+
+	// Initialize the kubernetes names
+	ss.NameBuilder.Base(rs.parentFSM.customResource.Name).Suffix("ss").Generate()
+	svc.HeadlessNameBuilder.Prefix("amq-broker").Base("amq").Suffix("headless").Generate()
+	pods.NameBuilder.Base(rs.parentFSM.customResource.Name).Suffix("container").Generate()
+}
+
 // First time entering state
 func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 
 	var err error = nil
 	var retrieveError error = nil
 
-	// Initialize the kubernetes names
-	ss.NameBuilder.Base(rs.parentFSM.customResource.Name).Suffix("ss").Generate()
+	rs.generateNames()
 	selectors.LabelBuilder.Base(rs.parentFSM.customResource.Name).Suffix("app").Generate()
-	svc.HeadlessNameBuilder.Prefix("amq-broker").Base("amq").Suffix("headless").Generate()
 	statefulsetDefinition := ss.NewStatefulSetForCR(rs.parentFSM.customResource)
 
 	// Check to see if the statefulset already exists
@@ -171,7 +175,8 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 
 		break
 	}
-	updataPodStatus(rs)
+	pods.UpdatePodStatus(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.namespacedName)
+
 	return err, nextStateID
 }
 
@@ -182,52 +187,4 @@ func (rs *CreatingK8sResourcesState) Exit() error {
 	reqLogger.Info("Exiting CreatingK8sResourceState")
 
 	return nil
-}
-
-func updataPodStatus(rs *CreatingK8sResourcesState) error {
-
-	reqLogger := log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
-	reqLogger.Info("Updating pods status")
-
-	podStatus := getPodStatus(rs.parentFSM.r, rs.parentFSM.customResource)
-
-	reqLogger.Info("PodStatus are to be updated.............................", "info:", podStatus)
-	reqLogger.Info("Ready Count........................", "info:", len(podStatus.Ready))
-	reqLogger.Info("Stopped Count........................", "info:", len(podStatus.Stopped))
-	reqLogger.Info("Starting Count........................", "info:", len(podStatus.Starting))
-
-	if !reflect.DeepEqual(podStatus, rs.parentFSM.customResource.Status.PodStatus) {
-
-		rs.parentFSM.customResource.Status.PodStatus = podStatus
-
-		err := rs.parentFSM.r.client.Status().Update(context.TODO(), rs.parentFSM.customResource)
-		if err != nil {
-			reqLogger.Error(err, "Failed to update pods status")
-			return err
-		}
-		reqLogger.Info("Pods status updated")
-		return nil
-	}
-
-	return nil
-
-}
-
-func getPodStatus(r *ReconcileActiveMQArtemis, instance *brokerv2alpha1.ActiveMQArtemis) olm.DeploymentStatus {
-	// List the pods for this deployment
-	var status olm.DeploymentStatus
-	sfsFound := &appsv1.StatefulSet{}
-
-	err := r.client.Get(context.TODO(), types.NamespacedName{Name: ss.NameBuilder.Name(), Namespace: instance.Namespace}, sfsFound)
-	if err == nil {
-		status = olm.GetSingleStatefulSetStatus(*sfsFound)
-	} else {
-		dsFound := &appsv1.DaemonSet{}
-		err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, dsFound)
-		if err == nil {
-			status = olm.GetSingleDaemonSetStatus(*dsFound)
-		}
-	}
-
-	return status
 }
