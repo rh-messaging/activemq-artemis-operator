@@ -13,10 +13,25 @@ spec:
     #user: adminUser
     #password: adminPass
     role: admin
-    requireLogin: true
-    clustered: true
+    requireLogin: false
+    clustered: false
     #clusterUser: clusterUser
     #clusterPass: clusterPass
     persistenceEnabled: false
     journalType: nio
     messageMigration: false
+  acceptors:
+    - name: all-protocol
+      protocols: all
+      port: 21212
+    - name: amqp-protocol
+      protocols: amqp
+      port: 5672
+  connectors:
+    - name: first-c
+      host: localhost
+      port: 22222
+    - name: second-c
+      host: 127.0.0.1
+      port: 33333
+

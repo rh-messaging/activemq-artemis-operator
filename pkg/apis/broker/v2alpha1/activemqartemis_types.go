@@ -31,22 +31,24 @@ type DeploymentPlanType struct {
 	ClusterUser        string `json:"clusterUser,omitempty"`
 	ClusterPassword    string `json:"clusterPassword,omitempty"`
 	PersistenceEnabled bool   `json:"persistenceEnabled,omitempty"`
-	JournalType        string `json:"journalType",omitempty`
-	MessageMigration   bool   `json:"messageMigration",omitempty"`
+	JournalType        string `json:"journalType,omitempty"`
+	MessageMigration   bool   `json:"messageMigration,omitempty"`
 }
 
 type AcceptorType struct {
 	Name       string `json:"name"`
-	Protocols  string `json:"protocols,omitempty"`
 	Port       int32  `json:"port,omitempty"`
-	Expose     bool   `json:"expose,omitempty"`
+	Protocols  string `json:"protocols,omitempty"`
 	SSLEnabled bool   `json:"sslEnabled,omitempty"`
 	SSLSecret  string `json:"sslSecret,omitempty"`
+	Expose     bool   `json:"expose,omitempty"`
 }
 
 type ConnectorType struct {
 	Name       string `json:"name"`
-	Port       int32  `json:"port,omitempty"`
+	Type       string `json:"type,omitempty"`
+	Host       string `json:"host"`
+	Port       int32  `json:"port"`
 	SSLEnabled bool   `json:"sslEnabled,omitempty"`
 	SSLSecret  string `json:"sslSecret,omitempty"`
 }

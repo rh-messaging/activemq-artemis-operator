@@ -69,6 +69,58 @@ spec:
               messageMigration:
                 type: boolean
                 description: If true migrate messages on scaledown
+          acceptors:
+            type: array
+            description: Configuration of all acceptors
+            minItems: 0
+            items:
+              type: object
+              description: A single acceptor configuration
+              properties:
+                name:
+                  type: string
+                  description: The name of the acceptor
+                port:
+                  type: integer
+                  description: Port number
+                protocols:
+                  type: string
+                  description: The protocols to enable for this acceptor
+                sslEnabled:
+                  type: boolean
+                  description: Whether or not to enable SSL on this port
+                sslSecret:
+                  type: string
+                  description: Name of the secret to use for ssl information
+                expose:
+                  type: boolean
+                  description: Whether or not to expose this port
+          connectors:
+            type: array
+            description: Configuration of all connectors
+            minItems: 0
+            items:
+              type: object
+              description: A single connector configuration
+              properties:
+                name:
+                  type: string
+                  description: The name of the acceptor
+                type:
+                  type: string
+                  description: The type either tcp or vm
+                host:
+                  type: string
+                  description: Hostname or IP to connect to
+                port:
+                  type: integer
+                  description: Port number
+                sslEnabled:
+                  type: boolean
+                  description: Whether or not to enable SSL on this port
+                sslSecret:
+                  type: string
+                  description: Name of the secret to use for ssl information
         status:
           type: object
   version: v2alpha1

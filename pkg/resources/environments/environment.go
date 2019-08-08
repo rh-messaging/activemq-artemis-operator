@@ -373,6 +373,28 @@ func StringSyncCausedUpdateOn(containers []corev1.Container, envVarName string, 
 	return retEnvVar
 }
 
+func Create(containers []corev1.Container, envVar *corev1.EnvVar) {
+
+	for i := 0; i < len(containers); i++ {
+		containers[i].Env = append(containers[i].Env, *envVar)
+	}
+}
+
+func Retrieve(containers []corev1.Container, envVarName string) *corev1.EnvVar {
+
+	var retEnvVar *corev1.EnvVar = nil
+	for i := 0; i < len(containers) && nil == retEnvVar; i++ {
+		for j := len(containers[i].Env) - 1; j >= 0; j-- {
+			if envVarName == containers[i].Env[j].Name {
+				retEnvVar = &containers[i].Env[j]
+				break
+			}
+		}
+	}
+
+	return retEnvVar
+}
+
 func Update(containers []corev1.Container, envVar *corev1.EnvVar) {
 
 	for i := 0; i < len(containers); i++ {
@@ -380,6 +402,17 @@ func Update(containers []corev1.Container, envVar *corev1.EnvVar) {
 			if envVar.Name == containers[i].Env[j].Name {
 				containers[i].Env = remove(containers[i].Env, j)
 				containers[i].Env = append(containers[i].Env, *envVar)
+			}
+		}
+	}
+}
+
+func Delete(containers []corev1.Container, envVarName string) {
+
+	for i := 0; i < len(containers); i++ {
+		for j := len(containers[i].Env) - 1; j >= 0; j-- {
+			if envVarName == containers[i].Env[j].Name {
+				containers[i].Env = remove(containers[i].Env, j)
 			}
 		}
 	}
