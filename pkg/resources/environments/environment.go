@@ -158,7 +158,7 @@ func addEnvVarForBasic(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
 		},
 		{
 			"AMQ_TRANSPORTS",
-			GetPropertyForCR("AMQ_TRANSPORTS", cr, "openwire,amqp,stomp,mqtt,hornetq"),
+			GetPropertyForCR("AMQ_TRANSPORTS", cr, ""),
 			nil,
 		},
 		{

@@ -143,33 +143,38 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(deploymentPla
 func (reconciler *ActiveMQArtemisReconciler) ProcessAcceptors(acceptors []brokerv2alpha1.AcceptorType, currentStatefulSet *appsv1.StatefulSet) {
 
 	acceptorEntry := ""
-	defaultArgs := "tcpSendBufferSize=1048576;tcpReceiveBufferSize=1048576;useEpoll=true;amqpCredits=1000;amqpMinCredits=300;connectionsAllowed=${connectionsAllowed}"
+	//defaultArgs := "tcpSendBufferSize=1048576;tcpReceiveBufferSize=1048576;useEpoll=true;amqpCredits=1000;amqpMinCredits=300;connectionsAllowed=${connectionsAllowed}"
+	defaultArgs := "tcpSendBufferSize=1048576;tcpReceiveBufferSize=1048576;useEpoll=true;amqpCredits=1000;amqpMinCredits=300"
 
+	var portIncrement int32 = 10
+	var currentPortIncrement int32 = 0
 	for _, acceptor := range acceptors {
 		if 0 == acceptor.Port {
-			acceptor.Port = 62626
+			acceptor.Port = 61616 + currentPortIncrement
+			currentPortIncrement += portIncrement
 		}
 		if "" == acceptor.Protocols ||
-			"all" == acceptor.Protocols {
-			acceptor.Protocols = "AMQP,CORE,HORNETQ,MQTT,STOMP"
+			"all" == strings.ToLower(acceptor.Protocols) {
+			acceptor.Protocols = "AMQP,CORE,HORNETQ,MQTT,OPENWIRE,STOMP"
 		}
 		acceptorEntry = acceptorEntry + "<acceptor name=\"" + acceptor.Name + "\">"
-		acceptorEntry = acceptorEntry + "tcp://${ACCEPTOR_IP}:"
+		acceptorEntry = acceptorEntry + "tcp:" + "\\/\\/" + "ACCEPTOR_IP:"
 		acceptorEntry = acceptorEntry + fmt.Sprintf("%d", acceptor.Port)
 		acceptorEntry = acceptorEntry + "?protocols=" + strings.ToUpper(acceptor.Protocols)
 		acceptorEntry = acceptorEntry + ";" + defaultArgs
 		// TODO: SSL
-		acceptorEntry = acceptorEntry + "</acceptor>\n"
-	}
-
-	acceptorsEnvVar := &corev1.EnvVar{
-		Name:      "AMQ_ACCEPTORS",
-		Value:     acceptorEntry,
-		ValueFrom: nil,
+		acceptorEntry = acceptorEntry + "<\\/acceptor>"
 	}
 
 	environments.Delete(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_ACCEPTORS")
-	environments.Create(currentStatefulSet.Spec.Template.Spec.Containers, acceptorsEnvVar)
+	if "" != acceptorEntry {
+		acceptorsEnvVar := &corev1.EnvVar{
+			Name:      "AMQ_ACCEPTORS",
+			Value:     acceptorEntry,
+			ValueFrom: nil,
+		}
+		environments.Create(currentStatefulSet.Spec.Template.Spec.Containers, acceptorsEnvVar)
+	}
 }
 
 func (reconciler *ActiveMQArtemisReconciler) ProcessConnectors(connectors []brokerv2alpha1.ConnectorType, currentStatefulSet *appsv1.StatefulSet) {
@@ -181,20 +186,21 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessConnectors(connectors []brok
 			connector.Type = "tcp"
 		}
 		connectorEntry = connectorEntry + "<connector name=\"" + connector.Name + "\">"
-		connectorEntry = connectorEntry + connector.Type + "://" + strings.ToLower(connector.Host) + ":"
+		connectorEntry = connectorEntry + strings.ToLower(connector.Type) + ":\\/\\/" + strings.ToLower(connector.Host) + ":"
 		connectorEntry = connectorEntry + fmt.Sprintf("%d", connector.Port)
 		// TODO: SSL
-		connectorEntry = connectorEntry + "</connector>\n"
-	}
-
-	connectorsEnvVar := &corev1.EnvVar{
-		Name:      "AMQ_CONNECTORS",
-		Value:     connectorEntry,
-		ValueFrom: nil,
+		connectorEntry = connectorEntry + "<\\/connector>"
 	}
 
 	environments.Delete(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_CONNECTORS")
-	environments.Create(currentStatefulSet.Spec.Template.Spec.Containers, connectorsEnvVar)
+	if "" != connectorEntry {
+		connectorsEnvVar := &corev1.EnvVar{
+			Name:      "AMQ_CONNECTORS",
+			Value:     connectorEntry,
+			ValueFrom: nil,
+		}
+		environments.Create(currentStatefulSet.Spec.Template.Spec.Containers, connectorsEnvVar)
+	}
 }
 
 // https://stackoverflow.com/questions/37334119/how-to-delete-an-element-from-a-slice-in-golang
