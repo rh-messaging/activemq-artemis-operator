@@ -5,6 +5,7 @@ import (
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/pods"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/secrets"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/serviceports"
@@ -115,6 +116,8 @@ func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 	}
 
 	clusterUserPasswordStringData := secrets.MakeUserPasswordStringData("clusterUser", "clusterPassword", rs.parentFSM.customResource.Spec.DeploymentPlan.ClusterUser, rs.parentFSM.customResource.Spec.DeploymentPlan.ClusterPassword)
+	environments.GLOBAL_AMQ_CLUSTER_USER = rs.parentFSM.customResource.Spec.DeploymentPlan.ClusterUser
+	environments.GLOBAL_AMQ_CLUSTER_PASSWORD = rs.parentFSM.customResource.Spec.DeploymentPlan.ClusterPassword
 	clusterUserPasswordSecret := secrets.NewUserPasswordSecret(rs.parentFSM.customResource, "amq-credentials-secret", clusterUserPasswordStringData)
 	if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, clusterUserPasswordSecret); err != nil {
 		// err means not found so create

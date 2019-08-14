@@ -36,12 +36,12 @@ func GetPropertyForCR(propName string, cr *brokerv2alpha1.ActiveMQArtemis, defau
 	case "AMQ_CLUSTER_USER":
 		if len(cr.Spec.DeploymentPlan.ClusterUser) > 0 {
 			result = cr.Spec.DeploymentPlan.ClusterUser
-			GLOBAL_AMQ_CLUSTER_USER = result
+			//GLOBAL_AMQ_CLUSTER_USER = result
 		}
 	case "AMQ_CLUSTER_PASSWORD":
 		if len(cr.Spec.DeploymentPlan.ClusterPassword) > 0 {
 			result = cr.Spec.DeploymentPlan.ClusterPassword
-			GLOBAL_AMQ_CLUSTER_PASSWORD = result
+			//GLOBAL_AMQ_CLUSTER_PASSWORD = result
 		}
 	case "AMQ_KEYSTORE_TRUSTSTORE_DIR":
 		//if checkSSLEnabled(cr) && len(cr.Spec.SSLConfig.SecretName) > 0 {
