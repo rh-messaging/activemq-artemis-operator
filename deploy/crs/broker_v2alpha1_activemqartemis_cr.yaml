@@ -8,30 +8,30 @@ metadata:
     application: example-activemqartemis-app
 spec:
   deploymentPlan:
-    size: 0
-    image: registry.redhat.io/amq7/amq-broker:7.4
+    size: 2
+    image: docker-registry.default.svc:5000/entmqbr-2687-0/amq-broker:7.4-5
+    #image: registry.redhat.io/amq7/amq-broker:7.4
     #user: adminUser
     #password: adminPass
     role: admin
     requireLogin: false
-    clustered: false
-    #clusterUser: clusterUser
-    #clusterPass: clusterPass
-    persistenceEnabled: false
+    clustered: true
+    clusterUser: clusteruser1
+    clusterPassword: clusterpass1
+    persistenceEnabled: true
     journalType: nio
-    messageMigration: false
-  acceptors:
-    - name: all-protocol
-      protocols: all
-      port: 21212
-    - name: amqp-protocol
-      protocols: amqp
-      port: 5672
-  connectors:
-    - name: first-c
-      host: localhost
-      port: 22222
-    - name: second-c
-      host: 127.0.0.1
-      port: 33333
-
+    messageMigration: true
+  #acceptors:
+    #- name: all-protocol
+      #protocols: all
+      #port: 61616
+    #- name: my
+    # protocols: amqp
+    #  port: 5672
+  #connectors:
+    #- name: first-c
+      #host: localhost
+      #port: 22222
+    #- name: second-c
+      #host: 127.0.0.1
+      #port: 33333
