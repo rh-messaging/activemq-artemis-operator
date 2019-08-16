@@ -38,14 +38,14 @@ type ActiveMQArtemisReconciler struct {
 type ActiveMQArtemisIReconciler interface {
 	Process(customResource *brokerv2alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) uint32
 	ProcessDeploymentPlan(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) uint32
-	ProcessAcceptors(acceptors []brokerv2alpha1.AcceptorType)
-	ProcessConnectors(connectors []brokerv2alpha1.ConnectorType)
+	ProcessAcceptors(acceptors []brokerv2alpha1.AcceptorType, ensureCOREOn61616Exists bool, currentStatefulSet *appsv1.StatefulSet)
+	ProcessConnectors(connectors []brokerv2alpha1.ConnectorType, currentStatefulSet *appsv1.StatefulSet)
 }
 
 func (reconciler *ActiveMQArtemisReconciler) Process(customResource *brokerv2alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) uint32 {
 
 	statefulSetUpdates := reconciler.ProcessDeploymentPlan(&customResource.Spec.DeploymentPlan, currentStatefulSet)
-	reconciler.ProcessAcceptors(customResource.Spec.Acceptors, currentStatefulSet)
+	reconciler.ProcessAcceptors(customResource.Spec.Acceptors, customResource.Spec.DeploymentPlan.MessageMigration || customResource.Spec.DeploymentPlan.Clustered, currentStatefulSet)
 	reconciler.ProcessConnectors(customResource.Spec.Connectors, currentStatefulSet)
 
 	return statefulSetUpdates
@@ -140,7 +140,7 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(deploymentPla
 	return reconciler.statefulSetUpdates
 }
 
-func (reconciler *ActiveMQArtemisReconciler) ProcessAcceptors(acceptors []brokerv2alpha1.AcceptorType, currentStatefulSet *appsv1.StatefulSet) {
+func (reconciler *ActiveMQArtemisReconciler) ProcessAcceptors(acceptors []brokerv2alpha1.AcceptorType, ensureCOREOn61616Exists bool, currentStatefulSet *appsv1.StatefulSet) {
 
 	acceptorEntry := ""
 	//defaultArgs := "tcpSendBufferSize=1048576;tcpReceiveBufferSize=1048576;useEpoll=true;amqpCredits=1000;amqpMinCredits=300;connectionsAllowed=${connectionsAllowed}"
@@ -148,9 +148,10 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessAcceptors(acceptors []broker
 
 	var portIncrement int32 = 10
 	var currentPortIncrement int32 = 0
+	var port61616InUse bool = false
 	for _, acceptor := range acceptors {
 		if 0 == acceptor.Port {
-			acceptor.Port = 61616 + currentPortIncrement
+			acceptor.Port = 61626 + currentPortIncrement
 			currentPortIncrement += portIncrement
 		}
 		if "" == acceptor.Protocols ||
@@ -161,6 +162,25 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessAcceptors(acceptors []broker
 		acceptorEntry = acceptorEntry + "tcp:" + "\\/\\/" + "ACCEPTOR_IP:"
 		acceptorEntry = acceptorEntry + fmt.Sprintf("%d", acceptor.Port)
 		acceptorEntry = acceptorEntry + "?protocols=" + strings.ToUpper(acceptor.Protocols)
+		// TODO: Evaluate more dynamic messageMigration
+		if 61616 == acceptor.Port {
+			port61616InUse = true
+		}
+		if ensureCOREOn61616Exists &&
+			(61616 == acceptor.Port) &&
+			!strings.Contains(acceptor.Protocols, "CORE") {
+			acceptorEntry = acceptorEntry + ",CORE"
+		}
+		acceptorEntry = acceptorEntry + ";" + defaultArgs
+		// TODO: SSL
+		acceptorEntry = acceptorEntry + "<\\/acceptor>"
+	}
+	// TODO: Evaluate more dynamic messageMigration
+	if ensureCOREOn61616Exists && !port61616InUse {
+		acceptorEntry = acceptorEntry + "<acceptor name=\"" + "scaleDown" + "\">"
+		acceptorEntry = acceptorEntry + "tcp:" + "\\/\\/" + "ACCEPTOR_IP:"
+		acceptorEntry = acceptorEntry + fmt.Sprintf("%d", 61616)
+		acceptorEntry = acceptorEntry + "?protocols=" + "CORE"
 		acceptorEntry = acceptorEntry + ";" + defaultArgs
 		// TODO: SSL
 		acceptorEntry = acceptorEntry + "<\\/acceptor>"
