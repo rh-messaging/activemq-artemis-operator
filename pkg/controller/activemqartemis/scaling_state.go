@@ -157,12 +157,17 @@ func (rs *ScalingState) configureServices() error {
 			continue
 		}
 
-		baseServiceName = "all-protocol"
-		portNumber = int32(61616)
-		serviceDefinition = svc.NewServiceDefinitionForCR(cr, baseServiceName+"-"+ordinalString, portNumber, labels)
-		if err = resources.Create(cr, client, scheme, serviceDefinition); err != nil {
-			reqLogger.Info("Failure to create " + baseServiceName + " service " + ordinalString)
-			continue
+		for _, acceptor := range cr.Spec.Acceptors {
+			if !acceptor.Expose {
+				continue
+			}
+			baseServiceName = acceptor.Name
+			portNumber = acceptor.Port
+			serviceDefinition = svc.NewServiceDefinitionForCR(cr, baseServiceName+"-"+ordinalString, portNumber, labels)
+			if err = resources.Create(cr, client, scheme, serviceDefinition); err != nil {
+				reqLogger.Info("Failure to create " + baseServiceName + " service " + ordinalString)
+				continue
+			}
 		}
 	}
 
@@ -208,28 +213,35 @@ func (rs *ScalingState) configureRoutes() error {
 	var err error = nil
 	var passthroughTLS bool
 
-	for i := 0; i < int(rs.parentFSM.customResource.Spec.DeploymentPlan.Size); i++ {
+	cr := rs.parentFSM.customResource
+	for i := 0; i < int(cr.Spec.DeploymentPlan.Size); i++ {
 		passthroughTLS = false
 		targetPortName := "console-jolokia" + "-" + strconv.Itoa(i)
-		targetServiceName := rs.parentFSM.customResource.Name + "-service-" + targetPortName
+		targetServiceName := cr.Name + "-service-" + targetPortName
 		log.Info("Checking route for " + targetPortName)
 
-		consoleJolokiaRoute := routes.NewRouteDefinitionForCR(rs.parentFSM.customResource, selectors.LabelBuilder.Labels(), targetServiceName, targetPortName, passthroughTLS)
-		if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, consoleJolokiaRoute); err != nil {
-			resources.Delete(rs.parentFSM.customResource, rs.parentFSM.r.client, consoleJolokiaRoute)
+		consoleJolokiaRoute := routes.NewRouteDefinitionForCR(cr, selectors.LabelBuilder.Labels(), targetServiceName, targetPortName, passthroughTLS)
+		if err = resources.Retrieve(cr, rs.parentFSM.namespacedName, rs.parentFSM.r.client, consoleJolokiaRoute); err != nil {
+			resources.Delete(cr, rs.parentFSM.r.client, consoleJolokiaRoute)
 		}
-		if err = resources.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, consoleJolokiaRoute); err == nil {
+		if err = resources.Create(cr, rs.parentFSM.r.client, rs.parentFSM.r.scheme, consoleJolokiaRoute); err == nil {
 		}
+		
+		for _, acceptor := range cr.Spec.Acceptors {
+			if !acceptor.Expose {
+				continue
+			}
 
-		targetPortName = "all-protocol" + "-" + strconv.Itoa(i)
-		targetServiceName = rs.parentFSM.customResource.Name + "-service-" + targetPortName
-		log.Info("Checking route for " + targetPortName)
-		passthroughTLS = true
-		allProtocolRoute := routes.NewRouteDefinitionForCR(rs.parentFSM.customResource, selectors.LabelBuilder.Labels(), targetServiceName, targetPortName, passthroughTLS)
-		if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, allProtocolRoute); err != nil {
-			resources.Delete(rs.parentFSM.customResource, rs.parentFSM.r.client, allProtocolRoute)
-		}
-		if err = resources.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, allProtocolRoute); err == nil {
+			targetPortName = acceptor.Name + "-" + strconv.Itoa(i)
+			targetServiceName = cr.Name + "-service-" + targetPortName
+			log.Info("Checking routeDefinition for " + targetPortName)
+			passthroughTLS = true
+			routeDefinition := routes.NewRouteDefinitionForCR(cr, selectors.LabelBuilder.Labels(), targetServiceName, targetPortName, passthroughTLS)
+			if err = resources.Retrieve(cr, rs.parentFSM.namespacedName, rs.parentFSM.r.client, routeDefinition); err != nil {
+				resources.Delete(cr, rs.parentFSM.r.client, routeDefinition)
+			}
+			if err = resources.Create(cr, rs.parentFSM.r.client, rs.parentFSM.r.scheme, routeDefinition); err == nil {
+			}
 		}
 	}
 
