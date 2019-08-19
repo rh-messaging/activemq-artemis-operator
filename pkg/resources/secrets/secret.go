@@ -11,7 +11,7 @@ import (
 
 var log = logf.Log.WithName("package secrets")
 
-func MakeUserPasswordStringData(keyName string, valueName string, key string, value string) map[string]string {
+func MakeStringDataMap(keyName string, valueName string, key string, value string) map[string]string {
 
 	if 0 == len(key) {
 		key = random.GenerateRandomString(8)
@@ -29,7 +29,7 @@ func MakeUserPasswordStringData(keyName string, valueName string, key string, va
 	return stringDataMap
 }
 
-func MakeUserPasswordSecret(customResource *brokerv2alpha1.ActiveMQArtemis, secretName string, stringData map[string]string) corev1.Secret {
+func MakeSecret(customResource *brokerv2alpha1.ActiveMQArtemis, secretName string, stringData map[string]string) corev1.Secret {
 
 	userPasswordSecret := corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
@@ -47,9 +47,9 @@ func MakeUserPasswordSecret(customResource *brokerv2alpha1.ActiveMQArtemis, secr
 	return userPasswordSecret
 }
 
-func NewUserPasswordSecret(customResource *brokerv2alpha1.ActiveMQArtemis, secretName string, stringData map[string]string) *corev1.Secret {
+func NewSecret(customResource *brokerv2alpha1.ActiveMQArtemis, secretName string, stringData map[string]string) *corev1.Secret {
 
-	userPasswordSecret := MakeUserPasswordSecret(customResource, secretName, stringData)
+	userPasswordSecret := MakeSecret(customResource, secretName, stringData)
 
 	return &userPasswordSecret
 }

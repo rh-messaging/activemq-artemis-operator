@@ -4,7 +4,6 @@ import (
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/environments"
 	corev1 "k8s.io/api/core/v1"
-
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
@@ -20,26 +19,50 @@ func MakeVolumeMounts(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.VolumeMount {
 		persistentCRVlMnt := makePersistentVolumeMount(cr)
 		volumeMounts = append(volumeMounts, persistentCRVlMnt...)
 	}
-	if environments.CheckSSLEnabled(cr) {
-		sslCRVlMnt := makeSSLVolumeMount(cr)
-		volumeMounts = append(volumeMounts, sslCRVlMnt...)
-	}
-	return volumeMounts
 
+	// Scan acceptors for any with sslEnabled
+	for _, acceptor := range cr.Spec.Acceptors {
+		if !acceptor.SSLEnabled {
+			continue
+		}
+		volumeMount := corev1.VolumeMount{
+			Name: 			  cr.Name + "-" + acceptor.Name + "-secret-volume",
+			ReadOnly:         true,
+			MountPath:        "/etc/" + cr.Name + "-" + acceptor.Name + "-secret-volume",
+			SubPath:          "",
+			MountPropagation: nil,
+		}
+		volumeMounts = append(volumeMounts, volumeMount)
+	}
+
+	return volumeMounts
 }
 
 func MakeVolumes(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.Volume {
 
-	volume := []corev1.Volume{}
+	volumes := []corev1.Volume{}
 	if cr.Spec.DeploymentPlan.PersistenceEnabled {
 		basicCRVolume := makePersistentVolume(cr)
-		volume = append(volume, basicCRVolume...)
+		volumes = append(volumes, basicCRVolume...)
 	}
-	if environments.CheckSSLEnabled(cr) {
-		sslCRVolume := makeSSLSecretVolume(cr)
-		volume = append(volume, sslCRVolume...)
+
+	// Scan acceptors for any with sslEnabled
+	for _, acceptor := range cr.Spec.Acceptors {
+		if !acceptor.SSLEnabled {
+			continue
+		}
+		volume := corev1.Volume{
+			Name: cr.Name + "-" + acceptor.Name + "-secret-volume",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: cr.Name + "-" + acceptor.Name + "-secret",
+				},
+			},
+		}
+		volumes = append(volumes, volume)
 	}
-	return volume
+
+	return volumes
 }
 
 func makePersistentVolume(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.Volume {
@@ -59,22 +82,6 @@ func makePersistentVolume(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.Volume {
 	return volume
 }
 
-func makeSSLSecretVolume(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.Volume {
-
-	volume := []corev1.Volume{
-		{
-			Name: "broker-secret-volume",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: "TODO-FIX-REPLACE", //cr.Spec.SSLConfig.SecretName,
-				},
-			},
-		},
-	}
-
-	return volume
-}
-
 func makePersistentVolumeMount(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.VolumeMount {
 
 	// TODO: Ensure consistent path usage
@@ -84,18 +91,6 @@ func makePersistentVolumeMount(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.Volu
 			Name:      cr.Name,
 			MountPath: GLOBAL_DATA_PATH,
 			ReadOnly:  false,
-		},
-	}
-	return volumeMounts
-}
-
-func makeSSLVolumeMount(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.VolumeMount {
-
-	volumeMounts := []corev1.VolumeMount{
-		{
-			Name:      "broker-secret-volume",
-			MountPath: "/etc/amq-secret-volume",
-			ReadOnly:  true,
 		},
 	}
 	return volumeMounts

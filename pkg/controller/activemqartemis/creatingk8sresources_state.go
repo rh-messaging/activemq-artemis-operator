@@ -106,8 +106,8 @@ func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 		}
 	}
 
-	userPasswordStringData := secrets.MakeUserPasswordStringData("user", "password", rs.parentFSM.customResource.Spec.DeploymentPlan.User, rs.parentFSM.customResource.Spec.DeploymentPlan.Password)
-	userPasswordSecret := secrets.NewUserPasswordSecret(rs.parentFSM.customResource, "amq-app-secret", userPasswordStringData)
+	userPasswordStringData := secrets.MakeStringDataMap("user", "password", rs.parentFSM.customResource.Spec.DeploymentPlan.User, rs.parentFSM.customResource.Spec.DeploymentPlan.Password)
+	userPasswordSecret := secrets.NewSecret(rs.parentFSM.customResource, "amq-app-secret", userPasswordStringData)
 	if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, userPasswordSecret); err != nil {
 		// err means not found so create
 		if retrieveError = resources.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, userPasswordSecret); retrieveError == nil {
@@ -115,10 +115,10 @@ func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 		}
 	}
 
-	clusterUserPasswordStringData := secrets.MakeUserPasswordStringData("clusterUser", "clusterPassword", rs.parentFSM.customResource.Spec.DeploymentPlan.ClusterUser, rs.parentFSM.customResource.Spec.DeploymentPlan.ClusterPassword)
+	clusterUserPasswordStringData := secrets.MakeStringDataMap("clusterUser", "clusterPassword", rs.parentFSM.customResource.Spec.DeploymentPlan.ClusterUser, rs.parentFSM.customResource.Spec.DeploymentPlan.ClusterPassword)
 	environments.GLOBAL_AMQ_CLUSTER_USER = rs.parentFSM.customResource.Spec.DeploymentPlan.ClusterUser
 	environments.GLOBAL_AMQ_CLUSTER_PASSWORD = rs.parentFSM.customResource.Spec.DeploymentPlan.ClusterPassword
-	clusterUserPasswordSecret := secrets.NewUserPasswordSecret(rs.parentFSM.customResource, "amq-credentials-secret", clusterUserPasswordStringData)
+	clusterUserPasswordSecret := secrets.NewSecret(rs.parentFSM.customResource, "amq-credentials-secret", clusterUserPasswordStringData)
 	if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, clusterUserPasswordSecret); err != nil {
 		// err means not found so create
 		if retrieveError = resources.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, clusterUserPasswordSecret); retrieveError == nil {
@@ -215,7 +215,7 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 			(rs.stepsComplete&CreatedHeadlessService) > 0 &&
 			(rs.stepsComplete&CreatedPingService > 0) {
 
-			statefulSetUpdates = reconciler.Process(rs.parentFSM.customResource, currentStatefulSet)
+			statefulSetUpdates = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, currentStatefulSet)
 			if statefulSetUpdates > 0 {
 				if err := resources.Update(rs.parentFSM.customResource, rs.parentFSM.r.client, currentStatefulSet); err != nil {
 					reqLogger.Error(err, "Failed to update StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
