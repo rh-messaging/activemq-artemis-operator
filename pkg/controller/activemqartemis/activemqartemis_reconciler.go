@@ -41,14 +41,14 @@ type ActiveMQArtemisIReconciler interface {
 	Process(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet) uint32
 	ProcessDeploymentPlan(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) uint32
 	ProcessAcceptors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet)
-	ProcessConnectors(connectors []brokerv2alpha1.ConnectorType, currentStatefulSet *appsv1.StatefulSet)
+	ProcessConnectors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet)
 }
 
 func (reconciler *ActiveMQArtemisReconciler) Process(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet) uint32 {
 
 	statefulSetUpdates := reconciler.ProcessDeploymentPlan(&customResource.Spec.DeploymentPlan, currentStatefulSet)
 	reconciler.ProcessAcceptors(customResource, client, currentStatefulSet)
-	reconciler.ProcessConnectors(customResource.Spec.Connectors, currentStatefulSet)
+	reconciler.ProcessConnectors(customResource, client, currentStatefulSet)
 
 	return statefulSetUpdates
 }
@@ -174,7 +174,11 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessAcceptors(customResource *br
 			acceptorEntry = acceptorEntry + ",CORE"
 		}
 		if acceptor.SSLEnabled {
-			acceptorEntry = acceptorEntry + ";" + generateSSLArguments(customResource, client, customResource.Name + "-" + acceptor.Name + "-secret")
+			secretName := customResource.Name + "-" + acceptor.Name + "-secret"
+			if "" != acceptor.SSLSecret {
+				secretName = acceptor.SSLSecret
+			}
+			acceptorEntry = acceptorEntry + ";" + generateSSLArguments(customResource, client, secretName)
 		}
 		acceptorEntry = acceptorEntry + ";" + defaultArgs
 		// TODO: SSL
@@ -189,6 +193,12 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessAcceptors(customResource *br
 		acceptorEntry = acceptorEntry + ";" + defaultArgs
 		// TODO: SSL
 		acceptorEntry = acceptorEntry + "<\\/acceptor>"
+	}
+
+	if amqAcceptorsEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_ACCEPTORS"); nil != amqAcceptorsEnvVar {
+		if 0 == strings.Compare(amqAcceptorsEnvVar.Value, acceptorEntry) {
+			return
+		}
 	}
 
 	environments.Delete(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_ACCEPTORS")
@@ -211,20 +221,37 @@ func generateSSLArguments(customResource *brokerv2alpha1.ActiveMQArtemis, client
 	}
 	stringDataMap := map[string]string{}
 	userPasswordSecret := secrets.NewSecret(customResource, secretName, stringDataMap)
+
 	keyStorePassword := "password"
-	var err error = nil
-	if err = resources.Retrieve(customResource, namespacedName, client, userPasswordSecret); err == nil {
-		keyStorePassword = string(userPasswordSecret.Data["keyStorePassword"])
+	keyStorePath := "\\/etc\\/" + secretName + "-volume\\/broker.ks"
+	trustStorePassword := "password"
+	trustStorePath := "\\/etc\\/" + secretName + "-volume\\/client.ts"
+	if err := resources.Retrieve(customResource, namespacedName, client, userPasswordSecret); err == nil {
+		if "" != string(userPasswordSecret.Data["keyStorePassword"]) {
+			keyStorePassword = string(userPasswordSecret.Data["keyStorePassword"])
+		}
+		if "" != string(userPasswordSecret.Data["keyStorePath"]) {
+			keyStorePath = string(userPasswordSecret.Data["keyStorePath"])
+		}
+		if "" != string(userPasswordSecret.Data["trustStorePassword"]) {
+			trustStorePassword = string(userPasswordSecret.Data["trustStorePassword"])
+		}
+		if "" != string(userPasswordSecret.Data["trustStorePath"]) {
+			trustStorePath = string(userPasswordSecret.Data["trustStorePath"])
+		}
 	}
-	sslArguments = sslArguments + ";" + "keyStorePath=\\/etc\\/" + secretName + "-volume\\/broker.ks"
+	sslArguments = sslArguments + ";" + "keyStorePath=" + keyStorePath
 	sslArguments = sslArguments + ";" + "keyStorePassword=" + keyStorePassword
+	sslArguments = sslArguments + ";" + "trustStorePath=" + trustStorePath
+	sslArguments = sslArguments + ";" + "trustStorePassword=" + trustStorePassword
 
 	return sslArguments
 }
 
-func (reconciler *ActiveMQArtemisReconciler) ProcessConnectors(connectors []brokerv2alpha1.ConnectorType, currentStatefulSet *appsv1.StatefulSet) {
+func (reconciler *ActiveMQArtemisReconciler) ProcessConnectors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet) {
 
 	connectorEntry := ""
+	connectors := customResource.Spec.Connectors
 
 	for _, connector := range connectors {
 		if connector.Type == "" {
@@ -234,7 +261,20 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessConnectors(connectors []brok
 		connectorEntry = connectorEntry + strings.ToLower(connector.Type) + ":\\/\\/" + strings.ToLower(connector.Host) + ":"
 		connectorEntry = connectorEntry + fmt.Sprintf("%d", connector.Port)
 		// TODO: SSL
+		if connector.SSLEnabled {
+			secretName := customResource.Name + "-" + connector.Name + "-secret"
+			if "" != connector.SSLSecret {
+				secretName = connector.SSLSecret
+			}
+			connectorEntry = connectorEntry + ";" + generateSSLArguments(customResource, client, secretName)
+		}
 		connectorEntry = connectorEntry + "<\\/connector>"
+	}
+
+	if amqConnectorsEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_CONNECTORS"); amqConnectorsEnvVar != nil {
+		if 0 == strings.Compare(amqConnectorsEnvVar.Value, connectorEntry) {
+			return
+		}
 	}
 
 	environments.Delete(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_CONNECTORS")

@@ -25,10 +25,35 @@ func MakeVolumeMounts(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.VolumeMount {
 		if !acceptor.SSLEnabled {
 			continue
 		}
+		volumeMountName := cr.Name + "-" + acceptor.Name + "-secret-volume"
+		if "" != acceptor.SSLSecret {
+			volumeMountName = acceptor.SSLSecret + "-volume"
+		}
+		volumeMountMountPath := "/etc/" + volumeMountName
 		volumeMount := corev1.VolumeMount{
-			Name: 			  cr.Name + "-" + acceptor.Name + "-secret-volume",
+			Name: 			  volumeMountName,
 			ReadOnly:         true,
-			MountPath:        "/etc/" + cr.Name + "-" + acceptor.Name + "-secret-volume",
+			MountPath:        volumeMountMountPath,
+			SubPath:          "",
+			MountPropagation: nil,
+		}
+		volumeMounts = append(volumeMounts, volumeMount)
+	}
+
+	// Scan connectors for any with sslEnabled
+	for _, connector := range cr.Spec.Connectors {
+		if !connector.SSLEnabled {
+			continue
+		}
+		volumeMountName := cr.Name + "-" + connector.Name + "-secret-volume"
+		if "" != connector.SSLSecret {
+			volumeMountName = connector.SSLSecret + "-volume"
+		}
+		volumeMountMountPath := "/etc/" + volumeMountName
+		volumeMount := corev1.VolumeMount{
+			Name: 			  volumeMountName,
+			ReadOnly:         true,
+			MountPath:        volumeMountMountPath,
 			SubPath:          "",
 			MountPropagation: nil,
 		}
@@ -51,11 +76,37 @@ func MakeVolumes(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.Volume {
 		if !acceptor.SSLEnabled {
 			continue
 		}
+		secretName := cr.Name + "-" + acceptor.Name + "-secret"
+		if "" != acceptor.SSLSecret {
+			secretName = acceptor.SSLSecret
+		}
+		volumeName := secretName + "-volume"
 		volume := corev1.Volume{
-			Name: cr.Name + "-" + acceptor.Name + "-secret-volume",
+			Name: volumeName,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: cr.Name + "-" + acceptor.Name + "-secret",
+					SecretName: secretName,
+				},
+			},
+		}
+		volumes = append(volumes, volume)
+	}
+
+	// Scan connectors for any with sslEnabled
+	for _, connector := range cr.Spec.Connectors {
+		if !connector.SSLEnabled {
+			continue
+		}
+		secretName := cr.Name + "-" + connector.Name + "-secret"
+		if "" != connector.SSLSecret {
+			secretName = connector.SSLSecret
+		}
+		volumeName := secretName + "-volume"
+		volume := corev1.Volume{
+			Name: volumeName,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: secretName,
 				},
 			},
 		}

@@ -29,11 +29,15 @@ spec:
     - name: my
       protocols: amqp
       port: 5672
-      sslEnabled: false
-  #connectors:
-    #- name: first-c
-      #host: localhost
-      #port: 22222
+      sslEnabled: true
+      #sslSecret: ym-secret
+      expose: true
+  connectors:
+    - name: my-c
+      host: localhost
+      port: 22222
+      sslEnabled: true
+      #sslSecret: c-ym-secret
     #- name: second-c
       #host: 127.0.0.1
       #port: 33333
