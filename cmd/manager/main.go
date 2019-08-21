@@ -4,13 +4,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/rh-messaging/activemq-artemis-operator/version"
 	"os"
 	"runtime"
 
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/apis"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/controller"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/env"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
@@ -60,7 +60,7 @@ func main() {
 	// uniform and structured logs.
 	logf.SetLogger(zap.Logger())
 
-	isOpenshift, err1 := env.DetectOpenshift()
+	isOpenshift, err1 := environments.DetectOpenshift()
 	if err1 != nil {
 		log.Error(err1, "Failed to get env")
 		os.Exit(1)

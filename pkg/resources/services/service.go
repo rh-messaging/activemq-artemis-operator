@@ -65,7 +65,7 @@ func NewServiceDefinitionForCR(cr *brokerv2alpha1.ActiveMQArtemis, nameSuffix st
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: nil,
 			Labels:      selectors.LabelBuilder.Labels(),
-			Name:        cr.Name + "-service" + "-" + nameSuffix,
+			Name:        cr.Name + "-" + nameSuffix + "-svc",
 			Namespace:   cr.Namespace,
 		},
 		Spec: corev1.ServiceSpec{

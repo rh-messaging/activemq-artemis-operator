@@ -31,7 +31,7 @@ spec:
       port: 5672
       sslEnabled: true
       #sslSecret: ym-secret
-      expose: true
+      expose: false
   connectors:
     - name: my-c
       host: localhost

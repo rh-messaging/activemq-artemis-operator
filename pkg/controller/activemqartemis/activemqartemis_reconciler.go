@@ -4,19 +4,28 @@ import (
 	"fmt"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/ingresses"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/routes"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/secrets"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
+
+	extv1b1 "k8s.io/api/extensions/v1beta1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
-
+	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/volumes"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	routev1 "github.com/openshift/api/route/v1"
+
 	"strconv"
 	"strings"
 )
@@ -24,13 +33,12 @@ import (
 const (
 	statefulSetSizeUpdated          = 1 << 0
 	statefulSetClusterConfigUpdated = 1 << 1
-	statefulSetSSLConfigUpdated     = 1 << 2
-	statefulSetImageUpdated         = 1 << 3
-	statefulSetPersistentUpdated    = 1 << 4
-	statefulSetAioUpdated           = 1 << 5
-	statefulSetCommonConfigUpdated  = 1 << 6
-	statefulSetRequireLoginUpdated  = 1 << 7
-	statefulSetRoleUpdated          = 1 << 8
+	statefulSetImageUpdated         = 1 << 2
+	statefulSetPersistentUpdated    = 1 << 3
+	statefulSetAioUpdated           = 1 << 4
+	statefulSetCommonConfigUpdated  = 1 << 5
+	statefulSetRequireLoginUpdated  = 1 << 6
+	statefulSetRoleUpdated          = 1 << 7
 )
 
 type ActiveMQArtemisReconciler struct {
@@ -38,17 +46,20 @@ type ActiveMQArtemisReconciler struct {
 }
 
 type ActiveMQArtemisIReconciler interface {
-	Process(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet) uint32
+	Process(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32
 	ProcessDeploymentPlan(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet) uint32
-	ProcessAcceptors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet)
+	ProcessAcceptors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet)
 	ProcessConnectors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet)
 }
 
-func (reconciler *ActiveMQArtemisReconciler) Process(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet) uint32 {
+func (reconciler *ActiveMQArtemisReconciler) Process(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
 
 	statefulSetUpdates := reconciler.ProcessDeploymentPlan(customResource, client, currentStatefulSet)
-	reconciler.ProcessAcceptors(customResource, client, currentStatefulSet)
+	reconciler.ProcessAcceptors(customResource, client, scheme, currentStatefulSet)
 	reconciler.ProcessConnectors(customResource, client, currentStatefulSet)
+
+	// TODO: Implement console settings
+	configureConsoleJolokiaExposure(customResource, client, scheme, true)
 
 	return statefulSetUpdates
 }
@@ -111,10 +122,6 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(customResourc
 		reconciler.statefulSetUpdates |= statefulSetClusterConfigUpdated
 	}
 
-	if sslConfigSyncCausedUpdateOn(deploymentPlan, currentStatefulSet) {
-		reconciler.statefulSetUpdates |= statefulSetSSLConfigUpdated
-	}
-
 	if imageSyncCausedUpdateOn(deploymentPlan, currentStatefulSet) {
 		reconciler.statefulSetUpdates |= statefulSetImageUpdated
 	}
@@ -144,7 +151,7 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(customResourc
 	return reconciler.statefulSetUpdates
 }
 
-func (reconciler *ActiveMQArtemisReconciler) ProcessAcceptors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet) {
+func (reconciler *ActiveMQArtemisReconciler) ProcessAcceptors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) {
 
 	ensureCOREOn61616Exists := customResource.Spec.DeploymentPlan.MessageMigration || customResource.Spec.DeploymentPlan.Clustered
 	acceptorEntry := ""
@@ -197,6 +204,8 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessAcceptors(customResource *br
 		acceptorEntry = acceptorEntry + "<\\/acceptor>"
 	}
 
+	configureAcceptorsExposure(customResource, client, scheme)
+
 	if amqAcceptorsEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_ACCEPTORS"); nil != amqAcceptorsEnvVar {
 		if 0 == strings.Compare(amqAcceptorsEnvVar.Value, acceptorEntry) {
 			return
@@ -212,42 +221,6 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessAcceptors(customResource *br
 		}
 		environments.Create(currentStatefulSet.Spec.Template.Spec.Containers, acceptorsEnvVar)
 	}
-}
-
-func generateSSLArguments(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, secretName string) string {
-
-	sslArguments := "sslEnabled=true"
-	namespacedName := types.NamespacedName{
-		Name:      secretName,
-		Namespace: customResource.Namespace,
-	}
-	stringDataMap := map[string]string{}
-	userPasswordSecret := secrets.NewSecret(customResource, secretName, stringDataMap)
-
-	keyStorePassword := "password"
-	keyStorePath := "\\/etc\\/" + secretName + "-volume\\/broker.ks"
-	trustStorePassword := "password"
-	trustStorePath := "\\/etc\\/" + secretName + "-volume\\/client.ts"
-	if err := resources.Retrieve(customResource, namespacedName, client, userPasswordSecret); err == nil {
-		if "" != string(userPasswordSecret.Data["keyStorePassword"]) {
-			keyStorePassword = string(userPasswordSecret.Data["keyStorePassword"])
-		}
-		if "" != string(userPasswordSecret.Data["keyStorePath"]) {
-			keyStorePath = string(userPasswordSecret.Data["keyStorePath"])
-		}
-		if "" != string(userPasswordSecret.Data["trustStorePassword"]) {
-			trustStorePassword = string(userPasswordSecret.Data["trustStorePassword"])
-		}
-		if "" != string(userPasswordSecret.Data["trustStorePath"]) {
-			trustStorePath = string(userPasswordSecret.Data["trustStorePath"])
-		}
-	}
-	sslArguments = sslArguments + ";" + "keyStorePath=" + keyStorePath
-	sslArguments = sslArguments + ";" + "keyStorePassword=" + keyStorePassword
-	sslArguments = sslArguments + ";" + "trustStorePath=" + trustStorePath
-	sslArguments = sslArguments + ";" + "trustStorePassword=" + trustStorePassword
-
-	return sslArguments
 }
 
 func (reconciler *ActiveMQArtemisReconciler) ProcessConnectors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet) {
@@ -288,6 +261,166 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessConnectors(customResource *b
 		}
 		environments.Create(currentStatefulSet.Spec.Template.Spec.Containers, connectorsEnvVar)
 	}
+}
+
+func configureAcceptorsExposure(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) {
+
+	var i int32 = 0
+	ordinalString := ""
+
+	labels := selectors.LabelBuilder.Labels()
+	for ; i < customResource.Spec.DeploymentPlan.Size; i++ {
+		ordinalString = strconv.Itoa(int(i))
+		labels["statefulset.kubernetes.io/pod-name"] = statefulsets.NameBuilder.Name() + "-" + ordinalString
+
+		for _, acceptor := range customResource.Spec.Acceptors {
+			serviceDefinition := svc.NewServiceDefinitionForCR(customResource, acceptor.Name+"-"+ordinalString, acceptor.Port, labels)
+			configureServiceExposure(customResource, client, scheme, serviceDefinition, acceptor.Expose)
+			targetPortName := acceptor.Name + "-" + ordinalString
+			targetServiceName := customResource.Name + "-" + targetPortName + "-svc"
+			log.Info("Checking routeDefinition for " + targetPortName)
+			passthroughTLS := true
+			routeDefinition := routes.NewRouteDefinitionForCR(customResource, selectors.LabelBuilder.Labels(), targetServiceName, targetPortName, passthroughTLS)
+			configureRouteExposure(customResource, client, scheme, routeDefinition, acceptor.Expose)
+		}
+	}
+}
+
+func configureConsoleJolokiaExposure(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, expose bool) {
+
+	var i int32 = 0
+	ordinalString := ""
+
+	labels := selectors.LabelBuilder.Labels()
+	for ; i < customResource.Spec.DeploymentPlan.Size; i++ {
+		ordinalString = strconv.Itoa(int(i))
+		labels["statefulset.kubernetes.io/pod-name"] = statefulsets.NameBuilder.Name() + "-" + ordinalString
+
+		passthroughTLS := false
+		portNumber := int32(8161)
+		targetPortName := "wconsj" + "-" + ordinalString
+		targetServiceName := customResource.Name + "-" + targetPortName + "-svc"
+		log.Info("Checking route for " + targetPortName)
+
+		serviceDefinition := svc.NewServiceDefinitionForCR(customResource, targetPortName, portNumber, labels)
+		configureServiceExposure(customResource, client, scheme, serviceDefinition, expose)
+		var err error = nil
+		isOpenshift := false
+
+		if isOpenshift, err = environments.DetectOpenshift(); err != nil {
+			log.Error(err, "Failed to get env, will try kubernetes")
+		}
+		if isOpenshift {
+			log.Info("Environment is OpenShift")
+			log.Info("Checking routeDefinition for " + targetPortName)
+			routeDefinition := routes.NewRouteDefinitionForCR(customResource, selectors.LabelBuilder.Labels(), targetServiceName, targetPortName, passthroughTLS)
+			configureRouteExposure(customResource, client, scheme, routeDefinition, expose)
+		} else {
+			log.Info("Environment is not OpenShift, creating ingress")
+			ingressDefinition := ingresses.NewIngressForCR(customResource, "wconsj")
+			configureIngress(customResource, client, scheme, ingressDefinition)
+		}
+	}
+}
+
+func configureRouteExposure(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, routeDefinition *routev1.Route, expose bool) {
+
+	var err error = nil
+
+	if expose {
+		namespacedName := types.NamespacedName{
+			Name:      routeDefinition.Name,
+			Namespace: customResource.Namespace,
+		}
+		if err = resources.Retrieve(customResource, namespacedName, client, routeDefinition); err != nil {
+			if errors.IsNotFound(err) {
+				if err = resources.Create(customResource, client, scheme, routeDefinition); err != nil {
+				}
+			}
+		}
+	} else {
+		if err = resources.Delete(customResource, client, routeDefinition); err != nil {
+			//reqLogger.Info("Failure to delete " + routeDefinition.Name + " route " + ordinalString)
+		}
+	}
+}
+
+func configureIngress(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, ingressDefinition *extv1b1.Ingress) {
+
+	var err error = nil
+
+	// Define the console-jolokia ingress for this Pod
+	namespacedName := types.NamespacedName{
+		Name:      ingressDefinition.Name,
+		Namespace: customResource.Namespace,
+	}
+	if err = resources.Retrieve(customResource, namespacedName, client, ingressDefinition); err != nil {
+		// err means not found, so create routes
+		if errors.IsNotFound(err) {
+			if err = resources.Create(customResource, client, scheme, ingressDefinition); err == nil {
+			}
+		}
+	}
+}
+
+func configureServiceExposure(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, serviceDefinition *corev1.Service, expose bool) {
+
+	var err error = nil
+
+	if expose {
+		namespacedName := types.NamespacedName{
+			Name:      serviceDefinition.Name,
+			Namespace: customResource.Namespace,
+		}
+
+		if err = resources.Retrieve(customResource, namespacedName, client, serviceDefinition); err != nil {
+			if errors.IsNotFound(err) {
+				if err = resources.Create(customResource, client, scheme, serviceDefinition); err != nil {
+					//reqLogger.Info("Failure to create " + baseServiceName + " service " + ordinalString)
+				}
+			}
+		}
+	} else {
+		if err = resources.Delete(customResource, client, serviceDefinition); err != nil {
+			//reqLogger.Info("Failure to delete " + baseServiceName + " service " + ordinalString)
+		}
+	}
+}
+
+func generateSSLArguments(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, secretName string) string {
+
+	sslArguments := "sslEnabled=true"
+	namespacedName := types.NamespacedName{
+		Name:      secretName,
+		Namespace: customResource.Namespace,
+	}
+	stringDataMap := map[string]string{}
+	userPasswordSecret := secrets.NewSecret(customResource, secretName, stringDataMap)
+
+	keyStorePassword := "password"
+	keyStorePath := "\\/etc\\/" + secretName + "-volume\\/broker.ks"
+	trustStorePassword := "password"
+	trustStorePath := "\\/etc\\/" + secretName + "-volume\\/client.ts"
+	if err := resources.Retrieve(customResource, namespacedName, client, userPasswordSecret); err == nil {
+		if "" != string(userPasswordSecret.Data["keyStorePassword"]) {
+			keyStorePassword = string(userPasswordSecret.Data["keyStorePassword"])
+		}
+		if "" != string(userPasswordSecret.Data["keyStorePath"]) {
+			keyStorePath = string(userPasswordSecret.Data["keyStorePath"])
+		}
+		if "" != string(userPasswordSecret.Data["trustStorePassword"]) {
+			trustStorePassword = string(userPasswordSecret.Data["trustStorePassword"])
+		}
+		if "" != string(userPasswordSecret.Data["trustStorePath"]) {
+			trustStorePath = string(userPasswordSecret.Data["trustStorePath"])
+		}
+	}
+	sslArguments = sslArguments + ";" + "keyStorePath=" + keyStorePath
+	sslArguments = sslArguments + ";" + "keyStorePassword=" + keyStorePassword
+	sslArguments = sslArguments + ";" + "trustStorePath=" + trustStorePath
+	sslArguments = sslArguments + ";" + "trustStorePassword=" + trustStorePassword
+
+	return sslArguments
 }
 
 // https://stackoverflow.com/questions/37334119/how-to-delete-an-element-from-a-slice-in-golang
@@ -429,241 +562,6 @@ func clusterConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArte
 	}
 
 	return statefulSetUpdated
-}
-
-func sslConfigSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
-
-	foundKeystore := false
-	foundKeystorePassword := false
-	foundKeystoreTruststoreDir := false
-	foundTruststore := false
-	foundTruststorePassword := false
-
-	keystoreNeedsUpdate := false
-	keystorePasswordNeedsUpdate := false
-	keystoreTruststoreDirNeedsUpdate := false
-	truststoreNeedsUpdate := false
-	truststorePasswordNeedsUpdate := false
-
-	statefulSetUpdated := false
-
-	// TODO: Remove yuck
-	// ensure password and username are valid if can't via openapi validation?
-	//if customResource.Spec.SSLConfig.KeyStorePassword != "" &&
-	//	customResource.Spec.SSLConfig.KeystoreFilename != "" {
-	if false { // "TODO-FIX-REPLACE"
-
-		envVarArray := []corev1.EnvVar{}
-		// Find the existing values
-		for _, v := range currentStatefulSet.Spec.Template.Spec.Containers[0].Env {
-			if v.Name == "AMQ_KEYSTORE" {
-				foundKeystore = true
-				//if v.Value != customResource.Spec.SSLConfig.KeystoreFilename {
-				if false { // "TODO-FIX-REPLACE"
-					keystoreNeedsUpdate = true
-				}
-			}
-			if v.Name == "AMQ_KEYSTORE_PASSWORD" {
-				foundKeystorePassword = true
-				//if v.Value != customResource.Spec.SSLConfig.KeyStorePassword {
-				if false { // "TODO-FIX-REPLACE"
-					keystorePasswordNeedsUpdate = true
-				}
-			}
-			if v.Name == "AMQ_KEYSTORE_TRUSTSTORE_DIR" {
-				foundKeystoreTruststoreDir = true
-				if v.Value != "/etc/amq-secret-volume" {
-					keystoreTruststoreDirNeedsUpdate = true
-				}
-			}
-		}
-
-		if !foundKeystore || keystoreNeedsUpdate {
-			newClusteredValue := corev1.EnvVar{
-				"AMQ_KEYSTORE",
-				"TODO-FIX-REPLACE", //customResource.Spec.SSLConfig.KeystoreFilename,
-				nil,
-			}
-			envVarArray = append(envVarArray, newClusteredValue)
-			statefulSetUpdated = true
-		}
-
-		if !foundKeystorePassword || keystorePasswordNeedsUpdate {
-			newClusteredValue := corev1.EnvVar{
-				"AMQ_KEYSTORE_PASSWORD",
-				"TODO-FIX-REPLACE", //customResource.Spec.SSLConfig.KeyStorePassword,
-				nil,
-			}
-			envVarArray = append(envVarArray, newClusteredValue)
-			statefulSetUpdated = true
-		}
-
-		if !foundKeystoreTruststoreDir || keystoreTruststoreDirNeedsUpdate {
-			newClusteredValue := corev1.EnvVar{
-				"AMQ_KEYSTORE_TRUSTSTORE_DIR",
-				"/etc/amq-secret-volume",
-				nil,
-			}
-			envVarArray = append(envVarArray, newClusteredValue)
-			statefulSetUpdated = true
-		}
-
-		if statefulSetUpdated {
-			envVarArrayLen := len(envVarArray)
-			if envVarArrayLen > 0 {
-				for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
-					for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
-						if ("AMQ_KEYSTORE" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && keystoreNeedsUpdate) ||
-							("AMQ_KEYSTORE_PASSWORD" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && keystorePasswordNeedsUpdate) ||
-							("AMQ_KEYSTORE_TRUSTSTORE_DIR" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && keystoreTruststoreDirNeedsUpdate) {
-							currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
-						}
-					}
-				}
-
-				containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
-				for i := 0; i < containerArrayLen; i++ {
-					for j := 0; j < envVarArrayLen; j++ {
-						currentStatefulSet.Spec.Template.Spec.Containers[i].Env = append(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, envVarArray[j])
-					}
-				}
-			}
-		}
-	} else {
-		for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
-			for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
-				if "AMQ_KEYSTORE" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name ||
-					"AMQ_KEYSTORE_PASSWORD" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name ||
-					"AMQ_KEYSTORE_TRUSTSTORE_DIR" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name {
-					currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
-					statefulSetUpdated = true
-				}
-			}
-		}
-	}
-
-	//if customResource.Spec.SSLConfig.TrustStorePassword != "" &&
-	//	customResource.Spec.SSLConfig.TrustStoreFilename != "" {
-	if false { // "TODO-FIX-REPLACE"
-		envVarArray := []corev1.EnvVar{}
-		// Find the existing values
-		for _, v := range currentStatefulSet.Spec.Template.Spec.Containers[0].Env {
-			if v.Name == "AMQ_TRUSTSTORE" {
-				foundTruststore = true
-				//if v.Value != customResource.Spec.SSLConfig.TrustStoreFilename {
-				if false { // "TODO-FIX-REPLACE"
-					truststoreNeedsUpdate = true
-				}
-			}
-			if v.Name == "AMQ_TRUSTSTORE_PASSWORD" {
-				foundTruststorePassword = true
-				//if v.Value != customResource.Spec.SSLConfig.TrustStorePassword {
-				if false { // "TODO-FIX-REPLACE"
-					truststorePasswordNeedsUpdate = true
-				}
-			}
-		}
-
-		if !foundTruststore || truststoreNeedsUpdate {
-			newClusteredValue := corev1.EnvVar{
-				"AMQ_TRUSTSTORE",
-				"TODO-FIX-REPLACE", //customResource.Spec.SSLConfig.TrustStoreFilename,
-				nil,
-			}
-			envVarArray = append(envVarArray, newClusteredValue)
-			statefulSetUpdated = true
-		}
-
-		if !foundTruststorePassword || truststorePasswordNeedsUpdate {
-			newClusteredValue := corev1.EnvVar{
-				"AMQ_TRUSTSTORE_PASSWORD",
-				"TODO-FIX-REPLACE", //customResource.Spec.SSLConfig.TrustStorePassword,
-				nil,
-			}
-			envVarArray = append(envVarArray, newClusteredValue)
-			statefulSetUpdated = true
-		}
-
-		if statefulSetUpdated {
-			envVarArrayLen := len(envVarArray)
-			if envVarArrayLen > 0 {
-				for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
-					for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
-						if ("AMQ_TRUSTSTORE" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && truststoreNeedsUpdate) ||
-							("AMQ_TRUSTSTORE_PASSWORD" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && truststorePasswordNeedsUpdate) {
-							currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
-						}
-					}
-				}
-
-				containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
-				for i := 0; i < containerArrayLen; i++ {
-					for j := 0; j < envVarArrayLen; j++ {
-						currentStatefulSet.Spec.Template.Spec.Containers[i].Env = append(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, envVarArray[j])
-					}
-				}
-			}
-		}
-	} else {
-		for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
-			for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
-				if "AMQ_TRUSTSTORE" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name ||
-					"AMQ_TRUSTSTORE_PASSWORD" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name {
-					currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
-					statefulSetUpdated = true
-				}
-			}
-		}
-	}
-
-	if statefulSetUpdated {
-		sslConfigSyncEnsureSecretVolumeMountExists(deploymentPlan, currentStatefulSet)
-	}
-
-	return statefulSetUpdated
-}
-
-func sslConfigSyncEnsureSecretVolumeMountExists(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) {
-
-	secretVolumeExists := false
-	secretVolumeMountExists := false
-
-	for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Volumes); i++ {
-		//if currentStatefulSet.Spec.Template.Spec.Volumes[i].Name == customResource.Spec.SSLConfig.SecretName {
-		if false { // "TODO-FIX-REPLACE"
-			secretVolumeExists = true
-			break
-		}
-	}
-	if !secretVolumeExists {
-		volume := corev1.Volume{
-			Name: "broker-secret-volume",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: "TODO-FIX-REPLACE", //customResource.Spec.SSLConfig.SecretName,
-				},
-			},
-		}
-
-		currentStatefulSet.Spec.Template.Spec.Volumes = append(currentStatefulSet.Spec.Template.Spec.Volumes, volume)
-	}
-
-	for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
-		for j := 0; j < len(currentStatefulSet.Spec.Template.Spec.Containers[i].VolumeMounts); j++ {
-			if currentStatefulSet.Spec.Template.Spec.Containers[i].VolumeMounts[j].Name == "broker-secret-volume" {
-				secretVolumeMountExists = true
-				break
-			}
-		}
-		if !secretVolumeMountExists {
-			volumeMount := corev1.VolumeMount{
-				Name:      "broker-secret-volume",
-				MountPath: "/etc/amq-secret-volume",
-				ReadOnly:  true,
-			}
-			currentStatefulSet.Spec.Template.Spec.Containers[i].VolumeMounts = append(currentStatefulSet.Spec.Template.Spec.Containers[i].VolumeMounts, volumeMount)
-		}
-	}
 }
 
 func aioSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
@@ -914,3 +812,4 @@ func commonConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtem
 
 	return statefulSetUpdated
 }
+

@@ -2,19 +2,12 @@ package activemqartemis
 
 import (
 	"context"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/ingresses"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/routes"
-	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/env"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"strconv"
 	"time"
 )
 
@@ -123,127 +116,6 @@ func (ss *ScalingState) Exit() error {
 	reqLogger.Info("Exiting ScalingState")
 
 	var err error = nil
-
-	// Did we...
-	err = ss.configureServices()
-	err = ss.configureExternalNetworkAccess()
-
-	return err
-}
-
-func (rs *ScalingState) configureServices() error {
-
-	// Log where we are and what we're doing
-	reqLogger := log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
-	reqLogger.Info("CreatingK8sResourcesState configureServices")
-
-	var err error = nil
-	var i int32 = 0
-	ordinalString := ""
-
-	portNumber := int32(8161)
-	cr := rs.parentFSM.customResource
-	client := rs.parentFSM.r.client
-	scheme := rs.parentFSM.r.scheme
-	labels := selectors.LabelBuilder.Labels()
-	for ; i < cr.Spec.DeploymentPlan.Size; i++ {
-		ordinalString = strconv.Itoa(int(i))
-		labels["statefulset.kubernetes.io/pod-name"] = statefulsets.NameBuilder.Name() + "-" + ordinalString
-
-		baseServiceName := "console-jolokia"
-		serviceDefinition := svc.NewServiceDefinitionForCR(cr, baseServiceName+"-"+ordinalString, portNumber, labels)
-		if err = resources.Create(cr, client, scheme, serviceDefinition); err != nil {
-			reqLogger.Info("Failure to create " + baseServiceName + " service " + ordinalString)
-			continue
-		}
-
-		for _, acceptor := range cr.Spec.Acceptors {
-			if !acceptor.Expose {
-				continue
-			}
-			baseServiceName = acceptor.Name
-			portNumber = acceptor.Port
-			serviceDefinition = svc.NewServiceDefinitionForCR(cr, baseServiceName+"-"+ordinalString, portNumber, labels)
-			if err = resources.Create(cr, client, scheme, serviceDefinition); err != nil {
-				reqLogger.Info("Failure to create " + baseServiceName + " service " + ordinalString)
-				continue
-			}
-		}
-	}
-
-	return err
-}
-
-func (rs *ScalingState) configureExternalNetworkAccess() error {
-
-	var err error = nil
-	var isOpenshift bool = false
-
-	if isOpenshift, err = env.DetectOpenshift(); err != nil {
-		log.Error(err, "Failed to get env, will try kubernetes")
-	}
-	if isOpenshift {
-		log.Info("Environment is OpenShift")
-		err = rs.configureRoutes()
-	} else {
-		log.Info("Environment is not OpenShift, creating ingress")
-		err = rs.configureIngress()
-	}
-
-	return err
-}
-
-func (rs *ScalingState) configureIngress() error {
-
-	var err error = nil
-
-	// Define the console-jolokia ingress for this Pod
-	ingress := ingresses.NewIngressForCR(rs.parentFSM.customResource, "console-jolokia")
-	if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, ingress); err != nil {
-		// err means not found, so create routes
-		if err = resources.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, ingress); err == nil {
-		}
-	}
-
-	return err
-}
-
-func (rs *ScalingState) configureRoutes() error {
-
-	var err error = nil
-	var passthroughTLS bool
-
-	cr := rs.parentFSM.customResource
-	for i := 0; i < int(cr.Spec.DeploymentPlan.Size); i++ {
-		passthroughTLS = false
-		targetPortName := "console-jolokia" + "-" + strconv.Itoa(i)
-		targetServiceName := cr.Name + "-service-" + targetPortName
-		log.Info("Checking route for " + targetPortName)
-
-		consoleJolokiaRoute := routes.NewRouteDefinitionForCR(cr, selectors.LabelBuilder.Labels(), targetServiceName, targetPortName, passthroughTLS)
-		if err = resources.Retrieve(cr, rs.parentFSM.namespacedName, rs.parentFSM.r.client, consoleJolokiaRoute); err != nil {
-			resources.Delete(cr, rs.parentFSM.r.client, consoleJolokiaRoute)
-		}
-		if err = resources.Create(cr, rs.parentFSM.r.client, rs.parentFSM.r.scheme, consoleJolokiaRoute); err == nil {
-		}
-		
-		for _, acceptor := range cr.Spec.Acceptors {
-			if !acceptor.Expose {
-				continue
-			}
-
-			targetPortName = acceptor.Name + "-" + strconv.Itoa(i)
-			targetServiceName = cr.Name + "-service-" + targetPortName
-			log.Info("Checking routeDefinition for " + targetPortName)
-			passthroughTLS = true
-			routeDefinition := routes.NewRouteDefinitionForCR(cr, selectors.LabelBuilder.Labels(), targetServiceName, targetPortName, passthroughTLS)
-			if err = resources.Retrieve(cr, rs.parentFSM.namespacedName, rs.parentFSM.r.client, routeDefinition); err != nil {
-				resources.Delete(cr, rs.parentFSM.r.client, routeDefinition)
-			}
-			if err = resources.Create(cr, rs.parentFSM.r.client, rs.parentFSM.r.scheme, routeDefinition); err == nil {
-			}
-		}
-	}
 
 	return err
 }

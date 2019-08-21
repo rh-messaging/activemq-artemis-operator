@@ -28,7 +28,6 @@ func NewStatefulSetForCR(cr *brokerv2alpha1.ActiveMQArtemis) *appsv1.StatefulSet
 	replicas := cr.Spec.DeploymentPlan.Size
 
 	labels := selectors.LabelBuilder.Labels()
-
 	ss := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "StatefulSet",
