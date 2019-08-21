@@ -154,14 +154,12 @@ func (rs *CreatingK8sResourcesState) syncMessageMigration(cr *v2alpha1.ActiveMQA
 	}
 
 	if rs.parentFSM.customResource.Spec.DeploymentPlan.MessageMigration {
-		//resources.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, &scaledown)
 		if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, scaledown); err != nil {
 			// err means not found so create
 			if retrieveError = resources.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, scaledown); retrieveError == nil {
 			}
 		}
 	} else {
-		//resources.Delete(rs.parentFSM.customResource, rs.parentFSM.r.client, &scaledown)
 		if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, scaledown); err == nil {
 			// no err means found so delete
 			if retrieveError = resources.Delete(rs.parentFSM.customResource, rs.parentFSM.r.client, scaledown); retrieveError == nil {
@@ -215,17 +213,20 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 			(rs.stepsComplete&CreatedHeadlessService) > 0 &&
 			(rs.stepsComplete&CreatedPingService > 0) {
 
+			reconciler.SyncMessageMigration(rs.parentFSM.customResource, rs.parentFSM.r)
 			statefulSetUpdates = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, currentStatefulSet)
+			if 0 == statefulSetUpdates {
+				if rs.parentFSM.customResource.Spec.DeploymentPlan.Size > 0 {
+					nextStateID = ScalingID
+				}
+				break
+			}
 			if statefulSetUpdates > 0 {
 				if err := resources.Update(rs.parentFSM.customResource, rs.parentFSM.r.client, currentStatefulSet); err != nil {
 					reqLogger.Error(err, "Failed to update StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
 					break
 				}
 			}
-			if rs.parentFSM.customResource.Spec.DeploymentPlan.Size > 0 {
-				nextStateID = ScalingID
-			}
-			reconciler.SyncMessageMigration(rs.parentFSM.customResource, rs.parentFSM.r)
 		} else {
 			// Not ready... requeue to wait? What other action is required - try to recreate?
 			rs.parentFSM.r.result = reconcile.Result{Requeue: true, RequeueAfter: time.Second * 5}

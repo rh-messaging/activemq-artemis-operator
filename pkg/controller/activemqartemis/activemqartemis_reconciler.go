@@ -39,14 +39,14 @@ type ActiveMQArtemisReconciler struct {
 
 type ActiveMQArtemisIReconciler interface {
 	Process(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet) uint32
-	ProcessDeploymentPlan(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) uint32
+	ProcessDeploymentPlan(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet) uint32
 	ProcessAcceptors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet)
 	ProcessConnectors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet)
 }
 
 func (reconciler *ActiveMQArtemisReconciler) Process(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet) uint32 {
 
-	statefulSetUpdates := reconciler.ProcessDeploymentPlan(&customResource.Spec.DeploymentPlan, currentStatefulSet)
+	statefulSetUpdates := reconciler.ProcessDeploymentPlan(customResource, client, currentStatefulSet)
 	reconciler.ProcessAcceptors(customResource, client, currentStatefulSet)
 	reconciler.ProcessConnectors(customResource, client, currentStatefulSet)
 
@@ -97,7 +97,9 @@ func (reconciler *ActiveMQArtemisReconciler) SyncMessageMigration(customResource
 	}
 }
 
-func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) uint32 {
+func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet) uint32 {
+
+	deploymentPlan := &customResource.Spec.DeploymentPlan
 
 	// Ensure the StatefulSet size is the same as the spec
 	if *currentStatefulSet.Spec.Replicas != deploymentPlan.Size {
@@ -105,7 +107,7 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(deploymentPla
 		reconciler.statefulSetUpdates |= statefulSetSizeUpdated
 	}
 
-	if clusterConfigSyncCausedUpdateOn(deploymentPlan, currentStatefulSet) {
+	if clusterConfigSyncCausedUpdateOn(customResource, client, currentStatefulSet) {
 		reconciler.statefulSetUpdates |= statefulSetClusterConfigUpdated
 	}
 
@@ -125,7 +127,7 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(deploymentPla
 		reconciler.statefulSetUpdates |= statefulSetPersistentUpdated
 	}
 
-	if commonConfigSyncCausedUpdateOn(deploymentPlan, currentStatefulSet) {
+	if commonConfigSyncCausedUpdateOn(customResource, client, currentStatefulSet) {
 		reconciler.statefulSetUpdates |= statefulSetCommonConfigUpdated
 	}
 
@@ -295,7 +297,7 @@ func remove(s []corev1.EnvVar, i int) []corev1.EnvVar {
 	return s[:len(s)-1]
 }
 
-func clusterConfigSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
+func clusterConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet) bool {
 
 	foundClustered := false
 	foundClusterUser := false
@@ -306,11 +308,20 @@ func clusterConfigSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPl
 	clusterPasswordNeedsUpdate := false
 
 	statefulSetUpdated := false
+	deploymentPlan := customResource.Spec.DeploymentPlan
+	secretName := "amq-credentials-secret"
+	namespacedName := types.NamespacedName{
+		Name:      secretName,
+		Namespace: currentStatefulSet.Namespace,
+	}
+	stringDataMap := map[string]string{}
+	secret := secrets.NewSecret(customResource, secretName, stringDataMap)
+	err := resources.Retrieve(customResource, namespacedName, client, secret)
 
 	clusterUserEnvVarSource := &corev1.EnvVarSource{
 		SecretKeyRef: &corev1.SecretKeySelector{
 			LocalObjectReference: corev1.LocalObjectReference{
-				Name: "amq-credentials-secret",
+				Name: secretName,
 			},
 			Key:      "clusterUser",
 			Optional: nil,
@@ -320,7 +331,7 @@ func clusterConfigSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPl
 	clusterPasswordEnvVarSource := &corev1.EnvVarSource{
 		SecretKeyRef: &corev1.SecretKeySelector{
 			LocalObjectReference: corev1.LocalObjectReference{
-				Name: "amq-credentials-secret",
+				Name: secretName,
 			},
 			Key:      "clusterPassword",
 			Optional: nil,
@@ -329,80 +340,89 @@ func clusterConfigSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPl
 
 	// TODO: Remove yuck
 	// ensure password and username are valid if can't via openapi validation?
-	{
-		envVarArray := []corev1.EnvVar{}
-		// Find the existing values
-		for _, v := range currentStatefulSet.Spec.Template.Spec.Containers[0].Env {
-			if v.Name == "AMQ_CLUSTERED" {
-				foundClustered = true
-				//if v.Value == "false" {
-				boolValue, _ := strconv.ParseBool(v.Value)
-				if boolValue != deploymentPlan.Clustered {
-					clusteredNeedsUpdate = true
-				}
-			}
-			if v.Name == "AMQ_CLUSTER_USER" {
-				foundClusterUser = true
-				if v.Value != deploymentPlan.ClusterUser {
-					clusterUserNeedsUpdate = true
-				}
-			}
-			if v.Name == "AMQ_CLUSTER_PASSWORD" {
-				foundClusterPassword = true
-				if v.Value != deploymentPlan.ClusterPassword {
-					clusterPasswordNeedsUpdate = true
-				}
+	envVarArray := []corev1.EnvVar{}
+	// Find the existing values
+	for _, v := range currentStatefulSet.Spec.Template.Spec.Containers[0].Env {
+		if v.Name == "AMQ_CLUSTERED" {
+			foundClustered = true
+			boolValue, _ := strconv.ParseBool(v.Value)
+			if boolValue != deploymentPlan.Clustered {
+				clusteredNeedsUpdate = true
 			}
 		}
-
-		if !foundClustered || clusteredNeedsUpdate {
-			newClusteredValue := corev1.EnvVar{
-				"AMQ_CLUSTERED",
-				strconv.FormatBool(deploymentPlan.Clustered),
-				nil,
-			}
-			envVarArray = append(envVarArray, newClusteredValue)
-			statefulSetUpdated = true
-		}
-
-		if !foundClusterUser || clusterUserNeedsUpdate {
-			newClusteredValue := corev1.EnvVar{
-				"AMQ_CLUSTER_USER",
-				"",
-				clusterUserEnvVarSource,
-			}
-			envVarArray = append(envVarArray, newClusteredValue)
-			statefulSetUpdated = true
-		}
-
-		if !foundClusterPassword || clusterPasswordNeedsUpdate {
-			newClusteredValue := corev1.EnvVar{
-				"AMQ_CLUSTER_PASSWORD",
-				"",
-				clusterPasswordEnvVarSource, //nil,
-			}
-			envVarArray = append(envVarArray, newClusteredValue)
-			statefulSetUpdated = true
-		}
-
-		if statefulSetUpdated {
-			envVarArrayLen := len(envVarArray)
-			if envVarArrayLen > 0 {
-				for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
-					for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
-						if ("AMQ_CLUSTERED" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && clusteredNeedsUpdate) ||
-							("AMQ_CLUSTER_USER" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && clusterUserNeedsUpdate) ||
-							("AMQ_CLUSTER_PASSWORD" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && clusterPasswordNeedsUpdate) {
-							currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
-						}
+		if v.Name == "AMQ_CLUSTER_USER" {
+			foundClusterUser = true
+			if err == nil {
+				secretClusterUser := string(secret.Data[v.ValueFrom.SecretKeyRef.Key])
+				if "" != secretClusterUser &&
+					"" != deploymentPlan.ClusterUser {
+					if 0 != strings.Compare(secretClusterUser, deploymentPlan.ClusterUser) {
+						clusterUserNeedsUpdate = true
 					}
 				}
-
-				containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
-				for i := 0; i < containerArrayLen; i++ {
-					for j := 0; j < envVarArrayLen; j++ {
-						currentStatefulSet.Spec.Template.Spec.Containers[i].Env = append(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, envVarArray[j])
+			}
+		}
+		if v.Name == "AMQ_CLUSTER_PASSWORD" {
+			foundClusterPassword = true
+			if err == nil {
+				secretClusterPassword := string(secret.Data[v.ValueFrom.SecretKeyRef.Key])
+				if "" != secretClusterPassword &&
+					"" != deploymentPlan.ClusterPassword {
+					if 0 != strings.Compare(secretClusterPassword, deploymentPlan.ClusterPassword) {
+						clusterPasswordNeedsUpdate = true
 					}
+				}
+			}
+		}
+	}
+
+	if !foundClustered || clusteredNeedsUpdate {
+		newClusteredValue := corev1.EnvVar{
+			"AMQ_CLUSTERED",
+			strconv.FormatBool(deploymentPlan.Clustered),
+			nil,
+		}
+		envVarArray = append(envVarArray, newClusteredValue)
+		statefulSetUpdated = true
+	}
+
+	if !foundClusterUser || clusterUserNeedsUpdate {
+		newClusteredValue := corev1.EnvVar{
+			"AMQ_CLUSTER_USER",
+			"",
+			clusterUserEnvVarSource,
+		}
+		envVarArray = append(envVarArray, newClusteredValue)
+		statefulSetUpdated = true
+	}
+
+	if !foundClusterPassword || clusterPasswordNeedsUpdate {
+		newClusteredValue := corev1.EnvVar{
+			"AMQ_CLUSTER_PASSWORD",
+			"",
+			clusterPasswordEnvVarSource, //nil,
+		}
+		envVarArray = append(envVarArray, newClusteredValue)
+		statefulSetUpdated = true
+	}
+
+	if statefulSetUpdated {
+		envVarArrayLen := len(envVarArray)
+		if envVarArrayLen > 0 {
+			for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
+				for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
+					if ("AMQ_CLUSTERED" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && clusteredNeedsUpdate) ||
+						("AMQ_CLUSTER_USER" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && clusterUserNeedsUpdate) ||
+						("AMQ_CLUSTER_PASSWORD" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && clusterPasswordNeedsUpdate) {
+						currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
+					}
+				}
+			}
+
+			containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
+			for i := 0; i < containerArrayLen; i++ {
+				for j := 0; j < envVarArrayLen; j++ {
+					currentStatefulSet.Spec.Template.Spec.Containers[i].Env = append(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, envVarArray[j])
 				}
 			}
 		}
@@ -802,7 +822,7 @@ func imageSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanType, 
 	return false
 }
 
-func commonConfigSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
+func commonConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet) bool {
 
 	foundCommonUser := false
 	foundCommonPassword := false
@@ -811,66 +831,82 @@ func commonConfigSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPla
 	commonPasswordNeedsUpdate := false
 
 	statefulSetUpdated := false
+	deploymentPlan := customResource.Spec.DeploymentPlan
+	secretName := "amq-app-secret"
+	namespacedName := types.NamespacedName{
+		Name:      secretName,
+		Namespace: currentStatefulSet.Namespace,
+	}
+	stringDataMap := map[string]string{}
+	secret := secrets.NewSecret(customResource, secretName, stringDataMap)
+	err := resources.Retrieve(customResource, namespacedName, client, secret)
 
 	// TODO: Remove yuck
-	// ensure password and username are valid if can't via openapi validation?
-	if deploymentPlan.Password != "" &&
-		deploymentPlan.User != "" {
-
-		envVarArray := []corev1.EnvVar{}
-		// Find the existing values
-		for _, v := range currentStatefulSet.Spec.Template.Spec.Containers[0].Env {
-			if v.Name == "AMQ_USER" {
-				foundCommonUser = true
-				if v.Value != deploymentPlan.User {
-					commonUserNeedsUpdate = true
-				}
-			}
-			if v.Name == "AMQ_PASSWORD" {
-				foundCommonPassword = true
-				if v.Value != deploymentPlan.Password {
-					commonPasswordNeedsUpdate = true
-				}
-			}
-		}
-
-		if !foundCommonUser || commonUserNeedsUpdate {
-			newCommonedValue := corev1.EnvVar{
-				"AMQ_USER",
-				deploymentPlan.User,
-				nil,
-			}
-			envVarArray = append(envVarArray, newCommonedValue)
-			statefulSetUpdated = true
-		}
-
-		if !foundCommonPassword || commonPasswordNeedsUpdate {
-			newCommonedValue := corev1.EnvVar{
-				"AMQ_PASSWORD",
-				deploymentPlan.Password,
-				nil,
-			}
-			envVarArray = append(envVarArray, newCommonedValue)
-			statefulSetUpdated = true
-		}
-
-		if statefulSetUpdated {
-			envVarArrayLen := len(envVarArray)
-			if envVarArrayLen > 0 {
-				for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
-					for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
-						if ("AMQ_USER" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && commonUserNeedsUpdate) ||
-							("AMQ_PASSWORD" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && commonPasswordNeedsUpdate) {
-							currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
-						}
+	envVarArray := []corev1.EnvVar{}
+	// Find the existing values
+	for _, v := range currentStatefulSet.Spec.Template.Spec.Containers[0].Env {
+		if v.Name == "AMQ_USER" {
+			foundCommonUser = true
+			if err == nil {
+				secretCommonUser := string(secret.Data[v.ValueFrom.SecretKeyRef.Key])
+				if "" != secretCommonUser &&
+					"" != deploymentPlan.User {
+					if 0 != strings.Compare(secretCommonUser, deploymentPlan.User) {
+						commonUserNeedsUpdate = true
 					}
 				}
-
-				containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
-				for i := 0; i < containerArrayLen; i++ {
-					for j := 0; j < envVarArrayLen; j++ {
-						currentStatefulSet.Spec.Template.Spec.Containers[i].Env = append(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, envVarArray[j])
+			}
+		}
+		if v.Name == "AMQ_PASSWORD" {
+			foundCommonPassword = true
+			if err == nil {
+				secretCommonPassword := string(secret.Data[v.ValueFrom.SecretKeyRef.Key])
+				if "" != secretCommonPassword &&
+					"" != deploymentPlan.Password {
+					if 0 != strings.Compare(secretCommonPassword, deploymentPlan.Password) {
+						commonPasswordNeedsUpdate = true
 					}
+				}
+			}
+		}
+	}
+
+	if !foundCommonUser || commonUserNeedsUpdate {
+		newCommonedValue := corev1.EnvVar{
+			"AMQ_USER",
+			deploymentPlan.User,
+			nil,
+		}
+		envVarArray = append(envVarArray, newCommonedValue)
+		statefulSetUpdated = true
+	}
+
+	if !foundCommonPassword || commonPasswordNeedsUpdate {
+		newCommonedValue := corev1.EnvVar{
+			"AMQ_PASSWORD",
+			deploymentPlan.Password,
+			nil,
+		}
+		envVarArray = append(envVarArray, newCommonedValue)
+		statefulSetUpdated = true
+	}
+
+	if statefulSetUpdated {
+		envVarArrayLen := len(envVarArray)
+		if envVarArrayLen > 0 {
+			for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
+				for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
+					if ("AMQ_USER" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && commonUserNeedsUpdate) ||
+						("AMQ_PASSWORD" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && commonPasswordNeedsUpdate) {
+						currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
+					}
+				}
+			}
+
+			containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
+			for i := 0; i < containerArrayLen; i++ {
+				for j := 0; j < envVarArrayLen; j++ {
+					currentStatefulSet.Spec.Template.Spec.Containers[i].Env = append(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, envVarArray[j])
 				}
 			}
 		}
