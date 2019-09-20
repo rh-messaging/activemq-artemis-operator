@@ -92,7 +92,7 @@ func UpdatePodStatus(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, s
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Updating status for pods")
 
-	podStatus := getPodStatus(cr, client, ssNamespacedName)
+	podStatus := GetPodStatus(cr, client, ssNamespacedName)
 
 	reqLogger.V(5).Info("PodStatus are to be updated.............................", "info:", podStatus)
 	reqLogger.V(5).Info("Ready Count........................", "info:", len(podStatus.Ready))
@@ -114,8 +114,10 @@ func UpdatePodStatus(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, s
 	return nil
 }
 
-func getPodStatus(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, namespacedName types.NamespacedName) olm.DeploymentStatus {
-	// List the pods for this deployment
+func GetPodStatus(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, namespacedName types.NamespacedName) olm.DeploymentStatus {
+
+	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
+	reqLogger.Info("Getting status for pods")
 	var status olm.DeploymentStatus
 	sfsFound := &appsv1.StatefulSet{}
 

@@ -3,8 +3,8 @@ package environments
 import (
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/secrets"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/random"
 	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/random"
 	corev1 "k8s.io/api/core/v1"
 	"math"
 	"os"

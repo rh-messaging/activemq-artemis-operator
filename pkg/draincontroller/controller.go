@@ -22,6 +22,7 @@ import (
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 	"time"
 
+	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -37,7 +38,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
 
 	"encoding/json"
 	"k8s.io/apimachinery/pkg/labels"
