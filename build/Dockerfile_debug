@@ -1,23 +1,24 @@
-FROM golang:1.11.5-alpine3.8 AS build-env
+FROM devtools/go-toolset-rhel7:1.11.13-10 AS build-env
+
+USER root
 
 ENV OPERATOR=/activemq-artemis-operator/activemq-artemis-operator \
     CGO_ENABLED=0 \
     GOPATH=/go
 
-# Allow Go to retrieve the dependencies for the build step
-RUN apk add --no-cache git
-
 RUN mkdir -p ${GOPATH}/src/github.com/rh-messaging/activemq-artemis-operator/bin
 RUN mkdir -p /activemq-artemis-operator
 ADD . ${GOPATH}/src/github.com/rh-messaging/activemq-artemis-operator
 WORKDIR ${GOPATH}/src/github.com/rh-messaging/activemq-artemis-operator
-RUN go build -gcflags "all=-N -l" -v -o ${OPERATOR} ${GOPATH}/src/github.com/rh-messaging/activemq-artemis-operator/cmd/manager
+RUN scl enable go-toolset-1.11 "go build -gcflags \"all=-N -l\" -v -o ${OPERATOR} ${GOPATH}/src/github.com/rh-messaging/activemq-artemis-operator/cmd/manager"
 
 # Get Delve from a GOPATH not from a Go Modules project
 # as we aren't using Go Modules yet
-RUN go get github.com/go-delve/delve/cmd/dlv
+RUN scl enable go-toolset-1.11 "go get github.com/go-delve/delve/cmd/dlv"
 
-FROM alpine:3.8
+FROM devtools/go-toolset-rhel7:1.11.13-10
+
+USER root
 
 ENV OPERATOR=/activemq-artemis-operator/activemq-artemis-operator \
     USER_UID=1001 \
