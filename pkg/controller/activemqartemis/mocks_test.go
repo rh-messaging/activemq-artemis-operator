@@ -134,8 +134,8 @@ var (
 
 	AMQInstanceWithoutSpec = brokerv2alpha1.ActiveMQArtemis{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "activemq-artemis-test-3",
-			Namespace: "activemq-artemis-operator-ns-3",
+			Name:      "activemq-artemis-test",
+			Namespace: "activemq-artemis-operator-ns",
 		},
 	}
 
