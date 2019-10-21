@@ -64,7 +64,7 @@ required = [
 
 [[constraint]]
   name = "github.com/RHsyseng/operator-utils"
-  revision = "232650febd728455482b3c780c79a9ac0be62b50"
+  revision = "24b5b6380a3fcd3b71fb8338257ea2f6e7c50538"
 
 [prune]
   go-tests = true

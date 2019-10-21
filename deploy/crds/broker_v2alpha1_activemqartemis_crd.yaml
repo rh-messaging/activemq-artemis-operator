@@ -35,6 +35,9 @@ spec:
             adminPassword:
               type: string
               description: Password for standard broker user. It is required for connecting to the broker. If left empty, it will be generated.
+            version:
+              type: string
+              description: The version of the application deployment.
             deploymentPlan:
               type: object
               properties:
@@ -180,6 +183,16 @@ spec:
                 useClientAuth:
                   type: boolean
                   description: If the embedded server requires client authentication
+            upgrades:
+              type: object
+              description: Specify the level of upgrade that should be allowed when an older product version is detected
+              properties:
+                enabled:
+                  type: boolean
+                  description: Set true to enable automatic micro version product upgrades, it is disabled by default.
+                minor:
+                  type: boolean
+                  description: Set true to enable automatic minor product version upgrades, it is disabled by default. Requires spec.upgrades.enabled to be true.
           type: object
         status:
           properties:

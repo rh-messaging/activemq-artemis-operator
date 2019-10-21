@@ -14,7 +14,6 @@ const (
 
 type PlatformInfo struct {
 	Name       PlatformType `json:"name"`
-	OCPVersion string       `json:"ocpVersion"`
 	K8SVersion string       `json:"k8sVersion"`
 	OS         string       `json:"os"`
 }
@@ -27,18 +26,6 @@ func (info PlatformInfo) K8SMinorVersion() string {
 	return strings.Split(info.K8SVersion, ".")[1]
 }
 
-func (info PlatformInfo) OCPMajorVersion() string {
-	return strings.Split(info.OCPVersion, ".")[0]
-}
-
-func (info PlatformInfo) OCPMinorVersion() string {
-	return strings.Split(info.OCPVersion, ".")[1]
-}
-
-func (info PlatformInfo) OCPBuildVersion() string {
-	return strings.Join(strings.Split(info.OCPVersion, ".")[2:], ".")
-}
-
 func (info PlatformInfo) IsOpenShift() bool {
 	return info.Name == OpenShift
 }
@@ -47,31 +34,32 @@ func (info PlatformInfo) IsKubernetes() bool {
 	return info.Name == Kubernetes
 }
 
-func (info *PlatformInfo) ApproximateOpenShiftVersion() {
-
-	if info.K8SVersion == "" || info.Name == Kubernetes {
-		return
-	}
-	switch info.K8SVersion {
-	case "1.10+":
-		info.OCPVersion = "3.10"
-	case "1.11+":
-		info.OCPVersion = "3.11"
-	case "1.13+":
-		info.OCPVersion = "4.1"
-	default:
-		log.Info("unable to version-match OCP to K8S version " + info.K8SVersion)
-		info.OCPVersion = ""
-		return
-	}
-}
-
 func (info PlatformInfo) String() string {
 	return "PlatformInfo [" +
 		"Name: " + fmt.Sprintf("%v", info.Name) +
-		", OCPVersion: " + info.OCPVersion +
 		", K8SVersion: " + info.K8SVersion +
 		", OS: " + info.OS + "]"
+}
+
+type OpenShiftVersion struct {
+	Version string `json:"ocpVersion"`
+}
+
+func (info OpenShiftVersion) MajorVersion() string {
+	return strings.Split(info.Version, ".")[0]
+}
+
+func (info OpenShiftVersion) MinorVersion() string {
+	return strings.Split(info.Version, ".")[1]
+}
+
+func (info OpenShiftVersion) BuildVersion() string {
+	return strings.Join(strings.Split(info.Version, ".")[2:], ".")
+}
+
+func (info OpenShiftVersion) String() string {
+	return "OpenShiftVersion [" +
+		"Version: " + info.Version + "]"
 }
 
 // full generated 'version' API fetch result struct @

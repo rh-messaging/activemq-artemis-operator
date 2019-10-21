@@ -15,12 +15,14 @@ type ActiveMQArtemisSpec struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
 
-	AdminUser      string             `json:"adminUser,omitempty"`
-	AdminPassword  string             `json:"adminPassword,omitempty"`
-	DeploymentPlan DeploymentPlanType `json:"deploymentPlan,omitempty"`
-	Acceptors      []AcceptorType     `json:"acceptors,omitempty"`
-	Connectors     []ConnectorType    `json:"connectors,omitempty"`
-	Console        ConsoleType        `json:"console,omitempty"`
+	AdminUser      string                  `json:"adminUser,omitempty"`
+	AdminPassword  string                  `json:"adminPassword,omitempty"`
+	DeploymentPlan DeploymentPlanType      `json:"deploymentPlan,omitempty"`
+	Acceptors      []AcceptorType          `json:"acceptors,omitempty"`
+	Connectors     []ConnectorType         `json:"connectors,omitempty"`
+	Console        ConsoleType             `json:"console,omitempty"`
+	Version        string                  `json:"version,omitempty"`
+	Upgrades       ActiveMQArtemisUpgrades `json:"upgrades,omitempty"`
 }
 
 type DeploymentPlanType struct {
@@ -73,6 +75,12 @@ type ConsoleType struct {
 	SSLEnabled    bool   `json:"sslEnabled,omitempty"`
 	SSLSecret     string `json:"sslSecret,omitempty"`
 	UseClientAuth bool   `json:"useClientAuth,omitempty"`
+}
+
+// ActiveMQArtemis App product upgrade flags
+type ActiveMQArtemisUpgrades struct {
+	Enabled bool `json:"enabled"`
+	Minor   bool `json:"minor"`
 }
 
 // ActiveMQArtemisStatus defines the observed state of ActiveMQArtemis

@@ -78,7 +78,6 @@ func (pv K8SBasedPlatformVersioner) GetPlatformInfo(client Discoverer, cfg *rest
 
 			log.Info("route.openshift.io found in apis, platform is OpenShift")
 			info.Name = OpenShift
-			info.ApproximateOpenShiftVersion()
 			break
 		}
 	}
@@ -86,70 +85,52 @@ func (pv K8SBasedPlatformVersioner) GetPlatformInfo(client Discoverer, cfg *rest
 	return info, nil
 }
 
-func DetectOpenShift(pv PlatformVersioner, cfg *rest.Config) (bool, error) {
-
-	if pv == nil {
-		pv = K8SBasedPlatformVersioner{}
-	}
-	info, err := pv.GetPlatformInfo(nil, cfg)
-	if err != nil {
-		return false, err
-	}
-	return info.IsOpenShift(), nil
-}
-
 /*
 OCP4.1+ requires elevated cluster configuration user security permissions for version fetch
 REST call URL requiring permissions: /apis/config.openshift.io/v1/clusterversions
 */
-func (pv K8SBasedPlatformVersioner) LookupOpenShiftVersion(client Discoverer, cfg *rest.Config, info PlatformInfo) (PlatformInfo, error) {
+func (pv K8SBasedPlatformVersioner) LookupOpenShiftVersion(client Discoverer, cfg *rest.Config) (OpenShiftVersion, error) {
 
-	// allow blank info param to still to be fully populated
-	if info.K8SVersion == "" {
-		var err error
-		info, err = pv.GetPlatformInfo(nil, nil)
-		if err != nil {
-			return info, err
-		}
-	}
-	if info.Name != OpenShift {
-		log.Info("OCP version fetch not valid for non-OCP platform", "PlatformInfo", info)
-		return info, nil
-	}
-	var err error
-	client, cfg, err = pv.DefaultArgs(client, cfg)
+	osv := OpenShiftVersion{}
+	client, _, err := pv.DefaultArgs(nil, nil)
 	if err != nil {
 		log.Info("issue occurred while defaulting args for version lookup")
-		return info, err
+		return osv, err
 	}
-
 	doc, err := client.OpenAPISchema()
 	if err != nil {
 		log.Info("issue occurred while fetching OpenAPISchema")
-		return info, err
+		return osv, err
 	}
 
 	switch doc.Info.Version[:4] {
 	case "v3.1":
-		info.OCPVersion = doc.Info.Version
+		osv.Version = doc.Info.Version
 
 	// OCP4 returns K8S major/minor from old API endpoint [bugzilla-1658957]
 	case "v1.1":
-		// sooo much interfacing for testing...
-		body, err := client.RESTClient().Get().AbsPath(ClusterVersionApiPath).Do().Raw()
+		rest := client.RESTClient().Get().AbsPath(ClusterVersionApiPath)
 
+		result := rest.Do()
+		if result.Error() != nil {
+			log.Info("issue making API version rest call: " + result.Error().Error())
+			return osv, result.Error()
+		}
+
+		// error handling before/after Raw() seems redundant, but error detail can be lost in convert
+		body, err := result.Raw()
 		if err != nil {
-			log.Info("issue occurred while making cluster version API call")
-			return info, err
+			log.Info("issue pulling raw result from API call")
+			return osv, err
 		}
 
 		var cvi PlatformClusterInfo
 		err = json.Unmarshal(body, &cvi)
 		if err != nil {
 			log.Info("issue occurred while unmarshalling PlatformClusterInfo")
-			return info, err
+			return osv, err
 		}
-		info.OCPVersion = cvi.Status.Desired.Version
+		osv.Version = cvi.Status.Desired.Version
 	}
-	return info, nil
+	return osv, nil
 }

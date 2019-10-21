@@ -4,6 +4,7 @@ metadata:
   name: ex-aao
   application: ex-aao-app
 spec:
+  version: 7.5.0
   deploymentPlan:
     size: 2
     image: registry.redhat.io/amq7/amq-broker:7.5
@@ -41,3 +42,7 @@ spec:
       sslProvider: JDK
       sniHost: localhost
       expose: true
+  upgrades:
+      enabled: true
+      minor: true
+

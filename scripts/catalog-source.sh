@@ -6,11 +6,11 @@ else
     CATALOG_NS=${1}
 fi
 
-CSV=`cat deploy/catalog_resources/redhat/activemq-artemis-operator.v0.9.1.clusterserviceversion.yaml | sed -e 's/^/          /' | sed '0,/ /{s/          /        - /}'`
+CSV=`cat deploy/catalog_resources/redhat/0.9.1/activemq-artemis-operator.v0.9.1.clusterserviceversion.yaml | sed -e 's/^/          /' | sed '0,/ /{s/          /        - /}'`
 CRD=`cat deploy/crds/broker_v2alpha1_activemqartemis_crd.yaml | sed -e 's/^/          /' | sed '0,/ /{s/          /        - /}'`
 CRDActivemqartemisaddress=`cat deploy/crds/broker_v2alpha1_activemqartemisaddress_crd.yaml | sed -e 's/^/          /' | sed '0,/ /{s/          /        - /}'`
 CRDActivemqartemisscaledown=`cat deploy/crds/broker_v2alpha1_activemqartemisscaledown_crd.yaml | sed -e 's/^/          /' | sed '0,/ /{s/          /        - /}'`
-PKG=`cat deploy/catalog_resources/redhat/activemq-artemis.package.yaml | sed -e 's/^/          /' | sed '0,/ /{s/          /        - /}'`
+PKG=`cat deploy/catalog_resources/redhat/0.9.1/activemq-artemis.v0.9.1.package.yaml | sed -e 's/^/          /' | sed '0,/ /{s/          /        - /}'`
 
 cat << EOF > deploy/catalog_resources/redhat/catalog-source.yaml
 apiVersion: v1

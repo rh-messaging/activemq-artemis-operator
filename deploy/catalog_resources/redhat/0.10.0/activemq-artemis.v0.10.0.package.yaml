@@ -1,0 +1,4 @@
+packageName: activemq-artemis
+channels:
+  - name: alpha
+    currentCSV: activemq-artemis-operator.0.10.0

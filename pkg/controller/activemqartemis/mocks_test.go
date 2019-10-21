@@ -14,6 +14,7 @@ var (
 	NameBuilder namer.NamerData
 
 	labels = selectors.LabelBuilder.Labels()
+	f      = false
 
 	AMQinstance = brokerv2alpha1.ActiveMQArtemis{
 		ObjectMeta: metav1.ObjectMeta{
@@ -33,7 +34,7 @@ var (
 				Image:              "registry.redhat.io/amq7/amq-broker:7.5",
 				PersistenceEnabled: false,
 				RequireLogin:       false,
-				MessageMigration:   false,
+				MessageMigration:   &f,
 			},
 			Console: brokerv2alpha1.ConsoleType{
 				Expose: true,
@@ -86,11 +87,11 @@ var (
 			AdminPassword: "admin",
 			DeploymentPlan: brokerv2alpha1.DeploymentPlanType{
 				Size:               0,
-				Image:              "registry.redhat.io/amq7/amq-broker:7.4",
+				Image:              "registry.redhat.io/amq7/amq-broker:7.5",
 				PersistenceEnabled: false,
 				JournalType:        "nio",
 				RequireLogin:       false,
-				MessageMigration:   false,
+				MessageMigration:   &f,
 			},
 			Console: brokerv2alpha1.ConsoleType{
 				Expose: true,

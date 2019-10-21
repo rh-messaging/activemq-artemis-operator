@@ -26,14 +26,14 @@
   revision = "de5bf2ad457846296e2031421a34e2568e304e35"
 
 [[projects]]
-  digest = "1:b0c94aea1797e0a93e644ee6a6937bb2402e2ab418154ece436cee737eec1c2d"
+  digest = "1:89ac0de6a32b92b7ce40655c76cbaa4a0af5235a7802d36441853597534b67ac"
   name = "github.com/RHsyseng/operator-utils"
   packages = [
     "pkg/olm",
     "pkg/validation",
   ]
   pruneopts = "NT"
-  revision = "232650febd728455482b3c780c79a9ac0be62b50"
+  revision = "24b5b6380a3fcd3b71fb8338257ea2f6e7c50538"
 
 [[projects]]
   digest = "1:680b63a131506e668818d630d3ca36123ff290afa0afc9f4be21940adca3f27d"
