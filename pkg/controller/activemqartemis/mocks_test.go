@@ -15,6 +15,7 @@ var (
 
 	labels = selectors.LabelBuilder.Labels()
 	f      = false
+	t      = true
 
 	AMQinstance = brokerv2alpha1.ActiveMQArtemis{
 		ObjectMeta: metav1.ObjectMeta{
@@ -30,7 +31,7 @@ var (
 			AdminUser:     "admin",
 			AdminPassword: "admin",
 			DeploymentPlan: brokerv2alpha1.DeploymentPlanType{
-				Size:               3,
+				Size:               2,
 				Image:              "registry.redhat.io/amq7/amq-broker:7.5",
 				PersistenceEnabled: false,
 				RequireLogin:       false,
@@ -44,7 +45,7 @@ var (
 					Name:                "my",
 					Protocols:           "amqp",
 					Port:                5672,
-					SSLEnabled:          true,
+					SSLEnabled:          false,
 					EnabledCipherSuites: "SSL_RSA_WITH_RC4_128_SHA,SSL_DH_anon_WITH_3DES_EDE_CBC_SHA",
 					EnabledProtocols:    " TLSv1,TLSv1.1,TLSv1.2",
 					NeedClientAuth:      true,
@@ -62,7 +63,7 @@ var (
 					Name:                "my-c",
 					Host:                "localhost",
 					Port:                22222,
-					SSLEnabled:          true,
+					SSLEnabled:          false,
 					EnabledCipherSuites: "SSL_RSA_WITH_RC4_128_SHA,SSL_DH_anon_WITH_3DES_EDE_CBC_SHA",
 					EnabledProtocols:    " TLSv1,TLSv1.1,TLSv1.2",
 					NeedClientAuth:      true,

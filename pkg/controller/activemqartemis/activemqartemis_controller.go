@@ -3,6 +3,7 @@ package activemqartemis
 import (
 	"context"
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	"github.com/rh-messaging/activemq-artemis-operator/version"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -135,6 +136,21 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 		// Add error detail for use later
 		return r.result, err
 	}
+
+	minor, micro, err := checkProductUpgrade(instance)
+	if err != nil {
+		return r.result, err
+	}
+
+	minorVersion := getMinorImageVersion(instance.Spec.Version)
+	latestMinorVersion := getMinorImageVersion(CurrentVersion)
+	if (micro && minorVersion == latestMinorVersion) ||
+		(minor && minorVersion != latestMinorVersion) {
+		// reset current annotations and update CR use to latest product version
+		instance.SetAnnotations(map[string]string{})
+		instance.Spec.Version = CurrentVersion
+	}
+	reqLogger.Info("Reconciling ActiveMQArtemis", "Operator version", version.Version, "ActiveMQArtemis release", instance.Spec.Version)
 
 	// Do lookup to see if we have a fsm for the incoming name in the incoming namespace
 	// if not, create it

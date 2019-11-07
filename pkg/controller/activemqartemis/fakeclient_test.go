@@ -15,7 +15,7 @@ import (
 //buildReconcileWithFakeClientWithMocks return reconcile with fake client, schemes and mock objects
 func buildReconcileWithFakeClientWithMocks(objs []runtime.Object, t *testing.T) *ReconcileActiveMQArtemis {
 
-	registerObjs := []runtime.Object{&brokerv2alpha1.ActiveMQArtemis{}, &corev1.Service{}, &appsv1.StatefulSet{}, &corev1.Pod{}, &routev1.Route{}}
+	registerObjs := []runtime.Object{&brokerv2alpha1.ActiveMQArtemis{}, &corev1.Service{}, &appsv1.StatefulSet{}, &appsv1.StatefulSetList{}, &corev1.Pod{}, &routev1.Route{}, &routev1.RouteList{}, &corev1.PersistentVolumeClaimList{}, &corev1.ServiceList{}}
 	registerObjs = append(registerObjs)
 	brokerv2alpha1.SchemeBuilder.Register(registerObjs...)
 	brokerv2alpha1.SchemeBuilder.Register()

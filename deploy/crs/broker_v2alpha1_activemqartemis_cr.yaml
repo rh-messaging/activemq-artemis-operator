@@ -6,7 +6,7 @@ metadata:
 spec:
   version: 7.5.0
   deploymentPlan:
-    size: 2
+    size: 1
     image: registry.redhat.io/amq7/amq-broker:7.5
     requireLogin: false
     persistenceEnabled: false
@@ -18,7 +18,7 @@ spec:
     - name: amqp
       protocols: amqp
       port: 5672
-      sslEnabled: true
+      sslEnabled: false
       enabledCipherSuites: SSL_RSA_WITH_RC4_128_SHA,SSL_DH_anon_WITH_3DES_EDE_CBC_SHA
       enabledProtocols: TLSv1,TLSv1.1,TLSv1.2
       needClientAuth: true
@@ -33,7 +33,7 @@ spec:
     - name: connector0
       host: localhost
       port: 22222
-      sslEnabled: true
+      sslEnabled: false
       enabledCipherSuites: SSL_RSA_WITH_RC4_128_SHA,SSL_DH_anon_WITH_3DES_EDE_CBC_SHA
       enabledProtocols: TLSv1,TLSv1.1,TLSv1.2
       needClientAuth: true

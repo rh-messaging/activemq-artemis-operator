@@ -26,14 +26,19 @@
   revision = "de5bf2ad457846296e2031421a34e2568e304e35"
 
 [[projects]]
-  digest = "1:89ac0de6a32b92b7ce40655c76cbaa4a0af5235a7802d36441853597534b67ac"
+  digest = "1:90eedc18e7dec17773aea9f00974b3b9e3fab6dee47dd868547f2962f4bd1000"
   name = "github.com/RHsyseng/operator-utils"
   packages = [
     "pkg/olm",
+    "pkg/resource",
+    "pkg/resource/compare",
+    "pkg/resource/read",
+    "pkg/resource/write",
+    "pkg/resource/write/hooks",
     "pkg/validation",
   ]
   pruneopts = "NT"
-  revision = "24b5b6380a3fcd3b71fb8338257ea2f6e7c50538"
+  revision = "942a3f9c85a9638585c45cb90af49a08fac6e22d"
 
 [[projects]]
   digest = "1:680b63a131506e668818d630d3ca36123ff290afa0afc9f4be21940adca3f27d"
@@ -405,6 +410,7 @@
   name = "github.com/openshift/api"
   packages = [
     "apps/v1",
+    "build/v1",
     "route/v1",
   ]
   pruneopts = "NT"
@@ -1119,6 +1125,10 @@
   analyzer-version = 1
   input-imports = [
     "github.com/RHsyseng/operator-utils/pkg/olm",
+    "github.com/RHsyseng/operator-utils/pkg/resource",
+    "github.com/RHsyseng/operator-utils/pkg/resource/compare",
+    "github.com/RHsyseng/operator-utils/pkg/resource/read",
+    "github.com/RHsyseng/operator-utils/pkg/resource/write",
     "github.com/RHsyseng/operator-utils/pkg/validation",
     "github.com/ghodss/yaml",
     "github.com/go-openapi/spec",

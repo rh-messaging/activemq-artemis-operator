@@ -63,7 +63,7 @@ func NewSecret(customResource *brokerv2alpha1.ActiveMQArtemis, secretName string
 	return &secretDefinition
 }
 
-func Create(customResource *brokerv2alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, stringDataMap map[string]string, client client.Client, scheme *runtime.Scheme) error {
+func Create(customResource *brokerv2alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, stringDataMap map[string]string, client client.Client, scheme *runtime.Scheme) *corev1.Secret {
 
 	var err error = nil
 	secretDefinition := NewSecret(customResource, namespacedName.Name, stringDataMap)
@@ -74,5 +74,5 @@ func Create(customResource *brokerv2alpha1.ActiveMQArtemis, namespacedName types
 		}
 	}
 
-	return err
+	return secretDefinition
 }
