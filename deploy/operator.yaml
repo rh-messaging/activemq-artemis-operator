@@ -16,7 +16,7 @@ spec:
       containers:
         - name: activemq-artemis-operator
           # Replace this with the built image name
-          image: quay.io/artemiscloud/activemq-artemis-operator:0.9.1
+          image: quay.io/artemiscloud/activemq-artemis-operator:latest
           command:
             - /home/activemq-artemis-operator/bin/entrypoint
           args:
