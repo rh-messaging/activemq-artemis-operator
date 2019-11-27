@@ -11,5 +11,5 @@ if ! whoami &>/dev/null; then
   fi
 fi
 
-echo "exec ${HOME}/dlv exec --headless=true --listen=0.0.0.0:4000 --api-version=2 ${OPERATOR} $@"
-exec ${HOME}/dlv exec --headless=true --listen=0.0.0.0:4000 --api-version=2 ${OPERATOR} $@
+echo "exec ${HOME}/bin/dlv exec --headless=true --listen=0.0.0.0:4000 --api-version=2 ${OPERATOR} $@"
+exec ${HOME}/bin/dlv exec --headless=true --listen=0.0.0.0:4000 --api-version=2 ${OPERATOR} $@
