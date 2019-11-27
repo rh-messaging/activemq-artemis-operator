@@ -13,17 +13,17 @@ resource.
 ## Getting the code
 
 To launch the operator you will need to clone the [activemq-artemis-operator](https://github.com/rh-messaging/activemq-artemis-operator)
-and checkout the 0.9.1 tag as per
+and checkout the 0.10.0 tag as per
 
 ```$xslt
 git clone https://github.com/rh-messaging/activemq-artemis-operator
-git checkout 0.9.1
+git checkout 0.10.0
 ```
 
 ## Deploying the operator
 
-In the activemq-artemis-operator/deploy directory you should see [operator.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.9.1/deploy/operator.yaml)
-within which you will want to update the [spec.containers.image](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.9.1/deploy/operator.yaml#L18-L19)
+In the activemq-artemis-operator/deploy directory you should see [operator.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.10.0/deploy/operator.yaml)
+within which you will want to update the [spec.containers.image](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.10.0/deploy/operator.yaml#L18-L19)
 with the correct location for the activemq-artemis-operator container image that you either pulled or [built](building.md).
 
 As per the [operator-framework/operator-sdk](https://github.com/operator-framework/operator-sdk) Quick Start we first
@@ -81,7 +81,7 @@ exec /activemq-artemis-operator/activemq-artemis-operator
 ## Deploying the broker
 
 Now that the operator is running and listening for changes related to our crd we can deploy our basic broker custom
-resource instance for 'ex-aao' from [broker_v2alpha1_activemqartemis_cr.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.9.1/deploy/crs/broker_v2alpha1_activemqartemis_cr.yaml)
+resource instance for 'ex-aao' from [broker_v2alpha1_activemqartemis_cr.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.10.0/deploy/crs/broker_v2alpha1_activemqartemis_cr.yaml)
 which looks like
 
 ```$xslt
@@ -92,10 +92,10 @@ metadata:
 spec:
   # Add fields here
   size: 4
-  image: registry.redhat.io/amq7/amq-broker:7.4
+  image: registry.redhat.io/amq7/amq-broker:7.5
 ```  
 
-Note in particular the [spec.image:](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.9.1/deploy/crs/broker_v2alpha1_activemqartemis_cr.yaml#L8)
+Note in particular the [spec.image:](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.10.0/deploy/crs/broker_v2alpha1_activemqartemis_cr.yaml#L8)
 which identifies the container image to use to launch the AMQ Broker. Ignore the size as its unused at the moment.
 
 To deploy the broker we simply execute

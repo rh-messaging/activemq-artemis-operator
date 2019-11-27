@@ -10,7 +10,6 @@ RUN mkdir -p /tmp/activemq-artemis-operator
 
 ADD . ${GOPATH}/src/github.com/rh-messaging/activemq-artemis-operator
 WORKDIR ${GOPATH}/src/github.com/rh-messaging/activemq-artemis-operator
-#COPY src /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator
 
 RUN /opt/rh/go-toolset-1.11/root/usr/bin/go build -o /tmp/activemq-artemis-operator/${BROKER_NAME}-operator /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/cmd/manager
 
@@ -27,16 +26,12 @@ ENV JBOSS_IMAGE_NAME="amq7/amq-broker-rhel8-operator"
 ENV JBOSS_IMAGE_VERSION="0.10"
 
 WORKDIR /
-#RUN mkdir -p /manifests/0.9.1 && chown -R `id -u`:0 /manifests
+
 RUN mkdir -p /manifests/0.9.1
 RUN mkdir -p /manifests/0.10.0
 RUN chown -R `id -u`:0 /manifests
 COPY --from=build-env /tmp/activemq-artemis-operator /home/${BROKER_NAME}-operator/bin
 COPY --from=build-env /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/build/bin/entrypoint /home/${BROKER_NAME}-operator/bin
-
-#COPY --from=build-env /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/deploy/catalog_resources/redhat/${BROKER_NAME}.package.yaml /manifests
-#COPY --from=build-env /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/deploy/catalog_resources/redhat/${BROKER_NAME}-operator.v0.9.1.clusterserviceversion.yaml /manifests/0.9.1
-#COPY --from=build-env /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/deploy/crds/* /manifests/0.9.1
 
 COPY --from=build-env /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/deploy/olm-catalog/activemq-artemis-operator/${BROKER_NAME}.package.yaml /manifests
 COPY --from=build-env /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/deploy/olm-catalog/activemq-artemis-operator/0.9.1/ /manifests/0.9.1

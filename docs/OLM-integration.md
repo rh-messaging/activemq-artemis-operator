@@ -23,7 +23,7 @@ To install this operator on OpenShift 4 for end-to-end testing, make sure you ha
 Push the operator bundle to your quay application repository as follows:
 
 ```bash
-operator-courier push deploy/catalog_resources/courier/bundle_dir/0.9.1 <quay.io account> <application repo name> <version> "basic YWhhbWVlZDpIYW1lZWRAMTIz" "basic XXXXXXXXX"
+operator-courier push deploy/olm-catalog/activemq-artemis-operator/0.10.0 <quay.io account> <application repo name> <version> "basic YWhhbWVlZDpIYW1lZWRAMTIz" "basic XXXXXXXXX"
 ```
 
 If pushing to another quay repository, replace with your username or other repot name. 
@@ -31,14 +31,14 @@ If pushing to another quay repository, replace with your username or other repot
 for example : 
 
 ```bash
-operator-courier push deploy/catalog_resources/courier/bundle_dir/0.9.1 ahameed amqoperator 0.9.1 "basic YWhhbWVlZDpIYW1lZWRAMTIz"
+operator-courier push deploy/olm-catalog/activemq-artemis-operator/0.10.0 ahameed amqoperator 0.9.1 "basic YWhhbWVlZDpIYW1lZWRAMTIz"
 ```
 
 
 Also note that the push command does not overwrite an existing repository, and it needs to be deleted before a new version can be built and uploaded. Once the bundle has been uploaded, create an [Operator Source](https://github.com/operator-framework/community-operators/blob/master/docs/testing-operators.md#linking-the-quay-application-repository-to-your-openshift-40-cluster) to load your operator bundle in OpenShift.
 
 ```bash
-oc create -f deploy/catalog_resources/courier/activemq-artemis-operatorsource.yaml 
+oc create -f deploy/catalog_respirces/activemq-artemis-operatorsource.yaml 
 ```
 
 Remember to replace _registryNamespace_ with your quay namespace. The name, display name and publisher of the operator are the only other attributes that may be modified.
@@ -71,7 +71,7 @@ This will create a new `CatalogSource` and `ConfigMap`, allowing the OLM Catalog
 Use the OLM console to subscribe to the `ActiveMQ Artemis` Operator Catalog Source within your namespace. Once subscribed, deploy the the operator in your namespace by deploying the cluster service version. First edit
 
 ```bash
-deploy/catalog_resources/courier/bundle_dir/0.9.1/activemq-artemis-operator.v0.9.1.clusterserviceversion.yaml
+deploy/olm-catalog/activemq-artemis-operator/0.10.0/activemq-artemis-operator.v0.10.0.clusterserviceversion.yaml
 ```
 
 and update
