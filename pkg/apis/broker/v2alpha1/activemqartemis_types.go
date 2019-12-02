@@ -88,6 +88,7 @@ type ActiveMQArtemisStatus struct {
 
 // ActiveMQArtemis is the Schema for the activemqartemis API
 // +k8s:openapi-gen=true
+// +genclient
 type ActiveMQArtemis struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

@@ -18,6 +18,7 @@ type ActiveMQArtemisScaledownSpec struct {
 }
 
 // ActiveMQArtemisScaledownStatus defines the observed state of ActiveMQArtemisScaledown
+// +genclient
 // +k8s:openapi-gen=true
 type ActiveMQArtemisScaledownStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster

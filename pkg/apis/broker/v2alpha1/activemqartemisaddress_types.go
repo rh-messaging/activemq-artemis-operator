@@ -29,6 +29,7 @@ type ActiveMQArtemisAddressStatus struct {
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses API
+// +genclient
 // +k8s:openapi-gen=true
 type ActiveMQArtemisAddress struct {
 	metav1.TypeMeta   `json:",inline"`
