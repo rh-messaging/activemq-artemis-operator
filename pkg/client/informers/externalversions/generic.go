@@ -57,8 +57,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Broker().V2alpha1().ActiveMQArtemises().Informer()}, nil
 	case v2alpha1.SchemeGroupVersion.WithResource("activemqartemisaddresses"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Broker().V2alpha1().ActiveMQArtemisAddresses().Informer()}, nil
-	case v2alpha1.SchemeGroupVersion.WithResource("activemqartemisscaledownstatuses"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Broker().V2alpha1().ActiveMQArtemisScaledownStatuses().Informer()}, nil
+	case v2alpha1.SchemeGroupVersion.WithResource("activemqartemisscaledowns"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Broker().V2alpha1().ActiveMQArtemisScaledowns().Informer()}, nil
 
 	}
 

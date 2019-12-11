@@ -36,8 +36,8 @@ func (c *FakeBrokerV2alpha1) ActiveMQArtemisAddresses(namespace string) v2alpha1
 	return &FakeActiveMQArtemisAddresses{c, namespace}
 }
 
-func (c *FakeBrokerV2alpha1) ActiveMQArtemisScaledownStatuses(namespace string) v2alpha1.ActiveMQArtemisScaledownStatusInterface {
-	return &FakeActiveMQArtemisScaledownStatuses{c, namespace}
+func (c *FakeBrokerV2alpha1) ActiveMQArtemisScaledowns(namespace string) v2alpha1.ActiveMQArtemisScaledownInterface {
+	return &FakeActiveMQArtemisScaledowns{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

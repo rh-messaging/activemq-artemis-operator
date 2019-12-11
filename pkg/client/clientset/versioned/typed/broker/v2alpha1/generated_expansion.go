@@ -22,4 +22,4 @@ type ActiveMQArtemisExpansion interface{}
 
 type ActiveMQArtemisAddressExpansion interface{}
 
-type ActiveMQArtemisScaledownStatusExpansion interface{}
+type ActiveMQArtemisScaledownExpansion interface{}

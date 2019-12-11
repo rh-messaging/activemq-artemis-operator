@@ -18,7 +18,6 @@ type ActiveMQArtemisScaledownSpec struct {
 }
 
 // ActiveMQArtemisScaledownStatus defines the observed state of ActiveMQArtemisScaledown
-// +genclient
 // +k8s:openapi-gen=true
 type ActiveMQArtemisScaledownStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
@@ -30,6 +29,7 @@ type ActiveMQArtemisScaledownStatus struct {
 
 // ActiveMQArtemisScaledown is the Schema for the activemqartemisscaledowns API
 // +k8s:openapi-gen=true
+// +genclient
 type ActiveMQArtemisScaledown struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

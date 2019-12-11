@@ -34,10 +34,10 @@ type ActiveMQArtemisAddressListerExpansion interface{}
 // ActiveMQArtemisAddressNamespaceLister.
 type ActiveMQArtemisAddressNamespaceListerExpansion interface{}
 
-// ActiveMQArtemisScaledownStatusListerExpansion allows custom methods to be added to
-// ActiveMQArtemisScaledownStatusLister.
-type ActiveMQArtemisScaledownStatusListerExpansion interface{}
+// ActiveMQArtemisScaledownListerExpansion allows custom methods to be added to
+// ActiveMQArtemisScaledownLister.
+type ActiveMQArtemisScaledownListerExpansion interface{}
 
-// ActiveMQArtemisScaledownStatusNamespaceListerExpansion allows custom methods to be added to
-// ActiveMQArtemisScaledownStatusNamespaceLister.
-type ActiveMQArtemisScaledownStatusNamespaceListerExpansion interface{}
+// ActiveMQArtemisScaledownNamespaceListerExpansion allows custom methods to be added to
+// ActiveMQArtemisScaledownNamespaceLister.
+type ActiveMQArtemisScaledownNamespaceListerExpansion interface{}

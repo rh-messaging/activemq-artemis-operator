@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	apis "github.com/rh-messaging/activemq-artemis-operator/pkg/apis"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -31,7 +31,7 @@ var scheme = runtime.NewScheme()
 var codecs = serializer.NewCodecFactory(scheme)
 var parameterCodec = runtime.NewParameterCodec(scheme)
 var localSchemeBuilder = runtime.SchemeBuilder{
-	brokerv2alpha1.AddToScheme,
+	apis.AddToScheme,
 }
 
 // AddToScheme adds all types of this clientset into the given scheme. This allows composition

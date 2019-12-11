@@ -131,7 +131,7 @@ func (c *FakeActiveMQArtemises) DeleteCollection(options *v1.DeleteOptions, list
 // Patch applies the patch and returns the patched activeMQArtemis.
 func (c *FakeActiveMQArtemises) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v2alpha1.ActiveMQArtemis, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(activemqartemisesResource, c.ns, name, pt, data, subresources...), &v2alpha1.ActiveMQArtemis{})
+		Invokes(testing.NewPatchSubresourceAction(activemqartemisesResource, c.ns, name, data, subresources...), &v2alpha1.ActiveMQArtemis{})
 
 	if obj == nil {
 		return nil, err

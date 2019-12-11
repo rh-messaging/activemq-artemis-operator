@@ -31,59 +31,59 @@ import (
 	cache "k8s.io/client-go/tools/cache"
 )
 
-// ActiveMQArtemisScaledownStatusInformer provides access to a shared informer and lister for
-// ActiveMQArtemisScaledownStatuses.
-type ActiveMQArtemisScaledownStatusInformer interface {
+// ActiveMQArtemisScaledownInformer provides access to a shared informer and lister for
+// ActiveMQArtemisScaledowns.
+type ActiveMQArtemisScaledownInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v2alpha1.ActiveMQArtemisScaledownStatusLister
+	Lister() v2alpha1.ActiveMQArtemisScaledownLister
 }
 
-type activeMQArtemisScaledownStatusInformer struct {
+type activeMQArtemisScaledownInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 	namespace        string
 }
 
-// NewActiveMQArtemisScaledownStatusInformer constructs a new informer for ActiveMQArtemisScaledownStatus type.
+// NewActiveMQArtemisScaledownInformer constructs a new informer for ActiveMQArtemisScaledown type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewActiveMQArtemisScaledownStatusInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredActiveMQArtemisScaledownStatusInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewActiveMQArtemisScaledownInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredActiveMQArtemisScaledownInformer(client, namespace, resyncPeriod, indexers, nil)
 }
 
-// NewFilteredActiveMQArtemisScaledownStatusInformer constructs a new informer for ActiveMQArtemisScaledownStatus type.
+// NewFilteredActiveMQArtemisScaledownInformer constructs a new informer for ActiveMQArtemisScaledown type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredActiveMQArtemisScaledownStatusInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredActiveMQArtemisScaledownInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.BrokerV2alpha1().ActiveMQArtemisScaledownStatuses(namespace).List(options)
+				return client.BrokerV2alpha1().ActiveMQArtemisScaledowns(namespace).List(options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.BrokerV2alpha1().ActiveMQArtemisScaledownStatuses(namespace).Watch(options)
+				return client.BrokerV2alpha1().ActiveMQArtemisScaledowns(namespace).Watch(options)
 			},
 		},
-		&brokerv2alpha1.ActiveMQArtemisScaledownStatus{},
+		&brokerv2alpha1.ActiveMQArtemisScaledown{},
 		resyncPeriod,
 		indexers,
 	)
 }
 
-func (f *activeMQArtemisScaledownStatusInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredActiveMQArtemisScaledownStatusInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+func (f *activeMQArtemisScaledownInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredActiveMQArtemisScaledownInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
-func (f *activeMQArtemisScaledownStatusInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&brokerv2alpha1.ActiveMQArtemisScaledownStatus{}, f.defaultInformer)
+func (f *activeMQArtemisScaledownInformer) Informer() cache.SharedIndexInformer {
+	return f.factory.InformerFor(&brokerv2alpha1.ActiveMQArtemisScaledown{}, f.defaultInformer)
 }
 
-func (f *activeMQArtemisScaledownStatusInformer) Lister() v2alpha1.ActiveMQArtemisScaledownStatusLister {
-	return v2alpha1.NewActiveMQArtemisScaledownStatusLister(f.Informer().GetIndexer())
+func (f *activeMQArtemisScaledownInformer) Lister() v2alpha1.ActiveMQArtemisScaledownLister {
+	return v2alpha1.NewActiveMQArtemisScaledownLister(f.Informer().GetIndexer())
 }

@@ -19,8 +19,8 @@ limitations under the License.
 package v2alpha1
 
 import (
+	"fmt"
 	v2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 )
@@ -88,7 +88,7 @@ func (s activeMQArtemisNamespaceLister) Get(name string) (*v2alpha1.ActiveMQArte
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound(v2alpha1.Resource("activemqartemis"), name)
+		return nil, fmt.Errorf("activemqartemis not found: %s", name)
 	}
 	return obj.(*v2alpha1.ActiveMQArtemis), nil
 }
