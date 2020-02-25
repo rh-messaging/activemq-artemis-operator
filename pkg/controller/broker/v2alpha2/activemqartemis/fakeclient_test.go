@@ -3,6 +3,8 @@ package v2alpha2activemqartemis
 import (
 	routev1 "github.com/openshift/api/route/v1"
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	brokerv2alpha2 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
+
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -15,7 +17,7 @@ import (
 //buildReconcileWithFakeClientWithMocks return reconcile with fake client, schemes and mock objects
 func buildReconcileWithFakeClientWithMocks(objs []runtime.Object, t *testing.T) *ReconcileActiveMQArtemis {
 
-	registerObjs := []runtime.Object{&brokerv2alpha1.ActiveMQArtemis{}, &corev1.Service{}, &appsv1.StatefulSet{}, &appsv1.StatefulSetList{}, &corev1.Pod{}, &routev1.Route{}, &routev1.RouteList{}, &corev1.PersistentVolumeClaimList{}, &corev1.ServiceList{}}
+	registerObjs := []runtime.Object{&brokerv2alpha2.ActiveMQArtemis{}, &corev1.Service{}, &appsv1.StatefulSet{}, &appsv1.StatefulSetList{}, &corev1.Pod{}, &routev1.Route{}, &routev1.RouteList{}, &corev1.PersistentVolumeClaimList{}, &corev1.ServiceList{}}
 	registerObjs = append(registerObjs)
 	brokerv2alpha1.SchemeBuilder.Register(registerObjs...)
 	brokerv2alpha1.SchemeBuilder.Register()

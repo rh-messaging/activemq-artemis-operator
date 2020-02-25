@@ -23,7 +23,7 @@ To install this operator on OpenShift 4 for end-to-end testing, make sure you ha
 Push the operator bundle to your quay application repository as follows:
 
 ```bash
-operator-courier push deploy/olm-catalog/activemq-artemis-operator/0.13.0 <quay.io account> <application repo name> <version> "basic YWhhbWVlZDpIYW1lZWRAMTIz" "basic XXXXXXXXX"
+operator-courier push deploy/olm-catalog/activemq-artemis-operator/ <quay.io account> <application repo name> <version> "basic XXX" "basic XXXXXXXXX"
 ```
 
 If pushing to another quay repository, replace with your username or other repot name. 
@@ -31,7 +31,8 @@ If pushing to another quay repository, replace with your username or other repot
 for example : 
 
 ```bash
-operator-courier push deploy/olm-catalog/activemq-artemis-operator/0.13.0 ahameed amqoperator 0.13.0 "basic YWhhbWVlZDpIYW1lZWRAMTIz"
+operator-courier push deploy/olm-catalog/activemq-artemis-operator/ artemiscloud  activemq-artemis 0.14.0 "basic xxxx"
+
 ```
 
 
@@ -91,3 +92,20 @@ $ oc create -f deploy/crs/broker_activemqartemis_cr.yaml
 oc delete -f deploy/crs/broker_activemqartemis_cr.yaml
 ```
 
+
+CSV Generation
+
+```bash
+make csv
+
+# OR
+# w/ sha lookup/replacement against registry.redhat.io
+DIGESTS=true REDHATIO_TOKEN="<username>:<password>"  QUAYIO_TOKEN="basic xxxx" make csv
+
+
+```
+
+Reference Links about OLM:
+
+1- https://github.com/operator-framework/olm-book/blob/master/index.md
+ 

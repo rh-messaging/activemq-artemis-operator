@@ -132,7 +132,6 @@ func DetectOpenshift() (bool, error) {
 //	return result
 //}
 
-
 func AddEnvVarForBasic(requireLogin string, journalType string) []corev1.EnvVar {
 
 	//requireLogin := "false"
@@ -152,52 +151,52 @@ func AddEnvVarForBasic(requireLogin string, journalType string) []corev1.EnvVar 
 	envVarArray := []corev1.EnvVar{
 		{
 			"AMQ_ROLE",
-			"admin",//GetPropertyForCR("AMQ_ROLE", cr, "admin"),
+			"admin", //GetPropertyForCR("AMQ_ROLE", cr, "admin"),
 			nil,
 		},
 		{
 			"AMQ_NAME",
-			"amq-broker",//GetPropertyForCR("AMQ_NAME", cr, "amq-broker"),
+			"amq-broker", //GetPropertyForCR("AMQ_NAME", cr, "amq-broker"),
 			nil,
 		},
 		{
 			"AMQ_TRANSPORTS",
-			"",//GetPropertyForCR("AMQ_TRANSPORTS", cr, ""),
+			"", //GetPropertyForCR("AMQ_TRANSPORTS", cr, ""),
 			nil,
 		},
 		{
 			"AMQ_QUEUES",
-			"",//GetPropertyForCR("AMQ_QUEUES", cr, ""),
+			"", //GetPropertyForCR("AMQ_QUEUES", cr, ""),
 			nil,
 		},
 		{
 			"AMQ_ADDRESSES",
-			"",//GetPropertyForCR("AMQ_ADDRESSES", cr, ""),
+			"", //GetPropertyForCR("AMQ_ADDRESSES", cr, ""),
 			nil,
 		},
 		{
 			"AMQ_GLOBAL_MAX_SIZE",
-			"100 mb",//GetPropertyForCR("AMQ_GLOBAL_MAX_SIZE", cr, "100 mb"),
+			"100 mb", //GetPropertyForCR("AMQ_GLOBAL_MAX_SIZE", cr, "100 mb"),
 			nil,
 		},
 		{
 			"AMQ_REQUIRE_LOGIN",
-			requireLogin,//GetPropertyForCR("AMQ_REQUIRE_LOGIN", cr, "false"),
+			requireLogin, //GetPropertyForCR("AMQ_REQUIRE_LOGIN", cr, "false"),
 			nil,
 		},
 		{
 			"AMQ_EXTRA_ARGS",
-			"--no-autotune",//GetPropertyForCR("AMQ_EXTRA_ARGS", cr, "--no-autotune"),
+			"--no-autotune", //GetPropertyForCR("AMQ_EXTRA_ARGS", cr, "--no-autotune"),
 			nil,
 		},
 		{
 			"AMQ_ANYCAST_PREFIX",
-			"",//GetPropertyForCR("AMQ_ANYCAST_PREFIX", cr, ""),
+			"", //GetPropertyForCR("AMQ_ANYCAST_PREFIX", cr, ""),
 			nil,
 		},
 		{
 			"AMQ_MULTICAST_PREFIX",
-			"",//GetPropertyForCR("AMQ_MULTICAST_PREFIX", cr, ""),
+			"", //GetPropertyForCR("AMQ_MULTICAST_PREFIX", cr, ""),
 			nil,
 		},
 		{
@@ -207,7 +206,7 @@ func AddEnvVarForBasic(requireLogin string, journalType string) []corev1.EnvVar 
 		},
 		{
 			"AMQ_JOURNAL_TYPE",
-			journalType,//GetPropertyForCR("AMQ_JOURNAL_TYPE", cr, "nio"),
+			journalType, //GetPropertyForCR("AMQ_JOURNAL_TYPE", cr, "nio"),
 			nil,
 		},
 		{
@@ -230,12 +229,12 @@ func AddEnvVarForPersistent(customResourceName string) []corev1.EnvVar {
 	envVarArray := []corev1.EnvVar{
 		{
 			"AMQ_DATA_DIR",
-			"/opt/" + customResourceName + "/data",//GetPropertyForCR("AMQ_DATA_DIR", cr, "/opt/"+cr.Name+"/data"),
+			"/opt/" + customResourceName + "/data", //GetPropertyForCR("AMQ_DATA_DIR", cr, "/opt/"+cr.Name+"/data"),
 			nil,
 		},
 		{
 			"AMQ_DATA_DIR_LOGGING",
-			"true",//GetPropertyForCR("AMQ_DATA_DIR_LOGGING", cr, "true"),
+			"true", //GetPropertyForCR("AMQ_DATA_DIR_LOGGING", cr, "true"),
 			nil,
 		},
 	}
@@ -301,7 +300,7 @@ func AddEnvVarForCluster() []corev1.EnvVar {
 	envVarArray := []corev1.EnvVar{
 		{
 			"AMQ_CLUSTERED",
-			"true",//GetPropertyForCR("AMQ_CLUSTERED", cr, "true"),
+			"true", //GetPropertyForCR("AMQ_CLUSTERED", cr, "true"),
 			nil,
 		},
 		{

@@ -6,7 +6,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-
 func GetDefaultPorts() *[]corev1.ServicePort {
 
 	ports := []corev1.ServicePort{

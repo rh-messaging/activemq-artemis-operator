@@ -4,4 +4,6 @@ channels:
     currentCSV: activemq-artemis-operator.v0.9.1
   - name: current-76
     currentCSV: activemq-artemis-operator.v0.13.0
+  - name: current-76-offline
+    currentCSV: activemq-artemis-operator.v0.14.0
 defaultChannel: current-76

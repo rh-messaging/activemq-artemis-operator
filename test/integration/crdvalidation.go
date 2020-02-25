@@ -1,22 +1,24 @@
 package integration
 
 import (
-	"github.com/onsi/ginkgo"
-	"github.com/onsi/gomega"
 	"github.com/RHsyseng/operator-utils/pkg/validation"
 	"github.com/ghodss/yaml"
+	"github.com/onsi/ginkgo"
+	"github.com/onsi/gomega"
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	brokerv2alpha2 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
+
 	"io/ioutil"
 	"strings"
 )
 
 var crdTypeMap = map[string]interface{}{
-	"broker_v2alpha1_activemqartemis_crd.yaml":        &brokerv2alpha1.ActiveMQArtemis{},
+	"broker_activemqartemis_crd.yaml":                 &brokerv2alpha2.ActiveMQArtemis{},
 	"broker_v2alpha1_activemqartemisaddress_crd.yaml": &brokerv2alpha1.ActiveMQArtemisAddress{},
 }
 
 var crNameMap = map[string]string{
-	"activemqartemis_cr.yaml":                          "broker_v2alpha1_activemqartemis_crd.yaml",
+	"activemqartemis_cr.yaml":                          "broker_activemqartemis_crd.yaml",
 	"activemqartemisaddress_cr.yaml":                   "broker_v2alpha1_activemqartemisaddress_crd.yaml",
 	"address-queue-create.yaml":                        "broker_v2alpha1_activemqartemisaddress_crd.yaml",
 	"artemis-basic-deployment.yaml":                    "broker_v2alpha1_activemqartemis_crd.yaml",
@@ -32,23 +34,23 @@ var crNameMap = map[string]string{
 var _ = ginkgo.Describe("CRD Validation Test", func() {
 
 	ginkgo.It("Test CRD Schema", func() {
-	    for crdFileName, amqType := range crdTypeMap {
+		for crdFileName, amqType := range crdTypeMap {
 			schema := getSchema(crdFileName)
 			missingEntries := schema.GetMissingEntries(amqType)
 			for _, missing := range missingEntries {
 				gomega.Expect(strings.HasPrefix(missing.Path, "/status")).To(gomega.BeTrue(), "Discrepancy between CRD and Struct",
-						"Missing or incorrect schema validation at %v, expected type %v  in CRD file %v", missing.Path, missing.Type, crdFileName)
+					"Missing or incorrect schema validation at %v, expected type %v  in CRD file %v", missing.Path, missing.Type, crdFileName)
 			}
 		}
 	})
-	
+
 	ginkgo.It("Test Sample Custom Resources", func() {
 		testCustomResource("../../deploy/crs")
 	})
 
-    ginkgo.It("Test Example Custome Resources", func() {
-    	testCustomResource("../../deploy/examples")
-    })
+	ginkgo.It("Test Example Custome Resources", func() {
+		testCustomResource("../../deploy/examples")
+	})
 })
 
 func testCustomResource(resLoc string) {
@@ -74,11 +76,11 @@ func testCustomResource(resLoc string) {
 		gomega.Expect(crdFileName).ShouldNot(gomega.BeEmpty(), "No matching CRD file found for CR suffixed: %s", crFileName)
 		schema := getSchema(crdFileName)
 		yamlString, err := ioutil.ReadFile(resLoc + "/" + crFileName)
-		
+
 		gomega.Expect(err).To(gomega.BeNil(), "Error reading %v CR yaml", crFileName)
 		gomega.Ω(yaml.Unmarshal([]byte(yamlString), &input)).Should(gomega.Succeed())
 		gomega.Expect(schema.Validate(input)).Should(gomega.Succeed(), "File %v does not validate against the CRD schema", file)
-	}	
+	}
 }
 
 func getSchema(crdFile string) validation.Schema {
@@ -87,7 +89,7 @@ func getSchema(crdFile string) validation.Schema {
 	gomega.Expect(err).Should(gomega.Succeed(), "Error reading CRD yaml %v", yamlString)
 
 	schema, err := validation.New([]byte(yamlString))
-	gomega.Expect(err).Should(gomega.Succeed());
+	gomega.Expect(err).Should(gomega.Succeed())
 
 	return schema
 }

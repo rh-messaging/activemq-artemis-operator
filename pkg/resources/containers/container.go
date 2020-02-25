@@ -10,15 +10,14 @@ const (
 	TCPLivenessPort = 8161
 )
 
-
 //func MakeContainer(cr *brokerv2alpha1.ActiveMQArtemis) corev1.Container {
 func MakeContainer(customResourceName string, imageName string, envVarArray []corev1.EnvVar) corev1.Container {
 
 	container := corev1.Container{
 		Name:    customResourceName + "-container",
-		Image:   imageName,//cr.Spec.DeploymentPlan.Image,
+		Image:   imageName, //cr.Spec.DeploymentPlan.Image,
 		Command: []string{"/opt/amq/bin/launch.sh", "start"},
-		Env:     envVarArray,//environments.MakeEnvVarArrayForCR(cr),
+		Env:     envVarArray, //environments.MakeEnvVarArrayForCR(cr),
 		ReadinessProbe: &corev1.Probe{
 			InitialDelaySeconds: graceTime,
 			TimeoutSeconds:      5,
@@ -45,4 +44,3 @@ func MakeContainer(customResourceName string, imageName string, envVarArray []co
 
 	return container
 }
-

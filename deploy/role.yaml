@@ -1,7 +1,6 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  creationTimestamp: null
   name: activemq-artemis-operator
 rules:
 - apiGroups:
@@ -14,6 +13,7 @@ rules:
   - events
   - configmaps
   - secrets
+  - routes
   verbs:
   - '*'
 - apiGroups:

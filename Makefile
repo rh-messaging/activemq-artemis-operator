@@ -57,6 +57,11 @@ clean:
 	rm -rf build/_output
 
 
+.PHONY: csv
+csv:
+	./scripts/go-csv.sh
+
+
 # test/ci-go: test/sanity test/unit test/subcommand test/e2e/go
 
 # test/ci-ansible: test/e2e/ansible

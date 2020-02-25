@@ -1,7 +1,7 @@
 #!/bin/sh
-REGISTRY=localhost.localdomain:5000/activemq-artemis
+REGISTRY=quay.io/artemiscloud
 IMAGE=activemq-artemis-operator
-TAG=0.13.0
+TAG=0.14.0
 CFLAGS="--redhat --build-tech-preview"
 
 go generate ./...

@@ -128,7 +128,7 @@ func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 	secretDefinition := rs.generateSecrets()
 
 	//volumes.GLOBAL_DATA_PATH = environments.GetPropertyForCR("AMQ_DATA_DIR", rs.parentFSM.customResource, "/opt/"+rs.parentFSM.customResource.Name+"/data")
-	volumes.GLOBAL_DATA_PATH = "/opt/"+rs.parentFSM.customResource.Name+"/data"
+	volumes.GLOBAL_DATA_PATH = "/opt/" + rs.parentFSM.customResource.Name + "/data"
 	labels := selectors.LabelBuilder.Labels()
 
 	namespacedName := types.NamespacedName{

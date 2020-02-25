@@ -7,32 +7,42 @@ spec:
   selector:
     matchLabels:
       name: activemq-artemis-operator
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
   template:
     metadata:
       labels:
         name: activemq-artemis-operator
     spec:
-      serviceAccountName: activemq-artemis-operator
       containers:
-        - name: activemq-artemis-operator
-          # Replace this with the built image name
-          image: quay.io/artemiscloud/activemq-artemis-operator:latest
-          command:
-            - /home/activemq-artemis-operator/bin/entrypoint
-          args:
-            # Explicitly set the logging level.
-            # Valid values are debug, info, and error
-            # from most to least
-            - '--zap-level debug'
-          imagePullPolicy: Always
-          env:
-            - name: WATCH_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: OPERATOR_NAME
-              value: "activemq-artemis-operator"
+      - args:
+        - '--zap-level debug'
+        command:
+        - /home/activemq-artemis-operator/bin/entrypoint
+        env:
+        - name: OPERATOR_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['name']
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: WATCH_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: BROKER_IMAGE_7.6.0
+          value: registry.redhat.io/amq7/amq-broker:7.5
+        - name: BROKER_IMAGE_7.5.1
+          value: registry.redhat.io/amq7/amq-broker:7.5
+        - name: BROKER_IMAGE_7.5.0
+          value: registry.redhat.io/amq7/amq-broker:7.5
+        image: quay.io/artemiscloud/activemq-artemis-operator:0.14.0
+        imagePullPolicy: Always
+        name: activemq-artemis-operator
+        resources: {}
+      serviceAccountName: activemq-artemis-operator

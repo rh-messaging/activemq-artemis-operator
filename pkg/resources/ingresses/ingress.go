@@ -5,8 +5,8 @@ import (
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
 	extv1b1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"os"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )

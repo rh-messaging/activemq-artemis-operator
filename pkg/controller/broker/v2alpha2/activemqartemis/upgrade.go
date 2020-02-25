@@ -69,3 +69,17 @@ func setDefaults(cr *api.ActiveMQArtemis) {
 	}
 
 }
+//GetImage
+func GetImage(imageURL string) (image, imageTag, imageContext string) {
+	urlParts := strings.Split(imageURL, "/")
+	if len(urlParts) > 1 {
+		imageContext = urlParts[len(urlParts)-2]
+	}
+	imageAndTag := urlParts[len(urlParts)-1]
+	imageParts := strings.Split(imageAndTag, ":")
+	image = imageParts[0]
+	if len(imageParts) > 1 {
+		imageTag = imageParts[len(imageParts)-1]
+	}
+	return image, imageTag, imageContext
+}

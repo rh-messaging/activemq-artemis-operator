@@ -18,7 +18,6 @@ import (
 var log = logf.Log.WithName("package statefulsets")
 var NameBuilder namer.NamerData
 
-
 func MakeStatefulSet(namespacedName types.NamespacedName, annotations map[string]string, replicas int32, pts corev1.PodTemplateSpec) (*appsv1.StatefulSet, appsv1.StatefulSetSpec) {
 
 	labels := selectors.LabelBuilder.Labels()
@@ -40,7 +39,7 @@ func MakeStatefulSet(namespacedName types.NamespacedName, annotations map[string
 		Selector: &metav1.LabelSelector{
 			MatchLabels: labels,
 		},
-		Template: pts,//pods.NewPodTemplateSpecForCR(cr),
+		Template: pts, //pods.NewPodTemplateSpecForCR(cr),
 	}
 
 	return ss, Spec

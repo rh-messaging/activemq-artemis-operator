@@ -6,8 +6,8 @@ metadata:
 spec:
   version: 7.6.0
   deploymentPlan:
-    size: 2
-    image: quay.io/artemiscloud/activemq-artemis-operator:latest
+    size: 1
+    image: registry.redhat.io/amq7/amq-broker@sha256:ba5273b390a4762c21f005fdc92a837680417250dcd5e6d9d3c8f776e9cc372e
     requireLogin: false
     persistenceEnabled: false
     journalType: nio

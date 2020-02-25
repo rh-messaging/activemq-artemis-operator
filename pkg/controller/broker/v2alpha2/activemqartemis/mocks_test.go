@@ -148,7 +148,7 @@ var (
 		Namespace: AMQinstance.Namespace,
 		Name:      AMQinstance.Name,
 	}
-	container = containers.MakeContainer(namespacedName.Name, "quay.io/artemiscloud/activemq-artemis-operator:latest", environments.MakeEnvVarArrayForCR(&AMQinstance))
+	container   = containers.MakeContainer(namespacedName.Name, "quay.io/artemiscloud/activemq-artemis-operator:latest", environments.MakeEnvVarArrayForCR(&AMQinstance))
 	podTemplate = corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: AMQinstance.Namespace,

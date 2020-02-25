@@ -11,7 +11,6 @@ import (
 var log = logf.Log.WithName("package pods")
 var NameBuilder namer.NamerData
 
-
 //func NewPodTemplateSpecForCR(namespacedName types.NamespacedName, envVarArray []corev1.EnvVar) corev1.PodTemplateSpec {
 //
 //	// Log where we are and what we're doing
@@ -45,7 +44,7 @@ func MakePodTemplateSpec(namespacedName types.NamespacedName, labels map[string]
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      namespacedName.Name,
 			Namespace: namespacedName.Namespace,
-			Labels:    labels,//selectors.LabelBuilder.Labels(),
+			Labels:    labels, //selectors.LabelBuilder.Labels(),
 		},
 	}
 	return pts

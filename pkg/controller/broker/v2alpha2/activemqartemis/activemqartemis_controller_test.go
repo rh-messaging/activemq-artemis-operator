@@ -3,7 +3,7 @@ package v2alpha2activemqartemis
 import (
 	"fmt"
 	routev1 "github.com/openshift/api/route/v1"
-	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/stretchr/testify/assert"
