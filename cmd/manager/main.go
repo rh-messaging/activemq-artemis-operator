@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/rh-messaging/activemq-artemis-operator/version"
+	corev1 "k8s.io/api/core/v1"
 	"os"
 	"runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/apis"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/controller"
@@ -80,6 +82,7 @@ func main() {
 		os.Exit(1)
 	}
 
+
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
 	if err != nil {
@@ -90,6 +93,7 @@ func main() {
 	ctx := context.TODO()
 
 	// Become the leader before proceeding
+	//Should this user service account name instead?
 	err = leader.Become(ctx, "activemq-artemis-operator-lock")
 	if err != nil {
 		log.Error(err, "")
@@ -105,6 +109,12 @@ func main() {
 		log.Error(err, "")
 		os.Exit(1)
 	}
+	name, err := k8sutil.GetOperatorName()
+	if err != nil {
+		log.Error(err, "Failed to get operator name")
+		os.Exit(1)
+	}
+	setupAccountName(mgr, ctx, namespace, name)
 
 	log.Info("Registering Components.")
 
@@ -132,5 +142,21 @@ func main() {
 	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
 		log.Error(err, "Manager exited non-zero")
 		os.Exit(1)
+	}
+}
+
+func setupAccountName(mgr manager.Manager, ctx context.Context, ns, podname string) {
+	clnt := mgr.GetClient()
+	pod := &corev1.Pod{}
+	key := client.ObjectKey{Namespace: ns, Name: podname}
+	err := clnt.Get(ctx, key, pod)
+	if err != nil {
+		log.Error(err, "failed to get pod")
+	} else {
+		log.Info("service account name: " + pod.Spec.ServiceAccountName)
+		err = os.Setenv("SERVICE_ACCOUNT",pod.Spec.ServiceAccountName)
+		if err != nil {
+			log.Error(err, "failed to set env variable")
+		}
 	}
 }
