@@ -111,7 +111,13 @@ func main() {
 		os.Exit(1)
 	}
 	name := os.Getenv(leader.PodNameEnv)
-	setupAccountName(mgr, ctx, namespace, name)
+	clnt, err := client.New(cfg, client.Options{})
+	if err != nil {
+		log.Error(err, "can't create client from config")
+		os.Exit(1)
+	}  else {
+		setupAccountName(clnt, ctx, namespace, name)
+	}
 
 	log.Info("Registering Components.")
 
@@ -142,8 +148,7 @@ func main() {
 	}
 }
 
-func setupAccountName(mgr manager.Manager, ctx context.Context, ns, podname string) {
-	clnt := mgr.GetClient()
+func setupAccountName(clnt client.Client, ctx context.Context, ns, podname string) {
 	pod := &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
