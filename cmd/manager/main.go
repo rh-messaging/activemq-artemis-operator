@@ -7,6 +7,7 @@ import (
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/rh-messaging/activemq-artemis-operator/version"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"os"
 	"runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -143,7 +144,13 @@ func main() {
 
 func setupAccountName(mgr manager.Manager, ctx context.Context, ns, podname string) {
 	clnt := mgr.GetClient()
-	pod := &corev1.Pod{}
+	pod := &corev1.Pod{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Pod",
+		},
+	}
+
 	key := client.ObjectKey{Namespace: ns, Name: podname}
 	err := clnt.Get(ctx, key, pod)
 	if err != nil {
