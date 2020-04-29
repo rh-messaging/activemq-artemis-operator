@@ -109,11 +109,7 @@ func main() {
 		log.Error(err, "")
 		os.Exit(1)
 	}
-	name, err := k8sutil.GetOperatorName()
-	if err != nil {
-		log.Error(err, "Failed to get operator name")
-		os.Exit(1)
-	}
+	name := os.Getenv(leader.PodNameEnv)
 	setupAccountName(mgr, ctx, namespace, name)
 
 	log.Info("Registering Components.")
