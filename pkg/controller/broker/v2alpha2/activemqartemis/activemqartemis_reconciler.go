@@ -396,16 +396,16 @@ func configureAcceptorsExposure(customResource *brokerv2alpha2.ActiveMQArtemis, 
 	causedUpdate := false
 
 	originalLabels := selectors.LabelBuilder.Labels()
-	serviceRoutelabels := map[string]string{}
-	for k, v := range originalLabels {
-		serviceRoutelabels[k] = v
-	}
 	namespacedName := types.NamespacedName{
 		Name:		customResource.Name,
 		Namespace:	customResource.Namespace,
 	}
 	for ; i < customResource.Spec.DeploymentPlan.Size; i++ {
 		ordinalString = strconv.Itoa(int(i))
+		var serviceRoutelabels = make(map[string]string)
+		for k, v := range originalLabels {
+			serviceRoutelabels[k] = v
+		}
 		serviceRoutelabels["statefulset.kubernetes.io/pod-name"] = statefulsets.NameBuilder.Name() + "-" + ordinalString
 
 		for _, acceptor := range customResource.Spec.Acceptors {
@@ -447,16 +447,16 @@ func configureConnectorsExposure(customResource *brokerv2alpha2.ActiveMQArtemis,
 	causedUpdate := false
 
 	originalLabels := selectors.LabelBuilder.Labels()
-	serviceRoutelabels := map[string]string{}
-	for k, v := range originalLabels {
-		serviceRoutelabels[k] = v
-	}
 	namespacedName := types.NamespacedName{
 		Name:		customResource.Name,
 		Namespace:	customResource.Namespace,
 	}
 	for ; i < customResource.Spec.DeploymentPlan.Size; i++ {
 		ordinalString = strconv.Itoa(int(i))
+		var serviceRoutelabels = make(map[string]string)
+		for k, v := range originalLabels {
+			serviceRoutelabels[k] = v
+		}
 		serviceRoutelabels["statefulset.kubernetes.io/pod-name"] = statefulsets.NameBuilder.Name() + "-" + ordinalString
 
 		for _, connector := range customResource.Spec.Connectors {
@@ -501,16 +501,16 @@ func configureConsoleExposure(customResource *brokerv2alpha2.ActiveMQArtemis, cl
 	console := customResource.Spec.Console
 
 	originalLabels := selectors.LabelBuilder.Labels()
-	serviceRoutelabels := map[string]string{}
-	for k, v := range originalLabels {
-		serviceRoutelabels[k] = v
-	}
 	namespacedName := types.NamespacedName{
 		Name:		customResource.Name,
 		Namespace:	customResource.Namespace,
 	}
 	for ; i < customResource.Spec.DeploymentPlan.Size; i++ {
 		ordinalString = strconv.Itoa(int(i))
+        var serviceRoutelabels = make(map[string]string)
+		for k, v := range originalLabels {
+			serviceRoutelabels[k] = v
+		}
 		serviceRoutelabels["statefulset.kubernetes.io/pod-name"] = statefulsets.NameBuilder.Name() + "-" + ordinalString
 
 		portNumber := int32(8161)

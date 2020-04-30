@@ -40,5 +40,8 @@ spec:
               type: object
             status:
               type: object
+    - name: v1alpha2
+      served: false 
+      storage: false
   subresources:
     status: {}
