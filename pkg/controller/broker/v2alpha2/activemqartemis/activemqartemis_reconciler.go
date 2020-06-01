@@ -267,7 +267,7 @@ func sourceEnvVarFromSecret(customResource *brokerv2alpha2.ActiveMQArtemis, curr
 		for k := range *envVars {
 			elem, ok := nettySecret.Data[k]
 			if 0 != strings.Compare(string(elem), (*envVars)[k]) || !ok {
-				log.Info("Secret exists but not equals, or not ok", "elem", string(elem), "entry", (*envVars)[k], "ok?", ok)
+				log.Info("Secret exists but not equals, or not ok", "ok?", ok)
 				nettySecret.Data[k] = []byte((*envVars)[k])
 				needUpdate = true
 			}
@@ -285,7 +285,7 @@ func sourceEnvVarFromSecret(customResource *brokerv2alpha2.ActiveMQArtemis, curr
 		}
 	}
 
-	log.Info("Pupulating env vars", "envVars", *envVars)
+	log.Info("Populating env vars")
 
 	for envVarName := range *envVars {
 
