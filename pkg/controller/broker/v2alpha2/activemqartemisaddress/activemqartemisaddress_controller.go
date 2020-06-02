@@ -1,17 +1,21 @@
-package v2alpha1activemqartemisaddress
+package v2alpha2activemqartemisaddress
 
 import (
 	"context"
+	mgmt "github.com/artemiscloud/activemq-artemis-management"
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	brokerv2alpha2 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
+	v2alpha1activemqartemisaddress "github.com/rh-messaging/activemq-artemis-operator/pkg/controller/broker/v2alpha1/activemqartemisaddress"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/secrets"
 	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
-	mgmt "github.com/artemiscloud/activemq-artemis-management"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -22,8 +26,11 @@ import (
 	"strconv"
 )
 
-var log = logf.Log.WithName("controller_v2alpha1activemqartemisaddress")
+var log = logf.Log.WithName("controller_v2alpha2activemqartemisaddress")
 var namespacedNameToAddressName = make(map[types.NamespacedName]brokerv2alpha2.ActiveMQArtemisAddress)
+
+//This channel is used to receive new ready pods
+var C = make(chan types.NamespacedName)
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
@@ -38,13 +45,43 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
+	go setupAddressObserver(mgr, C)
 	return &ReconcileActiveMQArtemisAddress{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+}
+
+func setupAddressObserver(mgr manager.Manager, c chan types.NamespacedName) {
+	log.Info("Setting up address observer")
+	cfg, err := clientcmd.BuildConfigFromFlags("", "")
+	if err != nil {
+		log.Error(err, "Error building kubeconfig: %s", err.Error())
+	}
+
+	kubeClient, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		log.Error(err, "Error building kubernetes clientset: %s", err.Error())
+	}
+
+	namespace, err := k8sutil.GetWatchNamespace()
+
+	if err != nil {
+		log.Error(err, "Failed to get watch namespace")
+		return
+	}
+
+	observer := v2alpha1activemqartemisaddress.NewAddressObserver(kubeClient, namespace, mgr.GetClient())
+
+	if err = observer.Run(C); err != nil {
+		log.Error(err, "Error running controller: %s", err.Error())
+	}
+
+	log.Info("Finish setup address observer")
+	return
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("v2alpha1activemqartemisaddress-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("v2alpha2activemqartemisaddress-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
@@ -247,7 +284,7 @@ func getPodBrokers(instance *brokerv2alpha2.ActiveMQArtemisAddress, request reco
 					}
 				}
 
-				reqLogger.Info("New Jololia with ", "User: ", jolokiaUser, "Password: ", jolokiaPassword)
+				reqLogger.Info("New Jolokia with ", "User: ", jolokiaUser, "Password: ", jolokiaPassword)
 				artemis := mgmt.NewArtemis(pod.Status.PodIP, "8161", "amq-broker", jolokiaUser, jolokiaPassword)
 				artemisArray = append(artemisArray, artemis)
 			}

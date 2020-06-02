@@ -2,16 +2,19 @@ package v2alpha1activemqartemisaddress
 
 import (
 	"context"
+	mgmt "github.com/artemiscloud/activemq-artemis-management"
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/secrets"
 	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
-	mgmt "github.com/artemiscloud/activemq-artemis-management"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -20,9 +23,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	"strconv"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/kubernetes"
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 )
 
 var log = logf.Log.WithName("controller_v2alpha1activemqartemisaddress")
@@ -277,7 +277,7 @@ func getPodBrokers(instance *brokerv2alpha1.ActiveMQArtemisAddress, request reco
 					}
 				}
 
-				reqLogger.Info("New Jololia with ", "User: ", jolokiaUser, "Password: ", jolokiaPassword)
+				reqLogger.Info("New Jolokia with ", "User: ", jolokiaUser, "Password: ", jolokiaPassword)
 				artemis := mgmt.NewArtemis(pod.Status.PodIP, "8161", "amq-broker", jolokiaUser, jolokiaPassword)
 				artemisArray = append(artemisArray, artemis)
 			}

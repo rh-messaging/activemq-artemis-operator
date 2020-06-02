@@ -17,21 +17,21 @@ limitations under the License.
 package v2alpha1activemqartemisaddress
 
 import (
-	"fmt"
-	"time"
 	"context"
+	"fmt"
 	"strconv"
+	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	clientv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha1"
-	"k8s.io/client-go/tools/clientcmd"
-	corev1 "k8s.io/api/core/v1"
-	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/apimachinery/pkg/types"
 	mgmt "github.com/artemiscloud/activemq-artemis-management"
+	clientv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha1"
 	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 //var log = logf.Log.WithName("addressobserver_v2alpha1activemqartemisaddress")
@@ -172,7 +172,7 @@ func (c *AddressObserver) checkCRsForNewPod(newPod *corev1.Pod) {
 			}
 		}
 
-		log.Info("New Jololia with ", "User: ", jolokiaUser, "Password: ", jolokiaPassword, "podIP: ", newPod.Status.PodIP)
+		log.Info("New Jolokia with ", "User: ", jolokiaUser, "Password: ", jolokiaPassword, "podIP: ", newPod.Status.PodIP)
 		artemis := mgmt.NewArtemis(newPod.Status.PodIP, "8161", "amq-broker", jolokiaUser, jolokiaPassword)
 
 		for _, a := range result.Items {

@@ -8,7 +8,8 @@ import (
 	"github.com/RHsyseng/operator-utils/pkg/resource/compare"
 	"github.com/RHsyseng/operator-utils/pkg/resource/read"
 	"github.com/RHsyseng/operator-utils/pkg/resource/write"
-	v2alpha1activemqartemisaddress "github.com/rh-messaging/activemq-artemis-operator/pkg/controller/broker/v2alpha1/activemqartemisaddress"
+	//v2alpha1activemqartemisaddress "github.com/rh-messaging/activemq-artemis-operator/pkg/controller/broker/v2alpha1/activemqartemisaddress"
+	v2alpha2activemqartemisaddress "github.com/rh-messaging/activemq-artemis-operator/pkg/controller/broker/v2alpha2/activemqartemisaddress"
 	activemqartemisscaledown "github.com/rh-messaging/activemq-artemis-operator/pkg/controller/broker/v2alpha1/activemqartemisscaledown"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/containers"
@@ -1272,7 +1273,7 @@ func GetPodStatus(cr *brokerv2alpha2.ActiveMQArtemis, client client.Client, name
 		// More pods ready, let the address controller know
 		newPodCount := len(status.Ready) - len(lastStatus.Ready)
 		for i := newPodCount-1; i < len(status.Ready); i++ {
-			v2alpha1activemqartemisaddress.C <- types.NamespacedName{namespacedName.Namespace, status.Ready[i]}
+			v2alpha2activemqartemisaddress.C <- types.NamespacedName{namespacedName.Namespace, status.Ready[i]}
 		}
 	}
 	lastStatus = status
