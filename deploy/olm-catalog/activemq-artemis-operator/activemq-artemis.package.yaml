@@ -1,5 +1,5 @@
 packageName: activemq-artemis
 channels:
   - name: current
-    currentCSV: activemq-artemis-operator.v0.14.0
+    currentCSV: activemq-artemis-operator.v0.15.0
 defaultChannel: current

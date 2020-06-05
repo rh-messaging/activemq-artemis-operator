@@ -5,7 +5,6 @@ import (
 	mgmt "github.com/artemiscloud/activemq-artemis-management"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	brokerv2alpha2 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
-	v2alpha1activemqartemisaddress "github.com/rh-messaging/activemq-artemis-operator/pkg/controller/broker/v2alpha1/activemqartemisaddress"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/secrets"
 	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
@@ -68,7 +67,7 @@ func setupAddressObserver(mgr manager.Manager, c chan types.NamespacedName) {
 		return
 	}
 
-	observer := v2alpha1activemqartemisaddress.NewAddressObserver(kubeClient, namespace, mgr.GetClient())
+	observer := NewAddressObserver(kubeClient, namespace, mgr.GetClient())
 
 	if err = observer.Run(C); err != nil {
 		log.Error(err, "Error running controller: %s", err.Error())

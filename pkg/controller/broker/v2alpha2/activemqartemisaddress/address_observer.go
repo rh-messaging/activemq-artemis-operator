@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v2alpha1activemqartemisaddress
+package v2alpha2activemqartemisaddress
 
 import (
 	"context"

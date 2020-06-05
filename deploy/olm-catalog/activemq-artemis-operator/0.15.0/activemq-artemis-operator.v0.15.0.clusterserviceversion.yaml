@@ -1,0 +1,561 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  name: activemq-artemis-operator.v0.15.0
+  namespace: placeholder
+  annotations:
+    categories: "Streaming & Messaging"
+    certified: "false"
+    description: ActiveMQ Artemis Operator provides the ability to deploy and manage stateful ActiveMQ Artemis broker clusters
+    containerImage: quay.io/artemiscloud/activemq-artemis-operator:0.15.0
+    createdAt: 2019-11-25T08:16:32Z
+    capabilities: Seamless Upgrades
+    repository: https://github.com/rh-messaging/activemq-artemis-operator
+    support: Red Hat
+    tectonic-visibility: ocs
+    alm-examples: >-
+      [{
+          "apiVersion": "broker.amq.io/v2alpha2",
+          "kind": "ActiveMQArtemis",
+          "metadata": {
+              "name": "ex-aao",
+              "application": "ex-aao-app"
+          },
+          "spec": {
+              "deploymentPlan": {
+                  "size": 2,
+                  "image": "quay.io/artemiscloud/activemq-artemis-openshift-image:latest",
+                  "requireLogin": false,
+                  "persistenceEnabled": false,
+                  "journalType": "nio",
+                  "messageMigration": false
+              }
+          }
+      },
+      {
+          "apiVersion": "broker.amq.io/v2alpha2",
+          "kind": "ActiveMQArtemisAddress",
+          "metadata": {
+              "name": "ex-aaoaddress"
+          },
+          "spec": {
+              "addressName": "myAddress0",
+              "queueName": "myQueue0",
+              "routingType": "anycast"
+          }
+      },
+      {
+          "apiVersion": "broker.amq.io/v2alpha1",
+          "kind": "ActiveMQArtemisScaledown",
+          "metadata": {
+              "name": "ex-aaoscaledown"
+          },
+          "spec": {
+              "localOnly": "true"
+          }
+      }]
+labels:
+  operator-activemqartemis: "true"
+  operatorframework.io/arch.amd64: supported
+spec:
+  displayName: ActiveMQ Artemis
+  description: ActiveMQ Artemis Operator provides the ability to deploy and manage stateful ActiveMQ Artemis broker clusters
+  keywords:
+    - activemqartemis
+    - operator
+  version: 0.15.0
+  replaces: activemq-artemis-operator.v0.13.0
+  maturity: alpha
+  maintainers:
+    - name: Red Hat
+      email: rkieley@redhat.com
+  provider:
+    name: Red Hat
+  links:
+    - name: Product Page
+      url: https://access.redhat.com/products/red-hat-amq/
+    - name: Documentation
+      url: https://access.redhat.com/documentation/en-us/red_hat_amq/
+  icon:
+    - base64data: iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABGdBTUEAALGPC/xhBQAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAAlywAAJcsBGkdkZgAAAAd0SU1FB+MDHQ02AU8UBK4AAASBSURBVFjDtZfNb1RlFMZ/7zt3vqCU0pSSQjMSbCHVRSEjq7aBhQvFsDBqJIYF/gGGxAUpREyMCG5YqCSuiDGGRE2NCxTRBgkJuGlKYpAOBW3NtJ22UzoznTv3du6d++FibsvQ6XzQ1rO899z3Oefc5zznvII6LRahCTgCHAIOAu3ANu91GpgEhoBbwLWuOJl6zhV1AO8F+oG3gU11xqsD3wMXuuI8XFMAsQhh4BzwHuBnbVYAvgDOdsXR6w4gFqET+BF4kY2x+8DrXXEe1QwgFuEA8CuwnY21Od3h1egkwxUD8DK/8z+AozugOaQl9PQmiJUF4P3zoQ0s+0rwJRv1QbQngQaglPidqwYuWjtp+eRzELIqmF0wyefzy7kVcira6XdLXfY58KlH7qKX12p/VWO7cvA1OgZ+wrVthM+HY1lIRXnKx7EsMpkMOVXFJ8AwDMJ+P3/3daw8zpLQ3ZtgZCmd0/W22r/jY6jpFLdv/o6xuFgGbrsuqqqyuJDhcTJZMR8XzgAIT+GmaonMcgUsC6H4sAsWPr+/DBxgMaciERhGnk2BwGoVAMj7BO2KJ681Fc6ZHCd18waIculYXFjAdoosU/buI9y6Ayu7gDUyQjqnVjoy5LgcVYDD9ZTemR4heeLlmmxvvHydzaEw8Y/OYt74ttaxhxTgpdIn4eOnCHR0epS2KmusrmOXyEh28Be0u4OEZmeYv/J1PeC4EFW8qbZszW8dY8v+A1U/zGsaqpYjr+lIn8QfDKEWTLg7yHz/ibr1QUBEKRmpT/6pmiWZTBIIhjBNk+f27CkBz6FqOq5tMzUxQbChgdYdO9YkUC40KquyY3MDO3cFED6J67hl4AiBkJKtzdtQAkGklGtWSQVIAa3L2T8aRQYDBNt2oTQ14Zgm2v17WKaJlsvhel1guRD2vjFmZzDj8WcGF5AVsQh3gbKfrvS+SeSzLxE+H//sb66m7euxe4o3gMoCsG4PED8JbR9+7EUUJHzsJKaU+FxorDgMbArGk1ng6BrG1cuVKjAsYhHeAa5ULFOgAdfMoRw8QsfAzzVY5ZJNp9GNPAKBbdtI0+RR3/OVAjghgWveDrf6mWauSEAvo+nJCbRslj+HhjAN42nwTBrDtpmfe4yanGFyfKxqN0vBVeltr9/VUjjda4amrU2EwmEiu3fj92ZBETyDYdkABPx+lGCIcDhcjYA/9EyRWmrDC8Dx1SbiEuH8mRT67AwCganrhID83BwA2kKGfKFQpMqWRppaWnAdG7/jYCRnV8O3BJxfuRFdBN5fL9vbvrpOY3c301e+IXvxVKXsL/UligtJqYJ84G2v62o117KqggOjUtBfaSntAP7QHbavtc/lnijO2HCl1ylvKX1QcS0fbieqOfwGNG/wbpqS8EpvgqGnAl7pFZ1kWEIPMLqB4KNe5kNlFVvNuzfBA0UQFcVrlbUOYEvAJQWipWV/psvp7Z284MIZF94AQnUCGwIGBJzvTTCyrtvxkt3ZRbPjchQ47EJUQGRpJAjIuhAXMAzckoKrPVPM13Puf2Qd6X5KXrjXAAAAAElFTkSuQmCC
+      mediatype: image/png
+  labels:
+    alm-owner-amq-broker: activemq-artemis-operator
+    operated-by: activemq-artemis-operator.v0.15.0
+  selector:
+    matchLabels:
+      ActiveMQArtemis: ex-aao
+      application: ex-aao-app
+      operated-by: activemq-artemis-operator.v0.15.0
+  installModes:
+    - type: OwnNamespace
+      supported: true
+    - type: SingleNamespace
+      supported: false
+    - type: MultiNamespace
+      supported: false
+    - type: AllNamespaces
+      supported: false
+  customresourcedefinitions:
+    owned:
+      - name: activemqartemises.broker.amq.io
+        version: v2alpha2
+        versions:
+          - name: v2alpha2
+            served: true
+            storage: true
+          - name: v2alpha1
+            served: true
+            storage: false
+          - name: v1alpha1
+            served: false
+            storage: false
+        kind: ActiveMQArtemis
+        description: An instance of Active MQ Artemis
+        displayName: ActiveMQ Artemis
+        resources:
+          - kind: Service
+            version: v1
+          - kind: Route
+            version: v1
+          - kind: StatefulSet
+            version: v1
+          - kind: Secret
+            version: v1
+        specDescriptors:
+          - description: User name for standard broker user. It is required for connecting to the broker and the web console. If left empty, it will be generated.
+            displayName: AdminUser
+            path: adminUser
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:AdminUser'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Password for standard broker user. It is required for connecting to the broker and the web console. If left empty, it will be generated.
+            displayName: AdminPassword
+            path: adminPassword
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:AdminUser'
+              - 'urn:alm:descriptor:com.tectonic.ui:password'
+          - description: The version of the broker deployment.
+            displayName: Version
+            path: version
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:Version'
+              - 'urn:alm:descriptor:com.tectonic.ui:password'
+          - description: The number of broker pods to deploy
+            displayName: Size
+            path: deploymentPlan.size
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:podCount'
+          - description: The image used for the broker deployment
+            displayName: Image
+            path: deploymentPlan.image
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: If true require user password login credentials for broker protocol ports
+            displayName: RequireLogin
+            path: deploymentPlan.requireLogin
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: If true use persistent volume via persistent volume claim for journal storage
+            displayName: PersistenceEnabled
+            path: deploymentPlan.persistenceEnabled
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: If aio use ASYNCIO, if nio use NIO for journal IO
+            displayName: JournalType
+            path: deploymentPlan.journalType
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: If true migrate messages on scaledown
+            displayName: MessageMigration
+            path: deploymentPlan.messageMigration
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+
+          - description:  A single acceptor configuration
+            displayName: Name
+            path: acceptors[0].name
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:acceptors'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Port number
+            displayName: Port
+            path: acceptors[0].port
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:acceptors'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: The protocols to enable for this acceptor
+            displayName: Protocols
+            path: acceptors[0].protocols
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:acceptors'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description:  Whether or not to enable SSL on this port
+            displayName: Ssl Enabled
+            path: acceptors[0].sslEnabled
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:acceptors'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Name of the secret to use for ssl information
+            displayName: Ssl Secret
+            path: acceptors[0].sslSecret
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:acceptors'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Comma separated list of cipher suites used for SSL communication.
+            displayName: Enabled Cipher Suites
+            path: acceptors[0].enabledCipherSuites
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:acceptors'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Comma separated list of protocols used for SSL communication.
+            displayName: Enabled Protocols
+            path: acceptors[0].enabledProtocols
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:acceptors'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Tells a client connecting to this acceptor that 2-way SSL is required. This property takes precedence over wantClientAuth.
+            displayName: Need Client Auth
+            path: acceptors[0].needClientAuth
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:acceptors'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Tells a client connecting to this acceptor that 2-way SSL is requested but not required. Overridden by needClientAuth.
+            displayName: Want Client Auth
+            path: acceptors[0].wantClientAuth
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:acceptors'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: The CN of the connecting client's SSL certificate will be compared to its hostname to verify they match. This is useful only for 2-way SSL.
+            displayName: Verify Host
+            path: acceptors[0].verifyHost
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:acceptors'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Used to change the SSL Provider between JDK and OPENSSL. The default is JDK.
+            displayName: Ssl Provider
+            path: acceptors[0].sslProvider
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:acceptors'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: A regular expression used to match the server_name extension on incoming SSL connections. If the name doesn't match then the connection to the acceptor will be rejected.
+            displayName: Sni Host
+            path: acceptors[0].sniHost
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:acceptors'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Whether or not to expose this acceptor
+            displayName: Expose
+            path: acceptors[0].expose
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:acceptors'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: To indicate which kind of routing type to use.
+            displayName: AnyCast Prefix
+            path: acceptors[0].anycastPrefix
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:acceptors'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: To indicate which kind of routing type to use
+            displayName: Multicast Prefix
+            path: acceptors[0].multicastPrefix
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:acceptors'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: To indicate which kind of routing type to use
+            displayName: Connections Allowed
+            path: acceptors[0].connectionsAllowed
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:acceptors'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+
+          - description:  The name of the connector
+            displayName: Name
+            path: connectors[0].name
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:connectors'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The type either tcp or vm
+            displayName: Type
+            path: connectors[0].type
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:connectors'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description:  Hostname or IP to connect to
+            displayName: Host Name
+            path: connectors[0].host
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:connectors'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Port number
+            displayName: Port
+            path: connectors[0].port
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:connectors'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description:  Whether or not to enable SSL on this port
+            displayName: Ssl Enabled
+            path: connectors[0].sslEnabled
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:connectors'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Name of the secret to use for ssl information
+            displayName: Ssl Secret
+            path: connectors[0].sslSecret
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:connectors'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Comma separated list of cipher suites used for SSL communication.
+            displayName: Enabled Cipher Suites
+            path: connectors[0].enabledCipherSuites
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:connectors'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Comma separated list of protocols used for SSL communication.
+            displayName: Enabled Protocols
+            path: connectors[0].enabledProtocols
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:connectors'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Tells a client connecting to this connector that 2-way SSL is required. This property takes precedence over wantClientAuth.
+            displayName: Need Client Auth
+            path: connectors[0].needClientAuth
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:connectors'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Tells a client connecting to this connector that 2-way SSL is requested but not required. Overridden by needClientAuth.
+            displayName: Want Client Auth
+            path: connectors[0].wantClientAuth
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:connectors'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: The CN of the connecting client's SSL certificate will be compared to its hostname to verify they match. This is useful only for 2-way SSL.
+            displayName: Verify Host
+            path: connectors[0].verifyHost
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:connectors'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Used to change the SSL Provider between JDK and OPENSSL. The default is JDK.
+            displayName: Ssl Provider
+            path: connectors[0].sslProvider
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:connectors'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: A regular expression used to match the server_name extension on incoming SSL connections. If the name doesn't match then the connection to the acceptor will be rejected.
+            displayName: Sni Host
+            path: connectors[0].sniHost
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:connectors'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Whether or not to expose this connector
+            displayName: Expose
+            path: connectors[0].expose
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:connectors'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+
+          - description: Whether or not to expose this port
+            displayName: Expose
+            path: console.expose
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:console'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Whether or not to enable SSL on this port
+            displayName: Ssl Enabled
+            path: console.sslEnabled
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:console'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Name of the secret to use for ssl information
+            displayName: Ssl Secret
+            path: console.sslSecret
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:console'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: If the embedded server requires client authentication
+            displayName: Use Client Auth
+            path: console.useClientAuth
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:console'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+
+          - description: Set to true to enable automatic micro version product upgrades, disabled by default.
+            displayName: Enabled
+            path: upgrades.enabled
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:upgrades'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Set to true to enable automatic micro version product upgrades, disabled by default. Requires spec.upgrades.enabled true.
+            displayName: Minor
+            path: upgrades.minor
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:upgrades'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+
+        statusDescriptors:
+          - description: The current pods
+            displayName: Pods Status
+            path: podStatus
+            x-descriptors:
+              - "urn:alm:descriptor:com.tectonic.ui:podStatuses"
+
+      - name: activemqartemisaddresses.broker.amq.io
+        version: v2alpha2
+        versions:
+          - name: v2alpha2
+            served: true
+            storage: true
+          - name: v2alpha1
+            served: true
+            storage: false
+          - name: v1alpha2
+            served: true
+            storage: false
+          - name: v1alpha1
+            served: false
+            storage: false
+        kind: ActiveMQArtemisAddress
+        description: Adding and removing addresses via custom resource definitions
+        displayName: ActiveMQ Artemis Address
+        specDescriptors:
+          - description: The Queue Name
+            displayName: Queue Name
+            path: queueName
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The Address Name
+            displayName: Address Name
+            path: addressName
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The Routing Type
+            displayName: Routing Type
+            path: routingType
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Whether or not delete the queue from broker when CR is undeployed(default false)
+            displayName: Remove From Broker On Delete
+            path: removeFromBrokerOnDelete
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+
+      - name: activemqartemisscaledowns.broker.amq.io
+        version: v2alpha1
+        versions:
+          - name: v2alpha1
+            served: true
+            storage: true
+          - name: v1alpha1
+            served: false
+            storage: false
+        kind: ActiveMQArtemisScaledown
+        description: Provides message migration on clustered broker scaledown
+        displayName: ActiveMQ Artemis Scaledown
+        specDescriptors:
+          - description: Triggered by main ActiveMQArtemis CRD messageMigration entry
+            displayName: LocalOnly
+            path: localOnly
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:SingleNamespace'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+
+  install:
+    strategy: deployment
+    spec:
+      permissions:
+        - serviceAccountName: activemq-artemis-operator
+          rules:
+            - apiGroups:
+                - ""
+              resources:
+                - pods
+                - services
+                - endpoints
+                - persistentvolumeclaims
+                - events
+                - configmaps
+                - secrets
+                - routes
+              verbs:
+                - '*'
+            - apiGroups:
+                - ""
+              resources:
+                - namespaces
+              verbs:
+                - get
+            - apiGroups:
+                - apps
+              resources:
+                - deployments
+                - daemonsets
+                - replicasets
+                - statefulsets
+              verbs:
+                - '*'
+            - apiGroups:
+                - monitoring.coreos.com
+              resources:
+                - servicemonitors
+              verbs:
+                - get
+                - create
+            - apiGroups:
+                - broker.amq.io
+              resources:
+                - '*'
+              verbs:
+                - '*'
+            - apiGroups:
+                - "route.openshift.io"
+              resources:
+                - routes
+                - routes/custom-host
+                - routes/status
+              verbs:
+                - get
+                - list
+                - watch
+                - create
+                - delete
+
+      deployments:
+        - name: activemq-artemis-operator
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                name: activemq-artemis-operator
+            template:
+              metadata:
+                labels:
+                  name: activemq-artemis-operator
+              spec:
+                serviceAccountName: activemq-artemis-operator
+                containers:
+                  - name: activemq-artemis-operator
+                    image: quay.io/artemiscloud/activemq-artemis-operator:0.15.0
+                    command:
+                      -  /home/activemq-artemis-operator/bin/entrypoint
+                    imagePullPolicy: Always
+                    env:
+                      - name: WATCH_NAMESPACE
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.namespace
+                      - name: POD_NAME
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.name
+                      - name: OPERATOR_NAME
+                        value: "activemq-artemis-operator"
