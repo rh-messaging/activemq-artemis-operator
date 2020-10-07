@@ -9,28 +9,32 @@ import (
 
 const (
 	// LatestVersion product version supported
-	LatestVersion        = "0.2.0"
-	CompactLatestVersion = "020"
+	LatestVersion        = "7.7.0"
+	CompactLatestVersion = "770"
 	// LastMicroVersion product version supported
-	LastMicroVersion = "0.2.0"
+	LastMicroVersion = "7.6.0"
 	// LastMinorVersion product version supported
-	LastMinorVersion = "0.1.0"
+	LastMinorVersion = "7.6.0"
 )
 
 // SupportedVersions - product versions this operator supports
 var SupportedVersions = []string{LatestVersion, LastMicroVersion, LastMinorVersion}
 var OperandVersionFromOperatorVersion map[string]string = map[string]string{
-	"0.16.0": "0.1.0",
-	"0.17.0": "0.2.0",
+	"0.9.1" : "7.5.0",
+	"0.13.0" : "7.6.0",
+	"0.15.0" : "7.7.0",
+	"0.17.0" : "7.7.0",
 }
 var FullVersionFromMinorVersion map[string]string = map[string]string{
-	"01": "0.1.0",
-	"02": "0.2.0",
+	"75" : "7.5.0",
+	"76" : "7.6.0",
+	"77" : "7.7.0",
 }
 
 var CompactFullVersionFromMinorVersion map[string]string = map[string]string{
-	"01": "010",
-	"02": "020",
+	"75" : "750",
+	"76" : "760",
+	"77" : "770",
 }
 
 func checkProductUpgrade(cr *api.ActiveMQArtemis) (upgradesMinor, upgradesEnabled bool, err error) {

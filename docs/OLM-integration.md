@@ -2,7 +2,7 @@
 
 ## Building the operator
 
-In the activemq-artemis-operator directory issue the following command: 
+In the amq-broker-operator directory issue the following command: 
 
 ```bash
 make
@@ -13,7 +13,7 @@ make
 e.g.
 
 ```bash
-docker push localhost.localdomain:5000/<repo>/activemq-artemis-operator:<version>
+docker push localhost.localdomain:5000/<repo>/amq-broker-operator:<version>
 ```
 
 ## Deploy to OpenShift 4 using OLM
@@ -23,7 +23,7 @@ To install this operator on OpenShift 4 for end-to-end testing, make sure you ha
 Push the operator bundle to your quay application repository as follows:
 
 ```bash
-operator-courier push deploy/olm-catalog/activemq-artemis-operator/ <quay.io account> <application repo name> <version> "basic XXX" "basic XXXXXXXXX"
+operator-courier push deploy/olm-catalog/amq-broker-operator/ <quay.io account> <application repo name> <version> "basic XXX" "basic XXXXXXXXX"
 ```
 
 If pushing to another quay repository, replace with your username or other repot name. 
@@ -31,14 +31,14 @@ If pushing to another quay repository, replace with your username or other repot
 for example : 
 
 ```bash
-operator-courier push deploy/olm-catalog/activemq-artemis-operator/ artemiscloud  activemq-artemis 0.14.0 "basic xxxx"
+operator-courier push deploy/olm-catalog/amq-broker-operator/ artemiscloud  amq-broker 0.17.0 "basic xxxx"
 ```
 
 
 Also note that the push command does not overwrite an existing repository, and it needs to be deleted before a new version can be built and uploaded. Once the bundle has been uploaded, create an [Operator Source](https://github.com/operator-framework/community-operators/blob/master/docs/testing-operators.md#linking-the-quay-application-repository-to-your-openshift-40-cluster) to load your operator bundle in OpenShift.
 
 ```bash
-oc create -f deploy/catalog_respirces/activemq-artemis-operatorsource.yaml 
+oc create -f deploy/catalog_respirces/amq-broker-operatorsource.yaml 
 ```
 
 Remember to replace _registryNamespace_ with your quay namespace. The name, display name and publisher of the operator are the only other attributes that may be modified.
@@ -58,8 +58,8 @@ As cluster-admin and an OCP 3.11+ cluster with OLM installed, issue the followin
 # If using a different namespace for OLM
 ./scripts/catalog-redhat.sh <namespace>
 
-configmap/activemq-artemis-resources created
-catalogsource.operators.coreos.com/activemq-artemis-resources created
+configmap/amq-broker-resources created
+catalogsource.operators.coreos.com/amq-broker-resources created
 
 
 ```
@@ -71,7 +71,7 @@ This will create a new `CatalogSource` and `ConfigMap`, allowing the OLM Catalog
 Use the OLM console to subscribe to the `ActiveMQ Artemis` Operator Catalog Source within your namespace. Once subscribed, deploy the the operator in your namespace by deploying the cluster service version. First edit
 
 ```bash
-deploy/olm-catalog/activemq-artemis-operator/0.14.0/activemq-artemis-operator.v0.14.0.clusterserviceversion.yaml
+deploy/olm-catalog/amq-broker-operator/0.17.0/amq-broker-operator.v0.17.0.clusterserviceversion.yaml
 ```
 
 and update

@@ -4,10 +4,10 @@ metadata:
   name: ex-aao
   application: ex-aao-app
 spec:
-  version: 0.2.0
+  version: 7.7.0
   deploymentPlan:
     size: 1
-    image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.0
+    image: registry.redhat.io/amq7/amq-broker:7.7
     requireLogin: false
     persistenceEnabled: false
     journalType: nio

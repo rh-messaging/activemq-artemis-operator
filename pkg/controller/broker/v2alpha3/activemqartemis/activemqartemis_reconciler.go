@@ -1420,8 +1420,8 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha3.ActiveMQArtemis) cor
 		brokerYaml := cr2jinja2.MakeBrokerCfgOverrides(customResource, nil, nil)
 		InitContainers := []corev1.Container{
 			{
-				Name:            "activemq-artemis-init",
-				Image:           "quay.io/artemiscloud/activemq-artemis-broker-init:0.2.0",
+				Name:            "amq-broker-init",
+				Image:           "registry.redhat.io/amq7/amq-broker-init-rhel7:0.2",
 				ImagePullPolicy: "Always",
 				Command:         []string{"/bin/bash"},
 				Args: []string{"-c",
