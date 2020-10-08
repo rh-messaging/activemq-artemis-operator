@@ -3,7 +3,6 @@ module github.com/artemiscloud/activemq-artemis-operator
 go 1.13
 
 require (
-	cloud.google.com/go v0.39.0 // indirect
 	github.com/RHsyseng/operator-utils v0.0.0-20190906175225-942a3f9c85a9
 	github.com/appscode/jsonpatch v0.0.0-20190108182946-7c0e3b262f30 // indirect
 	github.com/artemiscloud/activemq-artemis-management v0.0.0-20200507120514-d75b890ea0e5
@@ -58,7 +57,6 @@ require (
 	golang.org/x/oauth2 v0.0.0-20190517181255-950ef44c6e07 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	google.golang.org/appengine v1.6.0 // indirect
-	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.0.0-20190222213804-5cb15d344471
 	k8s.io/apiextensions-apiserver v0.0.0-20190228180357-d002e88f6236 // indirect
 	k8s.io/apimachinery v0.0.0-20190221213512-86fb29eff628
