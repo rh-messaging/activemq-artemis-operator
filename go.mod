@@ -85,6 +85,4 @@ replace (
 	sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.1.11-0.20190411181648-9d55346c2bde
 )
 
-replace github.com/operator-framework/operator-sdk => github.com/operator-framework/operator-sdk v0.8.2
-
 replace bitbucket.org/ww/goautoneg => github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d
