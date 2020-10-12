@@ -7,7 +7,7 @@ metadata:
     categories: "Streaming & Messaging"
     certified: "false"
     description: AMQ Broker Operator provides the ability to deploy and manage stateful AMQ Broker broker clusters
-    containerImage: registry.redhat.io/amq7/amq-broker-rhel7-operator:0.17
+    containerImage: registry.redhat.io/amq7/amq-broker-rhel7-operator@sha256:9e372fb30048ed767b6e171096c5f2bf486e6a1fdc9710c07f25a018d8f65f34
     createdAt: 2020-06-10T14:18:22Z
     capabilities: Seamless Upgrades
     repository: https://github.com/rh-messaging/activemq-artemis-operator
@@ -380,373 +380,373 @@ spec:
             path: addressSettings.addressSetting[0].deadLetterAddress
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deadLetterAddress'
-              - 'urn:alm:descriptor:com.tectonic.ui:text
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
           - description: whether or not to automatically create the dead-letter-address and/or a corresponding queue on that address when a message found to be undeliverable
             displayName: AutoCreateDeadLetterResources
             path: addressSettings.addressSetting[0].autoCreateDeadLetterResources
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:autoCreateDeadLetterResources'
-              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
           - description: the prefix to use for auto-created dead letter queues
             displayName: DeadLetterQueuePrefix
             path: addressSettings.addressSetting[0].deadLetterQueuePrefix
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deadLetterQueuePrefix'
-              - 'urn:alm:descriptor:com.tectonic.ui:text
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
           - description: the suffix to use for auto-created dead letter queues
             displayName: DeadLetterQueueSuffix
             path: addressSettings.addressSetting[0].deadLetterQueueSuffix
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deadLetterQueueSuffix'
-              - 'urn:alm:descriptor:com.tectonic.ui:text
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
           - description: the address to send expired messages to
             displayName: ExpiryAddress
             path: addressSettings.addressSetting[0].expiryAddress
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:expiryAddress'
-              - 'urn:alm:descriptor:com.tectonic.ui:text
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
           - description: whether or not to automatically create the expiry-address and/or a corresponding queue on that address when a message is sent to a matching queue
             displayName: AutoCreateExpiryResources
             path: addressSettings.addressSetting[0].autoCreateExpiryResources
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:autoCreateExpiryResources'
-              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
           - description: the prefix to use for auto-created expiry queues
             displayName: ExpiryQueuePrefix
             path: addressSettings.addressSetting[0].expiryQueuePrefix
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:expiryQueuePrefix'
-              - 'urn:alm:descriptor:com.tectonic.ui:text
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
           - description: the suffix to use for auto-created expiry queues
             displayName: ExpiryQueueSuffix
             path: addressSettings.addressSetting[0].expiryQueueSuffix
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:expiryQueueSuffix'
-              - 'urn:alm:descriptor:com.tectonic.ui:text
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
           - description: Overrides the expiration time for messages using the default value for expiration time. "-1" disables this setting.
             displayName: ExpiryDelay
             path: addressSettings.addressSetting[0].expiryDelay
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:expiryDelay'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: Overrides the expiration time for messages using a lower value. "-1" disables this setting.
             displayName: MinExpiryDelay
             path: addressSettings.addressSetting[0].minExpiryDelay
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:minExpiryDelay'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: Overrides the expiration time for messages using a higher value. "-1" disables this setting.
             displayName: MaxExpiryDelay
             path: addressSettings.addressSetting[0].maxExpiryDelay
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:maxExpiryDelay'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: the time (in ms) to wait before redelivering a cancelled message.
             displayName: RedeliveryDelay
             path: addressSettings.addressSetting[0].redeliveryDelay
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:redeliveryDelay'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: multiplier to apply to the redelivery-delay
             displayName: RedeliveryDelayMultiplier
             path: addressSettings.addressSetting[0].redeliveryDelayMultiplier
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:redeliveryDelayMultiplier'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: factor by which to modify the redelivery delay slightly to avoid collisions
             displayName: RedeliveryCollisionAvoidanceFactor
             path: addressSettings.addressSetting[0].redeliveryCollisionAvoidanceFactor
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:redeliveryCollisionAvoidanceFactor'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: Maximum value for the redelivery-delay
             displayName: MaxRedeliveryDelay
             path: addressSettings.addressSetting[0].maxRedeliveryDelay
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:maxRedeliveryDelay'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: how many times to attempt to deliver a message before sending to dead letter address
             displayName: MaxDeliveryAttempts
             path: addressSettings.addressSetting[0].maxDeliveryAttempts
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:maxDeliveryAttempts'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: the maximum size in bytes for an address. -1 means no limits. This is used in PAGING, BLOCK and FAIL policies. Supports byte notation like K, Mb, GB, etc.
             displayName: MaxSizeBytes
             path: addressSettings.addressSetting[0].maxSizeBytes
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:maxSizeBytes'
-              - 'urn:alm:descriptor:com.tectonic.ui:text
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
           - description: used with the address full BLOCK policy, the maximum size in bytes an address can reach before messages start getting rejected. Works in combination with max-size-bytes for AMQP protocol only.  Default = -1 (no limit).
             displayName: MaxSizeBytesRejectThreshold
             path: addressSettings.addressSetting[0].maxSizeBytesRejectThreshold
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:maxSizeBytesRejectThreshold'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: The page size in bytes to use for an address. Supports byte notation like K, Mb, GB, etc.
             displayName: PageSizeBytes
             path: addressSettings.addressSetting[0].pageSizeBytes
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:pageSizeBytes'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: Number of paging files to cache in memory to avoid IO during paging navigation
             displayName: PageMaxCacheSize
             path: addressSettings.addressSetting[0].pageMaxCacheSize
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:pageMaxCacheSize'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: what happens when an address where maxSizeBytes is specified becomes full
             displayName: AddressFullPolicy
             path: addressSettings.addressSetting[0].addressFullPolicy
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:addressFullPolicy'
-              - 'urn:alm:descriptor:com.tectonic.ui:text
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
           - description: how many days to keep message counter history for this address
             displayName: MessageCounterHistoryDayLimit
             path: addressSettings.addressSetting[0].messageCounterHistoryDayLimit
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:messageCounterHistoryDayLimit'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: This is deprecated please use default-last-value-queue instead.
             displayName: LastValueQueue
             path: addressSettings.addressSetting[0].lastValueQueue
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:lastValueQueue'
-              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
           - description: whether to treat the queues under the address as a last value queues by default
             displayName: DefaultLastValueQueue
             path: addressSettings.addressSetting[0].defaultLastValueQueue
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:defaultLastValueQueue'
-              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
           - description: the property to use as the key for a last value queue by default
             displayName: DefaultLastValueKey
             path: addressSettings.addressSetting[0].defaultLastValueKey
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:defaultLastValueKey'
-              - 'urn:alm:descriptor:com.tectonic.ui:text
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
           - description: whether the queue should be non-destructive by default
             displayName: DefaultNonDestructive
             path: addressSettings.addressSetting[0].defaultNonDestructive
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:defaultNonDestructive'
-              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
           - description: whether to treat the queues under the address as exclusive queues by default
             displayName: DefaultExclusiveQueue
             path: addressSettings.addressSetting[0].defaultExclusiveQueue
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:defaultExclusiveQueue'
-              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
           - description: whether to rebalance groups when a consumer is added
             displayName: DefaultGroupRebalance
             path: addressSettings.addressSetting[0].defaultGroupRebalance
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:defaultGroupRebalance'
-              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
           - description: whether to pause dispatch when rebalancing groups
             displayName: DefaultGroupRebalancePauseDispatch
             path: addressSettings.addressSetting[0].defaultGroupRebalancePauseDispatch
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:defaultGroupRebalancePauseDispatch'
-              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
           - description: number of buckets to use for grouping, -1 (default) is unlimited and uses the raw group, 0 disables message groups.
             displayName: DefaultGroupBuckets
             path: addressSettings.addressSetting[0].defaultGroupBuckets
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:defaultGroupBuckets'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: key used to mark a message is first in a group for a consumer
             displayName: DefaultGroupFirstKey
             path: addressSettings.addressSetting[0].defaultGroupFirstKey
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:defaultGroupFirstKey'
-              - 'urn:alm:descriptor:com.tectonic.ui:text
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
           - description: the default number of consumers needed before dispatch can start for queues under the address.
             displayName: DefaultConsumersBeforeDispatch
             path: addressSettings.addressSetting[0].defaultConsumersBeforeDispatch
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:defaultConsumersBeforeDispatch'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: the default delay (in milliseconds) to wait before dispatching if number of consumers before dispatch is not met for queues under the address.
             displayName: DefaultDelayBeforeDispatch
             path: addressSettings.addressSetting[0].defaultDelayBeforeDispatch
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:defaultDelayBeforeDispatch'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: how long (in ms) to wait after the last consumer is closed on a queue before redistributing messages.
             displayName: RedistributionDelay
             path: addressSettings.addressSetting[0].redistributionDelay
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:redistributionDelay'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: if there are no queues matching this address, whether to forward message to DLA (if it exists for this address)
             displayName: SendToDlaOnNoRoute
             path: addressSettings.addressSetting[0].sendToDlaOnNoRoute
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:sendToDlaOnNoRoute'
-              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
           - description: The minimum rate of message consumption allowed before a consumer is considered "slow." Measured in messages-per-second.
             displayName: SlowConsumerThreshold
             path: addressSettings.addressSetting[0].slowConsumerThreshold
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:slowConsumerThreshold'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: what happens when a slow consumer is identified
             displayName: SlowConsumerPolicy
             path: addressSettings.addressSetting[0].slowConsumerPolicy
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:slowConsumerPolicy'
-              - 'urn:alm:descriptor:com.tectonic.ui:text
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
           - description: How often to check for slow consumers on a particular queue. Measured in seconds.
             displayName: SlowConsumerCheckPeriod
             path: addressSettings.addressSetting[0].slowConsumerCheckPeriod
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:slowConsumerCheckPeriod'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: DEPRECATED. whether or not to automatically create JMS queues when a producer sends or a consumer connects to a queue
             displayName: AutoCreateJmsQueues
             path: addressSettings.addressSetting[0].autoCreateJmsQueues
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:autoCreateJmsQueues'
-              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
           - description: DEPRECATED. whether or not to delete auto-created JMS queues when the queue has 0 consumers and 0 messages
             displayName: AutoDeleteJmsQueues
             path: addressSettings.addressSetting[0].autoDeleteJmsQueues
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:autoDeleteJmsQueues'
-              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
           - description: DEPRECATED. whether or not to automatically create JMS topics when a producer sends or a consumer subscribes to a topic
             displayName: AutoCreateJmsTopics
             path: addressSettings.addressSetting[0].autoCreateJmsTopics
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:autoCreateJmsTopics'
-              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
           - description: DEPRECATED. whether or not to delete auto-created JMS topics when the last subscription is closed
             displayName: AutoDeleteJmsTopics
             path: addressSettings.addressSetting[0].autoDeleteJmsTopics
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:autoDeleteJmsTopics'
-              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
           - description: whether or not to automatically create a queue when a client sends a message to or attempts to consume a message from a queue
             displayName: AutoCreateQueues
             path: addressSettings.addressSetting[0].autoCreateQueues
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:autoCreateQueues'
-              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
           - description: whether or not to delete auto-created queues when the queue has 0 consumers and 0 messages
             displayName: AutoDeleteQueues
             path: addressSettings.addressSetting[0].autoDeleteQueues
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:autoDeleteQueues'
-              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
           - description: whether or not to delete created queues when the queue has 0 consumers and 0 messages
             displayName: AutoDeleteCreatedQueues
             path: addressSettings.addressSetting[0].autoDeleteCreatedQueues
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:autoDeleteCreatedQueues'
-              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
           - description: how long to wait (in milliseconds) before deleting auto-created queues after the queue has 0 consumers.
             displayName: AutoDeleteQueuesDelay
             path: addressSettings.addressSetting[0].autoDeleteQueuesDelay
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:autoDeleteQueuesDelay'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: the message count the queue must be at or below before it can be evaluated to be auto deleted, 0 waits until empty queue (default) and -1 disables this check.
             displayName: AutoDeleteQueuesMessageCount
             path: addressSettings.addressSetting[0].autoDeleteQueuesMessageCount
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:autoDeleteQueuesMessageCount'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: What to do when a queue is no longer in broker.xml.  OFF = will do nothing queues will remain, FORCE = delete queues even if messages remaining.
             displayName: ConfigDeleteQueues
             path: addressSettings.addressSetting[0].configDeleteQueues
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:configDeleteQueues'
-              - 'urn:alm:descriptor:com.tectonic.ui:text
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
           - description: whether or not to automatically create addresses when a client sends a message to or attempts to consume a message from a queue mapped to an address that doesnt exist
             displayName: AutoCreateAddresses
             path: addressSettings.addressSetting[0].autoCreateAddresses
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:autoCreateAddresses'
-              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
           - description: whether or not to delete auto-created addresses when it no longer has any queues
             displayName: AutoDeleteAddresses
             path: addressSettings.addressSetting[0].autoDeleteAddresses
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:autoDeleteAddresses'
-              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
           - description: how long to wait (in milliseconds) before deleting auto-created addresses after they no longer have any queues
             displayName: AutoDeleteAddressesDelay
             path: addressSettings.addressSetting[0].autoDeleteAddressesDelay
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:autoDeleteAddressesDelay'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: What to do when an address is no longer in broker.xml.  OFF = will do nothing addresses will remain, FORCE = delete address and its queues even if messages remaining.
             displayName: ConfigDeleteAddresses
             path: addressSettings.addressSetting[0].configDeleteAddresses
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:configDeleteAddresses'
-              - 'urn:alm:descriptor:com.tectonic.ui:text
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
           - description: how many message a management resource can browse
             displayName: ManagementBrowsePageSize
             path: addressSettings.addressSetting[0].managementBrowsePageSize
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:managementBrowsePageSize'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: purge the contents of the queue once there are no consumers
             displayName: DefaultPurgeOnNoConsumers
             path: addressSettings.addressSetting[0].defaultPurgeOnNoConsumers
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:defaultPurgeOnNoConsumers'
-              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
           - description: the maximum number of consumers allowed on this queue at any one time
             displayName: DefaultMaxConsumers
             path: addressSettings.addressSetting[0].defaultMaxConsumers
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:defaultMaxConsumers'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: the routing-type used on auto-created queues
             displayName: DefaultQueueRoutingType
             path: addressSettings.addressSetting[0].defaultQueueRoutingType
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:defaultQueueRoutingType'
-              - 'urn:alm:descriptor:com.tectonic.ui:text
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
           - description: the routing-type used on auto-created addresses
             displayName: DefaultAddressRoutingType
             path: addressSettings.addressSetting[0].defaultAddressRoutingType
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:defaultAddressRoutingType'
-              - 'urn:alm:descriptor:com.tectonic.ui:text
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
           - description: the default window size for a consumer
             displayName: DefaultConsumerWindowSize
             path: addressSettings.addressSetting[0].defaultConsumerWindowSize
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:defaultConsumerWindowSize'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: the default ring-size value for any matching queue which doesnt have ring-size explicitly defined
             displayName: DefaultRingSize
             path: addressSettings.addressSetting[0].defaultRingSize
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:defaultRingSize'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: the number of messages to preserve for future queues created on the matching address
             displayName: RetroactiveMessageCount
             path: addressSettings.addressSetting[0].retroactiveMessageCount
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:retroactiveMessageCount'
-              - 'urn:alm:descriptor:com.tectonic.ui:number
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: whether or not to enable metrics for metrics plugins on the matching address
             displayName: EnableMetrics
             path: addressSettings.addressSetting[0].enableMetrics
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:enableMetrics'
-              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
           - description: pattern for matching settings against addresses; can use wildards
             displayName: Match
             path: addressSettings.addressSetting[0].match
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:match'
-              - 'urn:alm:descriptor:com.tectonic.ui:text
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
           - description: Whether or not to expose this port
             displayName: Expose
             path: console.expose
@@ -936,13 +936,13 @@ spec:
                 serviceAccountName: amq-broker-operator
                 containers:
                   - name: amq-broker-operator
-                    image: registry.redhat.io/amq7/amq-broker-rhel7-operator:0.17.0
+                    image: registry.redhat.io/amq7/amq-broker-rhel7-operator@sha256:9e372fb30048ed767b6e171096c5f2bf486e6a1fdc9710c07f25a018d8f65f34
                     args:
                       # Explicitly set the logging level.
                       # Valid values are debug, info, and error
                       # from most to least.
                       # If running entrypoint_debug then use '-- --zap-level debug'
-                      - '--zap-level debug'
+                      - '--zap-level info'
                     command:
                       - /home/amq-broker-operator/bin/entrypoint
                     imagePullPolicy: Always
