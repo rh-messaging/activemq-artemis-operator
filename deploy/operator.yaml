@@ -40,12 +40,16 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         - name: BROKER_IMAGE_760
-          value: registry.redhat.io/amq7/amq-broker:7.6
+          #value: registry.redhat.io/amq7/amq-broker:7.6
+          value: docker-registry.default.svc:5000/entmqbr-4064-1/amq-broker-7-amq-broker-77-openshift:7.7
         - name: BROKER_IMAGE_750
-          value: registry.redhat.io/amq7/amq-broker:7.5
+          #value: registry.redhat.io/amq7/amq-broker:7.5
+          value: docker-registry.default.svc:5000/entmqbr-4064-1/amq-broker-7-amq-broker-77-openshift:7.7
         - name: BROKER_IMAGE_770
-          value: registry.redhat.io/amq7/amq-broker:7.7
-        image: registry.redhat.io/amq7/amq-broker-rhel7-operator:0.17
+          #value: registry.redhat.io/amq7/amq-broker:7.7
+          value: docker-registry.default.svc:5000/entmqbr-4064-1/amq-broker-7-amq-broker-77-openshift:7.7
+        #image: registry.redhat.io/amq7/amq-broker-rhel7-operator:0.17
+        image: docker-registry.default.svc:5000/entmqbr-4064-1/amq-broker-operator:latest
         imagePullPolicy: Always
         name: amq-broker-operator
         resources: {}
