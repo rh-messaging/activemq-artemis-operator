@@ -110,16 +110,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	// todo temporary committing this code, getting compilation error. This required to fix, as `leader.PodNameEnv` is undefined
-	/*	name := os.Getenv(leader.PodNameEnv)
-		clnt, err := client.New(cfg, client.Options{})
-		if err != nil {
-			log.Error(err, "can't create client from config")
-			os.Exit(1)
-		} else {
-			setupAccountName(clnt, ctx, namespace, name)
-		}
-	*/
+	// Set the service account name for the drainer pod
+	// It will be broken without this as it won't have
+	// permission to list the endpoints in drain.sh
+	name := os.Getenv("POD_NAME")
+	clnt, err := client.New(cfg, client.Options{})
+	if err != nil {
+		log.Error(err, "can't create client from config")
+		os.Exit(1)
+	} else {
+		setupAccountName(clnt, ctx, namespace, name)
+	}
+
 	log.Info("Registering Components.")
 
 	// Setup Scheme for all resources
