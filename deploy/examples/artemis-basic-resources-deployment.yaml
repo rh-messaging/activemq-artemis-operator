@@ -5,12 +5,12 @@ metadata:
 spec:
   deploymentPlan:
     size: 1
-    image: registry.redhat.io/amq7/amq-broker:7.7
+    image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.0
     resources:
       limits:
-        cpu: 500m
-        memory: 1024m
+        cpu: "500Mi"
+        memory: "1024Mi"
       requests:
-        cpu: 250m
-        memory: 512m
+        cpu: "250Mi"
+        memory: "512Mi"
 
