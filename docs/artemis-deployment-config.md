@@ -1,7 +1,7 @@
 
-## Deployment Configuration for ActiveMQ Artemis broker 
+## Deployment Configuration for AMQ Broker 
  
-#### Deploying an ActiveMQ Artemis broker with Persistent
+#### Deploying an AMQ Broker with Persistent
 
  Add persistent flag true in the custom resource file:
  
@@ -10,9 +10,9 @@ e.g.
 ```yaml
           persistenceEnabled: true
     
- ```
+```
 
-## Trigger a ActiveMQ Artemis deployment
+## Trigger an AMQ Broker deployment
 
 Use the console to `Create Broker` or create one manually as seen below. Ensure SSL configuration is correct in the
 custom resource file.
@@ -21,7 +21,7 @@ custom resource file.
 $ oc create -f deploy/crs/broker_activemqartemis_cr.yaml
 ```
 
-## Clean up an ActiveMQ Artemis deployment
+## Clean up an AMQ Broker deployment
 
 ```bash
 oc delete -f deploy/crs/broker_activemqartemis_cr.yaml

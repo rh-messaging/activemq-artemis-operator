@@ -1450,7 +1450,7 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 		brokerYaml := cr2jinja2v2alpha4.MakeBrokerCfgOverrides(customResource, nil, nil)
 
 		//resolve initImage
-		initImage := "quay.io/artemiscloud/activemq-artemis-broker-init:0.2.1"
+		initImage := "registry.redhat.io/amq7/amq-broker-init-rhel7:0.2.1"
 		if len(customResource.Spec.DeploymentPlan.InitImage) > 0 {
 			initImage = customResource.Spec.DeploymentPlan.InitImage
 			log.Info("Using customized init image", "url", initImage)

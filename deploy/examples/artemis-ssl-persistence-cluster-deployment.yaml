@@ -5,7 +5,7 @@ metadata:
 spec:
   deploymentPlan:
     size: 2
-    image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.0
+    image: registry.redhat.io/amq7/amq-broker:7.8
     persistenceEnabled: true
     messageMigration: true
   acceptors:

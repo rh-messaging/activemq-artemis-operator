@@ -1,12 +1,12 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: activemq-artemis-operator
+  name: amq-broker-operator
 spec:
   replicas: 1
   selector:
     matchLabels:
-      name: activemq-artemis-operator
+      name: amq-broker-operator
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -15,7 +15,7 @@ spec:
   template:
     metadata:
       labels:
-        name: activemq-artemis-operator
+        name: amq-broker-operator
     spec:
       containers:
       - args:
@@ -26,7 +26,7 @@ spec:
         - '--zap-level debug'
         - '--zap-encoder console'
         command:
-        - /home/activemq-artemis-operator/bin/entrypoint
+        - /home/amq-broker-operator/bin/entrypoint
         env:
         - name: OPERATOR_NAME
           valueFrom:
@@ -40,14 +40,16 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        - name: BROKER_IMAGE_211
-          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.0
-        - name: BROKER_IMAGE_212
-          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.0
-        - name: BROKER_IMAGE_213
-          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.0
-        image: quay.io/artemiscloud/activemq-artemis-operator:0.18.0
+        - name: BROKER_IMAGE_760
+          value: registry.redhat.io/amq7/amq-broker:7.6
+        - name: BROKER_IMAGE_750
+          value: registry.redhat.io/amq7/amq-broker:7.5
+        - name: BROKER_IMAGE_770
+          value: registry.redhat.io/amq7/amq-broker:7.7
+        - name: BROKER_IMAGE_780
+          value: registry.redhat.io/amq7/amq-broker:7.8
+        image: registry.redhat.io/amq7/amq-broker-rhel7-operator:0.18
         imagePullPolicy: Always
-        name: activemq-artemis-operator
+        name: amq-broker-operator
         resources: {}
-      serviceAccountName: activemq-artemis-operator
+      serviceAccountName: amq-broker-operator

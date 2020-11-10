@@ -5,26 +5,26 @@ other kubernetes or OpenShift environments may require minor adjustment.
 
 One important note about operators in general is that to get the operator
 installed requires cluster-admin level privileges. Once installed, a regular
-user should be able to install ActiveMQ Artemis via the provided custom
+user should be able to install AMQ Broker via the provided custom
 resource.
 
 # Quick Start
 
 ## Getting the code
 
-To launch the operator you will need to clone the [activemq-artemis-operator](https://github.com/artemiscloud/activemq-artemis-operator)
-and checkout the 0.15.0 tag as per
+To launch the operator you will need to clone the [amq-broker-operator](https://github.com/rh-messaging/amq-broker-operator)
+and checkout the 0.18.0 tag as per
 
 ```$xslt
-git clone https://github.com/artemiscloud/activemq-artemis-operator
-git checkout 0.15.0
+git clone https://github.com/rh-messaging/amq-broker-operator
+git checkout 0.18.0
 ```
 
 ## Deploying the operator
 
-In the activemq-artemis-operator/deploy directory you should see [operator.yaml](https://github.com/artemiscloud/activemq-artemis-operator/blob/0.15.0/deploy/operator.yaml)
-within which you will want to update the [spec.containers.image](https://github.com/artemiscloud/activemq-artemis-operator/blob/0.15.0/deploy/operator.yaml#L18-L19)
-with the correct location for the activemq-artemis-operator container image that you either pulled or [built](building.md).
+In the amq-broker-operator/deploy directory you should see [operator.yaml](https://github.com/rh-messaging/amq-broker-operator/blob/0.18.0/deploy/operator.yaml)
+within which you will want to update the [spec.containers.image](https://github.com/rh-messaging/amq-broker-operator/blob/0.18.0/deploy/operator.yaml#L18-L19)
+with the correct location for the amq-broker-operator container image that you either pulled or [built](building.md).
 
 As per the [operator-framework/operator-sdk](https://github.com/operator-framework/operator-sdk) Quick Start we first
 prepare the project namespace to receive the operator:
@@ -46,18 +46,18 @@ you to do so.
 
 Now build the source according to the [building](building.md) instructions, tag, and push it into your project
 namespace. Then update the deploy/operator.yaml to reference the built image and once done you can deploy the
-built activemq-artemis-operator via:
+built amq-broker-operator via:
 
 ```$xslt
 $ kubectl create -f deploy/operator.yaml
 ```
 
-At this point in your project namespace you should see the activemq-artemis-operator starting up and if you check the
+At this point in your project namespace you should see the amq-broker-operator starting up and if you check the
 logs you should see something like
 
 ```$xslt
 Executing entrypoint
-exec /activemq-artemis-operator/activemq-artemis-operator
+exec /amq-broker-operator/amq-broker-operator
 {"level":"info","ts":1553619035.0707157,"logger":"cmd","msg":"Go Version: go1.11.5"}
 {"level":"info","ts":1553619035.0708382,"logger":"cmd","msg":"Go OS/Arch: linux/amd64"}
 {"level":"info","ts":1553619035.070858,"logger":"cmd","msg":"Version of operator-sdk: v0.5.0"}
@@ -70,7 +70,7 @@ exec /activemq-artemis-operator/activemq-artemis-operator
 {"level":"info","ts":1553619035.527945,"logger":"kubebuilder.controller","msg":"Starting EventSource","controller":"activemqartemis-controller","source":"kind source: /, Kind="}
 {"level":"info","ts":1553619035.5283449,"logger":"kubebuilder.controller","msg":"Starting EventSource","controller":"activemqartemisaddress-controller","source":"kind source: /, Kind="}
 {"level":"info","ts":1553619035.5286813,"logger":"kubebuilder.controller","msg":"Starting EventSource","controller":"activemqartemisaddress-controller","source":"kind source: /, Kind="}
-{"level":"info","ts":1553619035.729491,"logger":"metrics","msg":"Metrics Service object already exists","name":"activemq-artemis-operator"}
+{"level":"info","ts":1553619035.729491,"logger":"metrics","msg":"Metrics Service object already exists","name":"amq-broker-operator"}
 {"level":"info","ts":1553619035.7295585,"logger":"cmd","msg":"Starting the Cmd."}
 {"level":"info","ts":1553619035.8302743,"logger":"kubebuilder.controller","msg":"Starting Controller","controller":"activemqartemisaddress-controller"}
 {"level":"info","ts":1553619035.830541,"logger":"kubebuilder.controller","msg":"Starting Controller","controller":"activemqartemis-controller"}
@@ -81,21 +81,21 @@ exec /activemq-artemis-operator/activemq-artemis-operator
 ## Deploying the broker
 
 Now that the operator is running and listening for changes related to our crd we can deploy our basic broker custom
-resource instance for 'ex-aao' from [broker_activemqartemis_cr.yaml](https://github.com/artemiscloud/activemq-artemis-operator/blob/0.15.0/deploy/crs/broker_activemqartemis_cr.yaml)
+resource instance for 'ex-aao' from [broker_activemqartemis_cr.yaml](https://github.com/rh-messaging/amq-broker-operator/blob/0.18.0/deploy/crs/broker_activemqartemis_cr.yaml)
 which looks like
 
 ```$xslt
-apiVersion: broker.amq.io/v2alpha2
+apiVersion: broker.amq.io/v2alpha4
 kind: ActiveMQArtemis
 metadata:
   name: ex-aao
 spec:
   deploymentPlan:
     size: 2
-    image: quay.io/artemiscloud/activemq-artemis-operator:latest
+    image: quay.io/rh-messaging/amq-broker-operator:latest
 ```  
 
-Note in particular the [spec.image:](https://github.com/artemiscloud/activemq-artemis-operator/blob/0.15.0/deploy/crs/broker_activemqartemis_cr.yaml#L8)
+Note in particular the [spec.image:](https://github.com/rh-messaging/amq-broker-operator/blob/0.18.0/deploy/crs/broker_activemqartemis_cr.yaml#L8)
 which identifies the container image to use to launch the AMQ Broker. Ignore the size as its unused at the moment.
 
 To deploy the broker we simply execute
@@ -279,9 +279,9 @@ activemqartemis.broker.amq.io "ex-aao" deleted
 ### Overview
 
 Very basic, non-robust, functionality for adding and removing queues via custom resource definitions has been added. Of interest are two
-additional yaml files, [broker_activemqartemisaddress_crd.yaml](https://github.com/artemiscloud/activemq-artemis-operator/blob/master/deploy/crds/broker_activemqartemisaddress_crd.yaml)
+additional yaml files, [broker_activemqartemisaddress_crd.yaml](https://github.com/rh-messaging/amq-broker-operator/blob/master/deploy/crds/broker_activemqartemisaddress_crd.yaml)
 which provides the custom resource definition for an ActiveMQArtemisAddress and an example implementation of a custom
-resource based on this crd, [broker_activemqartemisaddress_cr.yaml](https://github.com/artemiscloud/activemq-artemis-operator/blob/master/deploy/crs/broker_activemqartemisaddress_cr.yaml)
+resource based on this crd, [broker_activemqartemisaddress_cr.yaml](https://github.com/rh-messaging/amq-broker-operator/blob/master/deploy/crs/broker_activemqartemisaddress_cr.yaml)
 
 In the implemented custom resource you will note the following of interest:
 
@@ -294,7 +294,7 @@ spec:
 ```
 
 Note that for the moment in this initial implementation each of the three fields; addressName, queueName,
-and routingType are required as per the [crd](https://github.com/artemiscloud/activemq-artemis-operator/blob/master/deploy/crds/broker_activemqartemisaddress_crd.yaml#L35-L39).
+and routingType are required as per the [crd](https://github.com/rh-messaging/amq-broker-operator/blob/master/deploy/crds/broker_activemqartemisaddress_crd.yaml#L35-L39).
 This will possibly be relaxed in the future when the feature is more mature.
 
 ### Deploying the ActiveMQArtemisAddress crd
@@ -374,7 +374,7 @@ kubectl scale statefulset ex-aao-ss --replicas 2
 are running. The output is like:
 
 ```$xslt
-activemq-artemis-operator-8566d9bf58-9g25l   1/1     Running   0          3m38s
+amq-broker-operator-8566d9bf58-9g25l   1/1     Running   0          3m38s
 ex-aao-ss-0                 1/1     Running   0          112s
 ex-aao-ss-1                 1/1     Running   0          8s
 ```
