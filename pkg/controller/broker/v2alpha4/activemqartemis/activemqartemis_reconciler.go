@@ -2,6 +2,7 @@ package v2alpha4activemqartemis
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/RHsyseng/operator-utils/pkg/olm"
@@ -250,7 +251,20 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessAddressSettings(customResour
 //returns true if currentAddressSettings need update
 func compareAddressSettings(currentAddressSettings *brokerv2alpha4.AddressSettingsType, newAddressSettings *brokerv2alpha4.AddressSettingsType) bool {
 
-	if len((*currentAddressSettings).AddressSetting) != len((*newAddressSettings).AddressSetting) || *(*currentAddressSettings).ApplyRule != *(*newAddressSettings).ApplyRule || !config.IsEqualV2Alpha4((*currentAddressSettings).AddressSetting, (*newAddressSettings).AddressSetting) {
+	if (*currentAddressSettings).ApplyRule == nil {
+		if (*newAddressSettings).ApplyRule != nil {
+			return true
+		}
+	} else {
+		if (*newAddressSettings).ApplyRule != nil {
+			if *(*currentAddressSettings).ApplyRule != *(*newAddressSettings).ApplyRule {
+				return true
+			}
+		} else {
+			return true
+		}
+	}
+	if len((*currentAddressSettings).AddressSetting) != len((*newAddressSettings).AddressSetting) || !config.IsEqualV2Alpha4((*currentAddressSettings).AddressSetting, (*newAddressSettings).AddressSetting) {
 		return true
 	}
 	return false
@@ -436,10 +450,12 @@ func generateAcceptorsString(customResource *brokerv2alpha4.ActiveMQArtemis, cli
 	var portIncrement int32 = 10
 	var currentPortIncrement int32 = 0
 	var port61616InUse bool = false
+	var i uint32 = 0
 	for _, acceptor := range customResource.Spec.Acceptors {
 		if 0 == acceptor.Port {
 			acceptor.Port = 61626 + currentPortIncrement
 			currentPortIncrement += portIncrement
+			customResource.Spec.Acceptors[i].Port = acceptor.Port
 		}
 		if "" == acceptor.Protocols ||
 			"all" == strings.ToLower(acceptor.Protocols) {
@@ -455,7 +471,7 @@ func generateAcceptorsString(customResource *brokerv2alpha4.ActiveMQArtemis, cli
 		}
 		if ensureCOREOn61616Exists &&
 			(61616 == acceptor.Port) &&
-			!strings.Contains(acceptor.Protocols, "CORE") {
+			!strings.Contains(strings.ToUpper(acceptor.Protocols), "CORE") {
 			acceptorEntry = acceptorEntry + ",CORE"
 		}
 		if acceptor.SSLEnabled {
@@ -486,6 +502,9 @@ func generateAcceptorsString(customResource *brokerv2alpha4.ActiveMQArtemis, cli
 		acceptorEntry = acceptorEntry + ";" + defaultArgs
 
 		acceptorEntry = acceptorEntry + "<\\/acceptor>"
+
+		// Used for indexing the original acceptor port to update it if required
+		i = i + 1
 	}
 	// TODO: Evaluate more dynamic messageMigration
 	if ensureCOREOn61616Exists && !port61616InUse {
@@ -1447,10 +1466,16 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 		}
 		reqLogger.V(1).Info("Process addresssetting", "ApplyRule", *envVarApplyRuleValue)
 
-		brokerYaml := cr2jinja2v2alpha4.MakeBrokerCfgOverrides(customResource, nil, nil)
+		brokerYaml, specials := cr2jinja2v2alpha4.MakeBrokerCfgOverrides(customResource, nil, nil)
+
+		byteArray, err := json.Marshal(specials)
+		if err != nil {
+			log.Error(err, "failed to marshl specials")
+		}
+		jsonSpecials := string(byteArray)
 
 		//resolve initImage
-		initImage := "registry.redhat.io/amq7/amq-broker-init-rhel7:0.2.1"
+		initImage := "registry.redhat.io/amq7/amq-broker-init-rhel7:0.2.2"
 		if len(customResource.Spec.DeploymentPlan.InitImage) > 0 {
 			initImage = customResource.Spec.DeploymentPlan.InitImage
 			log.Info("Using customized init image", "url", initImage)
@@ -1464,7 +1489,7 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 				Args: []string{"-c",
 					"echo \"" + brokerYaml + "\" > " + outputDir +
 						"/broker.yaml; cat /yacfg_etc/broker.yaml; yacfg --profile artemis/2.15.0/default_with_user_address_settings.yaml.jinja2  --tune " +
-						outputDir + "/broker.yaml --output " + outputDir},
+						outputDir + "/broker.yaml --extra-properties '" + jsonSpecials + "' --output " + outputDir},
 				Resources: customResource.Spec.DeploymentPlan.Resources,
 			},
 		}

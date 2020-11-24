@@ -79,6 +79,7 @@ func processCr(decoder *k8syaml.YAMLOrJSONDecoder, envVar *string, outputVar *st
 		return ""
 	}
 
-	return cr2jinja2.MakeBrokerCfgOverrides(brokerCr, envVar, outputVar)
+	result, _ := cr2jinja2.MakeBrokerCfgOverrides(brokerCr, envVar, outputVar)
 
+	return result
 }

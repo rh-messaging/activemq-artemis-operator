@@ -31,9 +31,8 @@ jobs:
       - name: Execute the test suite
         uses: artemiscloud/activemq-artemis-operator-test-action@v1
         with:
-          module: 'gitlab.cee.redhat.com/msgqe/openshift-broker-suite-golang'
           repository: 'https://github.com/brusdev/activemq-artemis-operator-test-suite.git'
-          ref: 'fix_test_flags'
+          ref: 'dev'
           test-packages: 'test/smoke/basic/...'
           docker-images: 'activemq-artemis-operator:dev.latest'
           operator-image: 'activemq-artemis-operator:dev.latest'

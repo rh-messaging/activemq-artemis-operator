@@ -2,6 +2,8 @@ package v2alpha2activemqartemisaddress
 
 import (
 	"context"
+	"strconv"
+
 	mgmt "github.com/artemiscloud/activemq-artemis-management"
 	brokerv2alpha2 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
@@ -22,7 +24,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	"strconv"
 )
 
 var log = logf.Log.WithName("controller_v2alpha2activemqartemisaddress")
@@ -268,6 +269,7 @@ func getPodBrokers(instance *brokerv2alpha2.ActiveMQArtemisAddress, request reco
 				containers := pod.Spec.Containers //get env from this
 				var jolokiaUser string
 				var jolokiaPassword string
+				var jolokiaProtocol string
 				if len(containers) == 1 {
 					envVars := containers[0].Env
 					for _, oneVar := range envVars {
@@ -277,14 +279,23 @@ func getPodBrokers(instance *brokerv2alpha2.ActiveMQArtemisAddress, request reco
 						if "AMQ_PASSWORD" == oneVar.Name {
 							jolokiaPassword = getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client)
 						}
-						if jolokiaUser != "" && jolokiaPassword != "" {
+						if "AMQ_CONSOLE_ARGS" == oneVar.Name {
+							jolokiaProtocol = getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client)
+						}
+						if jolokiaUser != "" && jolokiaPassword != "" && jolokiaProtocol != "" {
 							break
 						}
 					}
 				}
 
-				reqLogger.Info("New Jolokia with ", "User: ", jolokiaUser, "Password: ", jolokiaPassword)
-				artemis := mgmt.NewArtemis(pod.Status.PodIP, "8161", "amq-broker", jolokiaUser, jolokiaPassword)
+				if jolokiaProtocol == "" {
+					jolokiaProtocol = "http"
+				} else {
+					jolokiaProtocol = "https"
+				}
+
+				reqLogger.Info("New Jolokia with ", "User: ", jolokiaUser, "Protocol: ", jolokiaProtocol)
+				artemis := mgmt.GetArtemis(pod.Status.PodIP, "8161", "amq-broker", jolokiaUser, jolokiaPassword, jolokiaProtocol)
 				artemisArray = append(artemisArray, artemis)
 			}
 		}
