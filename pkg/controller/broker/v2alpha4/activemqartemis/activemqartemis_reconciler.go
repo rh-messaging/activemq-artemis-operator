@@ -1104,7 +1104,6 @@ func (reconciler *ActiveMQArtemisReconciler) createResource(customResource *brok
 		switch kind {
 		case ss.NameBuilder.Name():
 			stepsComplete |= CreatedStatefulSet
-			ss.GLOBAL_CRNAME = customResource.Name
 		case svc.HeadlessNameBuilder.Name():
 			stepsComplete |= CreatedHeadlessService
 		case svc.PingNameBuilder.Name():

@@ -64,6 +64,7 @@ func (rs *CreatingK8sResourcesState) generateNames() {
 
 	// Initialize the kubernetes names
 	ss.NameBuilder.Base(rs.parentFSM.customResource.Name).Suffix("ss").Generate()
+	ss.GLOBAL_CRNAME = rs.parentFSM.customResource.Name
 	svc.HeadlessNameBuilder.Prefix(rs.parentFSM.customResource.Name).Base("hdls").Suffix("svc").Generate()
 	svc.PingNameBuilder.Prefix(rs.parentFSM.customResource.Name).Base("ping").Suffix("svc").Generate()
 	pods.NameBuilder.Base(rs.parentFSM.customResource.Name).Suffix("container").Generate()
