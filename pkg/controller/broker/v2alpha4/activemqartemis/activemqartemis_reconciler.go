@@ -1474,7 +1474,7 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 		jsonSpecials := string(byteArray)
 
 		//resolve initImage
-		initImage := "registry.redhat.io/amq7/amq-broker-init-rhel7:0.2.2"
+		initImage := "registry.redhat.io/amq7/amq-broker-init-rhel7:0.2"
 		if len(customResource.Spec.DeploymentPlan.InitImage) > 0 {
 			initImage = customResource.Spec.DeploymentPlan.InitImage
 			log.Info("Using customized init image", "url", initImage)
