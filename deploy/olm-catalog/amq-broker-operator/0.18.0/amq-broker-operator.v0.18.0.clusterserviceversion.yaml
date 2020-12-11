@@ -3,6 +3,11 @@ kind: ClusterServiceVersion
 metadata:
   name: amq-broker-operator.v0.18.0
   namespace: placeholder
+  labels:
+    operator-activemqartemis: "true"
+    operatorframework.io/os.linux: supported
+    operatorframework.io/arch.amd64": supported
+    operatorframework.io/arch.s390x": supported
   annotations:
     categories: "Streaming & Messaging"
     certified: "false"
@@ -56,10 +61,6 @@ metadata:
               "localOnly": "true"
           }
       }]
-labels:
-  operator-activemqartemis: "true"
-  operatorframework.io/arch.amd64: supported
-  operatorframework.io/os.linux: supported
 spec:
   displayName: Red Hat Integration - AMQ Broker
   description: AMQ Broker Operator provides the ability to deploy and manage stateful AMQ Broker broker clusters
