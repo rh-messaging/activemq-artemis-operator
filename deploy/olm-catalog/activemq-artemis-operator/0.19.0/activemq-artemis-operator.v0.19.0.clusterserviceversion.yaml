@@ -70,6 +70,13 @@ spec:
     - operator
   version: 0.19.0
   replaces: activemq-artemis-operator.v0.18.0
+  relatedImages:
+    - name: ActiveMQ_Artemis_Broker_Init
+      image: quay.io/artemiscloud/activemq-artemis-broker-init:0.2
+    - name: ActiveMQ_Artemis_Broker_Kubernetes
+      image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2
+    - name: ActiveMQ_Artemis_Broker_Operator_Bundle
+      image: quay.io/artemiscloud/activemq-artemis-broker-operator:0.18
   maturity: alpha
   maintainers:
     - name: Artemis Cloud
@@ -982,9 +989,11 @@ spec:
                         valueFrom:
                           fieldRef:
                             fieldPath: metadata.namespace
-                      - name: BROKER_IMAGE_211
-                        value: quay.io/artemiscloud/activemq-artemis-kubernetes-image:0.2.0
-                      - name: BROKER_IMAGE_212
-                        value: quay.io/artemiscloud/activemq-artemis-kubernetes-image:0.2.0
-                      - name: BROKER_IMAGE_213
-                        value: quay.io/artemiscloud/activemq-artemis-kubernetes-image:0.2.0
+                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init
+                        image: quay.io/artemiscloud/activemq-artemis-broker-init:0.2
+                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_211
+                        image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2
+                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_212
+                        image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2
+                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_213
+                        image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2

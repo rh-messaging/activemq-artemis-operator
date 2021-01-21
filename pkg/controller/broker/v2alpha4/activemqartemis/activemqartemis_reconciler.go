@@ -1214,7 +1214,7 @@ func (reconciler *ActiveMQArtemisReconciler) checkUpgradeVersions(customResource
 			customResource.SetAnnotations(map[string]string{
 				brokerv2alpha4.SchemeGroupVersion.Group: FullVersionFromMinorVersion[specifiedMinorVersion]})
 			customResource.Spec.Version = FullVersionFromMinorVersion[specifiedMinorVersion]
-			upgradeVersionEnvBrokerImage := os.Getenv("BROKER_IMAGE_" + CompactFullVersionFromMinorVersion[specifiedMinorVersion])
+			upgradeVersionEnvBrokerImage := os.Getenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_" + CompactFullVersionFromMinorVersion[specifiedMinorVersion])
 			if "" != upgradeVersionEnvBrokerImage {
 				customResource.Spec.DeploymentPlan.Image = upgradeVersionEnvBrokerImage
 			}
@@ -1427,7 +1427,11 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 	pts := pods.MakePodTemplateSpec(namespacedName, selectors.LabelBuilder.Labels())
 	Spec := corev1.PodSpec{}
 	Containers := []corev1.Container{}
-	container := containers.MakeContainer(customResource.Name, customResource.Spec.DeploymentPlan.Image, MakeEnvVarArrayForCR(customResource))
+	imageName := os.Getenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes")
+	if "" != customResource.Spec.DeploymentPlan.Image {
+		imageName = customResource.Spec.DeploymentPlan.Image
+	}
+	container := containers.MakeContainer(customResource.Name, imageName, MakeEnvVarArrayForCR(customResource))
 	container.Resources = customResource.Spec.DeploymentPlan.Resources
 
 	containerPorts := MakeContainerPorts(customResource)
@@ -1474,7 +1478,10 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 		jsonSpecials := string(byteArray)
 
 		//resolve initImage
-		initImage := "quay.io/artemiscloud/activemq-artemis-broker-init:0.2"
+		initImage := ""
+		if initImage = os.Getenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init"); "" == initImage {
+			initImage = "quay.io/artemiscloud/activemq-artemis-broker-init:0.2"
+		}
 		if len(customResource.Spec.DeploymentPlan.InitImage) > 0 {
 			initImage = customResource.Spec.DeploymentPlan.InitImage
 			log.Info("Using customized init image", "url", initImage)

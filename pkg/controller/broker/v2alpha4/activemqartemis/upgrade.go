@@ -24,6 +24,7 @@ var OperandVersionFromOperatorVersion map[string]string = map[string]string{
 	"0.16.0": "0.1.0",
 	"0.17.0": "0.2.0",
 	"0.18.0": "0.2.0",
+	"0.19.0": "0.2.0",
 }
 var FullVersionFromMinorVersion map[string]string = map[string]string{
 	"01": "0.1.0",
