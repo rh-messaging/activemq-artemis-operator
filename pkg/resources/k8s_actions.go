@@ -2,11 +2,12 @@ package resources
 
 import (
 	"context"
+	"reflect"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -117,6 +118,8 @@ func configureExposure(owner v1.Object, client client.Client, scheme *runtime.Sc
 		if errors.IsNotFound(err) {
 			reqLogger.Info(namespacedName.Name + " " + "not found")
 			serviceIsNotFound = true
+		} else {
+			reqLogger.Error(err, "Unexpected error occurred in retrieve", objectDefinition)
 		}
 	}
 

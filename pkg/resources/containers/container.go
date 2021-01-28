@@ -44,3 +44,14 @@ func MakeContainer(customResourceName string, imageName string, envVarArray []co
 
 	return container
 }
+
+func MakeInitContainer(containerName string, imageName string, envVarArray []corev1.EnvVar) corev1.Container {
+
+	container := corev1.Container{
+		Name:  containerName,
+		Image: imageName,
+		Env:   envVarArray,
+	}
+
+	return container
+}
