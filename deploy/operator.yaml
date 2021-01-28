@@ -41,14 +41,14 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init
-          image: quay.io/artemiscloud/activemq-artemis-broker-init:0.2
+          image: registry.redhat.io/amq7/amq-broker-init-rhel7:0.2
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_211
-          image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2
+          image: registry.redhat.io/amq7/amq-broker:7.8
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_212
-          image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2
+          image: registry.redhat.io/amq7/amq-broker:7.8
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_213
-          image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2
-        image: quay.io/artemiscloud/activemq-artemis-operator:latest
+          image: registry.redhat.io/amq7/amq-broker:7.8
+        image: registry.redhat.io/amq7/amq-broker-rhel7-operator:0.18
         imagePullPolicy: Always
         name: activemq-artemis-operator
         resources: {}

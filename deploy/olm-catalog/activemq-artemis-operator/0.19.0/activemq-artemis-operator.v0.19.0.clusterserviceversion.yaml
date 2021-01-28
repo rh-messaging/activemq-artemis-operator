@@ -13,7 +13,7 @@ metadata:
     categories: "Streaming & Messaging"
     certified: "false"
     description: ActiveMQ Artemis Operator provides the ability to deploy and manage stateful ActiveMQ Artemis broker clusters
-    containerImage: quay.io/artemiscloud/activemq-artemis-operator:0.19.0
+    containerImage: registry.redhat.io/amq7/amq-broker-rhel7-operator:0.18
     createdAt: 2021-01-20T08:16:32Z
     capabilities: Seamless Upgrades
     repository: https://github.com/artemiscloud/activemq-artemis-operator
@@ -30,7 +30,6 @@ metadata:
           "spec": {
               "deploymentPlan": {
                   "size": 2,
-                  "image": "quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.0",
                   "requireLogin": false,
                   "persistenceEnabled": false,
                   "journalType": "nio",
@@ -69,14 +68,12 @@ spec:
     - activemqartemis
     - operator
   version: 0.19.0
-  replaces: activemq-artemis-operator.v0.18.0
+#  replaces: activemq-artemis-operator.v0.18.0
   relatedImages:
     - name: ActiveMQ_Artemis_Broker_Init
-      image: quay.io/artemiscloud/activemq-artemis-broker-init:0.2
+      image: registry.redhat.io/amq7/amq-broker-init-rhel7:0.2
     - name: ActiveMQ_Artemis_Broker_Kubernetes
-      image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2
-    - name: ActiveMQ_Artemis_Broker_Operator_Bundle
-      image: quay.io/artemiscloud/activemq-artemis-broker-operator:0.18
+      image: registry.redhat.io/amq7/amq-broker:7.8
   maturity: alpha
   maintainers:
     - name: Artemis Cloud
@@ -966,7 +963,7 @@ spec:
                 serviceAccountName: activemq-artemis-operator
                 containers:
                   - name: activemq-artemis-operator
-                    image: quay.io/artemiscloud/activemq-artemis-operator:0.19.0
+                    image: registry.redhat.io/amq7/amq-broker-rhel7-operator:0.18
                     args:
                       # Explicitly set the logging level.
                       # Valid values are debug, info, and error
@@ -990,10 +987,10 @@ spec:
                           fieldRef:
                             fieldPath: metadata.namespace
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init
-                        image: quay.io/artemiscloud/activemq-artemis-broker-init:0.2
+                        image: registry.redhat.io/amq7/amq-broker-init-rhel7:0.2
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_211
-                        image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2
+                        image: registry.redhat.io/amq7/amq-broker:7.8
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_212
-                        image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2
+                        image: registry.redhat.io/amq7/amq-broker:7.8
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_213
-                        image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2
+                        image: registry.redhat.io/amq7/amq-broker:7.8
