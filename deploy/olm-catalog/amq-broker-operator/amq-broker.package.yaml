@@ -1,0 +1,5 @@
+packageName: activemq-artemis
+channels:
+  - name: current
+    currentCSV: amq-broker-operator.v0.18.0
+defaultChannel: current
