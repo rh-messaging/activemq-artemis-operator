@@ -69,11 +69,6 @@ spec:
     - operator
   version: 0.19.0
   replaces: amq-broker-operator.v0.18.0
-  relatedImages:
-    - name: ActiveMQ_Artemis_Broker_Init
-      image: registry.redhat.io/amq7/amq-broker-init-rhel7:0.2
-    - name: ActiveMQ_Artemis_Broker_Kubernetes
-      image: registry.redhat.io/amq7/amq-broker:7.8
   maturity: alpha
   maintainers:
     - name: Red Hat
@@ -989,10 +984,26 @@ spec:
                           fieldRef:
                             fieldPath: metadata.namespace
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init
-                        image: registry.redhat.io/amq7/amq-broker-init-rhel7:0.2
+                        value: registry.redhat.io/amq7/amq-broker-init-rhel7:0.2
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_211
-                        image: registry.redhat.io/amq7/amq-broker:7.8
+                        value: registry.redhat.io/amq7/amq-broker:7.8
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_212
-                        image: registry.redhat.io/amq7/amq-broker:7.8
+                        value: registry.redhat.io/amq7/amq-broker:7.8
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_213
-                        image: registry.redhat.io/amq7/amq-broker:7.8
+                        value: registry.redhat.io/amq7/amq-broker:7.8
+                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_ppc64le
+                        value: registry.redhat.io/amq7/amq-broker-init-rhel7:0.2
+                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_211_ppc64le
+                        value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.7
+                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_212_ppc64le
+                        value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.7
+                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_213_ppc64le
+                        value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.7
+                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_s390x
+                        value: registry.redhat.io/amq7/amq-broker-init-rhel7:0.2
+                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_211_s390x
+                        value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.7
+                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_212_s390x
+                        value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.7
+                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_213_s390x
+                        value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.7
