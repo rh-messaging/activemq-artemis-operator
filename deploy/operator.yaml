@@ -1,12 +1,12 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: activemq-artemis-operator
+  name: amq-broker-operator
 spec:
   replicas: 1
   selector:
     matchLabels:
-      name: activemq-artemis-operator
+      name: amq-broker-operator
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -15,7 +15,7 @@ spec:
   template:
     metadata:
       labels:
-        name: activemq-artemis-operator
+        name: amq-broker-operator
     spec:
       containers:
       - args:
@@ -26,7 +26,7 @@ spec:
         - '--zap-level debug'
         - '--zap-encoder console'
         command:
-        - /home/activemq-artemis-operator/bin/entrypoint
+        - /home/amq-broker-operator/bin/entrypoint
         env:
         - name: OPERATOR_NAME
           valueFrom:
@@ -41,34 +41,31 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init
-#         value: registry.redhat.io/amq7/amq-broker-init-rhel8:0.3
-          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init:0.3
+          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init:0.2-12
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_211
-          value: registry.redhat.io/amq7/amq-broker:7.8
+          value: registry.redhat.io/amq7/amq-broker:7.6
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_212
-          value: registry.redhat.io/amq7/amq-broker:7.8
+          value: registry.redhat.io/amq7/amq-broker:7.7
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_213
-          value: registry.redhat.io/amq7/amq-broker:7.8
+          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift:7.8-16
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_ppc64le
-#         value: registry.redhat.io/amq7/amq-broker-init-rhel7:0.2
-          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init:0.3
+          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init:0.3-2
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_211_ppc64le
-          value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.7
+          value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.6
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_212_ppc64le
           value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.7
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_213_ppc64le
-          value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.7
+          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift-openj9-11-rhel8:7.8-4
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_s390x
-#         value: registry.redhat.io/amq7/amq-broker-init-rhel7:0.2
-          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init:0.3
+          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init:0.3-2
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_211_s390x
-          value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.7
+          value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.6
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_212_s390x
           value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.7
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_213_s390x
-          value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.7
-        image: registry.redhat.io/amq7/amq-broker-rhel8-operator:0.19
+          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift-openj9-11-rhel8:7.8-4
+        image: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator:0.19-1
         imagePullPolicy: Always
-        name: activemq-artemis-operator
+        name: amq-broker-operator
         resources: {}
-      serviceAccountName: activemq-artemis-operator
+      serviceAccountName: amq-broker-operator
