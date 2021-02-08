@@ -41,7 +41,7 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init
-          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init:0.2-12
+          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init:0.3-1
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_211
           value: registry.redhat.io/amq7/amq-broker:7.6
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_212
@@ -51,7 +51,7 @@ spec:
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_ppc64le
           value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init:0.3-2
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_211_ppc64le
-          value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.6
+          value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.7
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_212_ppc64le
           value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.7
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_213_ppc64le
@@ -59,12 +59,12 @@ spec:
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_s390x
           value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init:0.3-2
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_211_s390x
-          value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.6
+          value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.7
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_212_s390x
           value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.7
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_213_s390x
           value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift-openj9-11-rhel8:7.8-4
-        image: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator:0.19-1
+        image: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator:0.19
         imagePullPolicy: Always
         name: amq-broker-operator
         resources: {}
