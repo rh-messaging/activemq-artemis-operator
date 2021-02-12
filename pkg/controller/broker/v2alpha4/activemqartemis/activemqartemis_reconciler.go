@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"runtime"
-	
+
 	"github.com/RHsyseng/operator-utils/pkg/olm"
 	"github.com/RHsyseng/operator-utils/pkg/resource"
 	"github.com/RHsyseng/operator-utils/pkg/resource/compare"
@@ -1020,11 +1020,16 @@ func persistentSyncCausedUpdateOn(deploymentPlan *brokerv2alpha4.DeploymentPlanT
 
 func imageSyncCausedUpdateOn(deploymentPlan *brokerv2alpha4.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
 
+	imageName := DetermineImageToUse(deploymentPlan)
+	//reqLogger.V(1).Info("imageSyncCausedUpdateOn using image " + imageName)
+
 	// At implementation time only one container
-	if strings.Compare(currentStatefulSet.Spec.Template.Spec.Containers[0].Image, deploymentPlan.Image) != 0 {
+	//if strings.Compare(currentStatefulSet.Spec.Template.Spec.Containers[0].Image, deploymentPlan.Image) != 0 {
+	if strings.Compare(currentStatefulSet.Spec.Template.Spec.Containers[0].Image, imageName) != 0 {
 		containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
 		for i := 0; i < containerArrayLen; i++ {
-			currentStatefulSet.Spec.Template.Spec.Containers[i].Image = deploymentPlan.Image
+			//currentStatefulSet.Spec.Template.Spec.Containers[i].Image = deploymentPlan.Image
+			currentStatefulSet.Spec.Template.Spec.Containers[i].Image = imageName
 		}
 		return true
 	}
@@ -1433,11 +1438,11 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 	pts := pods.MakePodTemplateSpec(namespacedName, selectors.LabelBuilder.Labels())
 	Spec := corev1.PodSpec{}
 	Containers := []corev1.Container{}
-	imageName := os.Getenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes")
-	if "" != customResource.Spec.DeploymentPlan.Image {
-		imageName = customResource.Spec.DeploymentPlan.Image
-	}
+
+	imageName := DetermineImageToUse(&customResource.Spec.DeploymentPlan)
+	reqLogger.V(1).Info("NewPodTemplateSpecForCR using image " + imageName)
 	container := containers.MakeContainer(customResource.Name, imageName, MakeEnvVarArrayForCR(customResource))
+
 	container.Resources = customResource.Spec.DeploymentPlan.Resources
 
 	containerPorts := MakeContainerPorts(customResource)
@@ -1532,6 +1537,28 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 	pts.Spec = Spec
 
 	return pts
+}
+
+func DetermineImageToUse(deploymentPlan *brokerv2alpha4.DeploymentPlanType) string {
+
+	imageName := ""
+	log.V(1).Info("DetermineImageToUse DeploymentPlan.Image was " + deploymentPlan.Image)
+	if "placeholder" == deploymentPlan.Image {
+		genericRelatedImageEnvVarName := "RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_" + "213"
+		// Default case of x86_64/amd64 covered here
+		archSpecificRelatedImageEnvVarName := genericRelatedImageEnvVarName
+		if "s390x" == runtime.GOARCH || "ppc64le" == runtime.GOARCH {
+			archSpecificRelatedImageEnvVarName = genericRelatedImageEnvVarName + "_" + runtime.GOARCH
+		}
+		log.V(1).Info("DetermineImageToUse GOARCH specific image env var is " + archSpecificRelatedImageEnvVarName)
+		imageName = os.Getenv(archSpecificRelatedImageEnvVarName)
+		//deploymentPlan.Image = imageName
+	} else {
+		imageName = deploymentPlan.Image
+	}
+	log.V(1).Info("DetermineImageToUse returning " + imageName)
+
+	return imageName
 }
 
 func NewStatefulSetForCR(cr *brokerv2alpha4.ActiveMQArtemis) *appsv1.StatefulSet {
