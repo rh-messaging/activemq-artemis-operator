@@ -11,7 +11,7 @@ import (
 const (
 	// LatestVersion product version supported
 	LatestVersion        = "7.8.1"
-	//CompactLatestVersion = "781"
+	CompactLatestVersion = "781"
 	// LastMicroVersion product version supported
 	LastMicroVersion = "7.8.0"
 	// LastMinorVersion product version supported

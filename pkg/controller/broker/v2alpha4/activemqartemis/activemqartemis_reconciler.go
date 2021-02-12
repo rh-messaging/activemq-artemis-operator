@@ -1020,15 +1020,10 @@ func persistentSyncCausedUpdateOn(deploymentPlan *brokerv2alpha4.DeploymentPlanT
 
 func imageSyncCausedUpdateOn(deploymentPlan *brokerv2alpha4.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
 
-	imageName := DetermineImageToUse(deploymentPlan)
-	//reqLogger.V(1).Info("imageSyncCausedUpdateOn using image " + imageName)
-
-	// At implementation time only one container
-	//if strings.Compare(currentStatefulSet.Spec.Template.Spec.Containers[0].Image, deploymentPlan.Image) != 0 {
+	imageName := determineImageToUse(deploymentPlan)
 	if strings.Compare(currentStatefulSet.Spec.Template.Spec.Containers[0].Image, imageName) != 0 {
 		containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
 		for i := 0; i < containerArrayLen; i++ {
-			//currentStatefulSet.Spec.Template.Spec.Containers[i].Image = deploymentPlan.Image
 			currentStatefulSet.Spec.Template.Spec.Containers[i].Image = imageName
 		}
 		return true
@@ -1425,7 +1420,6 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithName(customResource.Name)
-	//reqLogger.Info("Creating new pod template spec for custom resource")
 	reqLogger.V(1).Info("NewPodTemplateSpecForCR")
 
 	namespacedName := types.NamespacedName{
@@ -1439,8 +1433,8 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 	Spec := corev1.PodSpec{}
 	Containers := []corev1.Container{}
 
-	imageName := DetermineImageToUse(&customResource.Spec.DeploymentPlan)
-	reqLogger.V(1).Info("NewPodTemplateSpecForCR using image " + imageName)
+	imageName := determineImageToUse(&customResource.Spec.DeploymentPlan)
+	reqLogger.V(1).Info("NewPodTemplateSpecForCR determined image to use " + imageName)
 	container := containers.MakeContainer(customResource.Name, imageName, MakeEnvVarArrayForCR(customResource))
 
 	container.Resources = customResource.Spec.DeploymentPlan.Resources
@@ -1539,12 +1533,12 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 	return pts
 }
 
-func DetermineImageToUse(deploymentPlan *brokerv2alpha4.DeploymentPlanType) string {
+func determineImageToUse(deploymentPlan *brokerv2alpha4.DeploymentPlanType) string {
 
 	imageName := ""
 	log.V(1).Info("DetermineImageToUse DeploymentPlan.Image was " + deploymentPlan.Image)
 	if "placeholder" == deploymentPlan.Image {
-		genericRelatedImageEnvVarName := "RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_" + "213"
+		genericRelatedImageEnvVarName := "RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_" + CompactLatestVersion
 		// Default case of x86_64/amd64 covered here
 		archSpecificRelatedImageEnvVarName := genericRelatedImageEnvVarName
 		if "s390x" == runtime.GOARCH || "ppc64le" == runtime.GOARCH {
@@ -1552,7 +1546,6 @@ func DetermineImageToUse(deploymentPlan *brokerv2alpha4.DeploymentPlanType) stri
 		}
 		log.V(1).Info("DetermineImageToUse GOARCH specific image env var is " + archSpecificRelatedImageEnvVarName)
 		imageName = os.Getenv(archSpecificRelatedImageEnvVarName)
-		//deploymentPlan.Image = imageName
 	} else {
 		imageName = deploymentPlan.Image
 	}
