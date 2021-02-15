@@ -293,7 +293,7 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 
 	if 0 == *sts.Spec.Replicas {
 		// Ensure data is not touched in the case of complete scaledown
-		log.V(5).Info("Ignoring StatefulSet " + sts.Name + " because replicas set to 0.")
+		log.V(1).Info("Ignoring StatefulSet " + sts.Name + " because replicas set to 0.")
 		return nil
 	}
 
@@ -301,7 +301,7 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 
 	if len(sts.Spec.VolumeClaimTemplates) == 0 {
 		// nothing to do, as the stateful pods don't use any PVCs
-		log.Info("Ignoring StatefulSet " + sts.Name + " because it does not use any PersistentVolumeClaims.")
+		log.V(1).Info("Ignoring StatefulSet " + sts.Name + " because it does not use any PersistentVolumeClaims.")
 		return nil
 	}
 	log.V(5).Info("Statefulset " + sts.Name + " Spec.VolumeClaimTemplates is " + strconv.Itoa((len(sts.Spec.VolumeClaimTemplates))))

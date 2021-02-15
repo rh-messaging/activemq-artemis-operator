@@ -212,7 +212,7 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(customResourc
 		reconciler.statefulSetUpdates |= statefulSetSizeUpdated
 	}
 
-	if imageSyncCausedUpdateOn(deploymentPlan, currentStatefulSet) {
+	if imageSyncCausedUpdateOn(customResource, currentStatefulSet) {
 		reconciler.statefulSetUpdates |= statefulSetImageUpdated
 	}
 
@@ -1018,9 +1018,9 @@ func persistentSyncCausedUpdateOn(deploymentPlan *brokerv2alpha4.DeploymentPlanT
 	return statefulSetUpdated
 }
 
-func imageSyncCausedUpdateOn(deploymentPlan *brokerv2alpha4.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
+func imageSyncCausedUpdateOn(customResource *brokerv2alpha4.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
 
-	imageName := determineImageToUse(deploymentPlan)
+	imageName := determineImageToUse(customResource)
 	if strings.Compare(currentStatefulSet.Spec.Template.Spec.Containers[0].Image, imageName) != 0 {
 		containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
 		for i := 0; i < containerArrayLen; i++ {
@@ -1051,7 +1051,9 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessResources(customResource *br
 		requestedResources[index].SetNamespace(customResource.Namespace)
 	}
 
-	err = reconciler.checkUpgradeVersions(customResource, err, reqLogger)
+	//err = reconciler.checkUpgradeVersions(customResource, err, reqLogger)
+	//reqLogger.V(1).Info("Checking upgrade versions")
+	//err = checkUpgradeVersions(customResource, err, reqLogger)
 	deployed, err = getDeployedResources(customResource, client)
 	if err != nil {
 		reqLogger.Error(err, "error getting deployed resources", "returned", stepsComplete)
@@ -1188,51 +1190,51 @@ func (reconciler *ActiveMQArtemisReconciler) deleteResource(customResource *brok
 	return deleted, stepsComplete
 }
 
-func (reconciler *ActiveMQArtemisReconciler) checkUpgradeVersions(customResource *brokerv2alpha4.ActiveMQArtemis, err error, reqLogger logr.Logger) error {
-	_, _, err = checkProductUpgrade(customResource)
-	//if err != nil {
-	//	log.Info("checkProductUpgrade failed")
-	//} else {
-	//	hasUpdates = true
-	//}
-	specifiedMinorVersion := getMinorImageVersion(customResource.Spec.Version)
-	if customResource.Spec.Upgrades.Enabled && customResource.Spec.Upgrades.Minor {
-		imageName, imageTag, imageContext := GetImage(customResource.Spec.DeploymentPlan.Image)
-		reqLogger.V(1).Info("Current imageName " + imageName)
-		reqLogger.V(1).Info("Current imageTag " + imageTag)
-		reqLogger.V(1).Info("Current imageContext " + imageContext)
-
-		imageTagNoDash := strings.Replace(imageTag, "-", ".", -1)
-		imageVersionSplitFromTag := strings.Split(imageTagNoDash, ".")
-		var currentMinorVersion = ""
-		if 3 == len(imageVersionSplitFromTag) {
-			currentMinorVersion = imageVersionSplitFromTag[0] + imageVersionSplitFromTag[1]
-		}
-		reqLogger.V(1).Info("Current minor version " + currentMinorVersion)
-
-		if specifiedMinorVersion != currentMinorVersion {
-			// reset current annotations and update CR use to specified product version
-			customResource.SetAnnotations(map[string]string{
-				brokerv2alpha4.SchemeGroupVersion.Group: FullVersionFromMinorVersion[specifiedMinorVersion]})
-			customResource.Spec.Version = FullVersionFromMinorVersion[specifiedMinorVersion]
-
-			upgradeVersionEnvBrokerImage := os.Getenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_" + CompactFullVersionFromMinorVersion[specifiedMinorVersion])
-			if "s390x" == runtime.GOARCH || "ppc64le" == runtime.GOARCH {
-				upgradeVersionEnvBrokerImage = upgradeVersionEnvBrokerImage + "_" + runtime.GOARCH
-			}
-
-			if "" != upgradeVersionEnvBrokerImage {
-				customResource.Spec.DeploymentPlan.Image = upgradeVersionEnvBrokerImage
-			}
-
-			imageName, imageTag, imageContext = GetImage(customResource.Spec.DeploymentPlan.Image)
-			reqLogger.V(1).Info("Updated imageName " + imageName)
-			reqLogger.V(1).Info("Updated imageTag " + imageTag)
-			reqLogger.V(1).Info("Updated imageContext " + imageContext)
-		}
-	}
-	return err
-}
+//func (reconciler *ActiveMQArtemisReconciler) checkUpgradeVersions(customResource *brokerv2alpha4.ActiveMQArtemis, err error, reqLogger logr.Logger) error {
+//	_, _, err = checkProductUpgrade(customResource)
+//	//if err != nil {
+//	//	log.Info("checkProductUpgrade failed")
+//	//} else {
+//	//	hasUpdates = true
+//	//}
+//	specifiedMinorVersion := getMinorImageVersion(customResource.Spec.Version)
+//	if customResource.Spec.Upgrades.Enabled && customResource.Spec.Upgrades.Minor {
+//		imageName, imageTag, imageContext := GetImage(customResource.Spec.DeploymentPlan.Image)
+//		reqLogger.V(1).Info("Current imageName " + imageName)
+//		reqLogger.V(1).Info("Current imageTag " + imageTag)
+//		reqLogger.V(1).Info("Current imageContext " + imageContext)
+//
+//		imageTagNoDash := strings.Replace(imageTag, "-", ".", -1)
+//		imageVersionSplitFromTag := strings.Split(imageTagNoDash, ".")
+//		var currentMinorVersion = ""
+//		if 3 == len(imageVersionSplitFromTag) {
+//			currentMinorVersion = imageVersionSplitFromTag[0] + imageVersionSplitFromTag[1]
+//		}
+//		reqLogger.V(1).Info("Current minor version " + currentMinorVersion)
+//
+//		if specifiedMinorVersion != currentMinorVersion {
+//			// reset current annotations and update CR use to specified product version
+//			customResource.SetAnnotations(map[string]string{
+//				brokerv2alpha4.SchemeGroupVersion.Group: version.FullVersionFromMinorVersion[specifiedMinorVersion]})
+//			customResource.Spec.Version = version.FullVersionFromMinorVersion[specifiedMinorVersion]
+//
+//			upgradeVersionEnvBrokerImage := os.Getenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_" + version.CompactFullVersionFromMinorVersion[specifiedMinorVersion])
+//			if "s390x" == runtime.GOARCH || "ppc64le" == runtime.GOARCH {
+//				upgradeVersionEnvBrokerImage = upgradeVersionEnvBrokerImage + "_" + runtime.GOARCH
+//			}
+//
+//			if "" != upgradeVersionEnvBrokerImage {
+//				customResource.Spec.DeploymentPlan.Image = upgradeVersionEnvBrokerImage
+//			}
+//
+//			imageName, imageTag, imageContext = GetImage(customResource.Spec.DeploymentPlan.Image)
+//			reqLogger.V(1).Info("Updated imageName " + imageName)
+//			reqLogger.V(1).Info("Updated imageTag " + imageTag)
+//			reqLogger.V(1).Info("Updated imageContext " + imageContext)
+//		}
+//	}
+//	return err
+//}
 
 func (reconciler *ActiveMQArtemisReconciler) createRequestedResource(customResource *brokerv2alpha4.ActiveMQArtemis, client client.Client, scheme *k8sruntime.Scheme, namespacedName types.NamespacedName, requested resource.KubernetesResource, reqLogger logr.Logger, createError error, kind string) (error, error) {
 
@@ -1433,7 +1435,7 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 	Spec := corev1.PodSpec{}
 	Containers := []corev1.Container{}
 
-	imageName := determineImageToUse(&customResource.Spec.DeploymentPlan)
+	imageName := determineImageToUse(customResource)
 	reqLogger.V(1).Info("NewPodTemplateSpecForCR determined image to use " + imageName)
 	container := containers.MakeContainer(customResource.Name, imageName, MakeEnvVarArrayForCR(customResource))
 
@@ -1533,12 +1535,33 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 	return pts
 }
 
-func determineImageToUse(deploymentPlan *brokerv2alpha4.DeploymentPlanType) string {
+func determineImageToUse(customResource *brokerv2alpha4.ActiveMQArtemis) string {
 
+	deploymentPlan := customResource.Spec.DeploymentPlan
+	specifiedVersion := customResource.Spec.Version
 	imageName := ""
 	log.V(1).Info("DetermineImageToUse DeploymentPlan.Image was " + deploymentPlan.Image)
+	log.V(1).Info("DetermineImageToUse specifiedVersion was " + specifiedVersion)
+
+	// By default we should use the latest version
+	versionToUse := version.CompactLatestVersion
+	// TODO: Make the Minor part work
+	if len(specifiedVersion) > 0 &&
+		customResource.Spec.Upgrades.Enabled &&
+		customResource.Spec.Upgrades.Minor {
+		// Attempt lookup of the specified version
+		compactSpecifiedVersion := version.CompactVersionFromVersion[specifiedVersion]
+		if len(compactSpecifiedVersion) > 0 {
+			versionToUse = compactSpecifiedVersion
+			log.V(1).Info("DetermineImageToUse successfully looked up product version " + specifiedVersion + " for this operator version")
+			log.V(1).Info("DetermineImageToUse using compact product version to make determination " + compactSpecifiedVersion)
+		} else {
+			log.V(1).Info("DetermineImageToUse failed to lookup product version " + specifiedVersion + " for this operator version")
+		}
+	}
+
 	if "placeholder" == deploymentPlan.Image {
-		genericRelatedImageEnvVarName := "RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_" + CompactLatestVersion
+		genericRelatedImageEnvVarName := "RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_" + versionToUse
 		// Default case of x86_64/amd64 covered here
 		archSpecificRelatedImageEnvVarName := genericRelatedImageEnvVarName
 		if "s390x" == runtime.GOARCH || "ppc64le" == runtime.GOARCH {
