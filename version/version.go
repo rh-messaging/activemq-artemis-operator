@@ -18,6 +18,7 @@ const (
 
 // SupportedVersions - product versions this operator supports
 var SupportedVersions = []string{LatestVersion, LastMicroVersion, LastMinorVersion}
+var SupportedMicroVersions = []string{LatestVersion, LastMicroVersion}
 var OperandVersionFromOperatorVersion map[string]string = map[string]string{
 	"0.17.0": "7.7.0",
 	"0.18.0": "7.8.0",
