@@ -8,42 +8,48 @@ var (
 
 const (
 	// LatestVersion product version supported
-	LatestVersion        = "2.16.0"
-	CompactLatestVersion = "2160"
+	LatestVersion        = "7.8.1"
+	CompactLatestVersion = "781"
 	// LastMicroVersion product version supported
-	LastMicroVersion = "2.15.0"
+	LastMicroVersion = "7.8.0"
 	// LastMinorVersion product version supported
-	LastMinorVersion = "2.15.0"
+	LastMinorVersion = "7.7.0"
 )
 
 // SupportedVersions - product versions this operator supports
 var SupportedVersions = []string{LatestVersion, LastMicroVersion, LastMinorVersion}
 var SupportedMicroVersions = []string{LatestVersion, LastMicroVersion}
 var OperandVersionFromOperatorVersion map[string]string = map[string]string{
-	"0.18.0": "2.15.0",
-	"0.19.0": "2.16.0",
+	"0.17.0": "7.7.0",
+	"0.18.0": "7.8.0",
+	"0.19.0": "7.8.1",
 }
 var FullVersionFromMinorVersion map[string]string = map[string]string{
-	"150": "2.15.0",
-	"160": "2.16.0",
+	"70": "7.7.0",
+	"80": "7.8.0",
+	"81": "7.8.1",
 }
 
 var CompactFullVersionFromMinorVersion map[string]string = map[string]string{
-	"150": "2150",
-	"160": "2160",
+	"70": "770",
+	"80": "780",
+	"81": "781",
 }
 
 var CompactVersionFromVersion map[string]string = map[string]string{
-	"2.15.0": "2150",
-	"2.16.0": "2160",
+	"7.7.0": "770",
+	"7.8.0": "780",
+	"7.8.1": "781",
 }
 
 var FullVersionFromCompactVersion map[string]string = map[string]string{
-	"2150": "2.15.0",
-	"2160": "2.16.0",
+	"770": "7.7.0",
+	"780": "7.8.0",
+	"781": "7.8.1",
 }
 
 var MinorVersionFromFullVersion map[string]string = map[string]string{
-	"2.15.0": "150",
-	"2.16.0": "160",
+	"7.7.0": "70",
+	"7.8.0": "80",
+	"7.8.1": "81",
 }
