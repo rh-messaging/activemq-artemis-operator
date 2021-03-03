@@ -1464,7 +1464,7 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 		reqLogger.Info("Determining the init image to use due to placeholder setting")
 		initImageName = determineImageToUse(customResource, "Init")
 	} else {
-		initImageName = customResource.Spec.DeploymentPlan.Image
+		initImageName = customResource.Spec.DeploymentPlan.InitImage
 	}
 	reqLogger.V(1).Info("NewPodTemplateSpecForCR determined initImage to use " + initImageName)
 
