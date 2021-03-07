@@ -76,7 +76,7 @@ var _ = ginkgo.Describe("CRD Validation Test", func() {
 				}
 				gomega.Expect(sfsize).Should(gomega.Equal(AMQinstance.Spec.DeploymentPlan.Size))
 			})
-			
+
 			ginkgo.Context("check if the services has been created", func() {
 				service := &corev1.Service{}
 				ginkgo.It("Headless Service", func() {
@@ -108,33 +108,33 @@ var _ = ginkgo.Describe("CRD Validation Test", func() {
 					gomega.Expect(err).Should(gomega.BeNil())
 				}
 			})
-			
+
 			var i int32 = 0
 			ordinalString := ""
 			route := &routev1.Route{}
 			ingress := &extv1b1.Ingress{}
 			for ; i < AMQinstance.Spec.DeploymentPlan.Size; i++ {
 				ordinalString = strconv.Itoa(int(i))
-					for _, acceptor := range AMQinstance.Spec.Acceptors {
-						acceptorRoute := types.NamespacedName{Name: AMQinstance.Name + "-" + acceptor.Name + "-" + ordinalString + "-svc-rte", Namespace: AMQinstance.Namespace}
-						err = r.GetClient().Get(context.TODO(), acceptorRoute, route)
-						gomega.Expect(err).Should(gomega.BeNil())
-					}
-					for _, connector := range AMQinstance.Spec.Connectors {
-						connectorRoute := types.NamespacedName{Name: AMQinstance.Name + "-" + connector.Name + "-" + ordinalString + "-svc-rte", Namespace: AMQinstance.Namespace}
-						err = r.GetClient().Get(context.TODO(), connectorRoute, route)
-						gomega.Expect(err).Should(gomega.BeNil())
-					}
+				for _, acceptor := range AMQinstance.Spec.Acceptors {
+					acceptorRoute := types.NamespacedName{Name: AMQinstance.Name + "-" + acceptor.Name + "-" + ordinalString + "-svc-rte", Namespace: AMQinstance.Namespace}
+					err = r.GetClient().Get(context.TODO(), acceptorRoute, route)
+					gomega.Expect(err).Should(gomega.BeNil())
+				}
+				for _, connector := range AMQinstance.Spec.Connectors {
+					connectorRoute := types.NamespacedName{Name: AMQinstance.Name + "-" + connector.Name + "-" + ordinalString + "-svc-rte", Namespace: AMQinstance.Namespace}
+					err = r.GetClient().Get(context.TODO(), connectorRoute, route)
+					gomega.Expect(err).Should(gomega.BeNil())
+				}
 
-					if isOpenshift {
-						consoleRoute := types.NamespacedName{Name: AMQinstance.Name + "-wconsj" + "-" + ordinalString + "-svc-rte", Namespace: AMQinstance.Namespace}
-						err = r.GetClient().Get(context.TODO(), consoleRoute, route)
-						gomega.Expect(err).Should(gomega.BeNil())
-					} else {
-						consoleIngress := types.NamespacedName{Name: AMQinstance.Name + "-wconsj" + "-" + ordinalString + "-svc-ing", Namespace: AMQinstance.Namespace}
-						err = r.GetClient().Get(context.TODO(), consoleIngress, ingress)
-						gomega.Expect(err).Should(gomega.BeNil())
-					}
+				if isOpenshift {
+					consoleRoute := types.NamespacedName{Name: AMQinstance.Name + "-wconsj" + "-" + ordinalString + "-svc-rte", Namespace: AMQinstance.Namespace}
+					err = r.GetClient().Get(context.TODO(), consoleRoute, route)
+					gomega.Expect(err).Should(gomega.BeNil())
+				} else {
+					consoleIngress := types.NamespacedName{Name: AMQinstance.Name + "-wconsj" + "-" + ordinalString + "-svc-ing", Namespace: AMQinstance.Namespace}
+					err = r.GetClient().Get(context.TODO(), consoleIngress, ingress)
+					gomega.Expect(err).Should(gomega.BeNil())
+				}
 			}
 
 			for i := 0; i < int(AMQinstance.Spec.DeploymentPlan.Size); i++ {
@@ -149,7 +149,7 @@ var _ = ginkgo.Describe("CRD Validation Test", func() {
 			gomega.Expect(res).Should(gomega.Equal(reconcile.Result{}))
 		})
 	})
-	
+
 	ginkgo.Context("TestActiveMQArtemis_Reconcile_WithoutSpecDefined", func() {
 		logf.SetLogger(logf.ZapLogger(true))
 		objs := []runtime.Object{
@@ -186,22 +186,22 @@ var _ = ginkgo.Describe("CRD Validation Test", func() {
 })
 
 func testNonWatchedResourceNameNotFound() {
-		logf.SetLogger(logf.ZapLogger(true))
-		objs := []runtime.Object{
-			&AMQinstance,
-		}
+	logf.SetLogger(logf.ZapLogger(true))
+	objs := []runtime.Object{
+		&AMQinstance,
+	}
 
-		request := reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      "doesn't exist",
-				Namespace: AMQinstance.Namespace,
-			},
-		}
-		r := buildReconcileWithFakeClientWithMocks(objs)
-		result, err := r.Reconcile(request)
-		gomega.Expect(err).To(gomega.BeNil())
-		gomega.Expect(result).To(gomega.Equal(reconcile.Result{}))
-	
+	request := reconcile.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      "doesn't exist",
+			Namespace: AMQinstance.Namespace,
+		},
+	}
+	r := buildReconcileWithFakeClientWithMocks(objs)
+	result, err := r.Reconcile(request)
+	gomega.Expect(err).To(gomega.BeNil())
+	gomega.Expect(result).To(gomega.Equal(reconcile.Result{}))
+
 }
 
 func testNonWatchedResourceNamespaceNotFound() {

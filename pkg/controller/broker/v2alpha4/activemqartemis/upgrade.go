@@ -5,7 +5,6 @@ import (
 	"strings"
 )
 
-
 func isVersionSupported(specifiedVersion string) bool {
 	for _, thisSupportedVersion := range version.SupportedVersions {
 		if thisSupportedVersion == specifiedVersion {

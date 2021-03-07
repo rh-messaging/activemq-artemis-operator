@@ -58,11 +58,11 @@ const (
 )
 
 type ActiveMQArtemisFSM struct {
-	m              fsm.IMachine
-	namespacedName types.NamespacedName
-	customResource *brokerv2alpha3.ActiveMQArtemis
+	m                  fsm.IMachine
+	namespacedName     types.NamespacedName
+	customResource     *brokerv2alpha3.ActiveMQArtemis
 	prevCustomResource *brokerv2alpha3.ActiveMQArtemis
-	r              *ReconcileActiveMQArtemis
+	r                  *ReconcileActiveMQArtemis
 }
 
 // Need to deep-copy the instance?
@@ -133,8 +133,8 @@ func (amqbfsm *ActiveMQArtemisFSM) Enter(startStateID int) error {
 }
 
 func (amqbfsm *ActiveMQArtemisFSM) UpdateCustomResource(newRc *brokerv2alpha3.ActiveMQArtemis) {
-		*amqbfsm.prevCustomResource = *amqbfsm.customResource
-		*amqbfsm.customResource = *newRc
+	*amqbfsm.prevCustomResource = *amqbfsm.customResource
+	*amqbfsm.customResource = *newRc
 }
 
 func (amqbfsm *ActiveMQArtemisFSM) Update() (error, int) {

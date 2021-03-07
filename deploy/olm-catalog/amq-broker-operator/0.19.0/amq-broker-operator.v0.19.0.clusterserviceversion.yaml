@@ -7,13 +7,11 @@ metadata:
     operator-activemqartemis: "true"
     operatorframework.io/os.linux: supported
     operatorframework.io/arch.amd64: supported
-    operatorframework.io/arch.s390x: supported
-    operatorframework.io/arch.ppc64le: supported
   annotations:
     categories: "Streaming & Messaging"
     certified: "false"
     description: AMQ Broker Operator provides the ability to deploy and manage stateful AMQ Broker clusters
-    containerImage: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator:0.19
+    containerImage: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel7-operator:0.19
     createdAt: 2021-02-12T08:16:32Z
     capabilities: Seamless Upgrades
     repository: https://github.com/rh-messaging/activemq-artemis-operator
@@ -961,7 +959,7 @@ spec:
                 serviceAccountName: amq-broker-operator
                 containers:
                   - name: amq-broker-operator
-                    image: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator:0.19
+                    image: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel7-operator:0.19
                     args:
                       # Explicitly set the logging level.
                       # Valid values are debug, info, and error
@@ -998,29 +996,3 @@ spec:
                         value: registry.redhat.io/amq7/amq-broker:7.8-12
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781
                         value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift:7.8-16
-
-                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_ppc64le_770
-                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init:0.3-3
-                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_ppc64le_780
-                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init:0.3-3
-                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_ppc64le_781
-                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init:0.3-3
-                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_770_ppc64le
-                        value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.7
-                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_780_ppc64le
-                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift-openj9-11-rhel8:7.8-5
-                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781_ppc64le
-                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift-openj9-11-rhel8:7.8-5
-
-                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_s390x_770
-                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init:0.3-3
-                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_s390x_780
-                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init:0.3-3
-                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_s390x_781
-                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init:0.3-3
-                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_770_s390x
-                        value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.7
-                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_780_s390x
-                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift-openj9-11-rhel8:7.8-5
-                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781_s390x
-                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift-openj9-11-rhel8:7.8-5

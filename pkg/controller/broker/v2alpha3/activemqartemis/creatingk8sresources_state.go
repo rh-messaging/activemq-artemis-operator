@@ -106,7 +106,7 @@ func (rs *CreatingK8sResourcesState) generateSecrets() *corev1.Secret {
 
 	namespacedName.Name = secrets.NettyNameBuilder.Name()
 	nettyDataMap := map[string]string{
-		"AMQ_ACCEPTORS": "",
+		"AMQ_ACCEPTORS":  "",
 		"AMQ_CONNECTORS": "",
 	}
 	secretDefinition = secrets.Create(rs.parentFSM.customResource, namespacedName, nettyDataMap, rs.parentFSM.r.client, rs.parentFSM.r.scheme)

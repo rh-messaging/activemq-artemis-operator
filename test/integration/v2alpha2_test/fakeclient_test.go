@@ -5,13 +5,13 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	extv1b1 "k8s.io/api/extensions/v1beta1"
 
+	. "github.com/artemiscloud/activemq-artemis-operator/pkg/controller/broker/v2alpha2/activemqartemis"
+	"github.com/onsi/ginkgo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	. "github.com/artemiscloud/activemq-artemis-operator/pkg/controller/broker/v2alpha2/activemqartemis"
-	"github.com/onsi/ginkgo"
 )
 
 //buildReconcileWithFakeClientWithMocks return reconcile with fake client, schemes and mock objects

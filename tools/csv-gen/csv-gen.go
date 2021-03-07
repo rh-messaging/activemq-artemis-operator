@@ -492,7 +492,7 @@ func main() {
 			Tags: []constants.ImageRefTag{
 				{
 					// Needs to match the component name for upstream and downstream.
-					Name: "amq7/amq-broker-rhel8-operator",
+					Name: "amq7/amq-broker-rhel7-operator",
 					From: &corev1.ObjectReference{
 						// Needs to match the image that is in your CSV that you want to replace.
 						Name: deployment.Spec.Template.Spec.Containers[0].Image,

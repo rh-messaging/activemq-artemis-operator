@@ -10,7 +10,6 @@ import (
 	"github.com/RHsyseng/operator-utils/pkg/resource/read"
 	activemqartemisscaledown "github.com/artemiscloud/activemq-artemis-operator/pkg/controller/broker/v2alpha1/activemqartemisscaledown"
 	v2alpha2activemqartemisaddress "github.com/artemiscloud/activemq-artemis-operator/pkg/controller/broker/v2alpha2/activemqartemisaddress"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/config"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/containers"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/ingresses"
@@ -21,6 +20,7 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/serviceports"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/config"
 	cr2jinja2v2alpha3 "github.com/artemiscloud/activemq-artemis-operator/pkg/utils/cr2jinja2"
 	"github.com/artemiscloud/activemq-artemis-operator/version"
 	"github.com/go-logr/logr"
@@ -132,7 +132,7 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessStatefulSet(fsm *ActiveMQArt
 		if reconciler.ProcessAddressSettings(fsm.customResource, fsm.prevCustomResource, client) {
 			log.Info("There are new address settings change in the cr, creating a new pod template to update")
 			*fsm.prevCustomResource = *fsm.customResource
-			currentStatefulSet.Spec.Template = NewPodTemplateSpecForCR(fsm.customResource);	
+			currentStatefulSet.Spec.Template = NewPodTemplateSpecForCR(fsm.customResource)
 		}
 	}
 

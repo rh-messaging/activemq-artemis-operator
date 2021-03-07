@@ -1,12 +1,12 @@
 package config_test
 
 import (
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/config"
+	"fmt"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha3"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/config"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"testing"
-	"fmt"
 )
 
 func TestConfigUtils(t *testing.T) {
@@ -15,13 +15,12 @@ func TestConfigUtils(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	fmt.Println("=======Before Config Suite========");
+	fmt.Println("=======Before Config Suite========")
 })
 
 var _ = AfterSuite(func() {
-	fmt.Println("=======After Config Suite========");
+	fmt.Println("=======After Config Suite========")
 })
-
 
 var _ = Describe("Config Util Test", func() {
 	Context("TestAddressSettingsEqual", func() {
@@ -29,7 +28,7 @@ var _ = Describe("Config Util Test", func() {
 		dlq2 := "DLQABC"
 		dlq3 := "jmsdlq"
 		dlq4 := "DLQoutgoingxxxx"
-		
+
 		dlq1a := "DLQ"
 		dlq2a := "DLQABC"
 		dlq3a := "jmsdlq"
@@ -37,54 +36,54 @@ var _ = Describe("Config Util Test", func() {
 
 		mergeAll := "merge_all"
 		mergeReplace := "merge_replace"
-		
+
 		enableMetrics1 := true
 		defaultConsumerWindowSize1 := int32(2048000)
 		maxSizeBytes1 := "10m"
 		defaultGroupBuckets1 := int32(10)
 
-		var addressSettings = [...]v2alpha3.AddressSettingType {
+		var addressSettings = [...]v2alpha3.AddressSettingType{
 			{
-				Match: "#",
-			    DeadLetterAddress: &dlq1,
-		    	EnableMetrics: &enableMetrics1,
+				Match:             "#",
+				DeadLetterAddress: &dlq1,
+				EnableMetrics:     &enableMetrics1,
 			},
 			{
-				Match: "abc#",
-				DeadLetterAddress: &dlq2,
+				Match:                     "abc#",
+				DeadLetterAddress:         &dlq2,
 				DefaultConsumerWindowSize: &defaultConsumerWindowSize1,
-				MaxSizeBytes: &maxSizeBytes1,
+				MaxSizeBytes:              &maxSizeBytes1,
 			},
 			{
-				Match: "jms",
-      			DeadLetterAddress: &dlq3,
+				Match:             "jms",
+				DeadLetterAddress: &dlq3,
 			},
 			{
-			    Match: "outgoingxx",
-			    DeadLetterAddress: &dlq4,
+				Match:               "outgoingxx",
+				DeadLetterAddress:   &dlq4,
 				DefaultGroupBuckets: &defaultGroupBuckets1,
 			},
 		}
 
-		var addressSettings2 = [...]v2alpha3.AddressSettingType {
+		var addressSettings2 = [...]v2alpha3.AddressSettingType{
 			{
-				Match: "#",
-			    DeadLetterAddress: &dlq1a,
-		    	EnableMetrics: &enableMetrics1,
+				Match:             "#",
+				DeadLetterAddress: &dlq1a,
+				EnableMetrics:     &enableMetrics1,
 			},
 			{
-				Match: "abc#",
-				DeadLetterAddress: &dlq2a,
+				Match:                     "abc#",
+				DeadLetterAddress:         &dlq2a,
 				DefaultConsumerWindowSize: &defaultConsumerWindowSize1,
-				MaxSizeBytes: &maxSizeBytes1,
+				MaxSizeBytes:              &maxSizeBytes1,
 			},
 			{
-				Match: "jms",
-      			DeadLetterAddress: &dlq3a,
+				Match:             "jms",
+				DeadLetterAddress: &dlq3a,
 			},
 			{
-			    Match: "outgoingxx",
-			    DeadLetterAddress: &dlq4a,
+				Match:               "outgoingxx",
+				DeadLetterAddress:   &dlq4a,
 				DefaultGroupBuckets: &defaultGroupBuckets1,
 			},
 		}
@@ -93,11 +92,11 @@ var _ = Describe("Config Util Test", func() {
 			result := config.IsEqual(addressSettings[:], addressSettings[:])
 			Expect(result).To(BeTrue())
 			addressSettingsType := v2alpha3.AddressSettingsType{
-				ApplyRule: &mergeAll,
+				ApplyRule:      &mergeAll,
 				AddressSetting: addressSettings[:],
 			}
-			newAddressSettingsType := v2alpha3.AddressSettingsType {
-				ApplyRule: &mergeReplace,
+			newAddressSettingsType := v2alpha3.AddressSettingsType{
+				ApplyRule:      &mergeReplace,
 				AddressSetting: []v2alpha3.AddressSettingType{},
 			}
 			result = (*addressSettingsType.ApplyRule) == (*newAddressSettingsType.ApplyRule)

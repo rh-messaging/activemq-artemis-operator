@@ -44,7 +44,7 @@ var crNameMap = map[string]string{
 
 var _ = ginkgo.Describe("CRD Validation Test", func() {
 
-	//mark this test as Pending because 
+	//mark this test as Pending because
 	//https://github.com/artemiscloud/activemq-artemis-operator/issues/19
 	ginkgo.It("Test CRD Schema", func() {
 		ginkgo.Skip("*** Skipping test for know issue #19")

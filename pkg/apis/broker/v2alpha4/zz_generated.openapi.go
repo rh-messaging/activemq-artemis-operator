@@ -310,7 +310,7 @@ func schema_pkg_apis_broker_v2alpha4_ActiveMQArtemisSpec(ref common.ReferenceCal
 			},
 		},
 		Dependencies: []string{
-			"github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha4.AcceptorType", "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha4.ActiveMQArtemisUpgrades", "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha4.ConnectorType", "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha4.ConsoleType", "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha4.StorageType","github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha4.DeploymentPlanType"},
+			"github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha4.AcceptorType", "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha4.ActiveMQArtemisUpgrades", "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha4.ConnectorType", "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha4.ConsoleType", "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha4.StorageType", "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha4.DeploymentPlanType"},
 	}
 }
 
