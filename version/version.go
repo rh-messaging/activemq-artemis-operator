@@ -53,3 +53,5 @@ var MinorVersionFromFullVersion map[string]string = map[string]string{
 	"7.8.0": "80",
 	"7.8.1": "81",
 }
+
+var YacfgProfileName string = "amq_broker"

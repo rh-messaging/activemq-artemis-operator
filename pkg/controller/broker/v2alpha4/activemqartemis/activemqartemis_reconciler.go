@@ -1506,9 +1506,10 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 
 		compactVersionToUse := determineCompactVersionToUse(customResource)
 		yacfgProfileVersion = version.FullVersionFromCompactVersion[compactVersionToUse]
+		yacfgProfileName := version.YacfgProfileName
 
 		initCmd := "echo \"" + configYaml.String() + "\" > " + outputDir +
-			"/broker.yaml; cat /yacfg_etc/broker.yaml; yacfg --profile artemis/" +
+			"/broker.yaml; cat /yacfg_etc/broker.yaml; yacfg --profile " + yacfgProfileName + "/" +
 			yacfgProfileVersion + "/default_with_user_address_settings.yaml.jinja2  --tune " +
 			outputDir + "/broker.yaml --extra-properties '" + jsonSpecials + "' --output " + outputDir
 		configCmd := "/opt/amq/bin/launch.sh"
