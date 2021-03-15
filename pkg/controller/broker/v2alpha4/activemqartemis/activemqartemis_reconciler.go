@@ -87,6 +87,11 @@ type ActiveMQArtemisReconciler struct {
 	statefulSetUpdates uint32
 }
 
+type ValueInfo struct {
+	Value   string
+	AutoGen bool
+}
+
 type ActiveMQArtemisIReconciler interface {
 	Process(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, firstTime bool) uint32
 	ProcessStatefulSet(fsm *ActiveMQArtemisFSM, client client.Client, log logr.Logger, firstTime bool) (*appsv1.StatefulSet, bool)
@@ -157,52 +162,67 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessCredentials(customResource *
 	var log = logf.Log.WithName("controller_v2alpha4activemqartemis")
 	log.V(1).Info("ProcessCredentials")
 
-	adminUser := ""
-	adminPassword := ""
+	envVars := make(map[string]ValueInfo)
+
+	adminUser := ValueInfo{
+		"",
+		false,
+	}
+	adminPassword := ValueInfo{
+		"",
+		false,
+	}
 	// TODO: Remove singular admin level user and password in favour of at least guest and admin access
 	secretName := secrets.CredentialsNameBuilder.Name()
 	envVarName1 := "AMQ_USER"
 	for {
-		adminUser = customResource.Spec.AdminUser
-		if "" != adminUser {
+		adminUser.Value = customResource.Spec.AdminUser
+		if "" != adminUser.Value {
 			break
 		}
 
 		if amqUserEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_USER"); nil != amqUserEnvVar {
-			adminUser = amqUserEnvVar.Value
+			adminUser.Value = amqUserEnvVar.Value
 		}
-		if "" != adminUser {
+		if "" != adminUser.Value {
 			break
 		}
 
-		adminUser = environments.Defaults.AMQ_USER
+		adminUser.Value = environments.Defaults.AMQ_USER
+		adminUser.AutoGen = true
 		break
 	} // do once
+	envVars[envVarName1] = adminUser
 
 	envVarName2 := "AMQ_PASSWORD"
 	for {
-		adminPassword = customResource.Spec.AdminPassword
-		if "" != adminPassword {
+		adminPassword.Value = customResource.Spec.AdminPassword
+		if "" != adminPassword.Value {
 			break
 		}
 
 		if amqPasswordEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_PASSWORD"); nil != amqPasswordEnvVar {
-			adminPassword = amqPasswordEnvVar.Value
+			adminPassword.Value = amqPasswordEnvVar.Value
 		}
-		if "" != adminPassword {
+		if "" != adminPassword.Value {
 			break
 		}
 
-		adminPassword = environments.Defaults.AMQ_PASSWORD
+		adminPassword.Value = environments.Defaults.AMQ_PASSWORD
+		adminPassword.AutoGen = true
 		break
 	} // do once
-
-	envVars := make(map[string]string)
-	envVars[envVarName1] = adminUser
 	envVars[envVarName2] = adminPassword
-	envVars["AMQ_CLUSTER_USER"] = environments.GLOBAL_AMQ_CLUSTER_USER
-	envVars["AMQ_CLUSTER_PASSWORD"] = environments.GLOBAL_AMQ_CLUSTER_PASSWORD
-	statefulSetUpdates := sourceEnvVarFromSecret(customResource, currentStatefulSet, &envVars, secretName, client, scheme)
+
+	envVars["AMQ_CLUSTER_USER"] = ValueInfo{
+		Value:   environments.GLOBAL_AMQ_CLUSTER_USER,
+		AutoGen: true,
+	}
+	envVars["AMQ_CLUSTER_PASSWORD"] = ValueInfo{
+		Value:   environments.GLOBAL_AMQ_CLUSTER_PASSWORD,
+		AutoGen: true,
+	}
+	statefulSetUpdates := sourceEnvVarFromSecret2(customResource, currentStatefulSet, &envVars, secretName, client, scheme)
 
 	return statefulSetUpdates
 }
@@ -447,6 +467,95 @@ func sourceEnvVarFromSecret(customResource *brokerv2alpha4.ActiveMQArtemis, curr
 				environments.Create(currentStatefulSet.Spec.Template.Spec.InitContainers, envVarDefinition)
 			} else {
 				log.V(1).Info("sourceEnvVarFromSecret retrieved for init container" + envVarName)
+			}
+		}
+	}
+
+	return retVal
+}
+
+func sourceEnvVarFromSecret2(customResource *brokerv2alpha4.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet, envVars *map[string]ValueInfo, secretName string, client client.Client, scheme *runtime.Scheme) uint32 {
+
+	var log = logf.Log.WithName("controller_v2alpha4activemqartemis")
+
+	var err error = nil
+	var retVal uint32 = statefulSetNotUpdated
+
+	namespacedName := types.NamespacedName{
+		Name:      secretName,
+		Namespace: currentStatefulSet.Namespace,
+	}
+	// Attempt to retrieve the secret
+	stringDataMap := make(map[string]string)
+	for k := range *envVars {
+		stringDataMap[k] = (*envVars)[k].Value
+	}
+
+	secretDefinition := secrets.NewSecret(namespacedName, secretName, stringDataMap)
+
+	if err = resources.Retrieve(namespacedName, client, secretDefinition); err != nil {
+		if errors.IsNotFound(err) {
+			log.V(1).Info("Did not find secret " + secretName)
+			requestedResources = append(requestedResources, secretDefinition)
+		}
+	} else { // err == nil so it already exists
+		// Exists now
+		// Check the contents against what we just got above
+		log.V(1).Info("Found secret " + secretName)
+
+		var needUpdate bool = false
+		for k := range *envVars {
+			elem, ok := secretDefinition.Data[k]
+			if 0 != strings.Compare(string(elem), (*envVars)[k].Value) || !ok {
+				log.V(1).Info("Secret exists but not equals, or not ok", "ok?", ok)
+				if !(*envVars)[k].AutoGen || string(elem) == "" {
+					secretDefinition.Data[k] = []byte((*envVars)[k].Value)
+					needUpdate = true
+				}
+			}
+		}
+
+		if needUpdate {
+			log.V(1).Info("Secret " + secretName + " needs update")
+
+			// These updates alone do not trigger a rolling update due to env var update as it's from a secret
+			err = resources.Update(namespacedName, client, secretDefinition)
+
+			// Force the rolling update to occur
+			environments.IncrementTriggeredRollCount(currentStatefulSet.Spec.Template.Spec.Containers)
+
+			//so far it doesn't matter what the value is as long as it's greater than zero
+			retVal = statefulSetAcceptorsUpdated
+		}
+	}
+
+	log.Info("Populating env vars from secret " + secretName)
+	for envVarName := range *envVars {
+		acceptorsEnvVarSource := &corev1.EnvVarSource{
+			SecretKeyRef: &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: secretName,
+				},
+				Key:      envVarName,
+				Optional: nil,
+			},
+		}
+
+		envVarDefinition := &corev1.EnvVar{
+			Name:      envVarName,
+			Value:     "",
+			ValueFrom: acceptorsEnvVarSource,
+		}
+		if retrievedEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, envVarName); nil == retrievedEnvVar {
+			log.V(1).Info("sourceEnvVarFromSecret failed to retrieve " + envVarName + " creating")
+			environments.Create(currentStatefulSet.Spec.Template.Spec.Containers, envVarDefinition)
+			retVal = statefulSetAcceptorsUpdated
+		}
+		//custom init container
+		if len(currentStatefulSet.Spec.Template.Spec.InitContainers) > 0 {
+			log.Info("we have custom init-containers")
+			if retrievedEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.InitContainers, envVarName); nil == retrievedEnvVar {
+				environments.Create(currentStatefulSet.Spec.Template.Spec.InitContainers, envVarDefinition)
 			}
 		}
 	}
