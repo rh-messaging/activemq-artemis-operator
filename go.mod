@@ -49,7 +49,7 @@ require (
 	github.com/prometheus/procfs v0.0.0-20190519111021-9935e8e0588d // indirect
 	github.com/sirupsen/logrus v1.6.0 // indirect
 	github.com/spf13/pflag v1.0.3
-	github.com/stretchr/testify v1.4.0
+	github.com/stretchr/testify v1.4.0 // indirect
 	github.com/tidwall/sjson v1.1.1
 	go.uber.org/atomic v1.4.0 // indirect
 	go.uber.org/zap v1.10.0 // indirect
@@ -88,3 +88,5 @@ replace (
 replace github.com/operator-framework/operator-sdk => github.com/operator-framework/operator-sdk v0.8.2
 
 replace bitbucket.org/ww/goautoneg => github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d
+
+replace golang.org/x/text => golang.org/x/text v0.3.3

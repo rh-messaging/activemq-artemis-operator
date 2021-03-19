@@ -1,8 +1,9 @@
 package artemis
 
 import (
-	"github.com/artemiscloud/activemq-artemis-management/jolokia"
 	"strings"
+
+	"github.com/artemiscloud/activemq-artemis-management/jolokia"
 )
 
 type IArtemis interface {
@@ -24,12 +25,16 @@ type Artemis struct {
 }
 
 func NewArtemis(_ip string, _jolokiaPort string, _name string, _user string, _password string) *Artemis {
+	return GetArtemis(_ip, _jolokiaPort, _name, _user, _password, "http")
+}
+
+func GetArtemis(_ip string, _jolokiaPort string, _name string, _user string, _password string, _protocol string) *Artemis {
 
 	artemis := Artemis{
 		ip:          _ip,
 		jolokiaPort: _jolokiaPort,
 		name:        _name,
-		jolokia:     jolokia.NewJolokia(_ip, _jolokiaPort, "/console/jolokia", _user, _password),
+		jolokia:     jolokia.GetJolokia(_ip, _jolokiaPort, "/console/jolokia", _user, _password, _protocol),
 	}
 
 	return &artemis

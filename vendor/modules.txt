@@ -14,7 +14,7 @@ github.com/RHsyseng/operator-utils/pkg/resource/write/hooks
 github.com/RHsyseng/operator-utils/pkg/validation
 # github.com/appscode/jsonpatch v0.0.0-20190108182946-7c0e3b262f30
 github.com/appscode/jsonpatch
-# github.com/artemiscloud/activemq-artemis-management v0.0.0-20200507120514-d75b890ea0e5
+# github.com/artemiscloud/activemq-artemis-management v0.0.0-20201117152945-c56dd3628989
 github.com/artemiscloud/activemq-artemis-management
 github.com/artemiscloud/activemq-artemis-management/jolokia
 # github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf
@@ -191,8 +191,6 @@ github.com/pborman/uuid
 github.com/peterbourgon/diskv
 # github.com/pkg/errors v0.8.1
 github.com/pkg/errors
-# github.com/pmezard/go-difflib v1.0.0
-github.com/pmezard/go-difflib/difflib
 # github.com/prometheus/client_golang v0.9.3
 github.com/prometheus/client_golang/prometheus
 github.com/prometheus/client_golang/prometheus/internal
@@ -210,9 +208,6 @@ github.com/prometheus/procfs/internal/fs
 github.com/sirupsen/logrus
 # github.com/spf13/pflag v1.0.3
 github.com/spf13/pflag
-# github.com/stretchr/testify v1.4.0
-github.com/stretchr/testify/assert
-github.com/stretchr/testify/require
 # github.com/tidwall/gjson v1.6.0
 github.com/tidwall/gjson
 # github.com/tidwall/match v1.0.1
@@ -254,7 +249,7 @@ golang.org/x/oauth2/jwt
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/text v0.3.2
+# golang.org/x/text v0.3.2 => golang.org/x/text v0.3.3
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
 golang.org/x/text/encoding/htmlindex

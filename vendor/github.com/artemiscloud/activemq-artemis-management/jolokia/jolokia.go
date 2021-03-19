@@ -2,6 +2,7 @@ package jolokia
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -67,9 +68,14 @@ type Jolokia struct {
 	jolokiaURL string
 	user       string
 	password   string
+	protocol   string
 }
 
 func NewJolokia(_ip string, _port string, _path string, _user string, _password string) *Jolokia {
+	return GetJolokia(_ip, _port, _path, _user, _password, "http")
+}
+
+func GetJolokia(_ip string, _port string, _path string, _user string, _password string, _protocol string) *Jolokia {
 
 	j := Jolokia{
 		ip:         _ip,
@@ -77,7 +83,7 @@ func NewJolokia(_ip string, _port string, _path string, _user string, _password 
 		jolokiaURL: _ip + ":" + _port + _path,
 		user:       _user,
 		password:   _password,
-
+		protocol:   _protocol,
 	}
 	if j.user == "" {
 		j.user = "admin"
@@ -89,17 +95,31 @@ func NewJolokia(_ip string, _port string, _path string, _user string, _password 
 	return &j
 }
 
+func (j *Jolokia) getClient() *http.Client {
+	if j.protocol == "https" {
+		return &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+				},
+			},
+			Timeout: time.Second * 2, //Maximum of 2 seconds
+		}
+	}
+	return &http.Client{
+		Timeout: time.Second * 2, // Maximum of 2 seconds
+	}
+}
+
 func (j *Jolokia) Read(_path string) (*ReadData, error) {
 
-	url := "http://" + j.user + ":" + j.password + "@" + j.jolokiaURL + "/read/" + _path
+	url := j.protocol + "://" + j.user + ":" + j.password + "@" + j.jolokiaURL + "/read/" + _path
 
 	jdata := &ReadData{
 		Request: &ReadRequest{},
 	}
 
-	jolokiaClient := http.Client{
-		Timeout: time.Second * 2, // Maximum of 2 seconds
-	}
+	jolokiaClient := j.getClient()
 
 	var err error = nil
 	for {
@@ -135,15 +155,13 @@ func (j *Jolokia) Read(_path string) (*ReadData, error) {
 
 func (j *Jolokia) Exec(_path string, _postJsonString string) (*ExecData, error) {
 
-	url := "http://" + j.user + ":" + j.password + "@" + j.jolokiaURL + "/exec/" + _path
+	url := j.protocol + "://" + j.user + ":" + j.password + "@" + j.jolokiaURL + "/exec/" + _path
 
 	jdata := &ExecData{
 		Request: &ExecRequest{},
 	}
 
-	jolokiaClient := http.Client{
-		Timeout: time.Second * 2, // Maximum of 2 seconds
-	}
+	jolokiaClient := j.getClient()
 
 	var err error = nil
 	for {
