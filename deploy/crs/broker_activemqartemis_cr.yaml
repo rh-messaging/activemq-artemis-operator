@@ -53,5 +53,4 @@ spec:
   upgrades:
       enabled: false
       minor: false
-  version: 2.16.0
 
