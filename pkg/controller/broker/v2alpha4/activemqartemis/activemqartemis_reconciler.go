@@ -68,6 +68,7 @@ const (
 	statefulSetAcceptorsUpdated  = 1 << 8
 	statefulSetConnectorsUpdated = 1 << 9
 	statefulSetConsoleUpdated    = 1 << 10
+	statefulSetInitImageUpdated  = 1 << 11
 )
 
 var defaultMessageMigration bool = true
@@ -235,6 +236,10 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(customResourc
 	if *currentStatefulSet.Spec.Replicas != deploymentPlan.Size {
 		currentStatefulSet.Spec.Replicas = &deploymentPlan.Size
 		reconciler.statefulSetUpdates |= statefulSetSizeUpdated
+	}
+
+	if initImageSyncCausedUpdateOn(customResource, currentStatefulSet) {
+		reconciler.statefulSetUpdates |= statefulSetInitImageUpdated
 	}
 
 	if imageSyncCausedUpdateOn(customResource, currentStatefulSet) {
@@ -1143,11 +1148,48 @@ func persistentSyncCausedUpdateOn(deploymentPlan *brokerv2alpha4.DeploymentPlanT
 
 func imageSyncCausedUpdateOn(customResource *brokerv2alpha4.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
 
-	imageName := determineImageToUse(customResource, "Kubernetes")
+	// Log where we are and what we're doing
+	reqLogger := log.WithName(customResource.Name)
+	reqLogger.V(1).Info("imageSyncCausedUpdateOn")
+
+	imageName := ""
+	if "placeholder" == customResource.Spec.DeploymentPlan.Image {
+		reqLogger.Info("Determining the updated kubernetes image to use due to placeholder setting")
+		imageName = determineImageToUse(customResource, "Kubernetes")
+	} else {
+		reqLogger.Info("Using the user provided kubernetes image " + customResource.Spec.DeploymentPlan.Image)
+		imageName = customResource.Spec.DeploymentPlan.Image
+	}
 	if strings.Compare(currentStatefulSet.Spec.Template.Spec.Containers[0].Image, imageName) != 0 {
 		containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
 		for i := 0; i < containerArrayLen; i++ {
 			currentStatefulSet.Spec.Template.Spec.Containers[i].Image = imageName
+		}
+		return true
+	}
+
+	return false
+}
+
+// TODO: Eliminate duplication between this and the original imageSyncCausedUpdateOn
+func initImageSyncCausedUpdateOn(customResource *brokerv2alpha4.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
+
+	// Log where we are and what we're doing
+	reqLogger := log.WithName(customResource.Name)
+	reqLogger.V(1).Info("initImageSyncCausedUpdateOn")
+
+	initImageName := ""
+	if "placeholder" == customResource.Spec.DeploymentPlan.InitImage {
+		reqLogger.Info("Determining the updated init image to use due to placeholder setting")
+		initImageName = determineImageToUse(customResource, "Init")
+	} else {
+		reqLogger.Info("Using the user provided init image " + customResource.Spec.DeploymentPlan.InitImage)
+		initImageName = customResource.Spec.DeploymentPlan.InitImage
+	}
+	if strings.Compare(currentStatefulSet.Spec.Template.Spec.InitContainers[0].Image, initImageName) != 0 {
+		containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.InitContainers)
+		for i := 0; i < containerArrayLen; i++ {
+			currentStatefulSet.Spec.Template.Spec.InitContainers[i].Image = initImageName
 		}
 		return true
 	}
@@ -1514,6 +1556,7 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 		reqLogger.Info("Determining the kubernetes image to use due to placeholder setting")
 		imageName = determineImageToUse(customResource, "Kubernetes")
 	} else {
+		reqLogger.Info("Using the user provided kubernetes image " + customResource.Spec.DeploymentPlan.Image)
 		imageName = customResource.Spec.DeploymentPlan.Image
 	}
 	reqLogger.V(1).Info("NewPodTemplateSpecForCR determined image to use " + imageName)
@@ -1573,6 +1616,7 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 		reqLogger.Info("Determining the init image to use due to placeholder setting")
 		initImageName = determineImageToUse(customResource, "Init")
 	} else {
+		reqLogger.Info("Using the user provided init image " + customResource.Spec.DeploymentPlan.InitImage)
 		initImageName = customResource.Spec.DeploymentPlan.InitImage
 	}
 	reqLogger.V(1).Info("NewPodTemplateSpecForCR determined initImage to use " + initImageName)
