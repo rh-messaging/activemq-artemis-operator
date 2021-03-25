@@ -1,9 +1,9 @@
 package version
 
 var (
-	Version = "0.19.0"
+	Version = "7.8.1"
 	// PriorVersion - prior version
-	PriorVersion = "0.18.0"
+	PriorVersion = "0.19.0"
 )
 
 const (
@@ -23,6 +23,7 @@ var OperandVersionFromOperatorVersion map[string]string = map[string]string{
 	"0.17.0": "7.7.0",
 	"0.18.0": "7.8.0",
 	"0.19.0": "7.8.1",
+	"7.8.1": "7.8.1",
 }
 var FullVersionFromMinorVersion map[string]string = map[string]string{
 	"70": "7.7.0",
