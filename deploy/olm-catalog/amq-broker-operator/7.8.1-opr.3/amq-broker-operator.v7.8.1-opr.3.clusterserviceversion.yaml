@@ -1,7 +1,7 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: amq-broker-operator.v7.8.1-OPR.3
+  name: amq-broker-operator.v7.8.1-opr.3
   namespace: placeholder
   labels:
     operator-activemqartemis: "true"
@@ -66,7 +66,7 @@ spec:
   keywords:
     - activemqartemis
     - operator
-  version: 7.8.1-OPR.3
+  version: 7.8.1-opr.3
   replaces: amq-broker-operator.v0.19.0
   maturity: alpha
   maintainers:
@@ -84,12 +84,12 @@ spec:
       mediatype: image/png
   labels:
     alm-owner-amq-broker: amq-broker-operator
-    operated-by: amq-broker-operator.v7.8.1-OPR.3
+    operated-by: amq-broker-operator.v7.8.1-opr.3
   selector:
     matchLabels:
       ActiveMQArtemis: ex-aao
       application: ex-aao-app
-      operated-by: amq-broker-operator.v7.8.1-OPR.3
+      operated-by: amq-broker-operator.v7.8.1-opr.3
   installModes:
     - type: OwnNamespace
       supported: true
