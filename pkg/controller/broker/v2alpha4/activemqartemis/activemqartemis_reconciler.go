@@ -1179,7 +1179,8 @@ func initImageSyncCausedUpdateOn(customResource *brokerv2alpha4.ActiveMQArtemis,
 	reqLogger.V(1).Info("initImageSyncCausedUpdateOn")
 
 	initImageName := ""
-	if "placeholder" == customResource.Spec.DeploymentPlan.InitImage {
+	if "placeholder" == customResource.Spec.DeploymentPlan.InitImage ||
+		0 == len(customResource.Spec.DeploymentPlan.InitImage) {
 		reqLogger.Info("Determining the updated init image to use due to placeholder setting")
 		initImageName = determineImageToUse(customResource, "Init")
 	} else {
