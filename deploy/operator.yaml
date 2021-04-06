@@ -48,6 +48,7 @@ spec:
         # NOTE: Below are the original image:tag values and equivalent SHA image references. The SHA values are unique to the specific
         #       container tag utilized during operator bundle build time.
 
+          # X86_64 / AMD64 / default
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_770
           #value: registry.redhat.io/amq7/amq-broker-init-rhel7:0.2-7
           value: registry.redhat.io/amq7/amq-broker-init-rhel7@sha256:b194c366a940f34aa86454f84f1a8ec3b2670456033882f4ef7f514da3f290c5
@@ -66,6 +67,26 @@ spec:
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781
           #value: registry.redhat.io/amq7/amq-broker:7.8-16
           value: registry.redhat.io/amq7/amq-broker@sha256:836b70b8a1d1c855d2dbb843e667fae94da639e352d344327f298015c2404d98
+
+        # PPC64LE
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_ppc64le
+          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init:0.3-2
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_770_ppc64le
+          value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.7
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_780_ppc64le
+          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift-openj9-11-rhel8:7.8-4
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781_ppc64le
+          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift-openj9-11-rhel8:7.8-4
+
+        # S390X
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_s390x
+          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init:0.3-2
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_770_s390x
+          value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.7
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_780_s390x
+          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift-openj9-11-rhel8:7.8-4
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781_s390x
+          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift-openj9-11-rhel8:7.8-4
 
         #image: registry.redhat.io/amq7/amq-broker-rhel7-operator:7.8-5
         image: registry.redhat.io/amq7/amq-broker-rhel7-operator@sha256:419ec14006b5cd76b91499873f3e4d6d50bc938cbcf65b6e4083b9de1ff7b7f6
