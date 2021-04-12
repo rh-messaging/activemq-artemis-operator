@@ -36,6 +36,7 @@ jobs:
           test-packages: 'test/smoke/basic/...'
           docker-images: 'activemq-artemis-operator:dev.latest'
           operator-image: 'activemq-artemis-operator:dev.latest'
+          operator-deploy-path: 'deploy'
 
       - name: Push the image
         if: ${{ github.event_name == 'push' }}
