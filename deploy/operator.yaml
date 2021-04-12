@@ -48,7 +48,7 @@ spec:
         # NOTE: Below are the original image:tag values and equivalent SHA image references. The SHA values are unique to the specific
         #       container tag utilized during operator bundle build time.
 
-          # X86_64 / AMD64 / default
+        # X86_64 / AMD64 / default
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_781
           value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init-rhel8:0.3-2
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781
