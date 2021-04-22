@@ -13,7 +13,7 @@ metadata:
     categories: "Streaming & Messaging"
     certified: "false"
     description: AMQ Broker Operator provides the ability to deploy and manage stateful AMQ Broker clusters
-    containerImage: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator:7.8-1
+    containerImage: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator:7.8-5
     createdAt: 2021-03-29T08:16:32Z
     capabilities: Seamless Upgrades
     repository: https://github.com/rh-messaging/activemq-artemis-operator
@@ -960,7 +960,7 @@ spec:
                 serviceAccountName: amq-broker-operator
                 containers:
                   - name: amq-broker-operator
-                    image: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator:7.8-1
+                    image: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator:7.8-5
                     args:
                       # Explicitly set the logging level.
                       # Valid values are debug, info, and error
@@ -994,19 +994,19 @@ spec:
 
                       # X86_64 / AMD64 / default
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_781
-                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init-rhel8:0.3-2
+                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init-rhel8:0.3-3
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781
-                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift-rhel8:7.8-2
+                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift-rhel8:7.8-3
 
                       # PPC64LE
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_781_ppc64le
-                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init-openj9-11-rhel8:0.3-2
+                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init-openj9-11-rhel8:0.3-3
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781_ppc64le
-                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift-openj9-11-rhel8:7.8-6
+                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift-openj9-11-rhel8:7.8-8
 
                       # S390X
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_781_s390x
-                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init-openj9-11-rhel8:0.3-2
+                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init-openj9-11-rhel8:0.3-3
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781_s390x
-                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift-openj9-11-rhel8:7.8-6
+                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift-openj9-11-rhel8:7.8-8
 

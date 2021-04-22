@@ -50,23 +50,23 @@ spec:
 
         # X86_64 / AMD64 / default
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_781
-          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init-rhel8:0.3-2
+          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init-rhel8:0.3-3
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781
-          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift-rhel8:7.8-2
+          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift-rhel8:7.8-3
 
         # PPC64LE
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_781_ppc64le
-          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init-openj9-11-rhel8:0.3-2
+          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init-openj9-11-rhel8:0.3-3
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781_ppc64le
-          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift-openj9-11-rhel8:7.8-6
+          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift-openj9-11-rhel8:7.8-8
 
         # S390X
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_781_s390x
-          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init-openj9-11-rhel8:0.3-2
+          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-init-openj9-11-rhel8:0.3-3
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781_s390x
-          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift-openj9-11-rhel8:7.8-6
+          value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift-openj9-11-rhel8:7.8-8
 
-        image: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator:7.8-1
+        image: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator:7.8-5
 
         # If floating tags are configured above you may want to set this to true.
         #imagePullPolicy: Always
