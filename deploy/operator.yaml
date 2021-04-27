@@ -66,7 +66,7 @@ spec:
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781_s390x
           value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-78-openshift-openj9-11-rhel8:7.8-8
 
-        image: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator:7.8-5
+        image: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator:7.8-6
 
         # If floating tags are configured above you may want to set this to true.
         #imagePullPolicy: Always
