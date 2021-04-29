@@ -67,8 +67,8 @@ spec:
           #value: registry.redhat.io/amq7/amq-broker:7.8-16
           value: registry.redhat.io/amq7/amq-broker@sha256:836b70b8a1d1c855d2dbb843e667fae94da639e352d344327f298015c2404d98
 
-        #image: registry.redhat.io/amq7/amq-broker-rhel7-operator:7.8-5
-        image: registry.redhat.io/amq7/amq-broker-rhel7-operator@sha256:419ec14006b5cd76b91499873f3e4d6d50bc938cbcf65b6e4083b9de1ff7b7f6
+        #image: registry.redhat.io/amq7/amq-broker-rhel7-operator:7.8-6
+        image: registry.redhat.io/amq7/amq-broker-rhel7-operator@sha256:e7452d228415dde11f25ccb8ddf7926131cc351ae9976da1cb102f27658d4a35
 
         # If floating tags are configured above you may want to set this to true.
         #imagePullPolicy: Always
