@@ -149,9 +149,10 @@ func (r *ReconcileActiveMQArtemisAddress) Reconcile(request reconcile.Request) (
 			return reconcile.Result{}, nil
 		}
 
-		log.Error(err, "Requeue the request for error")
-		// Error reading the object - requeue the request.
-		return reconcile.Result{}, err
+		if err != nil {
+			log.Error(err, "Requeue the request for error")
+			return reconcile.Result{}, err
+		}
 	} else {
 		err = createQueue(instance, request, r.client)
 		if nil == err {
@@ -177,7 +178,7 @@ func createQueue(instance *brokerv2alpha2.ActiveMQArtemisAddress, request reconc
 			}
 			_, err := a.CreateQueue(instance.Spec.AddressName, instance.Spec.QueueName, instance.Spec.RoutingType)
 			if nil != err {
-				reqLogger.Info("Creating ActiveMQArtemisAddress error for " + instance.Spec.QueueName)
+				reqLogger.Error(err, "Creating ActiveMQArtemisAddress error for "+instance.Spec.QueueName)
 				break
 			} else {
 				reqLogger.Info("Created ActiveMQArtemisAddress for " + instance.Spec.QueueName)
