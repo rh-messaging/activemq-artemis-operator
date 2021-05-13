@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go v0.39.0 // indirect
 	github.com/RHsyseng/operator-utils v0.0.0-20190906175225-942a3f9c85a9
 	github.com/appscode/jsonpatch v0.0.0-20190108182946-7c0e3b262f30 // indirect
-	github.com/artemiscloud/activemq-artemis-management v0.0.0-20201117152945-c56dd3628989
+	github.com/artemiscloud/activemq-artemis-management v0.0.0-20210513095101-1e29529292a2
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/prometheus-operator v0.26.0
 	github.com/docker/distribution v2.7.1+incompatible // indirect
@@ -44,12 +44,10 @@ require (
 	github.com/openshift/api v3.9.0+incompatible
 	github.com/operator-framework/operator-lifecycle-manager v0.0.0-20190128024246-5eb7ae5bdb7a
 	github.com/operator-framework/operator-sdk v0.8.2
-	github.com/otiai10/copy v1.2.0 // indirect
 	github.com/prometheus/client_golang v0.9.3 // indirect
 	github.com/prometheus/procfs v0.0.0-20190519111021-9935e8e0588d // indirect
 	github.com/sirupsen/logrus v1.6.0 // indirect
 	github.com/spf13/pflag v1.0.3
-	github.com/stretchr/testify v1.4.0 // indirect
 	github.com/tidwall/sjson v1.1.1
 	go.uber.org/atomic v1.4.0 // indirect
 	go.uber.org/zap v1.10.0 // indirect
