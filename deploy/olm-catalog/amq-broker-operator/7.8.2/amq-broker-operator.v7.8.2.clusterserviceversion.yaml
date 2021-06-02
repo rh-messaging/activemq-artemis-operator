@@ -925,10 +925,13 @@ spec:
                 - broker.amq.io
               resources:
                 - '*'
+                - activemqartemisaddresses
+                - activemqartemisscaledowns
+                - activemqartemis
               verbs:
                 - '*'
             - apiGroups:
-                - "route.openshift.io"
+                - route.openshift.io
               resources:
                 - routes
                 - routes/custom-host
@@ -939,6 +942,23 @@ spec:
                 - watch
                 - create
                 - delete
+                - update
+            - apiGroups:
+                - extensions
+              resources:
+                - ingresses
+              verbs:
+                - get
+                - list
+                - watch
+                - create
+                - delete
+            - apiGroups:
+                - apps
+              resources:
+                - deployments/finalizers
+              verbs:
+                - update
 
       deployments:
         - name: amq-broker-operator
