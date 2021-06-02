@@ -1,9 +1,9 @@
 packageName: amq-broker
 channels:
   - name: current
-    currentCSV: amq-broker-operator.v7.8.1-opr-3
+    currentCSV: amq-broker-operator.v7.8.2
   - name: 7.x
-    currentCSV: amq-broker-operator.v7.8.1-opr-3
+    currentCSV: amq-broker-operator.v7.8.2
   - name: 7.8.x
-    currentCSV: amq-broker-operator.v7.8.1-opr-3
+    currentCSV: amq-broker-operator.v7.8.2
 defaultChannel: 7.x
