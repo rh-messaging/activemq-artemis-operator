@@ -12,7 +12,7 @@ metadata:
   annotations:
     categories: "Streaming & Messaging"
     certified: "false"
-    description: AMQ Broker Operator provides the ability to deploy and manage stateful AMQ Broker clusters
+    description: AMQ Broker Operator for RHEL 8 (Multiarch) provides the ability to deploy and manage stateful AMQ Broker clusters
     #containerImage: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.8-7
     containerImage: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:33cdbac36593ce437b4f2c0a80008ababc1592f0441ffc4b1872ceb274d2ad42
     createdAt: 2021-03-29T08:16:32Z
@@ -64,8 +64,8 @@ metadata:
           }
       }]
 spec:
-  displayName: Red Hat Integration - AMQ Broker
-  description: AMQ Broker Operator provides the ability to deploy and manage stateful AMQ Broker broker clusters
+  displayName: Red Hat Integration - AMQ Broker for RHEL 8 (Multiarch)
+  description: AMQ Broker Operator for RHEL 8 (Multiarch) provides the ability to deploy and manage stateful AMQ Broker broker clusters
   keywords:
     - activemqartemis
     - operator
