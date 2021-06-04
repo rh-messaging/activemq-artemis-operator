@@ -119,8 +119,9 @@ func ID() int {
 }
 
 func (amqbfsm *ActiveMQArtemisFSM) panicOccurred() {
-	err := recover()
-	log.Error(nil, "Panic happened with error!", "details", err)
+	if err := recover(); err != nil {
+		log.Error(nil, "Panic happened with error!", "details", err)
+	}
 }
 
 func (amqbfsm *ActiveMQArtemisFSM) Enter(startStateID int) error {
