@@ -70,8 +70,8 @@ spec:
           #value: registry.redhat.io/amq7/amq-broker:7.8-16
           value: registry.redhat.io/amq7/amq-broker@sha256:836b70b8a1d1c855d2dbb843e667fae94da639e352d344327f298015c2404d98
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_782
-          #value: registry.redhat.io/amq7/amq-broker:7.8-
-          value: registry.redhat.io/amq7/amq-broker@sha256:
+          #value: registry.redhat.io/amq7/amq-broker:7.8-18
+          value: registry.redhat.io/amq7/amq-broker@sha256:d5bfecbfacf5a1c897ab26f69daf39eae55a7880797d381baed558431ddd0d0e
 
         #image: registry.redhat.io/amq7/amq-broker-rhel7-operator:7.8-
         image: registry.redhat.io/amq7/amq-broker-rhel7-operator@sha256:
