@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go v0.39.0 // indirect
 	github.com/RHsyseng/operator-utils v0.0.0-20190906175225-942a3f9c85a9
 	github.com/appscode/jsonpatch v0.0.0-20190108182946-7c0e3b262f30 // indirect
-	github.com/artemiscloud/activemq-artemis-management v0.0.0-20210513095101-1e29529292a2
+	github.com/artemiscloud/activemq-artemis-management v0.0.0-20210611083341-9f22c1cdd18e
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/prometheus-operator v0.26.0
 	github.com/docker/distribution v2.7.1+incompatible // indirect
