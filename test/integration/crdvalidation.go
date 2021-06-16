@@ -8,6 +8,7 @@ import (
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
 
+	"fmt"
 	"io/ioutil"
 	"strings"
 )
@@ -27,6 +28,7 @@ var crNameMap = map[string]string{
 	"activemqartemisaddress_cr.yaml":                         "broker_activemqartemisaddress_crd.yaml",
 	"address-queue-create.yaml":                              "broker_activemqartemisaddress_crd.yaml",
 	"address-queue-create-auto-removed.yaml":                 "broker_activemqartemisaddress_crd.yaml",
+	"address-create-auto-removed.yaml":                       "broker_activemqartemisaddress_crd.yaml",
 	"artemis-basic-deployment.yaml":                          "broker_activemqartemis_crd.yaml",
 	"artemis-ssl-deployment.yaml":                            "broker_activemqartemis_crd.yaml",
 	"artemis-cluster-deployment.yaml":                        "broker_activemqartemis_crd.yaml",
@@ -75,6 +77,7 @@ func testCustomResource(resLoc string) {
 	var input map[string]interface{}
 	for _, file := range fileList {
 
+		fmt.Printf("checking file %v\n", file)
 		// determine which cr/crd pairing in use for all *cr.yaml files
 		var crFileName, crdFileName string
 		for cr, crd := range crNameMap {

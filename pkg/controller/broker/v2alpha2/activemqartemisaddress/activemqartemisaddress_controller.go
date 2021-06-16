@@ -163,6 +163,7 @@ func (r *ReconcileActiveMQArtemisAddress) Reconcile(request reconcile.Request) (
 	return reconcile.Result{}, nil
 }
 
+// This method deals with creating queues and addresses.
 func createQueue(instance *brokerv2alpha2.ActiveMQArtemisAddress, request reconcile.Request, client client.Client) error {
 
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
@@ -176,12 +177,26 @@ func createQueue(instance *brokerv2alpha2.ActiveMQArtemisAddress, request reconc
 				reqLogger.Info("Creating ActiveMQArtemisAddress artemisArray had a nil!")
 				continue
 			}
-			_, err := a.CreateQueue(instance.Spec.AddressName, instance.Spec.QueueName, instance.Spec.RoutingType)
-			if nil != err {
-				reqLogger.Error(err, "Creating ActiveMQArtemisAddress error for "+instance.Spec.QueueName)
-				break
+			// Now checking if create queue or address
+			var err error
+			if instance.Spec.QueueName == "" {
+				//create address
+				_, err = a.CreateAddress(instance.Spec.AddressName, instance.Spec.RoutingType)
+				if nil != err {
+					reqLogger.Error(err, "Creating ActiveMQArtemisAddress error for address", instance.Spec.AddressName)
+					break
+				} else {
+					reqLogger.Info("Created ActiveMQArtemisAddress for address " + instance.Spec.AddressName)
+				}
 			} else {
-				reqLogger.Info("Created ActiveMQArtemisAddress for " + instance.Spec.QueueName)
+				log.Info("Queue name is not empty so create queue", "name", instance.Spec.QueueName)
+				_, err = a.CreateQueue(instance.Spec.AddressName, instance.Spec.QueueName, instance.Spec.RoutingType)
+				if nil != err {
+					reqLogger.Error(err, "Creating ActiveMQArtemisAddress error for queue ", instance.Spec.QueueName)
+					break
+				} else {
+					reqLogger.Info("Created ActiveMQArtemisAddress for queue" + instance.Spec.QueueName)
+				}
 			}
 		}
 	}
@@ -189,6 +204,7 @@ func createQueue(instance *brokerv2alpha2.ActiveMQArtemisAddress, request reconc
 	return err
 }
 
+// This method deals with deleting queues and addresses.
 func deleteQueue(instance *brokerv2alpha2.ActiveMQArtemisAddress, request reconcile.Request, client client.Client) error {
 
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
@@ -198,20 +214,31 @@ func deleteQueue(instance *brokerv2alpha2.ActiveMQArtemisAddress, request reconc
 	artemisArray := getPodBrokers(instance, request, client)
 	if nil != artemisArray {
 		for _, a := range artemisArray {
-			_, err := a.DeleteQueue(instance.Spec.QueueName)
-			if nil != err {
-				reqLogger.Info("Deleting ActiveMQArtemisAddress error for " + instance.Spec.QueueName)
-				break
+			if instance.Spec.QueueName == "" {
+				//delete address
+				_, err := a.DeleteAddress(instance.Spec.AddressName)
+				if nil != err {
+					reqLogger.Error(err, "Deleting ActiveMQArtemisAddress error for address ", instance.Spec.AddressName)
+					break
+				}
+				reqLogger.Info("Deleted ActiveMQArtemisAddress for address " + instance.Spec.AddressName)
 			} else {
-				reqLogger.Info("Deleted ActiveMQArtemisAddress for " + instance.Spec.QueueName)
-				reqLogger.Info("Checking parent address for bindings " + instance.Spec.AddressName)
-				bindingsData, err := a.ListBindingsForAddress(instance.Spec.AddressName)
-				if nil == err {
-					if "" == bindingsData.Value {
-						reqLogger.Info("No bindings found removing " + instance.Spec.AddressName)
-						a.DeleteAddress(instance.Spec.AddressName)
-					} else {
-						reqLogger.Info("Bindings found, not removing " + instance.Spec.AddressName)
+				//delete queues
+				_, err := a.DeleteQueue(instance.Spec.QueueName)
+				if nil != err {
+					reqLogger.Error(err, "Deleting ActiveMQArtemisAddress error for queue ", instance.Spec.QueueName)
+					break
+				} else {
+					reqLogger.Info("Deleted ActiveMQArtemisAddress for queue " + instance.Spec.QueueName)
+					reqLogger.Info("Checking parent address for bindings " + instance.Spec.AddressName)
+					bindingsData, err := a.ListBindingsForAddress(instance.Spec.AddressName)
+					if nil == err {
+						if "" == bindingsData.Value {
+							reqLogger.Info("No bindings found removing " + instance.Spec.AddressName)
+							a.DeleteAddress(instance.Spec.AddressName)
+						} else {
+							reqLogger.Info("Bindings found, not removing " + instance.Spec.AddressName)
+						}
 					}
 				}
 			}
