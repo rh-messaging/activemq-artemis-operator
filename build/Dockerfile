@@ -14,7 +14,7 @@ WORKDIR ${GOPATH}/src/github.com/artemiscloud/activemq-artemis-operator
 RUN /opt/rh/go-toolset-1.13/root/usr/bin/go build -o /tmp/activemq-artemis-operator/${BROKER_NAME}-operator /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/cmd/manager
 
 
-FROM registry.access.redhat.com/ubi7:7.9-405 AS base-env
+FROM registry.access.redhat.com/ubi8:8.4-203.1622660121 AS base-env
 
 ENV BROKER_NAME=amq-broker
 ENV OPERATOR=/home/${BROKER_NAME}-operator/bin/${BROKER_NAME}-operator
@@ -22,7 +22,7 @@ ENV USER_UID=1000
 ENV USER_NAME=${BROKER_NAME}-operator
 ENV CGO_ENABLED=0
 ENV GOPATH=/tmp/go
-ENV JBOSS_IMAGE_NAME="amq7/amq-broker-rhel7-operator"
+ENV JBOSS_IMAGE_NAME="amq7/amq-broker-rhel8-operator"
 ENV JBOSS_IMAGE_VERSION="7.8"
 
 WORKDIR /
@@ -64,15 +64,15 @@ USER ${USER_UID}
 ENTRYPOINT ["/home/${BROKER_NAME}-operator/bin/entrypoint"]
 
 LABEL \
-      com.redhat.component="amq-broker-rhel7-operator-container"  \
+      com.redhat.component="amq-broker-rhel8-operator-container"  \
       com.redhat.delivery.appregistry="false" \
-      description="ActiveMQ Artemis Operator"  \
+      description="AMQ Broker Operator"  \
       io.k8s.description="An associated operator that handles broker installation, updates and scaling."  \
-      io.k8s.display-name="ActiveMQ Artemis Operator"  \
+      io.k8s.display-name="AMQ Broker Operator"  \
       io.openshift.expose-services=""  \
       io.openshift.s2i.scripts-url="image:///usr/local/s2i"  \
       io.openshift.tags="messaging,amq,integration,operator,golang"  \
       maintainer="Roddie Kieley <rkieley@redhat.com>"  \
-      name="amq7/amq-broker-rhel7-operator" \
-      summary="ActiveMQ Artemis Operator"  \
+      name="amq7/amq-broker-rhel8-operator" \
+      summary="AMQ Broker Operator"  \
       version="7.8"
