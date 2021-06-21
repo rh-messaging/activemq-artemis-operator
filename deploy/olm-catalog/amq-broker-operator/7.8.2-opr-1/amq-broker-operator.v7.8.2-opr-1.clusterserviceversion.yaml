@@ -64,8 +64,8 @@ metadata:
           }
       }]
 spec:
-  displayName: Red Hat Integration - AMQ Broker
-  description: AMQ Broker Operator provides the ability to deploy and manage stateful AMQ Broker broker clusters
+  displayName: Red Hat Integration - AMQ Broker for RHEL 8 (Multiarch)
+  description: AMQ Broker Operator for RHEL 8 (Multiarch) provides the ability to deploy and manage stateful AMQ Broker broker clusters
   keywords:
     - activemqartemis
     - operator
