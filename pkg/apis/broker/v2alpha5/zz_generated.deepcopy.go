@@ -540,6 +540,11 @@ func (in *DeploymentPlanType) DeepCopyInto(out *DeploymentPlanType) {
 	in.Resources.DeepCopyInto(&out.Resources)
 	out.Storage = in.Storage
 	in.ExtraMounts.DeepCopyInto(&out.ExtraMounts)
+	if in.Clustered != nil {
+		in, out := &in.Clustered, &out.Clustered
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

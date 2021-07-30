@@ -111,6 +111,7 @@ type DeploymentPlanType struct {
 	JolokiaAgentEnabled   bool                        `json:"jolokiaAgentEnabled,omitempty"`
 	ManagementRBACEnabled bool                        `json:"managementRBACEnabled,omitempty"`
 	ExtraMounts           ExtraMountsType             `json:"extraMounts,omitempty"`
+	Clustered             *bool                       `json:"clustered,omitempty"`
 }
 
 type ExtraMountsType struct {

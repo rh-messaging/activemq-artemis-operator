@@ -222,6 +222,12 @@ spec:
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
               - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Whether broker is clustered
+            displayName: Clustered
+            path: deploymentPlan.clustered
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
 
           - description:  A single acceptor configuration
             displayName: Name

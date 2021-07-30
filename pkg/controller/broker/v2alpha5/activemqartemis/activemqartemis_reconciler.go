@@ -189,11 +189,20 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessStatefulSet(fsm *ActiveMQArt
 
 	headlessServiceDefinition := svc.NewHeadlessServiceForCR2(fsm.GetHeadlessServiceName(), ssNamespacedName, serviceports.GetDefaultPorts())
 	labels := selectors.LabelBuilder.Labels()
-	pingServiceDefinition := svc.NewPingServiceDefinitionForCR2(fsm.GetPingServiceName(), ssNamespacedName, labels, labels)
+	if isClustered(fsm.customResource) {
+		pingServiceDefinition := svc.NewPingServiceDefinitionForCR2(fsm.GetPingServiceName(), ssNamespacedName, labels, labels)
+		requestedResources = append(requestedResources, pingServiceDefinition)
+	}
 	requestedResources = append(requestedResources, headlessServiceDefinition)
-	requestedResources = append(requestedResources, pingServiceDefinition)
 
 	return currentStatefulSet, firstTime
+}
+
+func isClustered(customResource *brokerv2alpha5.ActiveMQArtemis) bool {
+	if customResource.Spec.DeploymentPlan.Clustered != nil {
+		return *customResource.Spec.DeploymentPlan.Clustered
+	}
+	return true
 }
 
 func (reconciler *ActiveMQArtemisReconciler) ProcessCredentials(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
@@ -300,7 +309,12 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(fsm *ActiveMQ
 		reconciler.statefulSetUpdates |= statefulSetRequireLoginUpdated
 	}
 
-	log.Info("Not sync Message migration", "for cr", fsm.customResource.Name)
+	if clusterSyncCausedUpdateOn(deploymentPlan, currentStatefulSet) {
+		log.Info("Clustered is false")
+		reconciler.statefulSetUpdates |= statefulSetClusterConfigUpdated
+	}
+
+	log.Info("Now sync Message migration", "for cr", fsm.customResource.Name)
 
 	syncMessageMigration(fsm.customResource, client, scheme)
 
@@ -435,7 +449,9 @@ func syncMessageMigration(customResource *brokerv2alpha5.ActiveMQArtemis, client
 		customResource.Spec.DeploymentPlan.MessageMigration = &defaultMessageMigration
 	}
 
-	if *customResource.Spec.DeploymentPlan.MessageMigration {
+	clustered := isClustered(customResource)
+
+	if *customResource.Spec.DeploymentPlan.MessageMigration && clustered {
 		if !customResource.Spec.DeploymentPlan.PersistenceEnabled {
 			log.Info("Won't set up scaledown for non persistent deployment")
 			return
@@ -1275,6 +1291,34 @@ func initImageSyncCausedUpdateOn(customResource *brokerv2alpha5.ActiveMQArtemis,
 	}
 
 	return false
+}
+
+func clusterSyncCausedUpdateOn(deploymentPlan *brokerv2alpha5.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
+
+	isClustered := true
+	if deploymentPlan.Clustered != nil {
+		isClustered = *deploymentPlan.Clustered
+	}
+
+	//we are only interested in non-cluster case
+	//as elsewhere in the code it's been treated as clustered.
+	if !isClustered {
+
+		brokerContainers := []*corev1.Container{
+			&currentStatefulSet.Spec.Template.Spec.InitContainers[0],
+			&currentStatefulSet.Spec.Template.Spec.Containers[0],
+		}
+
+		for _, container := range brokerContainers {
+			for j, envVar := range container.Env {
+				if "AMQ_CLUSTERED" == envVar.Name {
+					container.Env[j].Value = "false"
+					log.Info("Setting clustered env to false", "envs", container.Env)
+				}
+			}
+		}
+	}
+	return !isClustered
 }
 
 func (reconciler *ActiveMQArtemisReconciler) ProcessResources(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint8 {
