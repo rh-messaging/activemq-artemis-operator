@@ -1889,11 +1889,31 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 	}
 	environments.Create(Spec.InitContainers, &envBrokerCustomInstanceDir)
 
+	configPodSecurity(&Spec, &fsm.customResource.Spec.DeploymentPlan.PodSecurity)
+
 	log.Info("Final Init spec", "Detail", Spec.InitContainers)
 
 	pts.Spec = Spec
 
 	return pts
+}
+
+func configPodSecurity(podSpec *corev1.PodSpec, podSecurity *brokerv2alpha5.PodSecurityType) {
+	if podSecurity.ServiceAccountName != nil {
+		log.Info("Pod serviceAccountName specified", "existing", podSpec.ServiceAccountName, "new", *podSecurity.ServiceAccountName)
+		podSpec.ServiceAccountName = *podSecurity.ServiceAccountName
+	}
+	if podSecurity.RunAsUser != nil {
+		log.Info("Pod runAsUser specified", "runAsUser", *podSecurity.RunAsUser)
+		if podSpec.SecurityContext == nil {
+			secCtxt := corev1.PodSecurityContext{
+				RunAsUser: podSecurity.RunAsUser,
+			}
+			podSpec.SecurityContext = &secCtxt
+		} else {
+			podSpec.SecurityContext.RunAsUser = podSecurity.RunAsUser
+		}
+	}
 }
 
 func determineImageToUse(customResource *brokerv2alpha5.ActiveMQArtemis, imageTypeName string) string {

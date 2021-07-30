@@ -228,6 +228,18 @@ spec:
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
               - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: ServiceAccount Name of the pod
+            displayName: ServiceAccount Name
+            path: deploymentPlan.podSecurity.serviceAccountName
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: runAsUser as defined in PodSecurityContext for the pod
+            displayName: RunAsUser
+            path: deploymentPlan.podSecurity.runAsUser
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
 
           - description:  A single acceptor configuration
             displayName: Name

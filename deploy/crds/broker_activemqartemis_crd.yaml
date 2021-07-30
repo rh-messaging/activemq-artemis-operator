@@ -565,6 +565,16 @@ spec:
                     clustered:
                       description: whether the broker deployments are clustered or not
                       type: boolean
+                    podSecurity:
+                      description: Security properties for broker pods
+                      type: object
+                      properties:
+                        serviceAccountName:
+                          description: serviceAccount Name of the pod
+                          type: string
+                        runAsUser:
+                          description: runAsUser as defined in PodSecurityContext
+                          type: integer
                 upgrades:
                   description: >-
                     Specify the level of upgrade that should be allowed when an

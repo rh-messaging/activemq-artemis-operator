@@ -112,6 +112,12 @@ type DeploymentPlanType struct {
 	ManagementRBACEnabled bool                        `json:"managementRBACEnabled,omitempty"`
 	ExtraMounts           ExtraMountsType             `json:"extraMounts,omitempty"`
 	Clustered             *bool                       `json:"clustered,omitempty"`
+	PodSecurity           PodSecurityType             `json:"podSecurity,omitempty"`
+}
+
+type PodSecurityType struct {
+	ServiceAccountName *string `json:"serviceAccountName,omitempty"`
+	RunAsUser          *int64  `json:"runAsUser,omitempty"`
 }
 
 type ExtraMountsType struct {
