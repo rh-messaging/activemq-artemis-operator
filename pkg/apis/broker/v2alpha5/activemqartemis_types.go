@@ -113,6 +113,16 @@ type DeploymentPlanType struct {
 	ExtraMounts           ExtraMountsType             `json:"extraMounts,omitempty"`
 	Clustered             *bool                       `json:"clustered,omitempty"`
 	PodSecurity           PodSecurityType             `json:"podSecurity,omitempty"`
+	LivenessProbe         LivenessProbeType           `json:"livenessProbe,omitempty"`
+	ReadinessProbe        ReadinessProbeType          `json:"readinessProbe,omitempty"`
+}
+
+type LivenessProbeType struct {
+	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
+}
+
+type ReadinessProbeType struct {
+	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
 }
 
 type PodSecurityType struct {

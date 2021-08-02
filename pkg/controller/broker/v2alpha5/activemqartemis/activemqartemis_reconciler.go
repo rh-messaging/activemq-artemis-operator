@@ -1710,6 +1710,16 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 	}
 	reqLogger.V(1).Info("now mounts added to container", "new len", len(container.VolumeMounts))
 
+	if fsm.customResource.Spec.DeploymentPlan.LivenessProbe.TimeoutSeconds != nil {
+		container.LivenessProbe.TimeoutSeconds = *fsm.customResource.Spec.DeploymentPlan.LivenessProbe.TimeoutSeconds
+		reqLogger.V(1).Info("Setting liveness timeoutSeconds", "value", container.LivenessProbe.TimeoutSeconds)
+	}
+	reqLogger.V(1).Info("Checking out readiness", "crvalue", fsm.customResource.Spec.DeploymentPlan.ReadinessProbe.TimeoutSeconds)
+	if fsm.customResource.Spec.DeploymentPlan.ReadinessProbe.TimeoutSeconds != nil {
+		container.ReadinessProbe.TimeoutSeconds = *fsm.customResource.Spec.DeploymentPlan.ReadinessProbe.TimeoutSeconds
+		reqLogger.V(1).Info("Setting readiness timeoutSeconds", "value", container.ReadinessProbe.TimeoutSeconds)
+	}
+
 	Spec.Containers = append(Containers, container)
 	brokerVolumes := MakeVolumes(fsm)
 	if len(extraVolumes) > 0 {

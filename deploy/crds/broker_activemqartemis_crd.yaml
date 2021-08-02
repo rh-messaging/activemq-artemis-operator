@@ -575,6 +575,20 @@ spec:
                         runAsUser:
                           description: runAsUser as defined in PodSecurityContext
                           type: integer
+                    livenessProbe:
+                      description: Optional broker container liveness probe configuration
+                      type: object
+                      properties:
+                        timeoutSeconds:
+                          description: timeoutSeconds for the probe. Default 5 seconds
+                          type: integer
+                    readinessProbe:
+                      description: Optional broker container readiness probe configuration
+                      type: object
+                      properties:
+                        timeoutSeconds:
+                          description: timeoutSeconds for the probe. Default 5 seconds
+                          type: integer
                 upgrades:
                   description: >-
                     Specify the level of upgrade that should be allowed when an

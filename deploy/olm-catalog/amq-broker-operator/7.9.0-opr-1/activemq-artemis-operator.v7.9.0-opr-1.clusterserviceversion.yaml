@@ -240,6 +240,18 @@ spec:
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
               - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: Liveness Probe timeoutSeconds for broker container
+            displayName: TimeoutSeconds
+            path: deploymentPlan.livenessProbe.timeoutSeconds
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: Readiness Probe timeoutSeconds for broker container
+            displayName: TimeoutSeconds
+            path: deploymentPlan.readinessProbe.timeoutSeconds
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
 
           - description:  A single acceptor configuration
             displayName: Name
