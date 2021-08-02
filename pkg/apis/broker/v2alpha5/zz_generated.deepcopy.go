@@ -563,6 +563,11 @@ func (in *DeploymentPlanType) DeepCopyInto(out *DeploymentPlanType) {
 	in.PodSecurity.DeepCopyInto(&out.PodSecurity)
 	in.LivenessProbe.DeepCopyInto(&out.LivenessProbe)
 	in.ReadinessProbe.DeepCopyInto(&out.ReadinessProbe)
+	if in.EnableMetricsPlugin != nil {
+		in, out := &in.EnableMetricsPlugin, &out.EnableMetricsPlugin
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

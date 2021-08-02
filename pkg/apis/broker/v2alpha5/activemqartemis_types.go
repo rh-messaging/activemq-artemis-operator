@@ -118,6 +118,7 @@ type DeploymentPlanType struct {
 	PodSecurity           PodSecurityType             `json:"podSecurity,omitempty"`
 	LivenessProbe         LivenessProbeType           `json:"livenessProbe,omitempty"`
 	ReadinessProbe        ReadinessProbeType          `json:"readinessProbe,omitempty"`
+	EnableMetricsPlugin   *bool                       `json:"enableMetricsPlugin,omitempty"`
 }
 
 type LivenessProbeType struct {

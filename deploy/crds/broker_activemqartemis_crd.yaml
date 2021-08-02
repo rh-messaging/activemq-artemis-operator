@@ -609,6 +609,9 @@ spec:
                         timeoutSeconds:
                           description: timeoutSeconds for the probe. Default 5 seconds
                           type: integer
+                    enableMetricsPlugin:
+                      description: whether or not to install the artemis metrics plugin
+                      type: boolean
                 upgrades:
                   description: >-
                     Specify the level of upgrade that should be allowed when an

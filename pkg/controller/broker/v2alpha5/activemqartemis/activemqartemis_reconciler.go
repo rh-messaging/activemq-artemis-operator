@@ -2172,6 +2172,11 @@ func MakeEnvVarArrayForCR(fsm *ActiveMQArtemisFSM) []corev1.EnvVar {
 		managementRBACEnabled = "false"
 	}
 
+	metricsPluginEnabled := "false"
+	if fsm.customResource.Spec.DeploymentPlan.EnableMetricsPlugin != nil {
+		metricsPluginEnabled = strconv.FormatBool(*fsm.customResource.Spec.DeploymentPlan.EnableMetricsPlugin)
+	}
+
 	envVar := []corev1.EnvVar{}
 	envVarArrayForBasic := environments.AddEnvVarForBasic2(requireLogin, journalType, fsm.GetPingServiceName())
 	envVar = append(envVar, envVarArrayForBasic...)
@@ -2189,6 +2194,9 @@ func MakeEnvVarArrayForCR(fsm *ActiveMQArtemisFSM) []corev1.EnvVar {
 
 	envVarArrayForManagement := environments.AddEnvVarForManagement(managementRBACEnabled)
 	envVar = append(envVar, envVarArrayForManagement...)
+
+	envVarArrayForMetricsPlugin := environments.AddEnvVarForMetricsPlugin(metricsPluginEnabled)
+	envVar = append(envVar, envVarArrayForMetricsPlugin...)
 
 	return envVar
 }

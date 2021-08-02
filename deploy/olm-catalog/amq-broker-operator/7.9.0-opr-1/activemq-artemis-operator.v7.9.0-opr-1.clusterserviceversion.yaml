@@ -252,6 +252,12 @@ spec:
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
               - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: Whether or not to install the artemis metrics plugin
+            displayName: EnableMetricsPlugin
+            path: deploymentPlan.enableMetricsPlugin
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
 
           - description:  A single acceptor configuration
             displayName: Name

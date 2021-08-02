@@ -310,6 +310,19 @@ func AddEnvVarForManagement(managementRBACEnabled string) []corev1.EnvVar {
 	return envVarArray
 }
 
+func AddEnvVarForMetricsPlugin(metricsPluginEnabled string) []corev1.EnvVar {
+
+	envVarArray := []corev1.EnvVar{
+		{
+			"AMQ_ENABLE_METRICS_PLUGIN",
+			metricsPluginEnabled,
+			nil,
+		},
+	}
+
+	return envVarArray
+}
+
 // https://stackoverflow.com/questions/37334119/how-to-delete-an-element-from-a-slice-in-golang
 func remove(s []corev1.EnvVar, i int) []corev1.EnvVar {
 	s[i] = s[len(s)-1]
