@@ -818,6 +818,24 @@ spec:
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:match'
               - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: max size of the message returned from management API, default 256
+            displayName: Max management message size limit
+            path: addressSettings.addressSetting[0].managementMessageAttributeSizeLimit
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:match'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: Unit used in specifying slow consumer threshold, default is MESSAGE_PER_SECOND
+            displayName: Slow consumer threshold unit
+            path: addressSettings.addressSetting[0].slowConsumerThresholdMeasurementUnit
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:match'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Whether or not set the timestamp of arrival on messages. default false
+            displayName: Enable Ingress Timestamp
+            path: addressSettings.addressSetting[0].enableIngressTimestamp
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:match'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
           - description: Whether or not to expose this port
             displayName: Expose
             path: console.expose

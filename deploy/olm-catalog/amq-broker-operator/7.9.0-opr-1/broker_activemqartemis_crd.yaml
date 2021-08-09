@@ -51,7 +51,7 @@ spec:
                         type: integer
                       verifyHost:
                         description: >-
-                          The CN of the connecting client's SSL certificate will
+                          The CN of the connecting clients SSL certificate will
                           be compared to its hostname to verify they match. This
                           is useful only for 2-way SSL.
                         type: boolean
@@ -179,7 +179,7 @@ spec:
                         description: >-
                           A regular expression used to match the server_name
                           extension on incoming SSL connections. If the name
-                          doesn't match then the connection to the acceptor will
+                          does not match then the connection to the acceptor will
                           be rejected.
                         type: string
                       enabledProtocols:
@@ -472,6 +472,26 @@ spec:
                           match:
                             description: pattern for matching settings against addresses; can use wildards
                             type: string
+                          managementMessageAttributeSizeLimit:
+                            description: max size of the message returned from management API, default 256
+                            type: integer
+                          slowConsumerThresholdMeasurementUnit:
+                            description: >-
+                              unit used in specifying slow consumer threshold; available values:
+                              MESSAGES_PER_SECOND
+                              MESSAGES_PER_MINUTE
+                              MESSAGES_PER_HOUR
+                              MESSAGES_PER_DAY
+                              default is MESSAGE_PER_SECOND
+                            type: string
+                            enum:
+                            - "MESSAGES_PER_SECOND"
+                            - "MESSAGES_PER_MINUTE"
+                            - "MESSAGES_PER_HOUR"
+                            - "MESSAGES_PER_DAY"
+                          enableIngressTimestamp:
+                            description: whether or not set the timestamp of arrival on messages. default false
+                            type: boolean
 ################
                 console:
                   description: Configuration for the embedded web console

@@ -482,7 +482,7 @@ spec:
                               MESSAGES_PER_MINUTE
                               MESSAGES_PER_HOUR
                               MESSAGES_PER_DAY
-                              default is MESSAGE_PER_SECOND                   
+                              default is MESSAGE_PER_SECOND
                             type: string
                             enum:
                             - "MESSAGES_PER_SECOND"
@@ -491,7 +491,7 @@ spec:
                             - "MESSAGES_PER_DAY"
                           enableIngressTimestamp:
                             description: whether or not set the timestamp of arrival on messages. default false
-                            type: boolean 
+                            type: boolean
 ################
                 console:
                   description: Configuration for the embedded web console
