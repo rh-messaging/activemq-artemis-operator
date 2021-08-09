@@ -456,6 +456,21 @@ func (in *AddressSettingType) DeepCopyInto(out *AddressSettingType) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.ManagementMessageAttributeSizeLimit != nil {
+		in, out := &in.ManagementMessageAttributeSizeLimit, &out.ManagementMessageAttributeSizeLimit
+		*out = new(int32)
+		**out = **in
+	}
+	if in.SlowConsumerThresholdMeasurementUnit != nil {
+		in, out := &in.SlowConsumerThresholdMeasurementUnit, &out.SlowConsumerThresholdMeasurementUnit
+		*out = new(string)
+		**out = **in
+	}
+	if in.EnableIngressTimestamp != nil {
+		in, out := &in.EnableIngressTimestamp, &out.EnableIngressTimestamp
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 
