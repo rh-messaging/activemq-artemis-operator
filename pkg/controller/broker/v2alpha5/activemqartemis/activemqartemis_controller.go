@@ -24,6 +24,36 @@ var log = logf.Log.WithName("controller_v2alpha5activemqartemis")
 
 var namespacedNameToFSM = make(map[types.NamespacedName]*ActiveMQArtemisFSM)
 
+type ActiveMQArtemisConfigHandler interface {
+	Config(initContainers []corev1.Container, outputDirRoot string, yacfgProfileVersion string, yacfgProfileName string) (value []string)
+}
+
+var namespaceToConfigHandler = make(map[string]ActiveMQArtemisConfigHandler)
+
+func GetBrokerConfigHandler(namespacedName types.NamespacedName) (handler ActiveMQArtemisConfigHandler) {
+	value, _ := namespaceToConfigHandler[namespacedName.Namespace]
+	return value
+}
+
+func RemoveBrokerConfigHandler(namespacedName types.NamespacedName) {
+	log.Info("Removing config handler", "name", namespacedName)
+	_, ok := namespaceToConfigHandler[namespacedName.Namespace]
+	if ok {
+		delete(namespaceToConfigHandler, namespacedName.Namespace)
+		log.Info("Handler removed")
+	}
+}
+
+func AddBrokerConfigHandler(namespacedName types.NamespacedName, handler ActiveMQArtemisConfigHandler) {
+	_, exist := namespaceToConfigHandler[namespacedName.Namespace]
+	if exist {
+		log.Info("There is an old config handler that will be replace")
+	} else {
+		namespaceToConfigHandler[namespacedName.Namespace] = handler
+		log.Info("A config handler has been added", "new handler", handler)
+	}
+}
+
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
 * business logic.  Delete these comments after modifying this file.*

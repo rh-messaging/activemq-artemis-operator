@@ -79,6 +79,7 @@ var lastStatus olm.DeploymentStatus
 // and run it if exists.
 var initHelperScript = "/opt/amq-broker/script/default.sh"
 var brokerConfigRoot = "/amq/init/config"
+var configCmd = "/opt/amq/bin/launch.sh"
 
 //default ApplyRule for address-settings
 var defApplyRule string = "merge_all"
@@ -1771,6 +1772,13 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 	initContainer.Command = []string{"/bin/bash"}
 	initContainer.Resources = fsm.customResource.Spec.DeploymentPlan.Resources
 
+	var initCmds []string
+	var initCfgRootDir = "/init_cfg_root"
+
+	compactVersionToUse := determineCompactVersionToUse(fsm.customResource)
+	yacfgProfileVersion = version.FullVersionFromCompactVersion[compactVersionToUse]
+	yacfgProfileName := version.YacfgProfileName
+
 	//address settings
 	addressSettings := fsm.customResource.Spec.AddressSettings.AddressSetting
 	if len(addressSettings) > 0 {
@@ -1800,21 +1808,19 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 		jsonSpecials := string(byteArray)
 
 		envVarTuneFilePath := "TUNE_PATH"
-		outputDir := "/yacfg_etc"
+		outputDir := initCfgRootDir + "/yacfg_etc"
 
 		compactVersionToUse := determineCompactVersionToUse(fsm.customResource)
 		yacfgProfileVersion = version.FullVersionFromCompactVersion[compactVersionToUse]
 		yacfgProfileName := version.YacfgProfileName
 
-		initCmd := "echo \"" + configYaml.String() + "\" > " + outputDir +
-			"/broker.yaml; cat /yacfg_etc/broker.yaml; yacfg --profile " + yacfgProfileName + "/" +
+		initCmd := "mkdir -p " + outputDir + "; echo \"" + configYaml.String() + "\" > " + outputDir +
+			"/broker.yaml; cat " + outputDir + "/broker.yaml; yacfg --profile " + yacfgProfileName + "/" +
 			yacfgProfileVersion + "/default_with_user_address_settings.yaml.jinja2  --tune " +
 			outputDir + "/broker.yaml --extra-properties '" + jsonSpecials + "' --output " + outputDir
-		configCmd := "/opt/amq/bin/launch.sh"
 
-		var initArgs []string = []string{"-c", initCmd + " && " + configCmd + " && " + initHelperScript}
-
-		initContainer.Args = initArgs
+		log.Info("==debug==, initCmd: " + initCmd)
+		initCmds = append(initCmds, initCmd)
 
 		//populate args of init container
 
@@ -1850,37 +1856,65 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 		}
 		environments.Create(Spec.InitContainers, &tuneFile)
 
-		//now make volumes mount available to init image
-		log.Info("making volume mounts")
-
-		//setup volumeMounts
-		volumeMountForCfgRoot := volumes.MakeVolumeMountForCfg(cfgVolumeName, brokerConfigRoot)
-		Spec.InitContainers[0].VolumeMounts = append(Spec.InitContainers[0].VolumeMounts, volumeMountForCfgRoot)
-
-		volumeMountForCfg := volumes.MakeVolumeMountForCfg("tool-dir", outputDir)
-		Spec.InitContainers[0].VolumeMounts = append(Spec.InitContainers[0].VolumeMounts, volumeMountForCfg)
-
-		//add empty-dir volume
-		volumeForCfg := volumes.MakeVolumeForCfg("tool-dir")
-		Spec.Volumes = append(Spec.Volumes, volumeForCfg)
-
-		log.Info("Total volumes ", "volumes", Spec.Volumes)
 	} else {
 		log.Info("No addressetings")
-
-		configCmd := "/opt/amq/bin/launch.sh"
-
-		var initArgs []string
-		initArgs = []string{"-c", configCmd + " && " + initHelperScript}
-		initContainer.Args = initArgs
 
 		Spec.InitContainers = []corev1.Container{
 			initContainer,
 		}
-
-		volumeMountForCfgRoot := volumes.MakeVolumeMountForCfg(cfgVolumeName, brokerConfigRoot)
-		Spec.InitContainers[0].VolumeMounts = append(Spec.InitContainers[0].VolumeMounts, volumeMountForCfgRoot)
 	}
+	//now make volumes mount available to init image
+	log.Info("making volume mounts")
+
+	//setup volumeMounts
+	volumeMountForCfgRoot := volumes.MakeVolumeMountForCfg(cfgVolumeName, brokerConfigRoot)
+	Spec.InitContainers[0].VolumeMounts = append(Spec.InitContainers[0].VolumeMounts, volumeMountForCfgRoot)
+
+	volumeMountForCfg = volumes.MakeVolumeMountForCfg("tool-dir", initCfgRootDir)
+	Spec.InitContainers[0].VolumeMounts = append(Spec.InitContainers[0].VolumeMounts, volumeMountForCfg)
+
+	//add empty-dir volume
+	volumeForCfg = volumes.MakeVolumeForCfg("tool-dir")
+	Spec.Volumes = append(Spec.Volumes, volumeForCfg)
+
+	log.Info("Total volumes ", "volumes", Spec.Volumes)
+
+	var initArgs []string = []string{"-c"}
+
+	//provide a way to configuration after launch.sh
+	var brokerHandlerCmds []string = []string{}
+	log.Info("Checking if there are any config handlers", "main cr", namespacedName)
+	brokerConfigHandler := GetBrokerConfigHandler(namespacedName)
+	if brokerConfigHandler != nil {
+		log.Info("there is a config handler")
+		handlerCmds := brokerConfigHandler.Config(Spec.InitContainers, initCfgRootDir+"/security", yacfgProfileVersion, yacfgProfileName)
+		log.Info("Getting back some init commands", "handlerCmds", handlerCmds)
+		if len(handlerCmds) > 0 {
+			log.Info("appending to initCmd array...")
+			brokerHandlerCmds = append(brokerHandlerCmds, handlerCmds...)
+		}
+	}
+
+	var strBuilder strings.Builder
+
+	isFirst := true
+	initCmds = append(initCmds, configCmd)
+	initCmds = append(initCmds, brokerHandlerCmds...)
+	initCmds = append(initCmds, initHelperScript)
+
+	for _, icmd := range initCmds {
+		if isFirst {
+			isFirst = false
+		} else {
+			strBuilder.WriteString(" && ")
+		}
+		strBuilder.WriteString(icmd)
+	}
+	initArgs = append(initArgs, strBuilder.String())
+
+	log.Info("The final init cmds to init ", "the cmd array", initArgs)
+
+	Spec.InitContainers[0].Args = initArgs
 
 	if len(extraVolumeMounts) > 0 {
 		Spec.InitContainers[0].VolumeMounts = append(Spec.InitContainers[0].VolumeMounts, extraVolumeMounts...)

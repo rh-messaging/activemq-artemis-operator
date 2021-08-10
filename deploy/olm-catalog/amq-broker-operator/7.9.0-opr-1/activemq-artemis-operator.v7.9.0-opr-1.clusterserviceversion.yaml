@@ -1128,6 +1128,545 @@ spec:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:SingleNamespace'
               - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
 
+      - name: activemqartemissecurities.broker.amq.io
+        version: v1alpha1
+        versions:
+          - name: v1alpha1
+            served: true
+            storage: true
+        kind: ActiveMQArtemisSecurity
+        description: Security configuration for the broker
+        diaplayName: ActiveMQ Artemis Security
+        specDescriptors:
+          - description: Name for PropertiesLoginModule
+            displayName: Login Module Name
+            path: loginModules.propertiesLoginModules[0].name
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: User name to be defined in properties login module
+            displayName: User Name
+            path: loginModules.propertiesLoginModules[0].users[0].name
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Password to be defined in properties login module
+            displayName: Password
+            path: loginModules.propertiesLoginModules[0].users[0].password
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:password'
+          - description: Roles to be defined in properties login module
+            displayName: Role
+            path: loginModules.propertiesLoginModules[0].users[0].roles[0]
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Name for GuestLoginModule
+            displayName: Login Module Name
+            path: loginModules.guestLoginModules[0].name
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The guest user name
+            displayName: Guest User Name
+            path: loginModules.guestLoginModules[0].guestUser
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The guest user role
+            displayName: Guest User Role
+            path: loginModules.guestLoginModules[0].guestRole
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Name for KeycloakLoginModule
+            displayName: Login Module Name
+            path: loginModules.keycloakLoginModules[0].name
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Type of KeycloakLoginModule directAccess or bearerToken
+            displayName: Login Module Type
+            path: loginModules.keycloakLoginModules[0].moduleType
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Realm for KeycloakLoginModule
+            displayName: Realm
+            path: loginModules.keycloakLoginModules[0].configuration.realm
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Public key for the realm
+            displayName: Realm Public Key
+            path: loginModules.keycloakLoginModules[0].configuration.realmPublicKey
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: URL of the keycloak authentication server
+            displayName: Auth Server URL
+            path: loginModules.keycloakLoginModules[0].configuration.authServerUrl
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: How SSL is required
+            displayName: SSL required
+            path: loginModules.keycloakLoginModules[0].configuration.sslRequired
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Resource Name
+            displayName: Resource Name
+            path: loginModules.keycloakLoginModules[0].configuration.resource
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: If it is public client
+            displayName: Public Client
+            path: loginModules.keycloakLoginModules[0].configuration.publicClient
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: The credentials key
+            displayName: Credentials Key
+            path: loginModules.keycloakLoginModules[0].configuration.credentials[0].key
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The credentials value
+            displayName: Credentials Value
+            path: loginModules.keycloakLoginModules[0].configuration.credentials[0].value
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: If to use resource role mappings
+            displayName: Use Resource Role Mappings
+            path: loginModules.keycloakLoginModules[0].configuration.useResourceRoleMappings
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: If to enable CORS
+            displayName: Enable CORS
+            path: loginModules.keycloakLoginModules[0].configuration.enableCors
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: CORS max age
+            displayName: CORS Max Age
+            path: loginModules.keycloakLoginModules[0].configuration.corsMaxAge
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: CORS allowed methods
+            displayName: CORS Allowed Methods
+            path: loginModules.keycloakLoginModules[0].configuration.corsAllowedMethods
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: CORS allowed headers
+            displayName: CORS Allowed Headerss
+            path: loginModules.keycloakLoginModules[0].configuration.corsAllowedHeaders
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: CORS exposed headers
+            displayName: CORS Exposed Headers
+            path: loginModules.keycloakLoginModules[0].configuration.corsExposedHeaders
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: If to expose access token
+            displayName: Expose Access Token
+            path: loginModules.keycloakLoginModules[0].configuration.exposeToken
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: If only verify bearer token
+            displayName: Bearer Token Only
+            path: loginModules.keycloakLoginModules[0].configuration.bearerOnly
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: If auto-detect bearer token only
+            displayName: Auto-Detect Bearer Token Only
+            path: loginModules.keycloakLoginModules[0].configuration.autoDetectBearerOnly
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Size of the connection pool
+            displayName: Connection Pool Size
+            path: loginModules.keycloakLoginModules[0].configuration.connectionPoolSize
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: If to allow any host name
+            displayName: Allow Any Host Name
+            path: loginModules.keycloakLoginModules[0].configuration.allowAnyHostName
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: If to disable trust manager
+            displayName: Disable Trust Manager
+            path: loginModules.keycloakLoginModules[0].configuration.disableTrustManager
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Path of a trust store
+            displayName: Truststore Path
+            path: loginModules.keycloakLoginModules[0].configuration.trustStore
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Truststore password
+            displayName: Truststore Password
+            path: loginModules.keycloakLoginModules[0].configuration.trustStorePassword
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:password'
+          - description: Path of a client keystore
+            displayName: Keystore Path
+            path: loginModules.keycloakLoginModules[0].configuration.clientKeyStore
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Client keystore password
+            displayName: Keystore Password
+            path: loginModules.keycloakLoginModules[0].configuration.clientKeyStorePassword
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:password'
+          - description: Client key password
+            displayName: Client Key Password
+            path: loginModules.keycloakLoginModules[0].configuration.clientKeyPassword
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:password'
+          - description: If always refresh token
+            displayName: Always Refresh Token
+            path: loginModules.keycloakLoginModules[0].configuration.alwaysRefreshToken
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: If register node at startup
+            displayName: Register Node at Startup
+            path: loginModules.keycloakLoginModules[0].configuration.registerNodeAtStartup
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Period for re-registering node
+            displayName: Register Node Period
+            path: loginModules.keycloakLoginModules[0].configuration.registerNodePeriod
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: Type of token store. session or cookie
+            displayName: Token Store Type
+            path: loginModules.keycloakLoginModules[0].configuration.tokenStore
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Cookie path for a cookie store
+            displayName: Cookie Path
+            path: loginModules.keycloakLoginModules[0].configuration.tokenCookiePath
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: OpenID Connect ID Token attribute to populate the UserPrincipal name with
+            displayName: Principal Attribute
+            path: loginModules.keycloakLoginModules[0].configuration.principalAttribute
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The proxy URL
+            displayName: Proxy URL
+            path: loginModules.keycloakLoginModules[0].configuration.proxyUrl
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: If not to change session id on a successful login 
+            displayName: Turn Off Session ID Change On Login
+            path: loginModules.keycloakLoginModules[0].configuration.turnOffChangeSessionIdOnLogin
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Minimum time to refresh an active access token
+            displayName: Token Minimum Time To Live
+            path: loginModules.keycloakLoginModules[0].configuration.tokenMinimumTimeToLive
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: Minimum interval between two requests to Keycloak to retrieve new public keys
+            displayName: Minimum Time Between Jwks Requests
+            path: loginModules.keycloakLoginModules[0].configuration.minTimeBetweenJwksRequests
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: Maximum interval between two requests to Keycloak to retrieve new public keys
+            displayName: Public Key Cache TTL
+            path: loginModules.keycloakLoginModules[0].configuration.publicKeyCacheTtl
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: Whether to turn off processing of the access_token query parameter for bearer token processing
+            displayName: Ignore Oauth Query Parameter
+            path: loginModules.keycloakLoginModules[0].configuration.ignoreOauthQueryParameter
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Verify whether the token contains this client name (resource) as an audience
+            displayName: VerifyTokenAudience
+            path: loginModules.keycloakLoginModules[0].configuration.verifyTokenAudience
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Whether to support basic authentication
+            displayName: Enable Basic Auth
+            path: loginModules.keycloakLoginModules[0].configuration.enableBasicAuth
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: The confidential port used by the Keycloak server for secure connections over SSL/TLS
+            displayName: Confidential Port
+            path: loginModules.keycloakLoginModules[0].configuration.confidentialPort
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: The regular expression to which the Redirect URI is to be matched
+            displayName: Redirect Key
+            path: loginModules.keycloakLoginModules[0].configuration.redirectRewriteRules[0].key
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The replacement String
+            displayName: Redirect Replacement String
+            path: loginModules.keycloakLoginModules[0].configuration.redirectRewriteRules[0].value
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The OAuth2 scope parameter for DirectAccessGrantsLoginModule
+            displayName: OAuth2 Scope
+            path: loginModules.keycloakLoginModules[0].configuration.scope
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Name for the broker domain
+            displayName: Broker Domain Name
+            path: securityDomains.brokerDomain.name
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Name for login modules for broker domain
+            displayName: Name of Login Module
+            path: securityDomains.brokerDomain.loginModules[0].name
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Flag of login modules for broker domain
+            displayName: Flag of Login Module
+            path: securityDomains.brokerDomain.loginModules[0].flag
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Debug option of login modules for broker domain
+            displayName: Debug Option of Login Module
+            path: securityDomains.brokerDomain.loginModules[0].debug
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Reload option of login modules for broker domain
+            displayName: Reload Option of Login Module
+            path: securityDomains.brokerDomain.loginModules[0].reload
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Name for the console domain
+            displayName: Console Domain Name
+            path: securityDomains.consoleDomain.name
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Name for login modules for console domain
+            displayName: Name of Login Module
+            path: securityDomains.consoleDomain.loginModules[0].name
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Flag of login modules for console domain
+            displayName: Flag of Login Module
+            path: securityDomains.consoleDomain.loginModules[0].flag
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Debug option of login modules for console domain
+            displayName: Debug Option of Login Module
+            path: securityDomains.consoleDomain.loginModules[0].debug
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Reload option of login modules for console domain
+            displayName: Reload Option of Login Module
+            path: securityDomains.consoleDomain.loginModules[0].reload
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: The address match pattern of a security setting
+            displayName: Match Expression
+            path: securitySettings.broker[0].match
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The operation type of a security setting
+            displayName: Operation Type
+            path: securitySettings.broker[0].permissions[0].operationType
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The roles of a security setting
+            displayName: Role
+            path: securitySettings.broker[0].permissions[0].roles[0]
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The roles allowed to login hawtio
+            displayName: Hawtio Role
+            path: securitySettings.management.hawtioRoles[0]
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The connector host for connecting to management
+            displayName: Connector Host
+            path: securitySettings.management.connector.host
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The connector port for connecting to management
+            displayName: Connector Port
+            path: securitySettings.management.connector.port
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: The RMI registry port for management
+            displayName: RMI Registry Port
+            path: securitySettings.management.connector.rmiRegistryPort
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: The JMX realm of management
+            displayName: JMX Realm
+            path: securitySettings.management.connector.jmxRealm
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The JMX object name of management
+            displayName: Object Name
+            path: securitySettings.management.connector.objectName
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The management authentication type
+            displayName: Authentication Type
+            path: securitySettings.management.connector.authenticatorType
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Whether management connection is secured
+            displayName: Secured
+            path: securitySettings.management.connector.secured
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: The keystore provider for management connector
+            displayName: Keystore Provider
+            path: securitySettings.management.connector.keyStoreProvider
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The keystore path for management connector
+            displayName: Keystore Path
+            path: securitySettings.management.connector.keyStorePath
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The keystore password for management connector
+            displayName: Keystore Password
+            path: securitySettings.management.connector.keyStorePassword
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:password'
+          - description: The truststore provider for management connector
+            displayName: Truststore Provider
+            path: securitySettings.management.connector.trustStoreProvider
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The truststore path for management connector
+            displayName: Truststore Path
+            path: securitySettings.management.connector.trustStorePath
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The truststore password for management connector
+            displayName: Truststore Password
+            path: securitySettings.management.connector.trustStorePassword
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:password'
+          - description: The password codec for management connector
+            displayName: Password Codec
+            path: securitySettings.management.connector.passwordCodec
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The domain of allowedList
+            displayName: Domain
+            path: securitySettings.management.authorisation.allowedList[0].domain
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The key of allowedList
+            displayName: Key
+            path: securitySettings.management.authorisation.allowedList[0].key
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The method of defaultAccess List
+            displayName: Method
+            path: securitySettings.management.authorisation.defaultAccess[0].method
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The roles of defaultAccess List
+            displayName: Role
+            path: securitySettings.management.authorisation.defaultAccess[0].roles[0]
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The domain of roleAccess List
+            displayName: Domain
+            path: securitySettings.management.authorisation.roleAccess[0].domain
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The key of roleAccess List
+            displayName: Key
+            path: securitySettings.management.authorisation.roleAccess[0].key
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The method of roleAccess List
+            displayName: Method
+            path: securitySettings.management.authorisation.roleAccess[0].accessList[0].method
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The roles of roleAccess List
+            displayName: Roles
+            path: securitySettings.management.authorisation.roleAccess[0].accessList[0].roles[0]
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+
   install:
     strategy: deployment
     spec:

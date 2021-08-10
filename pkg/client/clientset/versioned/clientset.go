@@ -17,6 +17,7 @@ limitations under the License.
 package versioned
 
 import (
+	brokerv1alpha1 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v1alpha1"
 	brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha1"
 	brokerv2alpha2 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha2"
 	brokerv2alpha3 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha3"
@@ -30,6 +31,7 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
+	BrokerV1alpha1() brokerv1alpha1.BrokerV1alpha1Interface
 	BrokerV2alpha1() brokerv2alpha1.BrokerV2alpha1Interface
 	BrokerV2alpha2() brokerv2alpha2.BrokerV2alpha2Interface
 	BrokerV2alpha3() brokerv2alpha3.BrokerV2alpha3Interface
@@ -43,11 +45,17 @@ type Interface interface {
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
+	brokerV1alpha1 *brokerv1alpha1.BrokerV1alpha1Client
 	brokerV2alpha1 *brokerv2alpha1.BrokerV2alpha1Client
 	brokerV2alpha2 *brokerv2alpha2.BrokerV2alpha2Client
 	brokerV2alpha3 *brokerv2alpha3.BrokerV2alpha3Client
 	brokerV2alpha4 *brokerv2alpha4.BrokerV2alpha4Client
 	brokerV2alpha5 *brokerv2alpha5.BrokerV2alpha5Client
+}
+
+// BrokerV1alpha1 retrieves the BrokerV1alpha1Client
+func (c *Clientset) BrokerV1alpha1() brokerv1alpha1.BrokerV1alpha1Interface {
+	return c.brokerV1alpha1
 }
 
 // BrokerV2alpha1 retrieves the BrokerV2alpha1Client
@@ -97,6 +105,11 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	}
 	var cs Clientset
 	var err error
+	cs.brokerV1alpha1, err = brokerv1alpha1.NewForConfig(&configShallowCopy)
+	if err != nil {
+		return nil, err
+	}
+
 	cs.brokerV2alpha1, err = brokerv2alpha1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
@@ -130,6 +143,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
+	cs.brokerV1alpha1 = brokerv1alpha1.NewForConfigOrDie(c)
 	cs.brokerV2alpha1 = brokerv2alpha1.NewForConfigOrDie(c)
 	cs.brokerV2alpha2 = brokerv2alpha2.NewForConfigOrDie(c)
 	cs.brokerV2alpha3 = brokerv2alpha3.NewForConfigOrDie(c)
@@ -143,6 +157,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
+	cs.brokerV1alpha1 = brokerv1alpha1.New(c)
 	cs.brokerV2alpha1 = brokerv2alpha1.New(c)
 	cs.brokerV2alpha2 = brokerv2alpha2.New(c)
 	cs.brokerV2alpha3 = brokerv2alpha3.New(c)

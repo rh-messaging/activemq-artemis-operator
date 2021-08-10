@@ -45,6 +45,7 @@ rules:
   - activemqartemisaddresses
   - activemqartemisscaledowns
   - activemqartemis
+  - activemqartemisauthentications
   verbs:
   - '*'
 - apiGroups:
