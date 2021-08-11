@@ -3,10 +3,24 @@ package config
 import (
 	brokerv2alpha3 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha3"
 	brokerv2alpha4 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha4"
+	brokerv2alpha5 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha5"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 var log = logf.Log.WithName("config-util")
+
+//assuming the lengths of 2 array are equal
+func IsEqualV2Alpha5(currentAddressSetting []brokerv2alpha5.AddressSettingType, newAddressSetting []brokerv2alpha5.AddressSettingType) bool {
+	var currentAddressSettingV2Alpha3 []brokerv2alpha3.AddressSettingType
+	var newAddressSettingV2Alpha3 []brokerv2alpha3.AddressSettingType
+	for _, v := range currentAddressSetting {
+		currentAddressSettingV2Alpha3 = append(currentAddressSettingV2Alpha3, brokerv2alpha3.AddressSettingType(v))
+	}
+	for _, v := range newAddressSetting {
+		newAddressSettingV2Alpha3 = append(newAddressSettingV2Alpha3, brokerv2alpha3.AddressSettingType(v))
+	}
+	return IsEqual(currentAddressSettingV2Alpha3, newAddressSettingV2Alpha3)
+}
 
 //assuming the lengths of 2 array are equal
 func IsEqualV2Alpha4(currentAddressSetting []brokerv2alpha4.AddressSettingType, newAddressSetting []brokerv2alpha4.AddressSettingType) bool {

@@ -18,8 +18,8 @@ package fake
 
 import (
 	clientset "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned"
-	brokerv2alpha4 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha4"
-	fakebrokerv2alpha4 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha4/fake"
+	brokerv2alpha5 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha5"
+	fakebrokerv2alpha5 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha5/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -68,12 +68,12 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 
 var _ clientset.Interface = &Clientset{}
 
-// BrokerV2alpha4 retrieves the BrokerV2alpha4Client
-func (c *Clientset) BrokerV2alpha4() brokerv2alpha4.BrokerV2alpha4Interface {
-	return &fakebrokerv2alpha4.FakeBrokerV2alpha4{Fake: &c.Fake}
+// BrokerV2alpha5 retrieves the BrokerV2alpha5Client
+func (c *Clientset) BrokerV2alpha5() brokerv2alpha5.BrokerV2alpha5Interface {
+	return &fakebrokerv2alpha5.FakeBrokerV2alpha5{Fake: &c.Fake}
 }
 
 // Broker retrieves the BrokerV2alpha4Client
-func (c *Clientset) Broker() brokerv2alpha4.BrokerV2alpha4Interface {
-	return &fakebrokerv2alpha4.FakeBrokerV2alpha4{Fake: &c.Fake}
+func (c *Clientset) Broker() brokerv2alpha5.BrokerV2alpha5Interface {
+	return &fakebrokerv2alpha5.FakeBrokerV2alpha5{Fake: &c.Fake}
 }

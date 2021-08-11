@@ -172,11 +172,41 @@ func MakeVolumeForCfg(name string) corev1.Volume {
 }
 
 func MakeVolumeMountForCfg(name string, path string) corev1.VolumeMount {
+	return MakeVolumeMountForCfg2(name, path, false)
+}
+
+func MakeVolumeMountForCfg2(name string, path string, readOnly bool) corev1.VolumeMount {
 
 	volumeMount := corev1.VolumeMount{
 		Name:      name,
 		MountPath: path,
-		ReadOnly:  false,
+		ReadOnly:  readOnly,
 	}
 	return volumeMount
+}
+
+func MakeVolumeForConfigMap(cfgmapName string) corev1.Volume {
+	volume := corev1.Volume{
+		Name: "configmap-" + cfgmapName,
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				corev1.LocalObjectReference{Name: cfgmapName},
+				[]corev1.KeyToPath{},
+				nil, nil,
+			},
+		},
+	}
+	return volume
+}
+
+func MakeVolumeForSecret(secretName string) corev1.Volume {
+	volume := corev1.Volume{
+		Name: "secret-" + secretName,
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: secretName,
+			},
+		},
+	}
+	return volume
 }

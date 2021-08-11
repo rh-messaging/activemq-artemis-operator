@@ -3,6 +3,7 @@ package cr2jinja2
 import (
 	v2alpha3 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha3"
 	v2alpha4 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha4"
+	v2alpha5 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha5"
 
 	//k8syaml "k8s.io/apimachinery/pkg/util/yaml"
 	"fmt"
@@ -131,6 +132,12 @@ func MakeBrokerCfgOverrides(customResource interface{}, envVar *string, output *
 		if ok {
 			MakeBrokerCfgOverridesForV2alpha4(v2alpha4Res, envVar, output, &sb, specials)
 			processed = true
+		} else {
+			v2alpha5Res, ok := customResource.(*v2alpha5.ActiveMQArtemis)
+			if ok {
+				MakeBrokerCfgOverridesForV2alpha5(v2alpha5Res, envVar, output, &sb, specials)
+				processed = true
+			}
 		}
 	}
 
@@ -152,6 +159,18 @@ func MakeBrokerCfgOverrides(customResource interface{}, envVar *string, output *
 		}
 	}
 	return result, specials
+}
+
+func MakeBrokerCfgOverridesForV2alpha5(customResource *v2alpha5.ActiveMQArtemis, envVar *string, output *string, sb *strings.Builder, specials map[string]string) {
+	var addressSettings *[]v2alpha5.AddressSettingType = &customResource.Spec.AddressSettings.AddressSetting
+
+	//because the address settings are same between v2alpha3 and v2alpha5, reuse the code
+	var addressSettingsV2alpha3 []v2alpha3.AddressSettingType
+	for _, a := range *addressSettings {
+		addressSettingsV2alpha3 = append(addressSettingsV2alpha3, v2alpha3.AddressSettingType(a))
+	}
+
+	processAddressSettings(sb, &addressSettingsV2alpha3, specials)
 }
 
 func MakeBrokerCfgOverridesForV2alpha4(customResource *v2alpha4.ActiveMQArtemis, envVar *string, output *string, sb *strings.Builder, specials map[string]string) {

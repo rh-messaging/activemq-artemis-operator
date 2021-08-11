@@ -558,7 +558,7 @@ spec:
                           items:
                             type: string
                         secrets:
-                          description: List of secrets to mount
+                          description: List of configmaps to mount
                           type: array
                           items:
                             type: string

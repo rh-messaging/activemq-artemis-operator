@@ -1,6 +1,6 @@
 FROM registry.access.redhat.com/ubi7/go-toolset:1.13.4-18 AS build-env
 
-ENV GOPATH=/tmp/go 
+ENV GOPATH=/tmp/go
 ENV GOOS=linux
 ENV CGO_ENABLED=0
 ENV BROKER_NAME=amq-broker
@@ -36,7 +36,7 @@ ENV USER_NAME=${BROKER_NAME}-operator
 ENV CGO_ENABLED=0
 ENV GOPATH=/tmp/go
 ENV JBOSS_IMAGE_NAME="amq7/amq-broker-rhel8-operator"
-ENV JBOSS_IMAGE_VERSION="7.8"
+ENV JBOSS_IMAGE_VERSION="7.9"
 ENV XDG_CONFIG_HOME="/tmp"
 
 WORKDIR /
@@ -49,6 +49,7 @@ RUN mkdir -p /manifests/0.18.0
 RUN mkdir -p /manifests/0.19.0
 RUN mkdir -p /manifests/7.8.1-opr-3
 RUN mkdir -p /manifests/7.8.2-opr-1
+RUN mkdir -p /manifests/7.9.0-opr-1
 RUN chown -R `id -u`:0 /manifests
 COPY --from=build-env /tmp/activemq-artemis-operator /home/${BROKER_NAME}-operator/bin
 COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/build/bin/entrypoint /home/${BROKER_NAME}-operator/bin
@@ -64,6 +65,7 @@ COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-opera
 COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/deploy/olm-catalog/${BROKER_NAME}-operator/0.19.0/ /manifests/0.19.0
 COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/deploy/olm-catalog/${BROKER_NAME}-operator/7.8.1-opr-3/ /manifests/7.8.1-opr-3
 COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/deploy/olm-catalog/${BROKER_NAME}-operator/7.8.2-opr-1/ /manifests/7.8.2-opr-1
+COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/deploy/olm-catalog/${BROKER_NAME}-operator/7.9.0-opr-1/ /manifests/7.9.0-opr-1
 
 COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/deploy/crds/*v2alpha1* /manifests/0.13.0/
 COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/deploy/crds/*v2alpha1* /manifests/0.15.0/
@@ -72,6 +74,7 @@ COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-opera
 COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/deploy/crds/*v2alpha1* /manifests/0.19.0/
 COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/deploy/crds/*v2alpha1* /manifests/7.8.1-opr-3/
 COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/deploy/crds/*v2alpha1* /manifests/7.8.2-opr-1/
+COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/deploy/crds/*v2alpha1* /manifests/7.9.0-opr-1/
 
 RUN useradd ${BROKER_NAME}-operator
 RUN mkdir -p /home/${BROKER_NAME}-operator/bin && chown -R `id -u`:0 /home/${BROKER_NAME}-operator/bin && chmod -R 755 /home/${BROKER_NAME}-operator/bin
@@ -94,4 +97,4 @@ LABEL \
       maintainer="Roddie Kieley <rkieley@redhat.com>"  \
       name="amq7/amq-broker-rhel8-operator" \
       summary="AMQ Broker Operator"  \
-      version="7.8"
+      version="7.9"
