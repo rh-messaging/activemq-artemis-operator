@@ -1255,7 +1255,8 @@ func imageSyncCausedUpdateOn(customResource *brokerv2alpha5.ActiveMQArtemis, cur
 	reqLogger.V(1).Info("imageSyncCausedUpdateOn")
 
 	imageName := ""
-	if "placeholder" == customResource.Spec.DeploymentPlan.Image {
+	if "placeholder" == customResource.Spec.DeploymentPlan.Image ||
+		0 == len(customResource.Spec.DeploymentPlan.Image) {
 		reqLogger.Info("Determining the updated kubernetes image to use due to placeholder setting")
 		imageName = determineImageToUse(customResource, "Kubernetes")
 	} else {
@@ -1683,7 +1684,8 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 	Containers := []corev1.Container{}
 
 	imageName := ""
-	if "placeholder" == fsm.customResource.Spec.DeploymentPlan.Image {
+	if "placeholder" == fsm.customResource.Spec.DeploymentPlan.Image ||
+		0 == len(fsm.customResource.Spec.DeploymentPlan.Image) {
 		reqLogger.Info("Determining the kubernetes image to use due to placeholder setting")
 		imageName = determineImageToUse(fsm.customResource, "Kubernetes")
 	} else {
