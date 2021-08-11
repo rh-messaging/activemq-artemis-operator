@@ -18,8 +18,8 @@ github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuy
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
 github.com/appscode/jsonpatch v0.0.0-20190108182946-7c0e3b262f30 h1:Kn3rqvbUFqSepE2OqVu0Pn1CbDw9IuMlONapol0zuwk=
 github.com/appscode/jsonpatch v0.0.0-20190108182946-7c0e3b262f30/go.mod h1:4AJxUpXUhv4N+ziTvIcWWXgeorXpxPZOfk9HdEVr96M=
-github.com/artemiscloud/activemq-artemis-management v0.0.0-20210611083341-9f22c1cdd18e h1:lq9AMW1qGtNK4HgnpLSFlevnC3sN+O7Id6IF9ZmCQG0=
-github.com/artemiscloud/activemq-artemis-management v0.0.0-20210611083341-9f22c1cdd18e/go.mod h1:20sdZOagYLSsPx92EyDIoOJqAz1PlYAm+3vcR5IFIwk=
+github.com/artemiscloud/activemq-artemis-management v0.0.0-20210804051659-5b1c7c08500a h1:ooxd1nrmQc66NUK491U/L4dQBq+Sdan60e0k0/ReVQs=
+github.com/artemiscloud/activemq-artemis-management v0.0.0-20210804051659-5b1c7c08500a/go.mod h1:20sdZOagYLSsPx92EyDIoOJqAz1PlYAm+3vcR5IFIwk=
 github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf h1:eg0MeVzsP1G42dRafH3vf+al2vQIJU0YHX+1Tw87oco=
 github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf/go.mod h1:lB+ZfQJz7igIIfQNfa7Ml4HSf2uFQQRzpGGRXenZAgY=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 h1:xJ4a3vCFaGF/jqvzLMYoU8P317H5OQ+Via4RmuPwCS0=

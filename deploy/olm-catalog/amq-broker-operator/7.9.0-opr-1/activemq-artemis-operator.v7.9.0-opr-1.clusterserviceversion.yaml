@@ -915,6 +915,174 @@ spec:
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
               - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: User name for creating the queue or address
+            displayName: User Name
+            path: user
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The password for the user
+            displayName: Password
+            path: password
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:password'
+          - description: If ignore if the target queue already exists
+            displayName: Ignore If Exists
+            path: queueConfiguration.ignoreIfExists
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: The routing type of the queue
+            displayName: Queue Routing Type
+            path: queueConfiguration.routingType
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The filter string for the queue
+            displayName: Queue Filter String
+            path: queueConfiguration.filterString
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: If the queue is durable or not
+            displayName: Durable
+            path: queueConfiguration.durable
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: The user associated with the queue
+            displayName: Queue User
+            path: queueConfiguration.user
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Max number of consumers allowed on this queue
+            displayName: Max Consumers
+            path: queueConfiguration.maxConsumers
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: If the queue is exclusive
+            displayName: Exclusive
+            path: queueConfiguration.exclusive
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: If rebalance the message group
+            displayName: Group Rebalance
+            path: queueConfiguration.groupRebalance
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: If pause message dispatch when rebalancing groups
+            displayName: Group Rebalance Pause Dispatch
+            path: queueConfiguration.groupRebalancePauseDispatch
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Number of messaging group buckets
+            displayName: Group Buckets Number
+            path: queueConfiguration.groupBuckets
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: Header set on the first group message
+            displayName: Group First Key
+            path: queueConfiguration.groupFirstKey
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: If it is a last value queue
+            displayName: Last Value Queue
+            path: queueConfiguration.lastValue
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: The property used for last value queue to identify last values
+            displayName: Last Value Key
+            path: queueConfiguration.lastValueKey
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: If force non-destructive consumers on the queue
+            displayName: Non-destructive
+            path: queueConfiguration.nonDestructive
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Whether to delete all messages when no consumers connected to the queue
+            displayName: Purge On No Consumers
+            path: queueConfiguration.purgeOnNoConsumers
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: If the queue is enabled
+            displayName: Enabled
+            path: queueConfiguration.enabled
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Number of consumers required before dispatching messages
+            displayName: Consumers Before Dispatch
+            path: queueConfiguration.consumersBeforeDispatch
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: Milliseconds to wait for `consumers-before-dispatch` to be met before dispatching messages anyway
+            displayName: Delay Before Dispatch
+            path: queueConfiguration.delayBeforeDispatch
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: Consumer Priority
+            displayName: Consumer Priority
+            path: queueConfiguration.consumerPriority
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: Auto-delete the queue
+            displayName: Auto-delete
+            path: queueConfiguration.autoDelete
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Delay (Milliseconds) before auto-delete the queue
+            displayName: Auto-delete delay
+            path: queueConfiguration.autoDeleteDelay
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: Message count of the queue to allow auto delete
+            displayName: Auto-delete Message Count
+            path: queueConfiguration.autoDeleteMessageCount
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: The size the queue should maintain according to ring semantics
+            displayName: Ring Size
+            path: queueConfiguration.ringSize
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: If the queue is configuration managed
+            displayName: Configuration Managed
+            path: queueConfiguration.configurationManaged
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: If the queue is temporary
+            displayName: Temporary
+            path: queueConfiguration.temporary
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Whether auto create address
+            displayName: Auto Create Address
+            path: queueConfiguration.autoCreateAddress
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
 
       - name: activemqartemisscaledowns.broker.amq.io
         version: v2alpha1

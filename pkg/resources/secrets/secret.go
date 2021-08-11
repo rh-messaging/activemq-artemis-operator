@@ -77,3 +77,52 @@ func Create(owner metav1.Object, namespacedName types.NamespacedName, stringData
 
 	return secretDefinition
 }
+
+func GetValueFromSecret(namespace string, autoCreateSecret bool, autoGenValue bool,
+	secretName string, key string, client client.Client, scheme *runtime.Scheme, owner metav1.Object) *string {
+	//check if the secret exists.
+	namespacedName := types.NamespacedName{
+		Name:      secretName,
+		Namespace: namespace,
+	}
+	// Attempt to retrieve the secret
+	stringDataMap := make(map[string]string)
+
+	secretDefinition := NewSecret(namespacedName, secretName, stringDataMap)
+
+	if err := resources.Retrieve(namespacedName, client, secretDefinition); err != nil {
+		if errors.IsNotFound(err) {
+			if autoCreateSecret {
+				log.Info("Auto create secret", "name", secretName)
+				//create the secret
+				resources.Create(owner, namespacedName, client, scheme, secretDefinition)
+			} else {
+				log.Info("No secret found", "name", secretName)
+				return nil
+			}
+		}
+	} else {
+		log.Info("Found secret " + secretName)
+		if elem, ok := secretDefinition.Data[key]; ok {
+			//the value exists
+			value := string(elem)
+			return &value
+		}
+	}
+	//not found
+	if autoGenValue {
+		value := random.GenerateRandomString(8)
+		//update the secret
+		if secretDefinition.Data == nil {
+			secretDefinition.Data = make(map[string][]byte)
+		}
+		secretDefinition.Data[key] = []byte(value)
+		log.Info("Updating secret", "secret", namespacedName.Name)
+		if err := resources.Update(namespacedName, client, secretDefinition); err != nil {
+			log.Error(err, "failed to update secret", "secret", secretName)
+		}
+		return &value
+
+	}
+	return nil
+}

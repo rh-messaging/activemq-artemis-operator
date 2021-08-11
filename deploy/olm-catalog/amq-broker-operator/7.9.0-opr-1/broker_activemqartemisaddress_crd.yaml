@@ -28,8 +28,6 @@ spec:
           type: object
           required:
             - addressName
-            - queueName
-            - routingType
           properties:
             addressName:
               type: string
@@ -39,6 +37,65 @@ spec:
               type: string
             removeFromBrokerOnDelete:
               type: boolean
+            user:
+              type: string
+            password:
+              type: string
+            queueConfiguration:
+              type: object
+              properties:
+                ignoreIfExists:
+                  type: boolean
+                routingType:
+                  type: string
+                filterString:
+                  type: string
+                durable:
+                  type: boolean
+                user:
+                  type: string
+                maxConsumers:
+                  type: integer
+                exclusive:
+                  type: boolean
+                groupRebalance:
+                  type: boolean
+                groupRebalancePauseDispatch:
+                  type: boolean
+                groupBuckets:
+                  type: integer
+                groupFirstKey:
+                  type: string
+                lastValue:
+                  type: boolean
+                lastValueKey:
+                  type: string
+                nonDestructive:
+                  type: boolean
+                purgeOnNoConsumers:
+                  type: boolean
+                enabled:
+                  type: boolean
+                consumersBeforeDispatch:
+                  type: integer
+                delayBeforeDispatch:
+                  type: integer
+                consumerPriority:
+                  type: integer
+                autoDelete:
+                  type: boolean
+                autoDeleteDelay:
+                  type: integer
+                autoDeleteMessageCount:
+                  type: integer
+                ringSize:
+                  type: integer
+                configurationManaged:
+                  type: boolean
+                temporary:
+                  type: boolean
+                autoCreateAddress:
+                  type: boolean
             applyToCrNames:
               description: >-
                 Apply to the broker crs in the current namespace

@@ -51,7 +51,7 @@ spec:
                         type: integer
                       verifyHost:
                         description: >-
-                          The CN of the connecting client's SSL certificate will
+                          The CN of the connecting clients SSL certificate will
                           be compared to its hostname to verify they match. This
                           is useful only for 2-way SSL.
                         type: boolean

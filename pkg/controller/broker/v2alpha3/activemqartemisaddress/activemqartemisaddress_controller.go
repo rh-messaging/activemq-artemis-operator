@@ -150,7 +150,7 @@ func (r *ReconcileActiveMQArtemisAddress) Reconcile(request reconcile.Request) (
 
 		if lookupSucceeded {
 			if addressInstance.AddressResource.Spec.RemoveFromBrokerOnDelete {
-				err = deleteQueue(&addressInstance, request, r.client)
+				err = deleteQueue(&addressInstance, request, r.client, r.scheme)
 			} else {
 				log.Info("Not to delete address", "address", addressInstance)
 			}
@@ -163,15 +163,16 @@ func (r *ReconcileActiveMQArtemisAddress) Reconcile(request reconcile.Request) (
 			return reconcile.Result{}, nil
 		}
 
-		log.Error(err, "Requeue the request for error")
-		// Error reading the object - requeue the request.
-		return reconcile.Result{}, err
+		if err != nil {
+			log.Error(err, "Requeue the request for error")
+			return reconcile.Result{}, err
+		}
 	} else {
 		addressDeployment := AddressDeployment{
 			AddressResource:      *instance,
 			SsTargetNameBuilders: createNameBuilders(instance),
 		}
-		err = createQueue(&addressDeployment, request, r.client)
+		err = createQueue(&addressDeployment, request, r.client, r.scheme)
 		if nil == err {
 			namespacedNameToAddressName[request.NamespacedName] = addressDeployment
 		}
@@ -202,55 +203,58 @@ func createNameBuilders(instance *brokerv2alpha3.ActiveMQArtemisAddress) []namer
 	return nameBuilders
 }
 
-func createQueue(instance *AddressDeployment, request reconcile.Request, client client.Client) error {
+// This method deals with creating queues and addresses.
+func createQueue(instance *AddressDeployment, request reconcile.Request, client client.Client, scheme *runtime.Scheme) error {
 
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Creating ActiveMQArtemisAddress")
 
 	var err error = nil
-	artemisArray := getPodBrokers(instance, request, client)
+	artemisArray := getPodBrokers(instance, request, client, scheme)
 	if nil != artemisArray {
 		for _, a := range artemisArray {
 			if nil == a {
 				reqLogger.Info("Creating ActiveMQArtemisAddress artemisArray had a nil!")
 				continue
 			}
-			_, err := a.CreateQueue(instance.AddressResource.Spec.AddressName, instance.AddressResource.Spec.QueueName, instance.AddressResource.Spec.RoutingType)
-			if nil != err {
-				reqLogger.Info("Creating ActiveMQArtemisAddress error for " + instance.AddressResource.Spec.QueueName)
-				break
+			//Now checking if create queue or address
+			var err error
+			if instance.AddressResource.Spec.QueueName == nil || *instance.AddressResource.Spec.QueueName == "" {
+				//create address
+				_, err = a.CreateAddress(instance.AddressResource.Spec.AddressName, *instance.AddressResource.Spec.RoutingType)
+				if nil != err {
+					reqLogger.Error(err, "Creating ActiveMQArtemisAddress error for address", instance.AddressResource.Spec.AddressName)
+					break
+				} else {
+					reqLogger.Info("Created ActiveMQArtemisAddress for address " + instance.AddressResource.Spec.AddressName)
+				}
 			} else {
-				reqLogger.Info("Created ActiveMQArtemisAddress for " + instance.AddressResource.Spec.QueueName)
-			}
-		}
-	}
-
-	return err
-}
-
-func deleteQueue(instance *AddressDeployment, request reconcile.Request, client client.Client) error {
-
-	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Deleting ActiveMQArtemisAddress")
-
-	var err error = nil
-	artemisArray := getPodBrokers(instance, request, client)
-	if nil != artemisArray {
-		for _, a := range artemisArray {
-			_, err := a.DeleteQueue(instance.AddressResource.Spec.QueueName)
-			if nil != err {
-				reqLogger.Info("Deleting ActiveMQArtemisAddress error for " + instance.AddressResource.Spec.QueueName)
-				break
-			} else {
-				reqLogger.Info("Deleted ActiveMQArtemisAddress for " + instance.AddressResource.Spec.QueueName)
-				reqLogger.Info("Checking parent address for bindings " + instance.AddressResource.Spec.AddressName)
-				bindingsData, err := a.ListBindingsForAddress(instance.AddressResource.Spec.AddressName)
-				if nil == err {
-					if "" == bindingsData.Value {
-						reqLogger.Info("No bindings found removing " + instance.AddressResource.Spec.AddressName)
-						a.DeleteAddress(instance.AddressResource.Spec.AddressName)
+				log.Info("Queue name is not empty so create queue", "name", instance.AddressResource.Spec.QueueName)
+				if instance.AddressResource.Spec.QueueConfiguration == nil {
+					routingType := "MULTICAST"
+					if instance.AddressResource.Spec.RoutingType != nil {
+						routingType = *instance.AddressResource.Spec.RoutingType
+					}
+					_, err := a.CreateQueue(instance.AddressResource.Spec.AddressName, *instance.AddressResource.Spec.QueueName, routingType)
+					if nil != err {
+						reqLogger.Error(err, "Creating ActiveMQArtemisAddress error for "+*instance.AddressResource.Spec.QueueName)
+						break
 					} else {
-						reqLogger.Info("Bindings found, not removing " + instance.AddressResource.Spec.AddressName)
+						reqLogger.Info("Created ActiveMQArtemisAddress for " + *instance.AddressResource.Spec.QueueName)
+					}
+				} else {
+					//create queue using queueconfig
+					queueCfg, ignoreIfExists, err := GetQueueConfig(instance)
+					if err != nil {
+						log.Error(err, "Failed to get queue config json string")
+						break
+					}
+					_, err = a.CreateQueueFromConfig(queueCfg, ignoreIfExists)
+					if nil != err {
+						reqLogger.Error(err, "Creating ActiveMQArtemisAddress error for "+*instance.AddressResource.Spec.QueueName)
+						break
+					} else {
+						reqLogger.Info("Created ActiveMQArtemisAddress for " + *instance.AddressResource.Spec.QueueName)
 					}
 				}
 			}
@@ -260,12 +264,57 @@ func deleteQueue(instance *AddressDeployment, request reconcile.Request, client 
 	return err
 }
 
-func getPodBrokers(instance *AddressDeployment, request reconcile.Request, client client.Client) []*mgmt.Artemis {
+// This method deals with deleting queues and addresses.
+func deleteQueue(instance *AddressDeployment, request reconcile.Request, client client.Client, scheme *runtime.Scheme) error {
+
+	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	reqLogger.Info("Deleting ActiveMQArtemisAddress")
+
+	var err error = nil
+	artemisArray := getPodBrokers(instance, request, client, scheme)
+	if nil != artemisArray {
+		for _, a := range artemisArray {
+			if instance.AddressResource.Spec.QueueName == nil || *instance.AddressResource.Spec.QueueName == "" {
+				//delete address
+				_, err := a.DeleteAddress(instance.AddressResource.Spec.AddressName)
+				if nil != err {
+					reqLogger.Error(err, "Deleting ActiveMQArtemisAddress error for address ", instance.AddressResource.Spec.AddressName)
+					break
+				}
+				reqLogger.Info("Deleted ActiveMQArtemisAddress for address " + instance.AddressResource.Spec.AddressName)
+			} else {
+				//delete queues
+				_, err := a.DeleteQueue(*instance.AddressResource.Spec.QueueName)
+				if nil != err {
+					reqLogger.Error(err, "Deleting ActiveMQArtemisAddress error for queue "+*instance.AddressResource.Spec.QueueName)
+					break
+				} else {
+					reqLogger.Info("Deleted ActiveMQArtemisAddress for queue " + *instance.AddressResource.Spec.QueueName)
+					reqLogger.Info("Checking parent address for bindings " + instance.AddressResource.Spec.AddressName)
+					bindingsData, err := a.ListBindingsForAddress(instance.AddressResource.Spec.AddressName)
+					if nil == err {
+						if "" == bindingsData.Value {
+							reqLogger.Info("No bindings found removing " + instance.AddressResource.Spec.AddressName)
+							a.DeleteAddress(instance.AddressResource.Spec.AddressName)
+						} else {
+							reqLogger.Info("Bindings found, not removing " + instance.AddressResource.Spec.AddressName)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return err
+}
+
+func getPodBrokers(instance *AddressDeployment, request reconcile.Request, client client.Client, scheme *runtime.Scheme) []*mgmt.Artemis {
 
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Getting Pod Brokers", "instance", instance)
 
 	var artemisArray []*mgmt.Artemis = nil
+	var jolokiaSecretName string = request.Name + "-jolokia-secret"
 
 	targetCrNamespacedNames := createTargetCrNamespacedNames(request.Namespace, instance.AddressResource.Spec.ApplyToCrNames)
 
@@ -309,13 +358,35 @@ func getPodBrokers(instance *AddressDeployment, request reconcile.Request, clien
 					var jolokiaUser string
 					var jolokiaPassword string
 					var jolokiaProtocol string
+
+					userDefined := false
+					if instance.AddressResource.Spec.User != nil {
+						userDefined = true
+						jolokiaUser = *instance.AddressResource.Spec.User
+					} else {
+						jolokiaUserFromSecret := secrets.GetValueFromSecret(request.Namespace, false, false, jolokiaSecretName, "jolokiaUser", client, scheme, &instance.AddressResource)
+						if jolokiaUserFromSecret != nil {
+							userDefined = true
+							jolokiaUser = *jolokiaUserFromSecret
+						}
+					}
+					if userDefined {
+						if instance.AddressResource.Spec.Password != nil {
+							jolokiaPassword = *instance.AddressResource.Spec.Password
+						} else {
+							jolokiaPasswordFromSecret := secrets.GetValueFromSecret(request.Namespace, false, false, jolokiaSecretName, "jolokiaPassword", client, scheme, &instance.AddressResource)
+							if jolokiaPasswordFromSecret != nil {
+								jolokiaPassword = *jolokiaPasswordFromSecret
+							}
+						}
+					}
 					if len(containers) == 1 {
 						envVars := containers[0].Env
 						for _, oneVar := range envVars {
-							if "AMQ_USER" == oneVar.Name {
+							if !userDefined && "AMQ_USER" == oneVar.Name {
 								jolokiaUser = getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client)
 							}
-							if "AMQ_PASSWORD" == oneVar.Name {
+							if !userDefined && "AMQ_PASSWORD" == oneVar.Name {
 								jolokiaPassword = getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client)
 							}
 							if "AMQ_CONSOLE_ARGS" == oneVar.Name {
