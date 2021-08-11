@@ -724,6 +724,12 @@ func generateAcceptorsString(customResource *brokerv2alpha5.ActiveMQArtemis, cli
 		if acceptor.AMQPMinLargeMessageSize > 0 {
 			acceptorEntry = acceptorEntry + ";" + "amqpMinLargeMessageSize=" + fmt.Sprintf("%d", acceptor.AMQPMinLargeMessageSize)
 		}
+		if acceptor.SupportAdvisory != nil {
+			acceptorEntry = acceptorEntry + ";" + "supportAdvisory=" + strconv.FormatBool(*acceptor.SupportAdvisory)
+		}
+		if acceptor.SuppressInternalManagementObjects != nil {
+			acceptorEntry = acceptorEntry + ";" + "suppressInternalManagementObjects=" + strconv.FormatBool(*acceptor.SuppressInternalManagementObjects)
+		}
 		acceptorEntry = acceptorEntry + ";" + defaultArgs
 
 		acceptorEntry = acceptorEntry + "<\\/acceptor>"

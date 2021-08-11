@@ -361,6 +361,18 @@ spec:
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:acceptors'
               - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: For openwire protocol if advisory topics are enabled, default false
+            displayName: Support Advisory
+            path: acceptors[0].supportAdvisory
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:acceptors'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: If prevents advisory addresses/queues to be registered to management service, default false
+            displayName: Suppress Internal Management Objects
+            path: acceptors[0].suppressInternalManagementObjects
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:acceptors'
+              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
 
           - description:  The name of the connector
             displayName: Name

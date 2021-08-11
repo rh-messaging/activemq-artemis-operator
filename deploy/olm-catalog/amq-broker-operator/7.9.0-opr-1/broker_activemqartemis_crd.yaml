@@ -95,7 +95,7 @@ spec:
                         description: >-
                           A regular expression used to match the server_name
                           extension on incoming SSL connections. If the name
-                          doesn't match then the connection to the acceptor will
+                          does not match then the connection to the acceptor will
                           be rejected.
                         type: string
                       enabledProtocols:
@@ -117,6 +117,12 @@ spec:
                       anycastPrefix:
                         description: To indicate which kind of routing type to use.
                         type: string
+                      supportAdvisory:
+                        description: For openwire protocol if advisory topics are enabled, default false
+                        type: boolean
+                      suppressInternalManagementObjects:
+                        description: If prevents advisory addresses/queues to be registered to management service, default false
+                        type: boolean
                 adminPassword:
                   description: >-
                     Password for standard broker user. It is required for
