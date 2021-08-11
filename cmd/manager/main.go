@@ -4,16 +4,19 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
+	"runtime"
+	"strings"
+
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/artemiscloud/activemq-artemis-operator/version"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"os"
-	"runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/apis"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/controller"
+	nsoptions "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/namespaces"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
@@ -22,6 +25,7 @@ import (
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	"github.com/spf13/pflag"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -79,10 +83,45 @@ func main() {
 
 	printVersion()
 
-	namespace, err := k8sutil.GetWatchNamespace()
+	oprNameSpace, err := k8sutil.GetOperatorNamespace()
 	if err != nil {
-		log.Error(err, "Failed to get watch namespace")
+		log.Error(err, "failed to get operator namespace")
 		os.Exit(1)
+	}
+	log.Info("Got operator namespace", "operator ns", oprNameSpace)
+
+	watchNameSpace, _ := k8sutil.GetWatchNamespace()
+	watchAllNamespaces := false
+	if watchNameSpace == "*" || watchNameSpace == "" {
+		log.Info("Setting up to watch all namespaces")
+		watchAllNamespaces = true
+		watchNameSpace = ""
+	}
+	nsoptions.SetWatchAll(watchAllNamespaces)
+
+	if !watchAllNamespaces && strings.Contains(watchNameSpace, ",") {
+		watchList := strings.Split(watchNameSpace, ",")
+		nsoptions.SetWatchList(watchList)
+		log.Info("Watching multiple namespaces", "value", watchList)
+		//watch all namespace but filter out those not in the list
+		watchNameSpace = ""
+		// following api not available in current client-go
+		//mgrOptions = manager.Options{
+		//	Namespace:          "",
+		//	NewCache:           cache.MultiNamespacedCacheBuilder(watchList),
+		//	MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
+		//}
+	} else {
+		log.Info("Wating namespace", "namespace", watchNameSpace)
+		nsoptions.SetWatchNamespace(watchNameSpace)
+	}
+
+	// Expose the operator's namespace and watchNamespace
+	if err := os.Setenv("OPERATOR_NAMESPACE", oprNameSpace); err != nil {
+		log.Error(err, "failed to set operator's namespace to env")
+	}
+	if err := os.Setenv("OPERATOR_WATCH_NAMESPACE", watchNameSpace); err != nil {
+		log.Error(err, "failed to set operator's watch namespace to env")
 	}
 
 	// Get a config to talk to the apiserver
@@ -102,11 +141,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create a new Cmd to provide shared dependencies and start components
-	mgr, err := manager.New(cfg, manager.Options{
-		Namespace:          namespace,
+	mgrOptions := manager.Options{
+		Namespace:          watchNameSpace,
 		MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
-	})
+	}
+
+	mgr, err := manager.New(cfg, mgrOptions)
 	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)
@@ -121,7 +161,7 @@ func main() {
 		log.Error(err, "can't create client from config")
 		os.Exit(1)
 	} else {
-		setupAccountName(clnt, ctx, namespace, name)
+		setupAccountName(clnt, ctx, oprNameSpace, name)
 	}
 
 	log.Info("Registering Components.")

@@ -49,3 +49,7 @@ func (n *NamerData) Suffix(nameSuffix string) *NamerData {
 func (n *NamerData) Name() string {
 	return n.name
 }
+
+func CrToSS(crName string) string {
+	return crName + "-ss"
+}

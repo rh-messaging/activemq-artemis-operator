@@ -4,6 +4,7 @@ import (
 	"context"
 
 	brokerv2alpha5 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha5"
+	nsoptions "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/namespaces"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -98,6 +99,11 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling ActiveMQArtemis")
+
+	if !nsoptions.Match(request.Namespace) {
+		reqLogger.Info("Request not in watch list, ignore", "request", request)
+		return reconcile.Result{}, nil
+	}
 
 	var err error = nil
 	var namespacedNameFSM *ActiveMQArtemisFSM = nil

@@ -97,11 +97,11 @@ spec:
     - type: OwnNamespace
       supported: true
     - type: SingleNamespace
-      supported: false
+      supported: true
     - type: MultiNamespace
-      supported: false
+      supported: true
     - type: AllNamespaces
-      supported: false
+      supported: true
   customresourcedefinitions:
     owned:
       - name: activemqartemises.broker.amq.io
@@ -881,7 +881,7 @@ spec:
               - 'urn:alm:descriptor:com.tectonic.ui:text'
           - description: Apply to the broker crs in the current namespace. A value of * or empty string means applying to all broker crs. Default apply to all broker crs
             displayName: Apply to Broker CR Names
-            path: applyToCrNames[0]:
+            path: applyToCrNames[0]
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemis'
               - 'urn:alm:descriptor:com.tectonic.ui:text'
@@ -982,7 +982,92 @@ spec:
                 - deployments/finalizers
               verbs:
                 - update
-
+      clusterPermissions:
+        - serviceAccountName: activemq-artemis-operator
+          roles:
+            - apiGroups:
+              - ""
+              resources:
+              - pods
+              - services
+              - serviceaccounts
+              - endpoints
+              - persistentvolumeclaims
+              - events
+              - configmaps
+              - secrets
+              - routes
+              verbs:
+              - '*'
+            - apiGroups:
+              - "rbac.authorization.k8s.io"
+              resources:
+              - roles
+              - rolebindings
+              verbs:
+              - create
+              - get
+              - delete
+            - apiGroups:
+              - ""
+              resources:
+              - namespaces
+              verbs:
+              - get
+            - apiGroups:
+              - apps
+              resources:
+              - deployments
+              - daemonsets
+              - replicasets
+              - statefulsets
+              verbs:
+              - '*'
+            - apiGroups:
+              - monitoring.coreos.com
+              resources:
+              - servicemonitors
+              verbs:
+              - get
+              - create
+            - apiGroups:
+              - broker.amq.io
+              resources:
+              - '*'
+              - activemqartemisaddresses
+              - activemqartemisscaledowns
+              - activemqartemis
+              verbs:
+              - '*'
+            - apiGroups:
+              - route.openshift.io
+              resources:
+              - routes
+              - routes/custom-host
+              - routes/status
+              verbs:
+              - get
+              - list
+              - watch
+              - create
+              - delete
+              - update
+            - apiGroups:
+              - extensions
+              resources:
+              - ingresses
+              verbs:
+              - get
+              - list
+              - watch
+              - create
+              - delete
+            - apiGroups:
+              - apps
+              resources:
+              - deployments/finalizers
+              verbs:
+              - update
       deployments:
         - name: amq-broker-operator
           spec:

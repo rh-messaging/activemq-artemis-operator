@@ -23,6 +23,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -42,7 +43,11 @@ import (
 	"strconv"
 	"strings"
 
+	brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	rbacutil "github.com/artemiscloud/activemq-artemis-operator/pkg/rbac"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
@@ -53,6 +58,8 @@ const AnnotationStatefulSet = "statefulsets.kubernetes.io/drainer-pod-owner" // 
 const AnnotationDrainerPodTemplate = "statefulsets.kubernetes.io/drainer-pod-template"
 
 const LabelDrainPod = "drain-pod"
+const DrainServiceAccountName = "drain-pod-service-account"
+const DrainRoleName = "drain-pod-role"
 
 const (
 	SuccessCreate    = "SuccessfulCreate"
@@ -70,6 +77,7 @@ const (
 var globalPodTemplateJson string = "{\n \"metadata\": {\n    \"labels\": {\n      \"app\": \"CRNAME-amq-drainer\"\n    }\n  },\n  \"spec\": {\n \"serviceAccount\": \"SERVICE_ACCOUNT\",\n \"serviceAccountName\": \"SERVICE_ACCOUNT_NAME\",\n \"terminationGracePeriodSeconds\": 5,\n    \"containers\": [\n {\n        \"env\": [\n          {\n            \"name\": \"AMQ_EXTRA_ARGS\",\n            \"value\": \"--no-autotune\"\n },\n          {\n            \"name\": \"HEADLESS_SVC_NAME\",\n            \"value\": \"HEADLESSSVCNAMEVALUE\"\n },\n          {\n            \"name\": \"PING_SVC_NAME\",\n            \"value\": \"PINGSVCNAMEVALUE\"\n },\n          {\n            \"name\": \"AMQ_USER\",\n \"value\": \"admin\"\n          },\n          {\n            \"name\": \"AMQ_PASSWORD\",\n            \"value\": \"admin\"\n },\n          {\n            \"name\": \"AMQ_ROLE\",\n \"value\": \"admin\"\n          },\n          {\n            \"name\": \"AMQ_NAME\",\n            \"value\": \"amq-broker\"\n },\n          {\n            \"name\": \"AMQ_TRANSPORTS\",\n \"value\": \"openwire,amqp,stomp,mqtt,hornetq\"\n          },\n {\n            \"name\": \"AMQ_GLOBAL_MAX_SIZE\",\n            \"value\": \"100mb\"\n          },\n          {\n            \"name\": \"AMQ_DATA_DIR\",\n            \"value\": \"/opt/CRNAME/data\"\n          },\n          {\n \"name\": \"AMQ_DATA_DIR_LOGGING\",\n            \"value\": \"true\"\n          },\n          {\n            \"name\": \"AMQ_CLUSTERED\",\n            \"value\": \"true\"\n },\n          {\n            \"name\": \"AMQ_REPLICAS\",\n \"value\": \"1\"\n          },\n          {\n            \"name\": \"AMQ_CLUSTER_USER\",\n            \"value\": \"CLUSTERUSER\"\n },\n          {\n            \"name\": \"AMQ_CLUSTER_PASSWORD\",\n            \"value\": \"CLUSTERPASS\"\n          },\n          {\n            \"name\": \"POD_NAMESPACE\",\n            \"valueFrom\": {\n \"fieldRef\": {\n                \"fieldPath\": \"metadata.namespace\"\n              }\n            }\n },\n          {\n            \"name\": \"OPENSHIFT_DNS_PING_SERVICE_PORT\",\n            \"value\": \"8888\"\n          }\n        ],\n        \"image\": \"SSIMAGE\",\n \"name\": \"drainer-amq\",\n\n        \"command\": [\"/bin/sh\", \"-c\", \"echo \\\"Starting the drainer\\\" ; /opt/amq/bin/drain.sh; echo \\\"Drain completed! Exit code $?\\\"\"],\n        \"volumeMounts\": [\n          {\n            \"name\": \"CRNAME\",\n \"mountPath\": \"/opt/CRNAME/data\"\n          }\n ]\n      }\n    ]\n }\n}"
 
 type Controller struct {
+	name string
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
 
@@ -92,18 +100,21 @@ type Controller struct {
 
 	localOnly bool
 
-	ssNames map[string]string
+	// sts --> ssNames
+	ssNamesMap map[types.NamespacedName]map[string]string
 
 	stopCh chan struct{}
 }
 
 // NewController returns a new sample controller
 func NewController(
+	// controller name is the target namespace
+	// or "*" for all namespaces case
+	controllerName string,
 	kubeclientset kubernetes.Interface,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	namespace string,
-	localOnly bool,
-	ssNames map[string]string) *Controller {
+	localOnly bool) *Controller {
 
 	// obtain references to shared index informers for the Deployment and Foo
 	// types.
@@ -122,6 +133,7 @@ func NewController(
 	itemExponentialFailureRateLimiter := workqueue.NewItemExponentialFailureRateLimiter(5*time.Second, 300*time.Second)
 
 	controller := &Controller{
+		name:               controllerName,
 		kubeclientset:      kubeclientset,
 		statefulSetLister:  statefulSetInformer.Lister(),
 		statefulSetsSynced: statefulSetInformer.Informer().HasSynced,
@@ -132,7 +144,7 @@ func NewController(
 		workqueue:          workqueue.NewNamedRateLimitingQueue(itemExponentialFailureRateLimiter, "StatefulSets"),
 		recorder:           recorder,
 		localOnly:          localOnly,
-		ssNames:            ssNames,
+		ssNamesMap:         make(map[types.NamespacedName]map[string]string),
 		stopCh:             make(chan struct{}),
 	}
 
@@ -166,6 +178,24 @@ func NewController(
 	})
 
 	return controller
+}
+
+func (c *Controller) AddInstance(instance *brokerv2alpha1.ActiveMQArtemisScaledown) {
+	namespacedName := types.NamespacedName{
+		instance.Annotations["CRNAMESPACE"],
+		namer.CrToSS(instance.Annotations["CRNAME"]),
+	}
+	log.Info("adding a new scaledown instance", "key", namespacedName, "contents:", instance.Annotations)
+	c.ssNamesMap[namespacedName] = instance.Annotations
+	log.Info("Added new instance", "key", namespacedName, "now values", len(c.ssNamesMap))
+	c.dumpSsNamesMap()
+}
+
+func (c *Controller) dumpSsNamesMap() {
+	for k, v := range c.ssNamesMap {
+		log.Info("ssMap", "key", k)
+		log.Info("ssMap", "value", v)
+	}
 }
 
 // Run will set up the event handlers for types we are interested in, as well
@@ -209,11 +239,13 @@ func (c *Controller) runWorker() {
 // processNextWorkItem will read a single work item off the workqueue and
 // attempt to process it, by calling the syncHandler.
 func (c *Controller) processNextWorkItem() bool {
+	log.Info("[DEV] Processing next work item")
 	obj, shutdown := c.workqueue.Get()
 
 	if shutdown {
 		return false
 	}
+	log.Info("Got object from queue", "obj", obj)
 
 	// We wrap this block in a func so we can defer c.workqueue.Done.
 	err := func(obj interface{}) error {
@@ -232,6 +264,7 @@ func (c *Controller) processNextWorkItem() bool {
 		// more up to date that when the item was initially put onto the
 		// workqueue.
 		if key, ok = obj.(string); !ok {
+			log.Info("invalid obj, forget it", "obj", obj)
 			// As the item in the workqueue is actually invalid, we call
 			// Forget here else we'd go into a loop of attempting to
 			// process a work item that is invalid.
@@ -242,6 +275,7 @@ func (c *Controller) processNextWorkItem() bool {
 
 		// Run the syncHandler, passing it the namespace/name string of the
 		// Foo resource to be synced.
+		log.Info("calling syncHandler to process this one", "key", key)
 		if err := c.syncHandler(key); err != nil {
 			return fmt.Errorf("error syncing '" + key + ": " + err.Error())
 		}
@@ -265,8 +299,8 @@ func (c *Controller) processNextWorkItem() bool {
 // with the current status of the resource.
 func (c *Controller) syncHandler(key string) error {
 
-	log.V(4).Info("--------------------------------------------------------------------")
-	log.V(4).Info("SyncHandler invoked for " + key)
+	log.Info("--------------------------------------------------------------------")
+	log.Info("SyncHandler invoked for " + key)
 
 	// Convert the namespace/name string into a distinct namespace and name
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
@@ -279,6 +313,7 @@ func (c *Controller) syncHandler(key string) error {
 	// Get the StatefulSet resource with this namespace/name
 	sts, err := c.statefulSetLister.StatefulSets(namespace).Get(name)
 
+	log.Info("got sts from lister", "namespace", namespace, "name", name, "error?", err)
 	if err != nil {
 		// The StatefulSet may no longer exist, in which case we stop
 		// processing.
@@ -295,21 +330,22 @@ func (c *Controller) syncHandler(key string) error {
 
 func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 	// TODO: think about scale-down during a rolling upgrade
+	log.Info("Processing statefulset", "sts", *sts)
 
 	if 0 == *sts.Spec.Replicas {
 		// Ensure data is not touched in the case of complete scaledown
-		log.V(1).Info("Ignoring StatefulSet " + sts.Name + " because replicas set to 0.")
+		log.Info("Ignoring StatefulSet " + sts.Name + " because replicas set to 0.")
 		return nil
 	}
 
-	log.V(5).Info("Statefulset " + sts.Name + " Spec.Replicas set to " + strconv.Itoa(int(*sts.Spec.Replicas)))
+	log.Info("Statefulset " + sts.Name + " Spec.Replicas set to " + strconv.Itoa(int(*sts.Spec.Replicas)))
 
 	if len(sts.Spec.VolumeClaimTemplates) == 0 {
 		// nothing to do, as the stateful pods don't use any PVCs
 		log.V(1).Info("Ignoring StatefulSet " + sts.Name + " because it does not use any PersistentVolumeClaims.")
 		return nil
 	}
-	log.V(5).Info("Statefulset " + sts.Name + " Spec.VolumeClaimTemplates is " + strconv.Itoa((len(sts.Spec.VolumeClaimTemplates))))
+	log.Info("Statefulset " + sts.Name + " Spec.VolumeClaimTemplates is " + strconv.Itoa((len(sts.Spec.VolumeClaimTemplates))))
 
 	//if sts.Annotations[AnnotationDrainerPodTemplate] == "" {
 	//	log.Info("Ignoring StatefulSet '%s' because it does not define a drain pod template.", sts.Name)
@@ -329,17 +365,20 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 	}
 	sort.Sort(sort.Reverse(sort.IntSlice(ordinals)))
 
+	log.Info("Looking through all the pods...")
 	for _, ordinal := range ordinals {
 
+		log.Info("looking ordinal", "ordinal", ordinal)
 		if 0 == ordinal {
 			// This assumes order on scale up and down is enforced, i.e. the system waits for n, n-1,... 2, 1 to scaledown before attempting 0
-			log.V(5).Info("Ignoring ordinal 0 as no other pod to drain to.")
+			log.Info("Ignoring ordinal 0 as no other pod to drain to.")
 			continue
 		}
 
 		// TODO check if the number of claims matches the number of StatefulSet's volumeClaimTemplates. What if it doesn't?
 
 		podName := getPodName(sts, ordinal)
+		log.Info("got pod name", "name", podName)
 
 		pod, err := c.podLister.Pods(sts.Namespace).Get(podName)
 
@@ -350,6 +389,7 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 
 		// Is it a drain pod or a regular stateful pod?
 		if isDrainPod(pod) {
+			log.Info("This is a drain pod", "pod name", podName)
 			err = c.cleanUpDrainPodIfNeeded(sts, pod, ordinal)
 			if err != nil {
 				return err
@@ -358,6 +398,7 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 			if sts.Spec.PodManagementPolicy == appsv1.OrderedReadyPodManagement {
 				// don't create additional drain pods; they will be created in one of the
 				// next invocations of this method, when the current drain pod finishes
+				log.Info("sts has orderReadyPodManagement policy, break")
 				break
 			}
 		} else {
@@ -368,6 +409,7 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 
 		// TODO: scale down to zero? should what happens on such events be configurable? there may or may not be anywhere to drain to
 		if int32(ordinal) >= *sts.Spec.Replicas {
+			log.Info("ordinal is greater then replicas", "ordinal", ordinal, "replicas", *sts.Spec.Replicas)
 			// PVC exists, but its ordinal is higher than the current last stateful pod's ordinal;
 			// this means the PVC is an orphan and should be drained & deleted
 
@@ -411,10 +453,14 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 					continue
 				}
 
+				log.Info("Creating new drain pod...", "sts", sts)
 				pod, err := c.newPod(sts, ordinal)
 				if err != nil {
+					log.Error(err, "error creating drain pod")
 					return fmt.Errorf("Can't create drain Pod object: %s", err)
 				}
+				log.Info("Now creating the drain pod in namespace "+sts.Namespace, "pod", pod)
+				// needs a proper account for the pod to be created/start.
 				pod, err = c.kubeclientset.CoreV1().Pods(sts.Namespace).Create(pod)
 
 				// If an error occurs during Create, we'll requeue the item so we can
@@ -474,11 +520,53 @@ func (c *Controller) getClaims(sts *appsv1.StatefulSet) (claimsGroupedByOrdinal 
 	return claimsMap, nil
 }
 
+// create service account, role and rolbe binding for drain pod
+func (c *Controller) createDrainRBACResources(namespace string) {
+	log.Info("Creating drain pod rbac resources", "namespace", namespace)
+	rbacutil.CreateServiceAccount(DrainServiceAccountName, namespace, c.kubeclientset)
+	rules := []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{""},
+			Resources: []string{"pods"},
+			Verbs:     []string{"list"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"namespaces"},
+			Verbs:     []string{"get"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"endpoints"},
+			Verbs:     []string{"get"},
+		},
+	}
+
+	rbacutil.CreateRole(DrainRoleName, namespace, rules, c.kubeclientset)
+	rbacutil.CreateServiceAccountRoleBinding(DrainServiceAccountName, DrainRoleName, namespace+"-drain-rb", namespace, c.kubeclientset)
+}
+
+// delete the service account, role, and role binding for drain pod
+func (c *Controller) cleanupDrainRBACResources(namespace string) {
+	log.Info("Cleaning up drain pod rbac resources", "namespace", namespace)
+	drainRoleBindingName := namespace + "-drain-rb"
+	rbacutil.DeleteRoleBinding(drainRoleBindingName, namespace, c.kubeclientset)
+	rbacutil.DeleteRole(DrainRoleName, namespace, c.kubeclientset)
+	rbacutil.DeleteServiceAccount(DrainServiceAccountName, namespace, c.kubeclientset)
+
+	log.Info("Drain service account cleaned up", "namespace", namespace)
+}
+
 func (c *Controller) cleanUpDrainPodIfNeeded(sts *appsv1.StatefulSet, pod *corev1.Pod, ordinal int) error {
 	// Drain Pod already exists. Check if it's done draining.
 	podName := getPodName(sts, ordinal)
 
-	switch pod.Status.Phase {
+	podPhase := pod.Status.Phase
+	if podPhase == corev1.PodSucceeded || podPhase == corev1.PodFailed {
+		defer c.cleanupDrainRBACResources(sts.Namespace)
+	}
+
+	switch podPhase {
 	case (corev1.PodSucceeded):
 		log.Info("Drain pod " + podName + " finished.")
 		if !c.localOnly {
@@ -535,6 +623,7 @@ func (c *Controller) enqueueStatefulSet(obj interface{}) {
 		runtime.HandleError(err)
 		return
 	}
+	log.Info("Enquequing statefulset", "key", key, "controller ns", c.name)
 	c.workqueue.AddRateLimited(key)
 }
 
@@ -617,16 +706,42 @@ func (c *Controller) GetStopCh() *chan struct{} {
 
 func (c *Controller) newPod(sts *appsv1.StatefulSet, ordinal int) (*corev1.Pod, error) {
 
+	ssNamesKey := types.NamespacedName{
+		sts.Namespace,
+		sts.Name,
+	}
+	log.Info("Creating newPod for ss", "ss", ssNamesKey)
+
+	log.Info("Before look up dump the ssNamesMap", "size", len(c.ssNamesMap))
+	c.dumpSsNamesMap()
+
+	if _, ok := c.ssNamesMap[ssNamesKey]; !ok {
+		log.Info("Cannot find drain pod data for statefule set", "namespace", ssNamesKey)
+		return nil, fmt.Errorf("No drain pod data for statefulset " + sts.Name)
+	}
+
+	ssNames := c.ssNamesMap[ssNamesKey]
+
 	//podTemplateJson := sts.Annotations[AnnotationDrainerPodTemplate]
 	//TODO: Remove this blatant hack
 	podTemplateJson := globalPodTemplateJson
-	podTemplateJson = strings.Replace(podTemplateJson, "CRNAME", c.ssNames["CRNAME"], -1)
-	podTemplateJson = strings.Replace(podTemplateJson, "CLUSTERUSER", c.ssNames["CLUSTERUSER"], 1)
-	podTemplateJson = strings.Replace(podTemplateJson, "CLUSTERPASS", c.ssNames["CLUSTERPASS"], 1)
-	podTemplateJson = strings.Replace(podTemplateJson, "HEADLESSSVCNAMEVALUE", c.ssNames["HEADLESSSVCNAMEVALUE"], 1)
-	podTemplateJson = strings.Replace(podTemplateJson, "PINGSVCNAMEVALUE", c.ssNames["PINGSVCNAMEVALUE"], 1)
-	podTemplateJson = strings.Replace(podTemplateJson, "SERVICE_ACCOUNT", os.Getenv("SERVICE_ACCOUNT"), 1)
-	podTemplateJson = strings.Replace(podTemplateJson, "SERVICE_ACCOUNT_NAME", os.Getenv("SERVICE_ACCOUNT"), 1)
+	podTemplateJson = strings.Replace(podTemplateJson, "CRNAME", ssNames["CRNAME"], -1)
+	podTemplateJson = strings.Replace(podTemplateJson, "CLUSTERUSER", ssNames["CLUSTERUSER"], 1)
+	podTemplateJson = strings.Replace(podTemplateJson, "CLUSTERPASS", ssNames["CLUSTERPASS"], 1)
+	podTemplateJson = strings.Replace(podTemplateJson, "HEADLESSSVCNAMEVALUE", ssNames["HEADLESSSVCNAMEVALUE"], 1)
+	podTemplateJson = strings.Replace(podTemplateJson, "PINGSVCNAMEVALUE", ssNames["PINGSVCNAMEVALUE"], 1)
+	if c.localOnly {
+		podTemplateJson = strings.Replace(podTemplateJson, "SERVICE_ACCOUNT", os.Getenv("SERVICE_ACCOUNT"), 1)
+		podTemplateJson = strings.Replace(podTemplateJson, "SERVICE_ACCOUNT_NAME", os.Getenv("SERVICE_ACCOUNT"), 1)
+	} else {
+		// the drain pod is in a different namespace, we need set up a service account with proper permission
+		// and should delete it after drain is done.
+		c.createDrainRBACResources(sts.Namespace)
+
+		log.Info("Setting drain pod service account", "service account name", DrainServiceAccountName)
+		podTemplateJson = strings.Replace(podTemplateJson, "SERVICE_ACCOUNT", DrainServiceAccountName, 1)
+		podTemplateJson = strings.Replace(podTemplateJson, "SERVICE_ACCOUNT_NAME", DrainServiceAccountName, 1)
+	}
 	image := sts.Spec.Template.Spec.Containers[0].Image
 	if "" == image {
 		return nil, fmt.Errorf("No drain pod image configured for StatefulSet " + sts.Name)

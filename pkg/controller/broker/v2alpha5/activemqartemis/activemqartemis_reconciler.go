@@ -405,6 +405,7 @@ func syncMessageMigration(customResource *brokerv2alpha5.ActiveMQArtemis, client
 	fsm := namespacedNameToFSM[namespacedName]
 
 	ssNames := make(map[string]string)
+	ssNames["CRNAMESPACE"] = customResource.Namespace
 	ssNames["CRNAME"] = customResource.Name
 	ssNames["CLUSTERUSER"] = environments.GLOBAL_AMQ_CLUSTER_USER
 	ssNames["CLUSTERPASS"] = environments.GLOBAL_AMQ_CLUSTER_PASSWORD
@@ -425,7 +426,7 @@ func syncMessageMigration(customResource *brokerv2alpha5.ActiveMQArtemis, client
 			Annotations: ssNames,
 		},
 		Spec: brokerv2alpha1.ActiveMQArtemisScaledownSpec{
-			LocalOnly: true,
+			LocalOnly: isLocalOnly(),
 		},
 		Status: brokerv2alpha1.ActiveMQArtemisScaledownStatus{},
 	}
@@ -435,6 +436,10 @@ func syncMessageMigration(customResource *brokerv2alpha5.ActiveMQArtemis, client
 	}
 
 	if *customResource.Spec.DeploymentPlan.MessageMigration {
+		if !customResource.Spec.DeploymentPlan.PersistenceEnabled {
+			log.Info("Won't set up scaledown for non persistent deployment")
+			return
+		}
 		log.Info("we need scaledown for this cr", "crName", customResource.Name, "scheme", scheme)
 		if err = resources.Retrieve(namespacedName, client, scaledown); err != nil {
 			// err means not found so create
@@ -453,6 +458,15 @@ func syncMessageMigration(customResource *brokerv2alpha5.ActiveMQArtemis, client
 			}
 		}
 	}
+}
+
+func isLocalOnly() bool {
+	oprNamespace := os.Getenv("OPERATOR_NAMESPACE")
+	watchNamespace := os.Getenv("OPERATOR_WATCH_NAMESPACE")
+	if oprNamespace == watchNamespace {
+		return true
+	}
+	return false
 }
 
 func sourceEnvVarFromSecret(customResource *brokerv2alpha5.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet, envVars *map[string]string, secretName string, client client.Client, scheme *runtime.Scheme) uint32 {

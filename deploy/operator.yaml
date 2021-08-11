@@ -36,6 +36,9 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+          # to watch all namespaces use '*' or empty ''
+          # to watch multiple namespaces use comma separated list 'ns1,ns2'
+          # default is to watch the operator's namespace (backward compatibility)
         - name: WATCH_NAMESPACE
           valueFrom:
             fieldRef:

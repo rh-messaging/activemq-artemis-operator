@@ -4,7 +4,7 @@ import (
 	"context"
 
 	brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
-
+	nsoptions "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/namespaces"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -38,6 +38,8 @@ var (
 var StopCh chan struct{}
 
 var controllers map[string]*draincontroller.Controller = make(map[string]*draincontroller.Controller)
+
+var kubeClient *kubernetes.Clientset
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
@@ -103,6 +105,11 @@ func (r *ReconcileActiveMQArtemisScaledown) Reconcile(request reconcile.Request)
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling ActiveMQArtemisScaledown")
 
+	if !nsoptions.Match(request.Namespace) {
+		reqLogger.Info("Request not in watch list, ignore", "request", request)
+		return reconcile.Result{}, nil
+	}
+
 	// Fetch the ActiveMQArtemisScaledown instance
 	instance := &brokerv2alpha1.ActiveMQArtemisScaledown{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
@@ -133,43 +140,66 @@ func (r *ReconcileActiveMQArtemisScaledown) Reconcile(request reconcile.Request)
 		reqLogger.Error(err, "Error building kubeconfig: %s", err.Error())
 	}
 
-	kubeClient, err := kubernetes.NewForConfig(cfg)
+	kubeClient, err = kubernetes.NewForConfig(cfg)
 	if err != nil {
 		reqLogger.Error(err, "Error building kubernetes clientset: %s", err.Error())
 	}
 
-	var kubeInformerFactory kubeinformers.SharedInformerFactory
-	if localOnly {
-		reqLogger.Info("==== in localOnly mode")
-		if namespace == "" {
-			bytes, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
-			if err != nil {
-				reqLogger.Error(err, "Using --localOnly without --namespace, but unable to determine namespace: %s", err.Error())
-			}
-			namespace = string(bytes)
-			reqLogger.Info("==== reading ns from file", "namespace", namespace)
-		}
-		reqLogger.Info("==== creating namespace wide factory")
-		reqLogger.Info("Configured to only operate on StatefulSets in namespace " + namespace)
-		kubeInformerFactory = kubeinformers.NewFilteredSharedInformerFactory(kubeClient, time.Second*30, namespace, nil)
-	} else {
-		reqLogger.Info("Configured to operate on StatefulSets across all namespaces")
-		kubeInformerFactory = kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
+	kubeInformerFactory, drainControllerInstance, isNewController := r.getDrainController(localOnly, namespace, kubeClient, instance)
+
+	if isNewController {
+		reqLogger.Info("==== Starting async factory...")
+		go kubeInformerFactory.Start(*drainControllerInstance.GetStopCh())
+
+		reqLogger.Info("==== Running drain controller async so multiple controllers can run...")
+		go runDrainController(drainControllerInstance)
 	}
-
-	reqLogger.Info("==== new drain controller...")
-	drainControllerInstance := draincontroller.NewController(kubeClient, kubeInformerFactory, namespace, localOnly, instance.Annotations)
-
-	controllers[instance.Annotations["CRNAME"]] = drainControllerInstance
-
-	reqLogger.Info("==== Starting async factory...")
-	go kubeInformerFactory.Start(*drainControllerInstance.GetStopCh())
-
-	reqLogger.Info("==== Running drain controller async so multiple controllers can run...")
-	go runDrainController(drainControllerInstance)
 
 	reqLogger.Info("==== OK, return result")
 	return reconcile.Result{}, nil
+}
+
+func (r *ReconcileActiveMQArtemisScaledown) getDrainController(localOnly bool, namespace string, kubeClient *kubernetes.Clientset, instance *brokerv2alpha1.ActiveMQArtemisScaledown) (kubeinformers.SharedInformerFactory, *draincontroller.Controller, bool) {
+	var kubeInformerFactory kubeinformers.SharedInformerFactory
+	var controllerInstance *draincontroller.Controller
+	controllerKey := "*"
+	if localOnly {
+		if namespace == "" {
+			bytes, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+			if err != nil {
+				log.Error(err, "Using --localOnly without --namespace, but unable to determine namespace: %s", err.Error())
+			}
+			namespace = string(bytes)
+			log.Info("==== reading ns from file", "namespace", namespace)
+		}
+		controllerKey = namespace
+	}
+	if inst, ok := controllers[controllerKey]; ok {
+		log.Info("Drain controller already exists", "namespace", namespace)
+		inst.AddInstance(instance)
+		return nil, nil, false
+	}
+
+	if localOnly {
+		// localOnly means there is only one target namespace and it is the same as operator's
+		log.Info("==== getting localOnly informer factory", "namespace", controllerKey)
+		log.Info("==== creating namespace wide factory")
+		log.Info("Configured to only operate on StatefulSets in namespace " + namespace)
+		kubeInformerFactory = kubeinformers.NewFilteredSharedInformerFactory(kubeClient, time.Second*30, namespace, nil)
+	} else {
+		log.Info("==== getting global informer factory")
+		log.Info("Creating informer factory to operate on StatefulSets across all namespaces")
+		kubeInformerFactory = kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
+	}
+
+	log.Info("==== new drain controller...")
+	controllerInstance = draincontroller.NewController(controllerKey, kubeClient, kubeInformerFactory, namespace, localOnly)
+	controllers[controllerKey] = controllerInstance
+
+	log.Info("Adding scaledown instance to controller", "controller", controllerInstance, "scaledown", instance)
+	controllerInstance.AddInstance(instance)
+
+	return kubeInformerFactory, controllerInstance, true
 }
 
 func runDrainController(controller *draincontroller.Controller) {
@@ -179,5 +209,4 @@ func runDrainController(controller *draincontroller.Controller) {
 }
 
 func ReleaseController(brokerCRName string) {
-
 }

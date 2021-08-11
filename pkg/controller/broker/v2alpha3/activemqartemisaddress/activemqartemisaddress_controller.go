@@ -7,6 +7,7 @@ import (
 	mgmt "github.com/artemiscloud/activemq-artemis-management"
 	brokerv2alpha3 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha3"
 	v2alpha5 "github.com/artemiscloud/activemq-artemis-operator/pkg/controller/broker/v2alpha5/activemqartemis"
+	nsoptions "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/namespaces"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
@@ -134,6 +135,11 @@ func (r *ReconcileActiveMQArtemisAddress) Reconcile(request reconcile.Request) (
 
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling ActiveMQArtemisAddress")
+
+	if !nsoptions.Match(request.Namespace) {
+		reqLogger.Info("Request not in watch list, ignore", "request", request)
+		return reconcile.Result{}, nil
+	}
 
 	// Fetch the ActiveMQArtemisAddress instance
 	instance := &brokerv2alpha3.ActiveMQArtemisAddress{}

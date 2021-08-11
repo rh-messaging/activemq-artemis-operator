@@ -1,0 +1,13 @@
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: activemq-artemis-operator
+subjects:
+- kind: ServiceAccount
+  name: activemq-artemis-operator
+  # you will have to deploy the operator into this namespace, whatever it is
+  namespace: default
+roleRef:
+  kind: ClusterRole
+  name: activemq-artemis-operator
+  apiGroup: rbac.authorization.k8s.io
