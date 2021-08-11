@@ -256,11 +256,6 @@ func getPodBrokers(instance *brokerv2alpha2.ActiveMQArtemisAddress, request reco
 	var artemisArray []*mgmt.Artemis = nil
 	var err error = nil
 
-	ss.NameBuilder.Name()
-	if err != nil {
-		reqLogger.Error(err, "Failed to ge the statefulset name")
-	}
-
 	// Check to see if the statefulset already exists
 	ssNamespacedName := types.NamespacedName{
 		Name:      ss.NameBuilder.Name(),

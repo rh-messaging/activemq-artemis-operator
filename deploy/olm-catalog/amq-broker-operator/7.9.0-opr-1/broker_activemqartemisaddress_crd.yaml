@@ -14,7 +14,7 @@ spec:
   conversion:
     strategy: None
   preserveUnknownFields: true
-  version: v2alpha2
+  version: v2alpha3
   validation:
     openAPIV3Schema:
       properties:
@@ -39,12 +39,24 @@ spec:
               type: string
             removeFromBrokerOnDelete:
               type: boolean
+            applyToCrNames:
+              description: >-
+                Apply to the broker crs in the current namespace
+                A value of * means applying to all broker crs.
+                Default apply to all broker crs.
+              type: array
+              minItems: 0
+              items:
+                type: string
         status:
           type: object
   versions:
-    - name: v2alpha2
+    - name: v2alpha3
       served: true
       storage: true
+    - name: v2alpha2
+      served: true
+      storage: false
     - name: v2alpha1
       served: true
       storage: false

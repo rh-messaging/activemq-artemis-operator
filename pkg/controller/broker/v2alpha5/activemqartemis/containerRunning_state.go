@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
-	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/fsm"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -69,7 +68,7 @@ func (rs *ContainerRunningState) Update() (error, int) {
 	reconciler := ActiveMQArtemisReconciler{
 		statefulSetUpdates: 0,
 	}
-	ssNamespacedName := types.NamespacedName{Name: ss.NameBuilder.Name(), Namespace: rs.parentFSM.customResource.Namespace}
+	ssNamespacedName := types.NamespacedName{Name: rs.parentFSM.GetStatefulSetName(), Namespace: rs.parentFSM.customResource.Namespace}
 	currentStatefulSet := &appsv1.StatefulSet{}
 	err = rs.parentFSM.r.client.Get(context.TODO(), ssNamespacedName, currentStatefulSet)
 	firstTime := false

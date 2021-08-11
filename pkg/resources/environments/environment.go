@@ -175,6 +175,84 @@ func AddEnvVarForBasic(requireLogin string, journalType string) []corev1.EnvVar 
 	return envVarArray
 }
 
+func AddEnvVarForBasic2(requireLogin string, journalType string, svcPingName string) []corev1.EnvVar {
+
+	envVarArray := []corev1.EnvVar{
+		{
+			"AMQ_ROLE",
+			"admin", //GetPropertyForCR("AMQ_ROLE", cr, "admin"),
+			nil,
+		},
+		{
+			"AMQ_NAME",
+			"amq-broker", //GetPropertyForCR("AMQ_NAME", cr, "amq-broker"),
+			nil,
+		},
+		{
+			"AMQ_TRANSPORTS",
+			"", //GetPropertyForCR("AMQ_TRANSPORTS", cr, ""),
+			nil,
+		},
+		{
+			"AMQ_QUEUES",
+			"", //GetPropertyForCR("AMQ_QUEUES", cr, ""),
+			nil,
+		},
+		{
+			"AMQ_ADDRESSES",
+			"", //GetPropertyForCR("AMQ_ADDRESSES", cr, ""),
+			nil,
+		},
+		{
+			"AMQ_GLOBAL_MAX_SIZE",
+			"100 mb", //GetPropertyForCR("AMQ_GLOBAL_MAX_SIZE", cr, "100 mb"),
+			nil,
+		},
+		{
+			"AMQ_REQUIRE_LOGIN",
+			requireLogin, //GetPropertyForCR("AMQ_REQUIRE_LOGIN", cr, "false"),
+			nil,
+		},
+		{
+			"AMQ_EXTRA_ARGS",
+			"--no-autotune", //GetPropertyForCR("AMQ_EXTRA_ARGS", cr, "--no-autotune"),
+			nil,
+		},
+		{
+			"AMQ_ANYCAST_PREFIX",
+			"", //GetPropertyForCR("AMQ_ANYCAST_PREFIX", cr, ""),
+			nil,
+		},
+		{
+			"AMQ_MULTICAST_PREFIX",
+			"", //GetPropertyForCR("AMQ_MULTICAST_PREFIX", cr, ""),
+			nil,
+		},
+		{
+			"POD_NAMESPACE",
+			"", // Set to the field metadata.namespace in current object
+			nil,
+		},
+		{
+			"AMQ_JOURNAL_TYPE",
+			journalType, //GetPropertyForCR("AMQ_JOURNAL_TYPE", cr, "nio"),
+			nil,
+		},
+		{
+			"TRIGGERED_ROLL_COUNT",
+			"0",
+			nil,
+		},
+		{
+			"PING_SVC_NAME",
+			svcPingName,
+			nil,
+		},
+	}
+
+	return envVarArray
+}
+
 func AddEnvVarForPersistent(customResourceName string) []corev1.EnvVar {
 
 	envVarArray := []corev1.EnvVar{

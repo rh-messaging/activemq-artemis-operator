@@ -5,18 +5,16 @@ import (
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/pods"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
-	corev1 "k8s.io/api/core/v1"
-
 	svc "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/services"
-	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/volumes"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/fsm"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 
+	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"strconv"
@@ -61,7 +59,6 @@ func (rs *CreatingK8sResourcesState) ID() int {
 }
 
 func (rs *CreatingK8sResourcesState) generateNames() {
-
 	// Initialize the kubernetes names
 	ss.NameBuilder.Base(rs.parentFSM.customResource.Name).Suffix("ss").Generate()
 	ss.GLOBAL_CRNAME = rs.parentFSM.customResource.Name
@@ -95,7 +92,7 @@ func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 func (rs *CreatingK8sResourcesState) generateSecrets() *corev1.Secret {
 
 	namespacedName := types.NamespacedName{
-		Name:      secrets.CredentialsNameBuilder.Name(),
+		Name:      rs.parentFSM.GetCredentialsSecretName(),
 		Namespace: rs.namespacedName.Namespace,
 	}
 	stringDataMap := map[string]string{
@@ -106,7 +103,7 @@ func (rs *CreatingK8sResourcesState) generateSecrets() *corev1.Secret {
 	}
 	secretDefinition := secrets.Create(rs.parentFSM.customResource, namespacedName, stringDataMap, rs.parentFSM.r.client, rs.parentFSM.r.scheme)
 
-	namespacedName.Name = secrets.NettyNameBuilder.Name()
+	namespacedName.Name = rs.parentFSM.GetNettySecretName()
 	nettyDataMap := map[string]string{
 		"AMQ_ACCEPTORS":  "",
 		"AMQ_CONNECTORS": "",
@@ -150,7 +147,7 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 	var nextStateID int = CreatingK8sResourcesID
 
 	currentStatefulSet := &appsv1.StatefulSet{}
-	ssNamespacedName := types.NamespacedName{Name: ss.NameBuilder.Name(), Namespace: rs.parentFSM.customResource.Namespace}
+	ssNamespacedName := types.NamespacedName{Name: rs.parentFSM.GetStatefulSetName(), Namespace: rs.parentFSM.customResource.Namespace}
 	err = rs.parentFSM.r.client.Get(context.TODO(), ssNamespacedName, currentStatefulSet)
 	for {
 		if err != nil && errors.IsNotFound(err) {

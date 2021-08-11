@@ -143,11 +143,6 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 	// for the given fsm, do an update
 	// - update first level sets? what if the operator has gone away and come back? stateless?
 	if namespacedNameFSM = namespacedNameToFSM[namespacedName]; namespacedNameFSM == nil {
-		// TODO: Fix multiple fsm's post ENTMQBR-2875
-		if len(namespacedNameToFSM) > 0 {
-			reqLogger.Info("ActiveMQArtemis Controller Reconcile does not yet support more than one custom resource instance per namespace!")
-			return r.result, nil
-		}
 		amqbfsm = NewActiveMQArtemisFSM(customResource, namespacedName, r)
 		namespacedNameToFSM[namespacedName] = amqbfsm
 
@@ -163,4 +158,26 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 
 	// Single exit, return the result and error condition
 	return r.result, err
+}
+
+//get the statefulset names
+func GetDeployedStatefuleSetNames(targetCrNames []types.NamespacedName) []types.NamespacedName {
+
+	var result []types.NamespacedName = nil
+
+	if len(targetCrNames) == 0 {
+		for _, fsm := range namespacedNameToFSM {
+			result = append(result, fsm.GetStatefulSetNamespacedName())
+		}
+		return result
+	}
+
+	for _, target := range targetCrNames {
+		log.Info("Trying to get target fsm", "target", target)
+		if fsm := namespacedNameToFSM[target]; fsm != nil {
+			log.Info("got fsm", "fsm", fsm, "ss namer", fsm.namers.SsNameBuilder.Name())
+			result = append(result, fsm.GetStatefulSetNamespacedName())
+		}
+	}
+	return result
 }

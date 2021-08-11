@@ -2,15 +2,15 @@ package v2alpha5activemqartemis
 
 import (
 	"context"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/fsm"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"strconv"
-	"strings"
-	"time"
 )
 
 type ScalingState struct {
@@ -46,7 +46,7 @@ func (ss *ScalingState) Enter(previousStateID int) error {
 	var err error = nil
 
 	currentStatefulSet := &appsv1.StatefulSet{}
-	err = ss.parentFSM.r.client.Get(context.TODO(), types.NamespacedName{Name: statefulsets.NameBuilder.Name(), Namespace: ss.parentFSM.customResource.Namespace}, currentStatefulSet)
+	err = ss.parentFSM.r.client.Get(context.TODO(), types.NamespacedName{Name: ss.parentFSM.GetStatefulSetName(), Namespace: ss.parentFSM.customResource.Namespace}, currentStatefulSet)
 	for {
 		if err != nil && errors.IsNotFound(err) {
 			reqLogger.Error(err, "Failed to get StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
@@ -74,7 +74,7 @@ func (ss *ScalingState) Update() (error, int) {
 	var nextStateID int = ScalingID
 
 	currentStatefulSet := &appsv1.StatefulSet{}
-	ssNamespacedName := types.NamespacedName{Name: statefulsets.NameBuilder.Name(), Namespace: ss.parentFSM.customResource.Namespace}
+	ssNamespacedName := types.NamespacedName{Name: ss.parentFSM.GetStatefulSetName(), Namespace: ss.parentFSM.customResource.Namespace}
 	err = ss.parentFSM.r.client.Get(context.TODO(), ssNamespacedName, currentStatefulSet)
 	for {
 		if err != nil && errors.IsNotFound(err) {

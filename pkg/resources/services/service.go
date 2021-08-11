@@ -46,6 +46,33 @@ func NewHeadlessServiceForCR(namespacedName types.NamespacedName, servicePorts *
 	return svc
 }
 
+func NewHeadlessServiceForCR2(serviceName string, namespacedName types.NamespacedName, servicePorts *[]corev1.ServicePort) *corev1.Service {
+
+	labels := selectors.LabelBuilder.Labels()
+
+	svc := &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: nil,
+			Labels:      labels,
+			Name:        serviceName,
+			Namespace:   namespacedName.Namespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Type:                     "ClusterIP",
+			Ports:                    *servicePorts,
+			Selector:                 labels,
+			ClusterIP:                "None",
+			PublishNotReadyAddresses: true,
+		},
+	}
+
+	return svc
+}
+
 // newServiceForPod returns an activemqartemis service for the pod just created
 //func NewServiceDefinitionForCR(cr *brokerv2alpha1.ActiveMQArtemis, nameSuffix string, portNumber int32, selectorLabels map[string]string) *corev1.Service {
 func NewServiceDefinitionForCR(namespacedName types.NamespacedName, nameSuffix string, portNumber int32, selectorLabels map[string]string) *corev1.Service {
@@ -102,6 +129,39 @@ func NewPingServiceDefinitionForCR(namespacedName types.NamespacedName, labels m
 			Annotations: nil,
 			Labels:      labels,
 			Name:        PingNameBuilder.Name(),
+			Namespace:   namespacedName.Namespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Type:                     "ClusterIP",
+			Ports:                    ports,
+			Selector:                 selectorLabels,
+			ClusterIP:                "None",
+			PublishNotReadyAddresses: true,
+		},
+	}
+
+	return svc
+}
+
+func NewPingServiceDefinitionForCR2(serviceName string, namespacedName types.NamespacedName, labels map[string]string, selectorLabels map[string]string) *corev1.Service {
+
+	port := corev1.ServicePort{
+		Protocol:   "TCP",
+		Port:       8888,
+		TargetPort: intstr.FromInt(int(8888)),
+	}
+	ports := []corev1.ServicePort{}
+	ports = append(ports, port)
+
+	svc := &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: nil,
+			Labels:      labels,
+			Name:        serviceName,
 			Namespace:   namespacedName.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
