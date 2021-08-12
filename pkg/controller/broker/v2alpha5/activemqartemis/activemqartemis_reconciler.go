@@ -2134,7 +2134,7 @@ func UpdatePodStatus(cr *brokerv2alpha5.ActiveMQArtemis, client client.Client, s
 	if !reflect.DeepEqual(podStatus, cr.Status.PodStatus) {
 		cr.Status.PodStatus = podStatus
 
-		err := client.Status().Update(context.TODO(), cr)
+		err := resources.Update(ssNamespacedName, client, cr)
 		if err != nil {
 			reqLogger.Error(err, "Failed to update pods status")
 			return err

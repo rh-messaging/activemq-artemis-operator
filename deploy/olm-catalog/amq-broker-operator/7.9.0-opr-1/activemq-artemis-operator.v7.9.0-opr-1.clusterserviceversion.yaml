@@ -122,9 +122,6 @@ spec:
           - name: v2alpha1
             served: true
             storage: false
-          - name: v1alpha1
-            served: false
-            storage: false
         kind: ActiveMQArtemis
         description: A stateful deployment of one or more brokers
         displayName: AMQ Broker
@@ -911,12 +908,6 @@ spec:
           - name: v2alpha1
             served: true
             storage: false
-          - name: v1alpha2
-            served: true
-            storage: false
-          - name: v1alpha1
-            served: false
-            storage: false
         kind: ActiveMQArtemisAddress
         description: Adding and removing addresses via custom resource definitions
         displayName: AMQ Broker Address
@@ -1126,9 +1117,6 @@ spec:
           - name: v2alpha1
             served: true
             storage: true
-          - name: v1alpha1
-            served: false
-            storage: false
         kind: ActiveMQArtemisScaledown
         description: Provides message migration on clustered broker scaledown
         displayName: AMQ Broker Scaledown

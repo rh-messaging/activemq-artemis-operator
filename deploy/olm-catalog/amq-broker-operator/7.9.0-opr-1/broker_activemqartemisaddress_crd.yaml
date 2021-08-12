@@ -1,126 +1,173 @@
 ﻿kind: CustomResourceDefinition
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 metadata:
   name: activemqartemisaddresses.broker.amq.io
 spec:
-  subresources:
-    status: {}
+  group: broker.amq.io
+  version: v2alpha3
   names:
     plural: activemqartemisaddresses
     singular: activemqartemisaddress
     kind: ActiveMQArtemisAddress
     listKind: ActiveMQArtemisAddressList
   scope: Namespaced
+  subresources:
+    status: {}
   conversion:
     strategy: None
-  preserveUnknownFields: true
-  version: v2alpha3
-  validation:
-    openAPIV3Schema:
-      properties:
-        apiVersion:
-          type: string
-        kind:
-          type: string
-        metadata:
-          type: object
-        spec:
-          type: object
-          required:
-            - addressName
-          properties:
-            addressName:
-              type: string
-            queueName:
-              type: string
-            routingType:
-              type: string
-            removeFromBrokerOnDelete:
-              type: boolean
-            user:
-              type: string
-            password:
-              type: string
-            queueConfiguration:
-              type: object
-              properties:
-                ignoreIfExists:
-                  type: boolean
-                routingType:
-                  type: string
-                filterString:
-                  type: string
-                durable:
-                  type: boolean
-                user:
-                  type: string
-                maxConsumers:
-                  type: integer
-                exclusive:
-                  type: boolean
-                groupRebalance:
-                  type: boolean
-                groupRebalancePauseDispatch:
-                  type: boolean
-                groupBuckets:
-                  type: integer
-                groupFirstKey:
-                  type: string
-                lastValue:
-                  type: boolean
-                lastValueKey:
-                  type: string
-                nonDestructive:
-                  type: boolean
-                purgeOnNoConsumers:
-                  type: boolean
-                enabled:
-                  type: boolean
-                consumersBeforeDispatch:
-                  type: integer
-                delayBeforeDispatch:
-                  type: integer
-                consumerPriority:
-                  type: integer
-                autoDelete:
-                  type: boolean
-                autoDeleteDelay:
-                  type: integer
-                autoDeleteMessageCount:
-                  type: integer
-                ringSize:
-                  type: integer
-                configurationManaged:
-                  type: boolean
-                temporary:
-                  type: boolean
-                autoCreateAddress:
-                  type: boolean
-            applyToCrNames:
-              description: >-
-                Apply to the broker crs in the current namespace
-                A value of * means applying to all broker crs.
-                Default apply to all broker crs.
-              type: array
-              minItems: 0
-              items:
-                type: string
-        status:
-          type: object
+  preserveUnknownFields: false
   versions:
     - name: v2alpha3
       served: true
       storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              required:
+                - addressName
+              properties:
+                addressName:
+                  type: string
+                queueName:
+                  type: string
+                routingType:
+                  type: string
+                removeFromBrokerOnDelete:
+                  type: boolean
+                user:
+                  type: string
+                password:
+                  type: string
+                queueConfiguration:
+                  type: object
+                  properties:
+                    ignoreIfExists:
+                      type: boolean
+                    routingType:
+                      type: string
+                    filterString:
+                      type: string
+                    durable:
+                      type: boolean
+                    user:
+                      type: string
+                    maxConsumers:
+                      type: integer
+                    exclusive:
+                      type: boolean
+                    groupRebalance:
+                      type: boolean
+                    groupRebalancePauseDispatch:
+                      type: boolean
+                    groupBuckets:
+                      type: integer
+                    groupFirstKey:
+                      type: string
+                    lastValue:
+                      type: boolean
+                    lastValueKey:
+                      type: string
+                    nonDestructive:
+                      type: boolean
+                    purgeOnNoConsumers:
+                      type: boolean
+                    enabled:
+                      type: boolean
+                    consumersBeforeDispatch:
+                      type: integer
+                    delayBeforeDispatch:
+                      type: integer
+                    consumerPriority:
+                      type: integer
+                    autoDelete:
+                      type: boolean
+                    autoDeleteDelay:
+                      type: integer
+                    autoDeleteMessageCount:
+                      type: integer
+                    ringSize:
+                      type: integer
+                    configurationManaged:
+                      type: boolean
+                    temporary:
+                      type: boolean
+                    autoCreateAddress:
+                      type: boolean
+                applyToCrNames:
+                  description: >-
+                    Apply to the broker crs in the current namespace
+                    A value of * means applying to all broker crs.
+                    Default apply to all broker crs.
+                  type: array
+                  minItems: 0
+                  items:
+                    type: string
+            status:
+              type: object
     - name: v2alpha2
       served: true
       storage: false
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              required:
+                - addressName
+                - queueName
+                - routingType
+              properties:
+                addressName:
+                  type: string
+                queueName:
+                  type: string
+                routingType:
+                  type: string
+                removeFromBrokerOnDelete:
+                  type: boolean
+            status:
+              type: object
     - name: v2alpha1
       served: true
       storage: false
-    - name: v1alpha2
-      served: true
-      storage: false
-    - name: v1alpha1
-      served: false
-      storage: false
-  group: broker.amq.io
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                addressName:
+                  type: string
+                queueName:
+                  type: string
+                routingType:
+                  type: string
+              required:
+                - addressName
+                - queueName
+                - routingType
+              type: object
+            status:
+              type: object
