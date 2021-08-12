@@ -1901,12 +1901,18 @@ spec:
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_782
                         #value: registry.redhat.io/amq7/amq-broker-init-rhel8:0.3-4
                         value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:90d14fd51dad277404dfaa9a6fbd47084996a7f078e7e6de2c5ad126a87cf0e1
+                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_790
+                        #value: ===TODO===
+                        value: ===TODO===
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781
                         #value: registry.redhat.io/amq7/amq-broker-rhel8:7.8-3
                         value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:0d857b95084e39c011651be89482d4dcc77c2d1c3ac3c6a819f3c9d5a57a425f
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_782
                         #value: registry.redhat.io/amq7/amq-broker-rhel8:7.8-4
                         value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:65efcd7f7d265225ff1f101b098afa0dfffaf5391424a23ebcce5f9b39818e59
+                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_790
+                        #value: ===TODO===
+                        value: ===TODO===
 
                       # PPC64LE
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_781_ppc64le
@@ -1915,12 +1921,18 @@ spec:
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_782_ppc64le
                         #value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8:0.3-4
                         value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8@sha256:326d8722c23aa8851cdad3fdc2d9c4823cd3f63d1e4668cf3a9a4c273a0b84e1
+                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_790_ppc64le
+                        #value: ===TODO===
+                        value: ===TODO===
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781_ppc64le
                         #value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.8-8
                         value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8@sha256:f2651cb097eb631fc6af90e4a8404d36516aa2205c546125bf0c37739ab525fa
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_782_ppc64le
                         #value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.8-12
                         value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8@sha256:bbfa637fdd96f3849240fae665a62426e395835834e397abfb07da3abc09b273
+                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_790_ppc64le
+                        #value: ===TODO===
+                        value: ===TODO===
 
                       # S390X
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_781_s390x
@@ -1929,10 +1941,16 @@ spec:
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_782_s390x
                         #value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8:0.3-4
                         value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8@sha256:326d8722c23aa8851cdad3fdc2d9c4823cd3f63d1e4668cf3a9a4c273a0b84e1
+                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_790_s390x
+                        #value: ===TODO===
+                        value: ===TODO===
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781_s390x
                         #value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.8-8
                         value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8@sha256:f2651cb097eb631fc6af90e4a8404d36516aa2205c546125bf0c37739ab525fa
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_782_s390x
                         #value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.8-12
                         value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8@sha256:bbfa637fdd96f3849240fae665a62426e395835834e397abfb07da3abc09b273
+                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_790_s390x
+                        #value: ===TODO===
+                        value: ===TODO===
 
