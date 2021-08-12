@@ -1424,7 +1424,7 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha3.ActiveMQArtemis) cor
 		}
 		reqLogger.V(1).Info("Process addresssetting", "ApplyRule", *envVarApplyRuleValue)
 
-		brokerYaml := cr2jinja2v2alpha3.MakeBrokerCfgOverrides(customResource, nil, nil)
+		brokerYaml, _ := cr2jinja2v2alpha3.MakeBrokerCfgOverrides(customResource, nil, nil)
 		InitContainers := []corev1.Container{
 			{
 				Name:            "amq-broker-init",
