@@ -435,7 +435,7 @@ func processAddressSettingsV2alpha5(sb *strings.Builder, addressSettings *[]v2al
 		if value := checkInt32(s.RedeliveryDelay); value != nil {
 			sb.WriteString("  redelivery_delay: " + *value + "\n")
 		}
-		if value := checkInt32(s.RedeliveryDelayMultiplier); value != nil {
+		if value := checkFloat32(s.RedeliveryDelayMultiplier); value != nil {
 			sb.WriteString("  redelivery_delay_multiplier: " + *value + "\n")
 		}
 		if value := checkFloat32(s.RedeliveryCollisionAvoidanceFactor); value != nil {

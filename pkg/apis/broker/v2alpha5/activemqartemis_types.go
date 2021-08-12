@@ -46,7 +46,7 @@ type AddressSettingType struct {
 	MinExpiryDelay                       *int32   `json:"minExpiryDelay,omitempty"`
 	MaxExpiryDelay                       *int32   `json:"maxExpiryDelay,omitempty"`
 	RedeliveryDelay                      *int32   `json:"redeliveryDelay,omitempty"`
-	RedeliveryDelayMultiplier            *int32   `json:"redeliveryDelayMultiplier,omitempty"`
+	RedeliveryDelayMultiplier            *float32   `json:"redeliveryDelayMultiplier,omitempty"`
 	RedeliveryCollisionAvoidanceFactor   *float32 `json:"redeliveryCollisionAvoidanceFactor,omitempty"`
 	MaxRedeliveryDelay                   *int32   `json:"maxRedeliveryDelay,omitempty"`
 	MaxDeliveryAttempts                  *int32   `json:"maxDeliveryAttempts,omitempty"`
