@@ -4,15 +4,12 @@ metadata:
   name: activemqartemisscaledowns.broker.amq.io
 spec:
   group: broker.amq.io
-  version: v2alpha1
   names:
     plural: activemqartemisscaledowns
     singular: activemqartemisscaledown
     kind: ActiveMQArtemisScaledown
     listKind: ActiveMQArtemisScaledownList
   scope: Namespaced
-  subresources:
-    status: {}
   conversion:
     strategy: None
   preserveUnknownFields: false
@@ -20,6 +17,8 @@ spec:
     - name: v2alpha1
       served: true
       storage: true
+      subresources:
+        status: {}
       schema:
         openAPIV3Schema:
           type: object

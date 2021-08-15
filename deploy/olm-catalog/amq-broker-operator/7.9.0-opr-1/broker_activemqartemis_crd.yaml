@@ -4,18 +4,12 @@ metadata:
   name: activemqartemises.broker.amq.io
 spec:
   group: broker.amq.io
-  version: v2alpha5
   names:
     plural: activemqartemises
     singular: activemqartemis
     kind: ActiveMQArtemis
     listKind: ActiveMQArtemisList
   scope: Namespaced
-  subresources:
-    status: {}
-    scale:
-      specReplicasPath: .spec.replicas
-      statusReplicasPath: .status.replicas
   conversion:
     strategy: None
   preserveUnknownFields: false
@@ -23,6 +17,11 @@ spec:
     - name: v2alpha5
       served: true
       storage: true
+      subresources:
+        status: {}
+        scale:
+          specReplicasPath: .spec.replicas
+          statusReplicasPath: .status.replicas
       schema:
         openAPIV3Schema:
           type: object
@@ -665,6 +664,11 @@ spec:
     - name: v2alpha4
       served: true
       storage: false
+      subresources:
+        status: {}
+        scale:
+          specReplicasPath: .spec.replicas
+          statusReplicasPath: .status.replicas
       schema:
         openAPIV3Schema:
           type: object
@@ -1237,6 +1241,11 @@ spec:
     - name: v2alpha3
       served: true
       storage: false
+      subresources:
+        status: {}
+        scale:
+          specReplicasPath: .spec.replicas
+          statusReplicasPath: .status.replicas
       schema:
         openAPIV3Schema:
           type: object
@@ -1800,6 +1809,11 @@ spec:
     - name: v2alpha2
       served: true
       storage: false
+      subresources:
+        status: {}
+        scale:
+          specReplicasPath: .spec.replicas
+          statusReplicasPath: .status.replicas
       schema:
         openAPIV3Schema:
           type: object
@@ -2061,6 +2075,11 @@ spec:
     - name: v2alpha1
       served: true
       storage: false
+      subresources:
+        status: {}
+        scale:
+          specReplicasPath: .spec.replicas
+          statusReplicasPath: .status.replicas
       schema:
         openAPIV3Schema:
           type: object

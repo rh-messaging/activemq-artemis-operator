@@ -4,15 +4,12 @@ metadata:
   name: activemqartemisaddresses.broker.amq.io
 spec:
   group: broker.amq.io
-  version: v2alpha3
   names:
     plural: activemqartemisaddresses
     singular: activemqartemisaddress
     kind: ActiveMQArtemisAddress
     listKind: ActiveMQArtemisAddressList
   scope: Namespaced
-  subresources:
-    status: {}
   conversion:
     strategy: None
   preserveUnknownFields: false
@@ -20,6 +17,8 @@ spec:
     - name: v2alpha3
       served: true
       storage: true
+      subresources:
+        status: {}
       schema:
         openAPIV3Schema:
           type: object
@@ -116,6 +115,8 @@ spec:
     - name: v2alpha2
       served: true
       storage: false
+      subresources:
+        status: {}
       schema:
         openAPIV3Schema:
           type: object
@@ -146,6 +147,8 @@ spec:
     - name: v2alpha1
       served: true
       storage: false
+      subresources:
+        status: {}
       schema:
         openAPIV3Schema:
           type: object
