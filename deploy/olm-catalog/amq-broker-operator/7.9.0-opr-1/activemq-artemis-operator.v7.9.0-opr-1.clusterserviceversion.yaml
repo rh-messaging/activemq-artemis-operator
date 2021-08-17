@@ -1666,6 +1666,12 @@ spec:
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
               - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Apply this security config to the broker crs in the current namespace. A value of * or empty string means applying to all broker crs. Default apply to all broker crs
+            displayName: Apply to Broker CR Names
+            path: applyToCrNames[0]
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
 
   install:
     strategy: deployment

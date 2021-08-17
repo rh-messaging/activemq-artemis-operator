@@ -323,5 +323,14 @@ spec:
                                           type: array
                                           items:
                                             type: string
+                applyToCrNames:
+                  description: >-
+                    Apply to the broker crs in the current namespace
+                    A value of * means applying to all broker crs.
+                    Default apply to all broker crs.
+                  type: array
+                  minItems: 0
+                  items:
+                    type: string
             status:
               type: object

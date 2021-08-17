@@ -75,6 +75,11 @@ func (in *ActiveMQArtemisSecuritySpec) DeepCopyInto(out *ActiveMQArtemisSecurity
 	in.LoginModules.DeepCopyInto(&out.LoginModules)
 	in.SecurityDomains.DeepCopyInto(&out.SecurityDomains)
 	in.SecuritySettings.DeepCopyInto(&out.SecuritySettings)
+	if in.ApplyToCrNames != nil {
+		in, out := &in.ApplyToCrNames, &out.ApplyToCrNames
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

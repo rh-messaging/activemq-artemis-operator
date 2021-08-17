@@ -25,33 +25,37 @@ var log = logf.Log.WithName("controller_v2alpha5activemqartemis")
 var namespacedNameToFSM = make(map[types.NamespacedName]*ActiveMQArtemisFSM)
 
 type ActiveMQArtemisConfigHandler interface {
+	IsApplicableFor(brokerNamespacedName types.NamespacedName) bool
 	Config(initContainers []corev1.Container, outputDirRoot string, yacfgProfileVersion string, yacfgProfileName string) (value []string)
 }
 
-var namespaceToConfigHandler = make(map[string]ActiveMQArtemisConfigHandler)
+var namespaceToConfigHandler = make(map[types.NamespacedName]ActiveMQArtemisConfigHandler)
 
-func GetBrokerConfigHandler(namespacedName types.NamespacedName) (handler ActiveMQArtemisConfigHandler) {
-	value, _ := namespaceToConfigHandler[namespacedName.Namespace]
-	return value
+func GetBrokerConfigHandler(brokerNamespacedName types.NamespacedName) (handler ActiveMQArtemisConfigHandler) {
+	for _, handler := range namespaceToConfigHandler {
+		if handler.IsApplicableFor(brokerNamespacedName) {
+			return handler
+		}
+	}
+	return nil
 }
 
 func RemoveBrokerConfigHandler(namespacedName types.NamespacedName) {
 	log.Info("Removing config handler", "name", namespacedName)
-	_, ok := namespaceToConfigHandler[namespacedName.Namespace]
+	_, ok := namespaceToConfigHandler[namespacedName]
 	if ok {
-		delete(namespaceToConfigHandler, namespacedName.Namespace)
+		delete(namespaceToConfigHandler, namespacedName)
 		log.Info("Handler removed")
 	}
 }
 
 func AddBrokerConfigHandler(namespacedName types.NamespacedName, handler ActiveMQArtemisConfigHandler) {
-	_, exist := namespaceToConfigHandler[namespacedName.Namespace]
+	_, exist := namespaceToConfigHandler[namespacedName]
 	if exist {
 		log.Info("There is an old config handler that will be replace")
-	} else {
-		namespaceToConfigHandler[namespacedName.Namespace] = handler
-		log.Info("A config handler has been added", "new handler", handler)
 	}
+	namespaceToConfigHandler[namespacedName] = handler
+	log.Info("A config handler has been added", "new handler", handler)
 }
 
 /**

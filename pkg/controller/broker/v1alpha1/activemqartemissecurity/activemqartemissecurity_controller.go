@@ -99,6 +99,19 @@ type ActiveMQArtemisSecurityConfigHandler struct {
 	owner          *ReconcileActiveMQArtemisSecurity
 }
 
+func (r *ActiveMQArtemisSecurityConfigHandler) IsApplicableFor(brokerNamespacedName types.NamespacedName) bool {
+	applyTo := r.SecurityCR.Spec.ApplyToCrNames
+	if len(applyTo) == 0 {
+		return true
+	}
+	for _, crName := range applyTo {
+		if crName == "*" || crName == "" || (r.NamespacedName.Namespace == brokerNamespacedName.Namespace && crName == brokerNamespacedName.Name) {
+			return true
+		}
+	}
+	return false
+}
+
 func (r *ActiveMQArtemisSecurityConfigHandler) processCrPasswords() *brokerv1alpha1.ActiveMQArtemisSecurity {
 	result := r.SecurityCR.DeepCopy()
 

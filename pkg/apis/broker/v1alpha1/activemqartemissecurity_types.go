@@ -16,6 +16,7 @@ type ActiveMQArtemisSecuritySpec struct {
 	LoginModules     LoginModulesType     `json:"loginModules"`
 	SecurityDomains  SecurityDomainsType  `json:"securityDomains"`
 	SecuritySettings SecuritySettingsType `json:"securitySettings"`
+	ApplyToCrNames   []string             `json:"applyToCrNames,omitempty"`
 }
 
 type LoginModulesType struct {
