@@ -14,7 +14,7 @@ metadata:
     certified: "false"
     description: AMQ Broker Operator for RHEL 8 (Multiarch) provides the ability to deploy and manage stateful AMQ Broker clusters
     #containerImage: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.8-10
-    containerImage: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:ba1de9342cd86546b2cb6942fd02238fb70be5594969020b1c1a030c56a30d65
+    containerImage: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:d3599a8faaae2d8a64528f8974b5dd69edf229518a32d8b91a491d8ed36a7d12
     createdAt: 2021-06-18T00:02:04Z
     capabilities: Seamless Upgrades
     repository: https://github.com/rh-messaging/activemq-artemis-operator
@@ -1855,8 +1855,8 @@ spec:
                 serviceAccountName: amq-broker-operator
                 containers:
                   - name: amq-broker-operator
-                    #image: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.8-10
-                    image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:ba1de9342cd86546b2cb6942fd02238fb70be5594969020b1c1a030c56a30d65
+                    #image: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.9-1
+                    image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:d3599a8faaae2d8a64528f8974b5dd69edf229518a32d8b91a491d8ed36a7d12
                     args:
                       # Explicitly set the logging level.
                       # Valid values are debug, info, and error
