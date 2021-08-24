@@ -18,8 +18,9 @@ import (
 
 	"time"
 
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/draincontroller"
 	"io/ioutil"
+
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/draincontroller"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -158,7 +159,7 @@ func (r *ReconcileActiveMQArtemisScaledown) Reconcile(request reconcile.Request)
 	}
 
 	reqLogger.Info("==== new drain controller...")
-	drainControllerInstance := draincontroller.NewController(kubeClient, kubeInformerFactory, namespace, localOnly)
+	drainControllerInstance := draincontroller.NewController(kubeClient, kubeInformerFactory, namespace, localOnly, r.client)
 
 	reqLogger.Info("==== Starting async factory...")
 	go kubeInformerFactory.Start(StopCh)
