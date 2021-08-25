@@ -428,6 +428,7 @@ func syncMessageMigration(customResource *brokerv2alpha5.ActiveMQArtemis, client
 	ssNames["PINGSVCNAMEVALUE"] = fsm.GetPingServiceName()
 	ssNames["SERVICE_ACCOUNT"] = os.Getenv("SERVICE_ACCOUNT")
 	ssNames["SERVICE_ACCOUNT_NAME"] = os.Getenv("SERVICE_ACCOUNT")
+	ssNames["AMQ_CREDENTIALS_SECRET_NAME"] = fsm.GetCredentialsSecretName()
 
 	scaledown := &brokerv2alpha1.ActiveMQArtemisScaledown{
 		TypeMeta: metav1.TypeMeta{

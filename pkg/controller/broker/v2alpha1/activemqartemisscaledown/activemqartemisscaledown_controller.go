@@ -193,7 +193,7 @@ func (r *ReconcileActiveMQArtemisScaledown) getDrainController(localOnly bool, n
 	}
 
 	log.Info("==== new drain controller...")
-	controllerInstance = draincontroller.NewController(controllerKey, kubeClient, kubeInformerFactory, namespace, localOnly)
+	controllerInstance = draincontroller.NewController(controllerKey, kubeClient, kubeInformerFactory, namespace, localOnly, r.client)
 	controllers[controllerKey] = controllerInstance
 
 	log.Info("Adding scaledown instance to controller", "controller", controllerInstance, "scaledown", instance)

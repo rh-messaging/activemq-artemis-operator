@@ -45,9 +45,12 @@ import (
 
 	brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	rbacutil "github.com/artemiscloud/activemq-artemis-operator/pkg/rbac"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
@@ -104,6 +107,8 @@ type Controller struct {
 	ssNamesMap map[types.NamespacedName]map[string]string
 
 	stopCh chan struct{}
+
+	client client.Client
 }
 
 // NewController returns a new sample controller
@@ -114,7 +119,8 @@ func NewController(
 	kubeclientset kubernetes.Interface,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	namespace string,
-	localOnly bool) *Controller {
+	localOnly bool,
+	client client.Client) *Controller {
 
 	// obtain references to shared index informers for the Deployment and Foo
 	// types.
@@ -146,6 +152,7 @@ func NewController(
 		localOnly:          localOnly,
 		ssNamesMap:         make(map[types.NamespacedName]map[string]string),
 		stopCh:             make(chan struct{}),
+		client:             client,
 	}
 
 	log.Info("Setting up event handlers")
@@ -185,12 +192,12 @@ func (c *Controller) AddInstance(instance *brokerv2alpha1.ActiveMQArtemisScaledo
 		instance.Annotations["CRNAMESPACE"],
 		namer.CrToSS(instance.Annotations["CRNAME"]),
 	}
-	log.Info("adding a new scaledown instance", "key", namespacedName, "contents:", instance.Annotations)
+	log.Info("adding a new scaledown instance", "key", namespacedName)
 	c.ssNamesMap[namespacedName] = instance.Annotations
 	log.Info("Added new instance", "key", namespacedName, "now values", len(c.ssNamesMap))
-	c.dumpSsNamesMap()
 }
 
+//for debug only
 func (c *Controller) dumpSsNamesMap() {
 	for k, v := range c.ssNamesMap {
 		log.Info("ssMap", "key", k)
@@ -330,7 +337,7 @@ func (c *Controller) syncHandler(key string) error {
 
 func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 	// TODO: think about scale-down during a rolling upgrade
-	log.Info("Processing statefulset", "sts", *sts)
+	log.Info("Processing statefulset", "sts", sts.Name)
 
 	if 0 == *sts.Spec.Replicas {
 		// Ensure data is not touched in the case of complete scaledown
@@ -548,13 +555,15 @@ func (c *Controller) createDrainRBACResources(namespace string) {
 
 // delete the service account, role, and role binding for drain pod
 func (c *Controller) cleanupDrainRBACResources(namespace string) {
-	log.Info("Cleaning up drain pod rbac resources", "namespace", namespace)
-	drainRoleBindingName := namespace + "-drain-rb"
-	rbacutil.DeleteRoleBinding(drainRoleBindingName, namespace, c.kubeclientset)
-	rbacutil.DeleteRole(DrainRoleName, namespace, c.kubeclientset)
-	rbacutil.DeleteServiceAccount(DrainServiceAccountName, namespace, c.kubeclientset)
+	if !c.localOnly {
+		log.Info("Cleaning up drain pod rbac resources", "namespace", namespace)
+		drainRoleBindingName := namespace + "-drain-rb"
+		rbacutil.DeleteRoleBinding(drainRoleBindingName, namespace, c.kubeclientset)
+		rbacutil.DeleteRole(DrainRoleName, namespace, c.kubeclientset)
+		rbacutil.DeleteServiceAccount(DrainServiceAccountName, namespace, c.kubeclientset)
 
-	log.Info("Drain service account cleaned up", "namespace", namespace)
+		log.Info("Drain service account cleaned up", "namespace", namespace)
+	}
 }
 
 func (c *Controller) cleanUpDrainPodIfNeeded(sts *appsv1.StatefulSet, pod *corev1.Pod, ordinal int) error {
@@ -704,6 +713,30 @@ func (c *Controller) GetStopCh() *chan struct{} {
 	return &c.stopCh
 }
 
+func (c *Controller) getClusterCredentials(namespace string, ssNames map[string]string) (string, string) {
+
+	secretName := ssNames["AMQ_CREDENTIALS_SECRET_NAME"]
+
+	namespacedName := types.NamespacedName{
+		Name:      secretName,
+		Namespace: namespace,
+	}
+	stringDataMap := make(map[string]string)
+	stringDataMap["AMQ_CLUSTER_USER"] = ""
+	stringDataMap["AMQ_CLUSTER_PASSWORD"] = ""
+
+	secretDefinition := secrets.NewSecret(namespacedName, secretName, stringDataMap)
+
+	log.Info("Try retrieving cluster credentials from secret", "secret", namespacedName)
+	if err := resources.Retrieve(namespacedName, c.client, secretDefinition); err != nil {
+		log.Info("Failed to retrieve cluster credentials from secret, using defaults", "err", err)
+		return ssNames["CLUSTERUSER"], ssNames["CLUSTERPASS"]
+	} else {
+		log.Info("retrieved cluster credential from existing secret")
+		return string(secretDefinition.Data["AMQ_CLUSTER_USER"]), string(secretDefinition.Data["AMQ_CLUSTER_PASSWORD"])
+	}
+}
+
 func (c *Controller) newPod(sts *appsv1.StatefulSet, ordinal int) (*corev1.Pod, error) {
 
 	ssNamesKey := types.NamespacedName{
@@ -711,9 +744,6 @@ func (c *Controller) newPod(sts *appsv1.StatefulSet, ordinal int) (*corev1.Pod, 
 		sts.Name,
 	}
 	log.Info("Creating newPod for ss", "ss", ssNamesKey)
-
-	log.Info("Before look up dump the ssNamesMap", "size", len(c.ssNamesMap))
-	c.dumpSsNamesMap()
 
 	if _, ok := c.ssNamesMap[ssNamesKey]; !ok {
 		log.Info("Cannot find drain pod data for statefule set", "namespace", ssNamesKey)
@@ -725,11 +755,13 @@ func (c *Controller) newPod(sts *appsv1.StatefulSet, ordinal int) (*corev1.Pod, 
 	//podTemplateJson := sts.Annotations[AnnotationDrainerPodTemplate]
 	//TODO: Remove this blatant hack
 	podTemplateJson := globalPodTemplateJson
+	clusterUser, clusterPassword := c.getClusterCredentials(sts.Namespace, ssNames)
 	podTemplateJson = strings.Replace(podTemplateJson, "CRNAME", ssNames["CRNAME"], -1)
-	podTemplateJson = strings.Replace(podTemplateJson, "CLUSTERUSER", ssNames["CLUSTERUSER"], 1)
-	podTemplateJson = strings.Replace(podTemplateJson, "CLUSTERPASS", ssNames["CLUSTERPASS"], 1)
+	podTemplateJson = strings.Replace(podTemplateJson, "CLUSTERUSER", clusterUser, 1)
+	podTemplateJson = strings.Replace(podTemplateJson, "CLUSTERPASS", clusterPassword, 1)
 	podTemplateJson = strings.Replace(podTemplateJson, "HEADLESSSVCNAMEVALUE", ssNames["HEADLESSSVCNAMEVALUE"], 1)
 	podTemplateJson = strings.Replace(podTemplateJson, "PINGSVCNAMEVALUE", ssNames["PINGSVCNAMEVALUE"], 1)
+
 	if c.localOnly {
 		podTemplateJson = strings.Replace(podTemplateJson, "SERVICE_ACCOUNT", os.Getenv("SERVICE_ACCOUNT"), 1)
 		podTemplateJson = strings.Replace(podTemplateJson, "SERVICE_ACCOUNT_NAME", os.Getenv("SERVICE_ACCOUNT"), 1)
