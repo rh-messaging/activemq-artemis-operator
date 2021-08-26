@@ -1855,8 +1855,8 @@ spec:
                 serviceAccountName: amq-broker-operator
                 containers:
                   - name: amq-broker-operator
-                    #image: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.9-1
-                    image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:d3599a8faaae2d8a64528f8974b5dd69edf229518a32d8b91a491d8ed36a7d12
+                    #image: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.9-2
+                    image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:050a98dce83a60a02238d37de32d71ca7ed59002f5762536743b115541d8204b
                     args:
                       # Explicitly set the logging level.
                       # Valid values are debug, info, and error
@@ -1881,7 +1881,6 @@ spec:
                           fieldRef:
                             fieldPath: metadata.namespace
 
-<<<<<<< HEAD:deploy/olm-catalog/amq-broker-operator/7.9.0-opr-1/amq-broker-operator.v7.9.0-opr-1.clusterserviceversion.yaml
                       #Below are the environment variables that inform the operator what container images to utilize for each product version.
                       # By default the *_782 values are utilized.
                       # The *Init* values refer to the init container images that configure the broker configuration prior to broker container start.
