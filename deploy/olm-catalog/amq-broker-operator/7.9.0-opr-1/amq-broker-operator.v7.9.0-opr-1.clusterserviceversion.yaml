@@ -1,7 +1,7 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: amq-broker-operator.v7.9.0-opr-1-rhel8
+  name: amq-broker-operator.v7.9.0-opr-1
   namespace: placeholder
   labels:
     operator-activemqartemis: "true"
@@ -13,8 +13,8 @@ metadata:
     categories: "Streaming & Messaging"
     certified: "false"
     description: AMQ Broker Operator for RHEL 8 (Multiarch) provides the ability to deploy and manage stateful AMQ Broker clusters
-    #containerImage: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.9-1
-    containerImage: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:d3599a8faaae2d8a64528f8974b5dd69edf229518a32d8b91a491d8ed36a7d12
+    #containerImage: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.9-2
+    containerImage: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:050a98dce83a60a02238d37de32d71ca7ed59002f5762536743b115541d8204b
     createdAt: 2021-06-18T00:02:04Z
     capabilities: Seamless Upgrades
     repository: https://github.com/rh-messaging/activemq-artemis-operator
@@ -61,6 +61,41 @@ metadata:
           },
           "spec": {
               "localOnly": "true"
+          }
+      },
+      {
+          "apiVersion": "broker.amq.io/v1alpha1",
+          "kind": "ActiveMQArtemisSecurity",
+          "metadata": {
+              "name": "ex-keycloak"
+          },
+          "spec": {
+              "loginModules": {
+                  "propertiesLoginModules": [
+                      {
+                          "name": "prop-module",
+                          "users": [
+                              {
+                                  "name": "superman",
+                                  "roles": [
+                                      "root"
+                                  ]
+                              }
+                          ]
+                      }
+                  ]
+              },
+              "securityDomains": {
+                  "brokerDomain": {
+                      "name": "activemq",
+                      "loginModules": [
+                          {
+                              "name": "prop-module",
+                              "flag": "sufficient"
+                          }
+                      ]
+                  }
+              }
           }
       }]
 spec:
@@ -121,6 +156,9 @@ spec:
             storage: false
           - name: v2alpha1
             served: true
+            storage: false
+          - name: v1alpha1
+            served: false
             storage: false
         kind: ActiveMQArtemis
         description: A stateful deployment of one or more brokers
@@ -908,6 +946,12 @@ spec:
           - name: v2alpha1
             served: true
             storage: false
+          - name: v1alpha2
+            served: true
+            storage: false
+          - name: v1alpha1
+            served: false
+            storage: false
         kind: ActiveMQArtemisAddress
         description: Adding and removing addresses via custom resource definitions
         displayName: AMQ Broker Address
@@ -1117,6 +1161,9 @@ spec:
           - name: v2alpha1
             served: true
             storage: true
+          - name: v1alpha1
+            served: false
+            storage: false
         kind: ActiveMQArtemisScaledown
         description: Provides message migration on clustered broker scaledown
         displayName: AMQ Broker Scaledown
@@ -1384,7 +1431,7 @@ spec:
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:ActiveMQArtemisSecurity'
               - 'urn:alm:descriptor:com.tectonic.ui:text'
-          - description: If not to change session id on a successful login 
+          - description: If not to change session id on a successful login
             displayName: Turn Off Session ID Change On Login
             path: loginModules.keycloakLoginModules[0].configuration.turnOffChangeSessionIdOnLogin
             x-descriptors:
