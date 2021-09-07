@@ -167,6 +167,21 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessStatefulSet(fsm *ActiveMQArt
 			log.Info("Statefulset recreation required for current operator compatibility")
 			statefulsetRecreationRequired = true
 		}
+		if !statefulsetRecreationRequired {
+			enableMetricsPluginEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_ENABLE_METRICS_PLUGIN")
+			enableMetricsPluginInCr := fsm.customResource.Spec.DeploymentPlan.EnableMetricsPlugin
+			if enableMetricsPluginEnvVar == nil || enableMetricsPluginEnvVar.Value == "false" {
+				if enableMetricsPluginInCr != nil && *enableMetricsPluginInCr == true {
+					log.Info("Need recreate statefuleset to update enableMetricsPlugin to true")
+					statefulsetRecreationRequired = true
+				}
+			} else {
+				if enableMetricsPluginInCr == nil || *enableMetricsPluginInCr == false {
+					log.Info("Need recreate statefuleset to update enableMetricsPlugin to false")
+					statefulsetRecreationRequired = true
+				}
+			}
+		}
 		if statefulsetRecreationRequired {
 			log.Info("Recreating existing statefulset")
 			deleteErr := resources.Delete(ssNamespacedName, client, currentStatefulSet)
