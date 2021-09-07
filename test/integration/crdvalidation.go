@@ -42,6 +42,7 @@ var crNameMap = map[string]string{
 	"artemis-replace-address-settings-deployment.yaml":       "broker_activemqartemis_crd.yaml",
 
 	"broker_activemqartemisscaledown_cr.yaml": "broker_activemqartemisscaledown_crd.yaml",
+	"broker_activemqartemissecurity_cr.yaml":  "broker_activemqartemissecurity_crd.yaml",
 }
 
 var _ = ginkgo.Describe("CRD Validation Test", func() {
