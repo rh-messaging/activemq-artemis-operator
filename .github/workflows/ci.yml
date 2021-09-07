@@ -29,7 +29,7 @@ jobs:
         run: docker build --file ./build/Dockerfile --label \"quay.expires-after=1w\" --label \"git-sha=$GITHUB_SHA\" --tag $IMAGE_NAME:dev.latest .
 
       - name: Execute the test suite
-        uses: artemiscloud/activemq-artemis-operator-test-action@v1
+        uses: artemiscloud/activemq-artemis-operator-test-action@v1.1
         with:
           repository: 'https://github.com/brusdev/activemq-artemis-operator-test-suite.git'
           ref: 'dev'
