@@ -105,7 +105,7 @@ spec:
     - activemqartemis
     - operator
   version: 7.9.0-opr-1
-  replaces: amq-broker-operator.v7.8.2-opr-2
+  replaces: amq-broker-operator.v7.8.2-opr-3
   maturity: alpha
   maintainers:
     - name: Red Hat
@@ -122,12 +122,12 @@ spec:
       mediatype: image/png
   labels:
     alm-owner-amq-broker: amq-broker-operator
-    operated-by: amq-broker-operator.v7.9.0-opr-1-rhel8
+    operated-by: amq-broker-operator.v7.9.0-opr-1
   selector:
     matchLabels:
       ActiveMQArtemis: ex-aao
       application: ex-aao-app
-      operated-by: amq-broker-operator.v7.9.0-opr-1-rhel8
+      operated-by: amq-broker-operator.v7.9.0-opr-1
   installModes:
     - type: OwnNamespace
       supported: true
