@@ -194,12 +194,22 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessStatefulSet(fsm *ActiveMQArt
 			}
 		}
 
+		newPodTemplateCreated := false
 		//update statefulset with customer resource
 		log.Info("Calling ProcessAddressSettings")
 		if reconciler.ProcessAddressSettings(fsm.customResource, fsm.prevCustomResource, client) {
 			log.Info("There are new address settings change in the cr, creating a new pod template to update")
 			*fsm.prevCustomResource = *fsm.customResource
 			currentStatefulSet.Spec.Template = NewPodTemplateSpecForCR(fsm)
+			newPodTemplateCreated = true
+		}
+
+		podInvalid := fsm.GetPodInvalid()
+		if podInvalid && !newPodTemplateCreated {
+			log.Info("Updating the pod template for ss as is marked invalid")
+			currentStatefulSet.Spec.Template = NewPodTemplateSpecForCR(fsm)
+			fsm.SetPodInvalid(false)
+			newPodTemplateCreated = true
 		}
 	}
 

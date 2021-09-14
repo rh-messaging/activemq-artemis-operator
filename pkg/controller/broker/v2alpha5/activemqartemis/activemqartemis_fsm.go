@@ -75,6 +75,7 @@ type ActiveMQArtemisFSM struct {
 	prevCustomResource *brokerv2alpha5.ActiveMQArtemis
 	r                  *ReconcileActiveMQArtemis
 	namers             *Namers
+	podInvalid         bool
 }
 
 func (amqbfsm *ActiveMQArtemisFSM) MakeNamers() *Namers {
@@ -102,7 +103,7 @@ func (amqbfsm *ActiveMQArtemisFSM) MakeNamers() *Namers {
 }
 
 // Need to deep-copy the instance?
-func MakeActiveMQArtemisFSM(instance *brokerv2alpha5.ActiveMQArtemis, _namespacedName types.NamespacedName, r *ReconcileActiveMQArtemis) ActiveMQArtemisFSM {
+func MakeActiveMQArtemisFSM(instance *brokerv2alpha5.ActiveMQArtemis, _namespacedName types.NamespacedName, r *ReconcileActiveMQArtemis) *ActiveMQArtemisFSM {
 
 	var creatingK8sResourceIState fsm.IState
 	var containerRunningIState fsm.IState
@@ -117,6 +118,7 @@ func MakeActiveMQArtemisFSM(instance *brokerv2alpha5.ActiveMQArtemis, _namespace
 	amqbfsm.prevCustomResource = &brokerv2alpha5.ActiveMQArtemis{}
 	amqbfsm.r = r
 	amqbfsm.namers = amqbfsm.MakeNamers()
+	amqbfsm.podInvalid = false
 
 	// TODO: Fix disconnect here between passing the parent and being added later as adding implies parenthood
 	creatingK8sResourceState := MakeCreatingK8sResourcesState(&amqbfsm, _namespacedName)
@@ -131,14 +133,14 @@ func MakeActiveMQArtemisFSM(instance *brokerv2alpha5.ActiveMQArtemis, _namespace
 	scalingIState = &scalingState
 	amqbfsm.Add(&scalingIState)
 
-	return amqbfsm
+	return &amqbfsm
 }
 
 func NewActiveMQArtemisFSM(instance *brokerv2alpha5.ActiveMQArtemis, _namespacedName types.NamespacedName, r *ReconcileActiveMQArtemis) *ActiveMQArtemisFSM {
 
 	amqbfsm := MakeActiveMQArtemisFSM(instance, _namespacedName, r)
 
-	return &amqbfsm
+	return amqbfsm
 }
 func (amqbfsm *ActiveMQArtemisFSM) Add(s *fsm.IState) {
 
@@ -233,4 +235,12 @@ func (amqbfsm *ActiveMQArtemisFSM) GetConsoleSecretName() string {
 
 func (amqbfsm *ActiveMQArtemisFSM) GetStatefulSetName() string {
 	return amqbfsm.namers.SsNameBuilder.Name()
+}
+
+func (amqbfsm *ActiveMQArtemisFSM) SetPodInvalid(isInvalid bool) {
+	amqbfsm.podInvalid = isInvalid
+}
+
+func (amqbfsm *ActiveMQArtemisFSM) GetPodInvalid() bool {
+	return amqbfsm.podInvalid
 }

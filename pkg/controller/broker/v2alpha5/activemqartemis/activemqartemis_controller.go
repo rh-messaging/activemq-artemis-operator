@@ -40,22 +40,35 @@ func GetBrokerConfigHandler(brokerNamespacedName types.NamespacedName) (handler 
 	return nil
 }
 
+func UpdatePodForSecurity(securityHandlerNamespacedName types.NamespacedName, handler ActiveMQArtemisConfigHandler) {
+	for nsn, fsm := range namespacedNameToFSM {
+		if handler.IsApplicableFor(nsn) {
+			fsm.SetPodInvalid(true)
+			log.Info("Need update fsm for security", "fsm", nsn)
+			fsm.Update()
+		}
+	}
+}
+
 func RemoveBrokerConfigHandler(namespacedName types.NamespacedName) {
 	log.Info("Removing config handler", "name", namespacedName)
-	_, ok := namespaceToConfigHandler[namespacedName]
+	oldHandler, ok := namespaceToConfigHandler[namespacedName]
 	if ok {
 		delete(namespaceToConfigHandler, namespacedName)
-		log.Info("Handler removed")
+		log.Info("Handler removed, updating fsm if exists")
+		UpdatePodForSecurity(namespacedName, oldHandler)
 	}
 }
 
 func AddBrokerConfigHandler(namespacedName types.NamespacedName, handler ActiveMQArtemisConfigHandler) {
-	_, exist := namespaceToConfigHandler[namespacedName]
-	if exist {
-		log.Info("There is an old config handler that will be replace")
-	}
+	oldHandler, ok := namespaceToConfigHandler[namespacedName]
 	namespaceToConfigHandler[namespacedName] = handler
-	log.Info("A config handler has been added", "new handler", handler)
+	log.Info("A config handler has been added", "handler", handler)
+	if ok {
+		log.Info("There is an old config handler so need update")
+		UpdatePodForSecurity(namespacedName, oldHandler)
+	}
+	UpdatePodForSecurity(namespacedName, handler)
 }
 
 /**
@@ -183,7 +196,7 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 	// for the given fsm, do an update
 	// - update first level sets? what if the operator has gone away and come back? stateless?
 	if namespacedNameFSM = namespacedNameToFSM[namespacedName]; namespacedNameFSM == nil {
-		amqbfsm = NewActiveMQArtemisFSM(customResource, namespacedName, r)
+		amqbfsm = MakeActiveMQArtemisFSM(customResource, namespacedName, r)
 		namespacedNameToFSM[namespacedName] = amqbfsm
 
 		// Enter the first state; atm CreatingK8sResourcesState
