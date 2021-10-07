@@ -5,5 +5,5 @@ channels:
   - name: 7.x
     currentCSV: amq-broker-operator.v7.9.0-opr-1
   - name: 7.8.x
-    currentCSV: amq-broker-operator.v7.8.2-opr-3
+    currentCSV: amq-broker-operator.v7.8.3
 defaultChannel: 7.x
