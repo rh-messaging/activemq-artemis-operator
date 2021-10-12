@@ -11,7 +11,7 @@ metadata:
     categories: "Streaming & Messaging"
     certified: "false"
     description: AMQ Broker Operator provides the ability to deploy and manage stateful AMQ Broker clusters
-    # containerImage: registry.redhat.io/amq7/amq-broker-rhel7-operator:7.8-11
+    # containerImage: registry.redhat.io/amq7/amq-broker-rhel7-operator:7.8-12
     containerImage: registry.redhat.io/amq7/amq-broker-rhel7-operator@sha256:f8e505d39e76f731408bec76ab0419440572d9f42a4d02204bcce9591b5f7229
     createdAt: 2021-06-18T00:02:04Z
     capabilities: Seamless Upgrades
@@ -981,7 +981,7 @@ spec:
                 serviceAccountName: amq-broker-operator
                 containers:
                   - name: amq-broker-operator
-                    # image: registry.redhat.io/amq7/amq-broker-rhel7-operator:7.8-11
+                    # image: registry.redhat.io/amq7/amq-broker-rhel7-operator:7.8-12
                     image: registry.redhat.io/amq7/amq-broker-rhel7-operator@sha256:f8e505d39e76f731408bec76ab0419440572d9f42a4d02204bcce9591b5f7229
                     args:
                       # Explicitly set the logging level.
