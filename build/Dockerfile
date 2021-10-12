@@ -35,6 +35,7 @@ RUN mkdir -p /manifests/0.18.0
 RUN mkdir -p /manifests/0.19.0
 RUN mkdir -p /manifests/7.8.1-opr-3
 RUN mkdir -p /manifests/7.8.2-opr-1
+RUN mkdir -p /manifests/7.8.2-opr-2
 RUN mkdir -p /manifests/7.8.2-opr-3
 RUN mkdir -p /manifests/7.8.3-opr-1
 
@@ -51,6 +52,7 @@ COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-opera
 COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/deploy/olm-catalog/${BROKER_NAME}-operator/0.19.0/ /manifests/0.19.0
 COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/deploy/olm-catalog/${BROKER_NAME}-operator/7.8.1-opr-3/ /manifests/7.8.1-opr-3
 COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/deploy/olm-catalog/${BROKER_NAME}-operator/7.8.2-opr-1/ /manifests/7.8.2-opr-1
+COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/deploy/olm-catalog/${BROKER_NAME}-operator/7.8.2-opr-2/ /manifests/7.8.2-opr-2
 COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/deploy/olm-catalog/${BROKER_NAME}-operator/7.8.2-opr-3/ /manifests/7.8.2-opr-3
 COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/deploy/olm-catalog/${BROKER_NAME}-operator/7.8.3-opr-1/ /manifests/7.8.3-opr-1
 
@@ -61,6 +63,7 @@ COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-opera
 COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/deploy/crds/*v2alpha1* /manifests/0.19.0/
 COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/deploy/crds/*v2alpha1* /manifests/7.8.1-opr-3/
 COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/deploy/crds/*v2alpha1* /manifests/7.8.2-opr-1/
+COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/deploy/crds/*v2alpha1* /manifests/7.8.2-opr-2/
 COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/deploy/crds/*v2alpha1* /manifests/7.8.2-opr-3/
 COPY --from=build-env /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/deploy/crds/*v2alpha1* /manifests/7.8.3-opr-1/
 
