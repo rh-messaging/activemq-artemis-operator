@@ -61,7 +61,7 @@ metadata:
               "localOnly": "true"
           }
       }]
-      olm.properties: '[{"type": "olm.maxOpenShiftVersion", "value": "4.8"}]' 
+    olm.properties: '[{"type": "olm.maxOpenShiftVersion", "value": "4.8"}]'
 spec:
   displayName: Red Hat Integration - AMQ Broker
   description: AMQ Broker Operator provides the ability to deploy and manage stateful AMQ Broker broker clusters
