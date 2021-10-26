@@ -17,3 +17,5 @@ limitations under the License.
 package v2alpha3
 
 type ActiveMQArtemisExpansion interface{}
+
+type ActiveMQArtemisAddressExpansion interface{}

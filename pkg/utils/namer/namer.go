@@ -1,5 +1,13 @@
 package namer
 
+import (
+	"fmt"
+	"strconv"
+	"strings"
+
+	"k8s.io/apimachinery/pkg/types"
+)
+
 type NamerInterface interface {
 	Name() string
 	Base(baseName string) *NamerData
@@ -52,4 +60,40 @@ func (n *NamerData) Name() string {
 
 func CrToSS(crName string) string {
 	return crName + "-ss"
+}
+
+func SSToCr(ssName string) string {
+	return strings.TrimSuffix(ssName, "-ss")
+}
+
+// This function returns whether a pod belongs to a statefulset
+// and if so, also returns the pod's number attached to its name
+// It depends on the naming convention between a statefulset and its pods:
+// The pods always take the form <ssName>-<n>, where <ssName> is the owning
+// statefulset name and <n> is a non-negative numerical number.
+// for example if a statefulset's name is "ex-aao-ss", it's pod name should
+// be "ex-aao-ss-0", or "ex-aao-ss-1" and so on so forth.
+// Note: the statefulset and pod must be in the same namespace.
+func PodBelongsToStatefulset(pod *types.NamespacedName, ssName *types.NamespacedName) (error, bool, int) {
+
+	//first check that their namespaces must match
+	if ssName.Namespace != pod.Namespace {
+		err := fmt.Errorf("the pod and statefulset are not in the same namespace", "pod", pod.Namespace, "ss", ssName.Namespace)
+		return err, false, -1
+	}
+	//next pod's name should be prefixed with statefulset's
+	if !strings.HasPrefix(pod.Name, ssName.Name) {
+		err := fmt.Errorf("The pod's name doesn't have the statefulset's name as its prefix", "pod", pod.Name, "ss", ssName.Name)
+		return err, false, -1
+	}
+	//next try to extract the pod name's number part
+	podSerial := pod.Name[len(ssName.Name)+1:]
+	//convert to int
+	i, err := strconv.Atoi(podSerial)
+	if err != nil || i < 0 {
+		err := fmt.Errorf("failed to convert pod number", "pod", pod.Name, "ssName", ssName.Name)
+		return err, false, -1
+	}
+
+	return nil, true, i
 }

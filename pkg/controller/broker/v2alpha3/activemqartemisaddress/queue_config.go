@@ -3,6 +3,8 @@ package v2alpha3activemqartemisaddress
 import (
 	"encoding/json"
 	"strings"
+
+	brokerv2alpha3 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha3"
 )
 
 var defaultRoutingType string = "MULTICAST"
@@ -41,10 +43,10 @@ type ActiveMQArtemisQueueConfiguration struct {
 }
 
 // convert QueueConfiguration to json string
-func GetQueueConfig(instance *AddressDeployment) (string, bool, error) {
+func GetQueueConfig(addressRes *brokerv2alpha3.ActiveMQArtemisAddress) (string, bool, error) {
 	ignoreIfExists := false
-	addressSpec := instance.AddressResource.Spec
-	configSpec := instance.AddressResource.Spec.QueueConfiguration
+	addressSpec := addressRes.Spec
+	configSpec := addressRes.Spec.QueueConfiguration
 
 	if configSpec.IgnoreIfExists != nil {
 		ignoreIfExists = *configSpec.IgnoreIfExists

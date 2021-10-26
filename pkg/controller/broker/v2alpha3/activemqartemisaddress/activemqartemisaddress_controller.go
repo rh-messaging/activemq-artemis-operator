@@ -77,7 +77,7 @@ func setupAddressObserver(mgr manager.Manager, c chan types.NamespacedName) {
 		return
 	}
 
-	observer := NewAddressObserver(kubeClient, namespace, mgr.GetClient())
+	observer := NewAddressObserver(kubeClient, namespace, mgr.GetClient(), mgr.GetScheme())
 
 	if err = observer.Run(channels.AddressListeningCh); err != nil {
 		log.Error(err, "Error running controller: %s", err.Error())
@@ -217,51 +217,55 @@ func createQueue(instance *AddressDeployment, request reconcile.Request, client 
 				reqLogger.Info("Creating ActiveMQArtemisAddress artemisArray had a nil!")
 				continue
 			}
-			//Now checking if create queue or address
-			var err error
-			if instance.AddressResource.Spec.QueueName == nil || *instance.AddressResource.Spec.QueueName == "" {
-				//create address
-				_, err = a.CreateAddress(instance.AddressResource.Spec.AddressName, *instance.AddressResource.Spec.RoutingType)
-				if nil != err {
-					reqLogger.Error(err, "Creating ActiveMQArtemisAddress error for address", instance.AddressResource.Spec.AddressName)
-					break
-				} else {
-					reqLogger.Info("Created ActiveMQArtemisAddress for address " + instance.AddressResource.Spec.AddressName)
-				}
-			} else {
-				log.Info("Queue name is not empty so create queue", "name", instance.AddressResource.Spec.QueueName)
-				if instance.AddressResource.Spec.QueueConfiguration == nil {
-					routingType := "MULTICAST"
-					if instance.AddressResource.Spec.RoutingType != nil {
-						routingType = *instance.AddressResource.Spec.RoutingType
-					}
-					_, err := a.CreateQueue(instance.AddressResource.Spec.AddressName, *instance.AddressResource.Spec.QueueName, routingType)
-					if nil != err {
-						reqLogger.Error(err, "Creating ActiveMQArtemisAddress error for "+*instance.AddressResource.Spec.QueueName)
-						break
-					} else {
-						reqLogger.Info("Created ActiveMQArtemisAddress for " + *instance.AddressResource.Spec.QueueName)
-					}
-				} else {
-					//create queue using queueconfig
-					queueCfg, ignoreIfExists, err := GetQueueConfig(instance)
-					if err != nil {
-						log.Error(err, "Failed to get queue config json string")
-						break
-					}
-					_, err = a.CreateQueueFromConfig(queueCfg, ignoreIfExists)
-					if nil != err {
-						reqLogger.Error(err, "Creating ActiveMQArtemisAddress error for "+*instance.AddressResource.Spec.QueueName)
-						break
-					} else {
-						reqLogger.Info("Created ActiveMQArtemisAddress for " + *instance.AddressResource.Spec.QueueName)
-					}
-				}
-			}
+			createAddressResource(a, &instance.AddressResource)
 		}
 	}
 
 	return err
+}
+
+func createAddressResource(a *mgmt.Artemis, addressRes *brokerv2alpha3.ActiveMQArtemisAddress) {
+	//Now checking if create queue or address
+	var err error
+	if addressRes.Spec.QueueName == nil || *addressRes.Spec.QueueName == "" {
+		//create address
+		_, err = a.CreateAddress(addressRes.Spec.AddressName, *addressRes.Spec.RoutingType)
+		if nil != err {
+			log.Error(err, "Creating ActiveMQArtemisAddress error for address", addressRes.Spec.AddressName)
+			return
+		} else {
+			log.Info("Created ActiveMQArtemisAddress for address " + addressRes.Spec.AddressName)
+		}
+	} else {
+		log.Info("Queue name is not empty so create queue", "name", *addressRes.Spec.QueueName)
+		if addressRes.Spec.QueueConfiguration == nil {
+			routingType := "MULTICAST"
+			if addressRes.Spec.RoutingType != nil {
+				routingType = *addressRes.Spec.RoutingType
+			}
+			_, err := a.CreateQueue(addressRes.Spec.AddressName, *addressRes.Spec.QueueName, routingType)
+			if nil != err {
+				log.Error(err, "Creating ActiveMQArtemisAddress error for "+*addressRes.Spec.QueueName)
+				return
+			} else {
+				log.Info("Created ActiveMQArtemisAddress for " + *addressRes.Spec.QueueName)
+			}
+		} else {
+			//create queue using queueconfig
+			queueCfg, ignoreIfExists, err := GetQueueConfig(addressRes)
+			if err != nil {
+				log.Error(err, "Failed to get queue config json string")
+				return
+			}
+			_, err = a.CreateQueueFromConfig(queueCfg, ignoreIfExists)
+			if nil != err {
+				log.Error(err, "Creating ActiveMQArtemisAddress error for "+*addressRes.Spec.QueueName)
+				return
+			} else {
+				log.Info("Created ActiveMQArtemisAddress for " + *addressRes.Spec.QueueName)
+			}
+		}
+	}
 }
 
 // This method deals with deleting queues and addresses.
@@ -355,54 +359,8 @@ func getPodBrokers(instance *AddressDeployment, request reconcile.Request, clien
 				} else {
 					reqLogger.Info("Pod found", "Namespace", request.Namespace, "Name", request.Name)
 					containers := pod.Spec.Containers //get env from this
-					var jolokiaUser string
-					var jolokiaPassword string
-					var jolokiaProtocol string
 
-					userDefined := false
-					if instance.AddressResource.Spec.User != nil {
-						userDefined = true
-						jolokiaUser = *instance.AddressResource.Spec.User
-					} else {
-						jolokiaUserFromSecret := secrets.GetValueFromSecret(request.Namespace, false, false, jolokiaSecretName, "jolokiaUser", client, scheme, &instance.AddressResource)
-						if jolokiaUserFromSecret != nil {
-							userDefined = true
-							jolokiaUser = *jolokiaUserFromSecret
-						}
-					}
-					if userDefined {
-						if instance.AddressResource.Spec.Password != nil {
-							jolokiaPassword = *instance.AddressResource.Spec.Password
-						} else {
-							jolokiaPasswordFromSecret := secrets.GetValueFromSecret(request.Namespace, false, false, jolokiaSecretName, "jolokiaPassword", client, scheme, &instance.AddressResource)
-							if jolokiaPasswordFromSecret != nil {
-								jolokiaPassword = *jolokiaPasswordFromSecret
-							}
-						}
-					}
-					if len(containers) == 1 {
-						envVars := containers[0].Env
-						for _, oneVar := range envVars {
-							if !userDefined && "AMQ_USER" == oneVar.Name {
-								jolokiaUser = getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client)
-							}
-							if !userDefined && "AMQ_PASSWORD" == oneVar.Name {
-								jolokiaPassword = getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client)
-							}
-							if "AMQ_CONSOLE_ARGS" == oneVar.Name {
-								jolokiaProtocol = getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client)
-							}
-							if jolokiaUser != "" && jolokiaPassword != "" && jolokiaProtocol != "" {
-								break
-							}
-						}
-					}
-
-					if jolokiaProtocol == "" {
-						jolokiaProtocol = "http"
-					} else {
-						jolokiaProtocol = "https"
-					}
+					jolokiaUser, jolokiaPassword, jolokiaProtocol := resolveJolokiaRequestParams(request.Namespace, &instance.AddressResource, client, scheme, jolokiaSecretName, &containers, podNamespacedName, statefulset)
 
 					reqLogger.Info("New Jolokia with ", "User: ", jolokiaUser, "Protocol: ", jolokiaProtocol)
 					artemis := mgmt.GetArtemis(pod.Status.PodIP, "8161", "amq-broker", jolokiaUser, jolokiaPassword, jolokiaProtocol)
@@ -414,6 +372,67 @@ func getPodBrokers(instance *AddressDeployment, request reconcile.Request, clien
 
 	log.Info("Finally we gathered some mgmt arry", "size", len(artemisArray))
 	return artemisArray
+}
+
+func resolveJolokiaRequestParams(namespace string,
+	addressRes *brokerv2alpha3.ActiveMQArtemisAddress,
+	client client.Client,
+	scheme *runtime.Scheme,
+	jolokiaSecretName string,
+	containers *[]corev1.Container,
+	podNamespacedName types.NamespacedName,
+	statefulset *appsv1.StatefulSet) (string, string, string) {
+
+	var jolokiaUser string
+	var jolokiaPassword string
+	var jolokiaProtocol string
+
+	userDefined := false
+	if addressRes.Spec.User != nil {
+		userDefined = true
+		jolokiaUser = *addressRes.Spec.User
+	} else {
+		jolokiaUserFromSecret := secrets.GetValueFromSecret(namespace, false, false, jolokiaSecretName, "jolokiaUser", client, scheme, addressRes)
+		if jolokiaUserFromSecret != nil {
+			userDefined = true
+			jolokiaUser = *jolokiaUserFromSecret
+		}
+	}
+	if userDefined {
+		if addressRes.Spec.Password != nil {
+			jolokiaPassword = *addressRes.Spec.Password
+		} else {
+			jolokiaPasswordFromSecret := secrets.GetValueFromSecret(namespace, false, false, jolokiaSecretName, "jolokiaPassword", client, scheme, addressRes)
+			if jolokiaPasswordFromSecret != nil {
+				jolokiaPassword = *jolokiaPasswordFromSecret
+			}
+		}
+	}
+	if len(*containers) == 1 {
+		envVars := (*containers)[0].Env
+		for _, oneVar := range envVars {
+			if !userDefined && "AMQ_USER" == oneVar.Name {
+				jolokiaUser = getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client)
+			}
+			if !userDefined && "AMQ_PASSWORD" == oneVar.Name {
+				jolokiaPassword = getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client)
+			}
+			if "AMQ_CONSOLE_ARGS" == oneVar.Name {
+				jolokiaProtocol = getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client)
+			}
+			if jolokiaUser != "" && jolokiaPassword != "" && jolokiaProtocol != "" {
+				break
+			}
+		}
+	}
+
+	if jolokiaProtocol == "" {
+		jolokiaProtocol = "http"
+	} else {
+		jolokiaProtocol = "https"
+	}
+
+	return jolokiaUser, jolokiaPassword, jolokiaProtocol
 }
 
 func getEnvVarValue(envVar *corev1.EnvVar, namespace *types.NamespacedName, statefulset *appsv1.StatefulSet, client client.Client) string {
@@ -474,49 +493,47 @@ func createTargetCrNamespacedNames(namespace string, targetCrNames []string) []t
 }
 
 func GetStatefulSetNameForPod(pod *types.NamespacedName) (string, int) {
+	log.Info("Trying to find SS name for pod", "pod name", pod.Name, "pod ns", pod.Namespace)
 	for crName, addressDeployment := range namespacedNameToAddressName {
+		log.Info("checking address cr in stock", "cr", crName)
 		if crName.Namespace != pod.Namespace {
+			log.Info("this cr doesn't match pod's namespace", "cr's ns", crName.Namespace)
 			return "", -1
 		}
 		if len(addressDeployment.SsTargetNameBuilders) == 0 {
+			log.Info("this cr doesn't have target specified, it will be applied to all")
 			//deploy to all sts, need get from broker controller
 			ssNames := v2alpha5.GetDeployedStatefuleSetNames(nil)
 			if len(ssNames) == 0 {
+				log.Info("No statefulset found")
 				return "", -1
 			}
 			for _, ssName := range ssNames {
-				if ok, podSerial := podBelongsToStatefulset(pod, &ssName.Name); ok {
+				log.Info("checking if this ss belong", "ss", ssName.Name)
+				if _, ok, podSerial := namer.PodBelongsToStatefulset(pod, &ssName); ok {
+					log.Info("got a match", "ss", ssName.Name, "podSerial", podSerial)
 					return ssName.Name, podSerial
 				}
 			}
+			log.Info("no match at all")
 			return "", -1
 		}
 		//iterate and check the ss name
+		log.Info("Now processing cr with applyToCrNames")
 		for _, ssNameBuilder := range addressDeployment.SsTargetNameBuilders {
 			ssName := ssNameBuilder.Name()
-			if ok, podSerial := podBelongsToStatefulset(pod, &ssName); ok {
+			log.Info("checking one applyTo", "ss", ssName)
+			//at this point the ss name space is sure the same
+			ssNameSpace := types.NamespacedName{
+				Name:      ssName,
+				Namespace: pod.Namespace,
+			}
+			if _, ok, podSerial := namer.PodBelongsToStatefulset(pod, &ssNameSpace); ok {
+				log.Info("yes this ssName match, returning results", "ssName", ssName, "podSerial", podSerial)
 				return ssName, podSerial
 			}
 		}
 	}
+	log.Info("all through, but none")
 	return "", -1
-}
-
-func podBelongsToStatefulset(pod *types.NamespacedName, ssName *string) (bool, int) {
-	//pod name must be <ss>-<n>
-	if len(*ssName) > len(pod.Name)-2 {
-		log.Info("Original pod name too short", "pod name", pod.Name, "base", ssName)
-		return false, -1
-	}
-
-	podSerial := pod.Name[len(*ssName)+1:]
-
-	//convert to int
-	i, err := strconv.Atoi(podSerial)
-	if err != nil || i < 1 {
-		log.Error(err, "failed to convert pod name", "pod", pod)
-		return false, -1
-	}
-
-	return true, i
 }
