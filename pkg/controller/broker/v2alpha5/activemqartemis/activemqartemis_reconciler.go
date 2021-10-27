@@ -1846,16 +1846,11 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 		envVarTuneFilePath := "TUNE_PATH"
 		outputDir := initCfgRootDir + "/yacfg_etc"
 
-		compactVersionToUse := determineCompactVersionToUse(fsm.customResource)
-		yacfgProfileVersion = version.FullVersionFromCompactVersion[compactVersionToUse]
-		yacfgProfileName := version.YacfgProfileName
-
 		initCmd := "mkdir -p " + outputDir + "; echo \"" + configYaml.String() + "\" > " + outputDir +
 			"/broker.yaml; cat " + outputDir + "/broker.yaml; yacfg --profile " + yacfgProfileName + "/" +
 			yacfgProfileVersion + "/default_with_user_address_settings.yaml.jinja2  --tune " +
 			outputDir + "/broker.yaml --extra-properties '" + jsonSpecials + "' --output " + outputDir
 
-		log.Info("==debug==, initCmd: " + initCmd)
 		initCmds = append(initCmds, initCmd)
 
 		//populate args of init container
