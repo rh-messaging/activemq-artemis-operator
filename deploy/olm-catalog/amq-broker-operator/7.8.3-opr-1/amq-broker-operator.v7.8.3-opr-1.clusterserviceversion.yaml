@@ -1,7 +1,7 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: amq-broker-operator.v7.8.3-rhel8
+  name: amq-broker-operator.v7.8.3-opr-1-rhel8
   namespace: placeholder
   labels:
     operator-activemqartemis: "true"
@@ -63,15 +63,16 @@ metadata:
               "localOnly": "true"
           }
       }]
-    olm.properties: '[{"type": "olm.maxOpenShiftVersion", "value": "4.8"}]' 
+    olm.properties: '[{"type": "olm.maxOpenShiftVersion", "value": "4.8"}]'
 spec:
   displayName: Red Hat Integration - AMQ Broker for RHEL 8 (Multiarch)
   description: AMQ Broker Operator for RHEL 8 (Multiarch) provides the ability to deploy and manage stateful AMQ Broker broker clusters
   keywords:
     - activemqartemis
     - operator
-  version: 7.8.3
-  replaces: amq-broker-operator.v7.8.2-opr-3
+  version: 7.8.3-opr-1-rhel8
+  replaces: amq-broker-operator.v7.8.2-opr-3-rhel8
+
   maturity: alpha
   maintainers:
     - name: Red Hat
@@ -88,12 +89,12 @@ spec:
       mediatype: image/png
   labels:
     alm-owner-amq-broker: amq-broker-operator
-    operated-by: amq-broker-operator.v7.8.3-rhel8
+    operated-by: amq-broker-operator.v7.8.3-opr-1-rhel8
   selector:
     matchLabels:
       ActiveMQArtemis: ex-aao
       application: ex-aao-app
-      operated-by: amq-broker-operator.v7.8.3-rhel8
+      operated-by: amq-broker-operator.v7.8.3-opr-1-rhel8
   installModes:
     - type: OwnNamespace
       supported: true
@@ -146,7 +147,7 @@ spec:
             displayName: AdminPassword
             path: adminPassword
             x-descriptors:
-              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:AdminUser'
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:AdminPassword'
               - 'urn:alm:descriptor:com.tectonic.ui:password'
           - description: The version of the broker deployment.
             displayName: Version
