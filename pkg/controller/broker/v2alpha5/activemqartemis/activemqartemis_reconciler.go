@@ -1705,7 +1705,9 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 
 	terminationGracePeriodSeconds := int64(60)
 
-	pts := pods.MakePodTemplateSpec(namespacedName, selectors.LabelBuilder.Labels())
+	podLabels := getPodLabels(fsm.customResource)
+
+	pts := pods.MakePodTemplateSpec(namespacedName, podLabels)
 	Spec := corev1.PodSpec{}
 	Containers := []corev1.Container{}
 
@@ -2010,6 +2012,28 @@ func determineImageToUse(customResource *brokerv2alpha5.ActiveMQArtemis, imageTy
 	log.V(1).Info("DetermineImageToUse imageName is " + imageName)
 
 	return imageName
+}
+
+func getPodLabels(customResource *brokerv2alpha5.ActiveMQArtemis) map[string]string {
+	podLabels := make(map[string]string)
+	labels := selectors.LabelBuilder.Labels()
+	for k, v := range labels {
+		podLabels[k] = v
+	}
+
+	compactVersion := determineCompactVersionToUse(customResource)
+	fullVersion := version.FullVersionFromCompactVersion[compactVersion]
+
+	additionalLabels := pods.GetAdditionalLabels(fullVersion)
+
+	if additionalLabels != nil {
+		log.Info("Adding additional Labels", "broker version", fullVersion, "labels", additionalLabels)
+		for k, v := range additionalLabels {
+			podLabels[k] = v
+		}
+	}
+
+	return podLabels
 }
 
 func determineCompactVersionToUse(customResource *brokerv2alpha5.ActiveMQArtemis) string {

@@ -16,6 +16,13 @@ spec:
     metadata:
       labels:
         name: amq-broker-operator
+        com.company: Red_Hat
+        rht.prod_name: Red_Hat_Integration
+        rht.prod_ver: 2021.Q4
+        rht.comp: Broker_AMQ
+        rht.comp_ver: 7.9.1
+        rht.subcomp: broker-amq-operator
+        rht.subcomp_t: application
     spec:
       containers:
       - args:
