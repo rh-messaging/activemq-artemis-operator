@@ -25,6 +25,7 @@ var OperandVersionFromOperatorVersion map[string]string = map[string]string{
 	"0.19.0": "7.8.1",
 	"7.8.1":  "7.8.1",
 	"7.8.2":  "7.8.2",
+	"7.8.3":  "7.8.3",
 	"7.9.0":  "7.9.0",
 }
 var FullVersionFromMinorVersion map[string]string = map[string]string{
@@ -65,6 +66,16 @@ var MinorVersionFromFullVersion map[string]string = map[string]string{
 	"7.8.1": "81",
 	"7.8.2": "82",
 	"7.9.0": "90",
+}
+
+//The yacfg profile to use for a given full version of broker
+var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
+	"7.7.0": "7.7.0",
+	"7.8.0": "7.8.0",
+	"7.8.1": "7.8.1",
+	"7.8.2": "7.8.2",
+	"7.8.3": "7.8.2",
+	"7.9.0": "7.9.0",
 }
 
 var YacfgProfileName string = "amq_broker"

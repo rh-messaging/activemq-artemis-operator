@@ -83,7 +83,7 @@ var configCmd = "/opt/amq/bin/launch.sh"
 
 //default ApplyRule for address-settings
 var defApplyRule string = "merge_all"
-var yacfgProfileVersion = version.LatestVersion
+var yacfgProfileVersion = version.YacfgProfileVersionFromFullVersion[version.LatestVersion]
 
 type ActiveMQArtemisReconciler struct {
 	statefulSetUpdates uint32
@@ -1810,7 +1810,7 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 	var initCfgRootDir = "/init_cfg_root"
 
 	compactVersionToUse := determineCompactVersionToUse(fsm.customResource)
-	yacfgProfileVersion = version.FullVersionFromCompactVersion[compactVersionToUse]
+	yacfgProfileVersion = version.YacfgProfileVersionFromFullVersion[version.FullVersionFromCompactVersion[compactVersionToUse]]
 	yacfgProfileName := version.YacfgProfileName
 
 	//address settings
