@@ -114,7 +114,7 @@ func main() {
 		//	MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
 		//}
 	} else {
-		log.Info("Wating namespace", "namespace", watchNameSpace)
+		log.Info("Watching namespace", "namespace", watchNameSpace)
 		nsoptions.SetWatchNamespace(watchNameSpace)
 	}
 
