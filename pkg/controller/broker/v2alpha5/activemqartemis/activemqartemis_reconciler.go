@@ -182,6 +182,9 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessStatefulSet(fsm *ActiveMQArt
 				}
 			}
 		}
+		if !statefulsetRecreationRequired {
+			statefulsetRecreationRequired = checkGeneralStatefulSetUpdate(fsm, currentStatefulSet)
+		}
 		if statefulsetRecreationRequired {
 			log.Info("Recreating existing statefulset")
 			deleteErr := resources.Delete(ssNamespacedName, client, currentStatefulSet)
@@ -222,6 +225,21 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessStatefulSet(fsm *ActiveMQArt
 	requestedResources = append(requestedResources, headlessServiceDefinition)
 
 	return currentStatefulSet, firstTime
+}
+
+func checkGeneralStatefulSetUpdate(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1.StatefulSet) bool {
+	if fsm.prevCustomResource == nil || currentStatefulSet == nil {
+		return false
+	}
+	prevConsole := fsm.prevCustomResource.Spec.Console
+	currConsole := fsm.customResource.Spec.Console
+
+	if prevConsole != currConsole {
+		log.Info("Console config has changed, statefulset need update", "old", prevConsole, "new", currConsole)
+		return true
+	}
+
+	return false
 }
 
 func isClustered(customResource *brokerv2alpha5.ActiveMQArtemis) bool {

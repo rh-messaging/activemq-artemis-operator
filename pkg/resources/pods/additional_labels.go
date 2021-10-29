@@ -1,9 +1,5 @@
 package pods
 
-import (
-	"fmt"
-)
-
 var labelsFor7_9_1 map[string]string = map[string]string{
 	"com.company":   "Red_Hat",
 	"rht.prod_name": "Red_Hat_Integration",
@@ -20,7 +16,6 @@ var labelsFromVersion map[string]map[string]string = map[string]map[string]strin
 
 // the labels returned will be added to broker pod
 func GetAdditionalLabels(fullBrokerVersion string) map[string]string {
-	fmt.Printf("Getting additonal label for version: %v\n", fullBrokerVersion)
 	if labels, ok := labelsFromVersion[fullBrokerVersion]; ok {
 		return labels
 	}
