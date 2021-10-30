@@ -48,7 +48,7 @@ require (
 	github.com/prometheus/procfs v0.0.0-20190519111021-9935e8e0588d // indirect
 	github.com/sirupsen/logrus v1.6.0 // indirect
 	github.com/spf13/pflag v1.0.3
-	github.com/tidwall/sjson v1.1.1
+	github.com/tidwall/sjson v1.2.3
 	go.uber.org/atomic v1.4.0 // indirect
 	go.uber.org/zap v1.10.0 // indirect
 	golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f // indirect
