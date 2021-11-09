@@ -122,8 +122,6 @@ func (r *ActiveMQArtemisSecurityConfigHandler) processCrPasswords() *brokerv1alp
 					if user.Password == nil {
 						result.Spec.LoginModules.PropertiesLoginModules[i].Users[j].Password = r.getPassword("security-properties-"+pm.Name, user.Name)
 					}
-					//Debug only. Dont log password in final commit!
-					log.Info("==set prop login module password", "login module", pm.Name, "user", user.Name, "password", user.Password)
 				}
 			}
 		}
