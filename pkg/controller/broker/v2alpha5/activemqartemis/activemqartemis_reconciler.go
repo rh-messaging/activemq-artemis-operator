@@ -6,6 +6,8 @@ import (
 	"fmt"
 	osruntime "runtime"
 
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
+
 	"github.com/RHsyseng/operator-utils/pkg/olm"
 	"github.com/RHsyseng/operator-utils/pkg/resource"
 	"github.com/RHsyseng/operator-utils/pkg/resource/compare"
@@ -236,6 +238,13 @@ func checkGeneralStatefulSetUpdate(fsm *ActiveMQArtemisFSM, currentStatefulSet *
 
 	if prevConsole != currConsole {
 		log.Info("Console config has changed, statefulset need update", "old", prevConsole, "new", currConsole)
+		return true
+	}
+	prevResources := fsm.prevCustomResource.Spec.DeploymentPlan.Resources
+	currResources := fsm.customResource.Spec.DeploymentPlan.Resources
+
+	if !common.CompareRequiredResources(&prevResources, &currResources) {
+		log.Info("Pod resources has changed, statefulset need update", "old", prevResources, "new", currResources)
 		return true
 	}
 
