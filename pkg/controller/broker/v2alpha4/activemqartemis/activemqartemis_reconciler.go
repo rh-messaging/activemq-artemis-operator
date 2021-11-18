@@ -6,6 +6,8 @@ import (
 	"fmt"
 	osruntime "runtime"
 
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
+
 	"github.com/RHsyseng/operator-utils/pkg/olm"
 	"github.com/RHsyseng/operator-utils/pkg/resource"
 	"github.com/RHsyseng/operator-utils/pkg/resource/compare"
@@ -168,6 +170,9 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessStatefulSet(fsm *ActiveMQArt
 			log.Info("Statefulset recreation required for current operator compatibility")
 			statefulsetRecreationRequired = true
 		}
+		if !statefulsetRecreationRequired {
+			statefulsetRecreationRequired = checkGeneralStatefulSetUpdate(fsm, currentStatefulSet)
+		}
 		if statefulsetRecreationRequired {
 			log.Info("Recreating existing statefulset")
 			deleteErr := resources.Delete(ssNamespacedName, client, currentStatefulSet)
@@ -196,6 +201,22 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessStatefulSet(fsm *ActiveMQArt
 	requestedResources = append(requestedResources, pingServiceDefinition)
 
 	return currentStatefulSet, firstTime
+}
+
+func checkGeneralStatefulSetUpdate(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1.StatefulSet) bool {
+	if fsm.prevCustomResource == nil || currentStatefulSet == nil {
+		return false
+	}
+
+	prevResources := fsm.prevCustomResource.Spec.DeploymentPlan.Resources
+	currResources := fsm.customResource.Spec.DeploymentPlan.Resources
+
+	if !common.CompareRequiredResources(&prevResources, &currResources) {
+		log.Info("Pod resources has changed, statefulset need update", "old", prevResources, "new", currResources)
+		return true
+	}
+
+	return false
 }
 
 func (reconciler *ActiveMQArtemisReconciler) ProcessCredentials(customResource *brokerv2alpha4.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {

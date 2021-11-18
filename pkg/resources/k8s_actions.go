@@ -119,7 +119,7 @@ func configureExposure(owner v1.Object, client client.Client, scheme *runtime.Sc
 			reqLogger.Info(namespacedName.Name + " " + "not found")
 			serviceIsNotFound = true
 		} else {
-			reqLogger.Error(err, "Unexpected error occurred in retrieve", objectDefinition)
+			reqLogger.Error(err, "Unexpected error occurred in retrieve", "object def", objectDefinition)
 		}
 	}
 
