@@ -257,8 +257,16 @@ func createAddressResource(a *mgmt.Artemis, addressRes *brokerv2alpha3.ActiveMQA
 				log.Error(err, "Failed to get queue config json string")
 				return
 			}
-			_, err = a.CreateQueueFromConfig(queueCfg, ignoreIfExists)
+			respData, err := a.CreateQueueFromConfig(queueCfg, ignoreIfExists)
 			if nil != err {
+				if mgmt.GetCreationError(respData) == mgmt.QUEUE_ALREADY_EXISTS {
+					log.Info("The queue already exists, updating", "queue", queueCfg)
+					respData, err := a.UpdateQueue(queueCfg)
+					if err != nil {
+						log.Error(err, "Failed to update queue", "details", respData)
+					}
+					return
+				}
 				log.Error(err, "Creating ActiveMQArtemisAddress error for "+*addressRes.Spec.QueueName)
 				return
 			} else {
