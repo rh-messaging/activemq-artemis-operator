@@ -1171,7 +1171,7 @@ spec:
             storage: true
         kind: ActiveMQArtemisSecurity
         description: Security configuration for the broker
-        diaplayName: ActiveMQ Artemis Security
+        diaplayName: AMQ Broker Security
         specDescriptors:
           - description: Name for PropertiesLoginModule
             displayName: Login Module Name
