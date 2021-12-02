@@ -32,8 +32,7 @@ func (c *FakeBrokerV2alpha5) ActiveMQArtemises(namespace string) v2alpha5.Active
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeBrok
-) RESTClient() rest.Interface {
+func (c *FakeBrokerV2alpha5) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
 }
