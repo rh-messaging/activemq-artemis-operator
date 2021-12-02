@@ -31,7 +31,6 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	BrokerV1alpha1() brokerv1alpha1.BrokerV1alpha1Interface
 	BrokerV2alpha1() brokerv2alpha1.BrokerV2alpha1Interface
 	BrokerV2alpha2() brokerv2alpha2.BrokerV2alpha2Interface
 	BrokerV2alpha3() brokerv2alpha3.BrokerV2alpha3Interface
