@@ -17,30 +17,22 @@ limitations under the License.
 package fake
 
 import (
-	v2alpha1 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha1"
+	v1alpha1 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )
 
-type FakeBrokerV2alpha1 struct {
+type FakeBrokerV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeBrokerV2alpha1) ActiveMQArtemises(namespace string) v2alpha1.ActiveMQArtemisInterface {
-	return &FakeActiveMQArtemises{c, namespace}
-}
-
-func (c *FakeBrokerV2alpha1) ActiveMQArtemisAddresses(namespace string) v2alpha1.ActiveMQArtemisAddressInterface {
-	return &FakeActiveMQArtemisAddresses{c, namespace}
-}
-
-func (c *FakeBrokerV2alpha1) ActiveMQArtemisScaledowns(namespace string) v2alpha1.ActiveMQArtemisScaledownInterface {
-	return &FakeActiveMQArtemisScaledowns{c, namespace}
+func (c *FakeBrokerV1alpha1) ActiveMQArtemisSecurities(namespace string) v1alpha1.ActiveMQArtemisSecurityInterface {
+	return &FakeActiveMQArtemisSecurities{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeBrokerV2alpha1) RESTClient() rest.Interface {
+func (c *FakeBrokerV1alpha1) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
 }
