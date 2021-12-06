@@ -26,7 +26,7 @@ RUN /opt/rh/go-toolset-1.13/root/usr/bin/go get github.com/go-delve/delve/cmd/dl
 RUN /opt/rh/go-toolset-1.13/root/usr/bin/go build -gcflags \"all=-N\" -v -o /tmp/activemq-artemis-operator/${BROKER_NAME}-operator /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/cmd/manager
 
 
-FROM registry.access.redhat.com/ubi8:8.4-211 AS base-env
+FROM registry.access.redhat.com/ubi8:8.5-200 AS base-env
 
 ENV BROKER_NAME=amq-broker
 ENV OPERATOR=/home/${BROKER_NAME}-operator/bin/${BROKER_NAME}-operator
