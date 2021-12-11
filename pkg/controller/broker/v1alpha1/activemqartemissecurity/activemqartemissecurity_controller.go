@@ -35,6 +35,11 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
+	noCacheClient, err := client.New(mgr.GetConfig(), client.Options{})
+	if err == nil {
+		return &ReconcileActiveMQArtemisSecurity{client: noCacheClient, scheme: mgr.GetScheme()}
+	}
+	log.Info("Using manager's client")
 	return &ReconcileActiveMQArtemisSecurity{client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
