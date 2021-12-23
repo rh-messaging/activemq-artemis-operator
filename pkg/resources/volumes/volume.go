@@ -7,9 +7,6 @@ import (
 
 var log = logf.Log.WithName("package volumes")
 
-// TODO: Remove this ugly hack
-var GLOBAL_DATA_PATH string
-
 //func MakeVolumeMounts(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.VolumeMount {
 //
 //	volumeMounts := []corev1.VolumeMount{}
@@ -149,12 +146,12 @@ func MakePersistentVolume(customResourceName string) []corev1.Volume {
 }
 
 //func makePersistentVolumeMount(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.VolumeMount {
-func MakePersistentVolumeMount(customResourceName string) []corev1.VolumeMount {
+func MakePersistentVolumeMount(customResourceName string, mountPath string) []corev1.VolumeMount {
 
 	volumeMounts := []corev1.VolumeMount{
 		{
 			Name:      customResourceName,
-			MountPath: GLOBAL_DATA_PATH,
+			MountPath: mountPath,
 			ReadOnly:  false,
 		},
 	}

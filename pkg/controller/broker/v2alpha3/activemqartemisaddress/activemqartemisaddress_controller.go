@@ -13,7 +13,10 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/channels"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/lsrcrs"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -36,7 +39,7 @@ var log = logf.Log.WithName("controller_v2alpha3activemqartemisaddress")
 type AddressDeployment struct {
 	AddressResource brokerv2alpha3.ActiveMQArtemisAddress
 	//a 0-len array means all statefulsets
-	SsTargetNameBuilders []namer.NamerData
+	SsTargetNameBuilders []SSInfoData
 }
 
 var namespacedNameToAddressName = make(map[types.NamespacedName]AddressDeployment)
@@ -141,58 +144,88 @@ func (r *ReconcileActiveMQArtemisAddress) Reconcile(request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
+	addressInstance, lookupSucceeded := namespacedNameToAddressName[request.NamespacedName]
 	// Fetch the ActiveMQArtemisAddress instance
 	instance := &brokerv2alpha3.ActiveMQArtemisAddress{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
-		// Delete action
-		addressInstance, lookupSucceeded := namespacedNameToAddressName[request.NamespacedName]
-
-		if lookupSucceeded {
-			if addressInstance.AddressResource.Spec.RemoveFromBrokerOnDelete {
-				err = deleteQueue(&addressInstance, request, r.client, r.scheme)
-			} else {
-				log.Info("Not to delete address", "address", addressInstance)
-			}
-			delete(namespacedNameToAddressName, request.NamespacedName)
-		}
 		if errors.IsNotFound(err) {
+			// Delete action
+			if lookupSucceeded {
+				if addressInstance.AddressResource.Spec.RemoveFromBrokerOnDelete {
+					deleteQueue(&addressInstance, request, r.client, r.scheme)
+				} else {
+					log.Info("Not to delete address", "address", addressInstance)
+				}
+				delete(namespacedNameToAddressName, request.NamespacedName)
+				lsrcrs.DeleteLastSuccessfulReconciledCR(request.NamespacedName, "address", getLabels(&addressInstance.AddressResource), r.client)
+			}
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
 			return reconcile.Result{}, nil
 		}
+		log.Error(err, "Requeue the request for error")
+		return reconcile.Result{}, err
+	}
 
-		if err != nil {
-			log.Error(err, "Requeue the request for error")
-			return reconcile.Result{}, err
+	if !lookupSucceeded {
+		//check stored cr
+		if existingCr := lsrcrs.RetrieveLastSuccessfulReconciledCR(request.NamespacedName, "address", r.client, getLabels(instance)); existingCr != nil {
+			//compare resource version
+			if existingCr.Checksum == instance.ResourceVersion {
+				log.V(1).Info("The incoming address CR is identical to stored CR, don't do reconcile")
+				return reconcile.Result{}, nil
+			}
 		}
-	} else {
-		addressDeployment := AddressDeployment{
-			AddressResource:      *instance,
-			SsTargetNameBuilders: createNameBuilders(instance),
+	}
+
+	addressDeployment := AddressDeployment{
+		AddressResource:      *instance,
+		SsTargetNameBuilders: createNameBuilders(instance),
+	}
+	err = createQueue(&addressDeployment, request, r.client, r.scheme)
+	if nil == err {
+		namespacedNameToAddressName[request.NamespacedName] = addressDeployment
+		crstr, merr := common.ToJson(instance)
+		if merr != nil {
+			log.Error(merr, "failed to marshal cr")
 		}
-		err = createQueue(&addressDeployment, request, r.client, r.scheme)
-		if nil == err {
-			namespacedNameToAddressName[request.NamespacedName] = addressDeployment
-		}
+		lsrcrs.StoreLastSuccessfulReconciledCR(instance, instance.Name, instance.Namespace, "address", crstr, "", instance.ResourceVersion, getLabels(instance), r.client, r.scheme)
 	}
 
 	return reconcile.Result{}, nil
 }
 
-func createStatefulSetNameBuilder(crName string) namer.NamerData {
-	ssNameBuilder := namer.NamerData{}
-	ssNameBuilder.Base(crName).Suffix("ss").Generate()
-	return ssNameBuilder
+func getLabels(cr *brokerv2alpha3.ActiveMQArtemisAddress) map[string]string {
+	labelBuilder := selectors.LabelerData{}
+	labelBuilder.Base(cr.Name).Suffix("addr").Generate()
+	return labelBuilder.Labels()
 }
 
-func createNameBuilders(instance *brokerv2alpha3.ActiveMQArtemisAddress) []namer.NamerData {
-	var nameBuilders []namer.NamerData = nil
+type SSInfoData struct {
+	NameBuilder namer.NamerData
+	Labels      map[string]string
+}
+
+func createStatefulSetNameBuilder(crName string) SSInfoData {
+	ssNameBuilder := namer.NamerData{}
+	ssNameBuilder.Base(crName).Suffix("ss").Generate()
+	ssLabelData := selectors.LabelerData{}
+	ssLabelData.Base(crName).Suffix("app").Generate()
+
+	return SSInfoData{
+		NameBuilder: ssNameBuilder,
+		Labels:      ssLabelData.Labels(),
+	}
+}
+
+func createNameBuilders(instance *brokerv2alpha3.ActiveMQArtemisAddress) []SSInfoData {
+	var nameBuilders []SSInfoData = nil
 	for _, crName := range instance.Spec.ApplyToCrNames {
 		if crName != "*" {
 			builder := createStatefulSetNameBuilder(crName)
-			log.Info("created a new name builder", "builder", builder, "buldername", builder.Name())
+			log.Info("created a new name builder", "builder", builder, "buldername", builder.NameBuilder.Name())
 			nameBuilders = append(nameBuilders, builder)
 			log.Info("added one builder for "+crName, "builders", nameBuilders, "len", len(nameBuilders))
 		} else {
@@ -332,18 +365,18 @@ func getPodBrokers(instance *AddressDeployment, request reconcile.Request, clien
 
 	log.Info("target Cr names", "result", targetCrNamespacedNames)
 
-	var ssNames []types.NamespacedName = v2alpha5.GetDeployedStatefuleSetNames(targetCrNamespacedNames)
+	ssInfos := v2alpha5.GetDeployedStatefuleSetNames(targetCrNamespacedNames)
 
-	log.Info("got taget ssNames from broker controller", "ssNames", ssNames)
+	log.Info("got taget ssNames from broker controller", "ssInfos", ssInfos)
 
-	for n, ssNamespacedName := range ssNames {
-		log.Info("Now retrieve ss", "order", n, "ssName", ssNamespacedName)
-		statefulset, err := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, client)
+	for n, info := range ssInfos {
+		log.Info("Now retrieve ss", "order", n, "ssName", info.NamespacedName)
+		statefulset, err := ss.RetrieveStatefulSet(info.NamespacedName.Name, info.NamespacedName, info.Labels, client)
 		if nil != err {
 			reqLogger.Error(err, "error retriving ss")
-			reqLogger.Info("Statefulset: " + ssNamespacedName.Name + " not found")
+			reqLogger.Info("Statefulset: " + info.NamespacedName.Name + " not found")
 		} else {
-			reqLogger.Info("Statefulset: " + ssNamespacedName.Name + " found")
+			reqLogger.Info("Statefulset: " + info.NamespacedName.Name + " found")
 			pod := &corev1.Pod{}
 			podNamespacedName := types.NamespacedName{
 				Name:      statefulset.Name + "-0",
@@ -368,7 +401,7 @@ func getPodBrokers(instance *AddressDeployment, request reconcile.Request, clien
 					reqLogger.Info("Pod found", "Namespace", request.Namespace, "Name", request.Name)
 					containers := pod.Spec.Containers //get env from this
 
-					jolokiaUser, jolokiaPassword, jolokiaProtocol := resolveJolokiaRequestParams(request.Namespace, &instance.AddressResource, client, scheme, jolokiaSecretName, &containers, podNamespacedName, statefulset)
+					jolokiaUser, jolokiaPassword, jolokiaProtocol := resolveJolokiaRequestParams(request.Namespace, &instance.AddressResource, client, scheme, jolokiaSecretName, &containers, podNamespacedName, statefulset, info.Labels)
 
 					reqLogger.Info("New Jolokia with ", "User: ", jolokiaUser, "Protocol: ", jolokiaProtocol)
 					artemis := mgmt.GetArtemis(pod.Status.PodIP, "8161", "amq-broker", jolokiaUser, jolokiaPassword, jolokiaProtocol)
@@ -389,7 +422,8 @@ func resolveJolokiaRequestParams(namespace string,
 	jolokiaSecretName string,
 	containers *[]corev1.Container,
 	podNamespacedName types.NamespacedName,
-	statefulset *appsv1.StatefulSet) (string, string, string) {
+	statefulset *appsv1.StatefulSet,
+	labels map[string]string) (string, string, string) {
 
 	var jolokiaUser string
 	var jolokiaPassword string
@@ -400,7 +434,7 @@ func resolveJolokiaRequestParams(namespace string,
 		userDefined = true
 		jolokiaUser = *addressRes.Spec.User
 	} else {
-		jolokiaUserFromSecret := secrets.GetValueFromSecret(namespace, false, false, jolokiaSecretName, "jolokiaUser", client, scheme, addressRes)
+		jolokiaUserFromSecret := secrets.GetValueFromSecret(namespace, false, false, jolokiaSecretName, "jolokiaUser", labels, client, scheme, addressRes)
 		if jolokiaUserFromSecret != nil {
 			userDefined = true
 			jolokiaUser = *jolokiaUserFromSecret
@@ -410,7 +444,7 @@ func resolveJolokiaRequestParams(namespace string,
 		if addressRes.Spec.Password != nil {
 			jolokiaPassword = *addressRes.Spec.Password
 		} else {
-			jolokiaPasswordFromSecret := secrets.GetValueFromSecret(namespace, false, false, jolokiaSecretName, "jolokiaPassword", client, scheme, addressRes)
+			jolokiaPasswordFromSecret := secrets.GetValueFromSecret(namespace, false, false, jolokiaSecretName, "jolokiaPassword", labels, client, scheme, addressRes)
 			if jolokiaPasswordFromSecret != nil {
 				jolokiaPassword = *jolokiaPasswordFromSecret
 			}
@@ -420,13 +454,13 @@ func resolveJolokiaRequestParams(namespace string,
 		envVars := (*containers)[0].Env
 		for _, oneVar := range envVars {
 			if !userDefined && "AMQ_USER" == oneVar.Name {
-				jolokiaUser = getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client)
+				jolokiaUser = getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client, labels)
 			}
 			if !userDefined && "AMQ_PASSWORD" == oneVar.Name {
-				jolokiaPassword = getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client)
+				jolokiaPassword = getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client, labels)
 			}
 			if "AMQ_CONSOLE_ARGS" == oneVar.Name {
-				jolokiaProtocol = getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client)
+				jolokiaProtocol = getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client, labels)
 			}
 			if jolokiaUser != "" && jolokiaPassword != "" && jolokiaProtocol != "" {
 				break
@@ -443,17 +477,17 @@ func resolveJolokiaRequestParams(namespace string,
 	return jolokiaUser, jolokiaPassword, jolokiaProtocol
 }
 
-func getEnvVarValue(envVar *corev1.EnvVar, namespace *types.NamespacedName, statefulset *appsv1.StatefulSet, client client.Client) string {
+func getEnvVarValue(envVar *corev1.EnvVar, namespace *types.NamespacedName, statefulset *appsv1.StatefulSet, client client.Client, labels map[string]string) string {
 	var result string
 	if envVar.Value == "" {
-		result = getEnvVarValueFromSecret(envVar.Name, envVar.ValueFrom, namespace, statefulset, client)
+		result = getEnvVarValueFromSecret(envVar.Name, envVar.ValueFrom, namespace, statefulset, client, labels)
 	} else {
 		result = envVar.Value
 	}
 	return result
 }
 
-func getEnvVarValueFromSecret(envName string, varSource *corev1.EnvVarSource, namespace *types.NamespacedName, statefulset *appsv1.StatefulSet, client client.Client) string {
+func getEnvVarValueFromSecret(envName string, varSource *corev1.EnvVarSource, namespace *types.NamespacedName, statefulset *appsv1.StatefulSet, client client.Client, labels map[string]string) string {
 
 	reqLogger := log.WithValues("Namespace", namespace.Name, "StatefulSet", statefulset.Name)
 
@@ -470,7 +504,7 @@ func getEnvVarValueFromSecret(envName string, varSource *corev1.EnvVarSource, na
 	stringDataMap := map[string]string{
 		envName: "",
 	}
-	theSecret := secrets.NewSecret(namespacedName, secretName, stringDataMap)
+	theSecret := secrets.NewSecret(namespacedName, secretName, stringDataMap, labels)
 	var err error = nil
 	if err = resources.Retrieve(namespacedName, client, theSecret); err != nil {
 		if errors.IsNotFound(err) {
@@ -500,36 +534,36 @@ func createTargetCrNamespacedNames(namespace string, targetCrNames []string) []t
 	return result
 }
 
-func GetStatefulSetNameForPod(pod *types.NamespacedName) (string, int) {
+func GetStatefulSetNameForPod(pod *types.NamespacedName) (string, int, map[string]string) {
 	log.Info("Trying to find SS name for pod", "pod name", pod.Name, "pod ns", pod.Namespace)
 	for crName, addressDeployment := range namespacedNameToAddressName {
 		log.Info("checking address cr in stock", "cr", crName)
 		if crName.Namespace != pod.Namespace {
 			log.Info("this cr doesn't match pod's namespace", "cr's ns", crName.Namespace)
-			return "", -1
+			return "", -1, nil
 		}
 		if len(addressDeployment.SsTargetNameBuilders) == 0 {
 			log.Info("this cr doesn't have target specified, it will be applied to all")
 			//deploy to all sts, need get from broker controller
-			ssNames := v2alpha5.GetDeployedStatefuleSetNames(nil)
-			if len(ssNames) == 0 {
+			ssInfos := v2alpha5.GetDeployedStatefuleSetNames(nil)
+			if len(ssInfos) == 0 {
 				log.Info("No statefulset found")
-				return "", -1
+				return "", -1, nil
 			}
-			for _, ssName := range ssNames {
-				log.Info("checking if this ss belong", "ss", ssName.Name)
-				if _, ok, podSerial := namer.PodBelongsToStatefulset(pod, &ssName); ok {
-					log.Info("got a match", "ss", ssName.Name, "podSerial", podSerial)
-					return ssName.Name, podSerial
+			for _, info := range ssInfos {
+				log.Info("checking if this ss belong", "ss", info.NamespacedName.Name)
+				if _, ok, podSerial := namer.PodBelongsToStatefulset(pod, &info.NamespacedName); ok {
+					log.Info("got a match", "ss", info.NamespacedName.Name, "podSerial", podSerial)
+					return info.NamespacedName.Name, podSerial, info.Labels
 				}
 			}
 			log.Info("no match at all")
-			return "", -1
+			return "", -1, nil
 		}
 		//iterate and check the ss name
 		log.Info("Now processing cr with applyToCrNames")
 		for _, ssNameBuilder := range addressDeployment.SsTargetNameBuilders {
-			ssName := ssNameBuilder.Name()
+			ssName := ssNameBuilder.NameBuilder.Name()
 			log.Info("checking one applyTo", "ss", ssName)
 			//at this point the ss name space is sure the same
 			ssNameSpace := types.NamespacedName{
@@ -538,10 +572,10 @@ func GetStatefulSetNameForPod(pod *types.NamespacedName) (string, int) {
 			}
 			if _, ok, podSerial := namer.PodBelongsToStatefulset(pod, &ssNameSpace); ok {
 				log.Info("yes this ssName match, returning results", "ssName", ssName, "podSerial", podSerial)
-				return ssName, podSerial
+				return ssName, podSerial, ssNameBuilder.Labels
 			}
 		}
 	}
 	log.Info("all through, but none")
-	return "", -1
+	return "", -1, nil
 }

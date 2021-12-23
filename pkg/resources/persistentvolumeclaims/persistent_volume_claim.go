@@ -1,7 +1,6 @@
 package persistentvolumeclaims
 
 import (
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -11,7 +10,7 @@ import (
 
 var log = logf.Log.WithName("package persistentvolumeclaims")
 
-func NewPersistentVolumeClaimForCR(namespacedName types.NamespacedName) *corev1.PersistentVolumeClaim {
+func NewPersistentVolumeClaimForCR(namespacedName types.NamespacedName, labels map[string]string) *corev1.PersistentVolumeClaim {
 
 	pvc := &corev1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
@@ -20,7 +19,7 @@ func NewPersistentVolumeClaimForCR(namespacedName types.NamespacedName) *corev1.
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: nil,
-			Labels:      selectors.LabelBuilder.Labels(),
+			Labels:      labels,
 			Name:        namespacedName.Name,
 			Namespace:   namespacedName.Namespace,
 		},
@@ -37,7 +36,7 @@ func NewPersistentVolumeClaimForCR(namespacedName types.NamespacedName) *corev1.
 	return pvc
 }
 
-func NewPersistentVolumeClaimWithCapacity(namespacedName types.NamespacedName, capacity string) *corev1.PersistentVolumeClaim {
+func NewPersistentVolumeClaimWithCapacity(namespacedName types.NamespacedName, capacity string, labels map[string]string) *corev1.PersistentVolumeClaim {
 
 	pvc := &corev1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
@@ -46,7 +45,7 @@ func NewPersistentVolumeClaimWithCapacity(namespacedName types.NamespacedName, c
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: nil,
-			Labels:      selectors.LabelBuilder.Labels(),
+			Labels:      labels,
 			Name:        namespacedName.Name,
 			Namespace:   namespacedName.Namespace,
 		},

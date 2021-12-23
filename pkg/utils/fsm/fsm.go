@@ -1,5 +1,9 @@
 package fsm
 
+import logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+
+var log = logf.Log.WithName("FSM")
+
 type IState interface {
 	ID() int
 	Enter(previousStateID int) error
@@ -34,6 +38,7 @@ type IMachine interface {
 	Update() (error, int)
 	Transition() error
 	Exit() error
+	SetCurrentState(state IState)
 }
 
 type Machine struct {
@@ -47,6 +52,18 @@ type Machine struct {
 	currentState    IState
 }
 
+func CreateMachine(currentID int, nextID int, prevID int, numStats int, isActive bool) *Machine {
+	m := Machine{
+		currentStateID:  currentID,
+		nextStateID:     nextID,
+		previousStateID: prevID,
+		numStates:       numStats,
+		active:          isActive,
+		states:          make([]*IState, 0, 10),
+	}
+	return &m
+}
+
 func MakeMachine() Machine {
 	return Machine{
 		states: make([]*IState, 0, 10),
@@ -56,6 +73,39 @@ func MakeMachine() Machine {
 func NewMachine() *Machine {
 	m := MakeMachine()
 	return &m
+}
+
+func (m *Machine) SetCurrentState(state IState) {
+	m.currentState = state
+}
+
+func (m *Machine) GetCurrentStateID() int {
+	return m.currentStateID
+}
+
+func (m *Machine) GetNextStateID() int {
+	return m.nextStateID
+}
+
+func (m *Machine) GetPreviousStateID() int {
+	return m.previousStateID
+}
+
+func (m *Machine) GetNumStates() int {
+	return m.numStates
+}
+
+func (m *Machine) GetActive() bool {
+	return m.active
+}
+
+func (m *Machine) GetState(stateID int) *IState {
+	for _, state := range m.states {
+		if (*state).ID() == stateID {
+			return state
+		}
+	}
+	return nil
 }
 
 func (m *Machine) Add(s *IState) {
@@ -83,6 +133,13 @@ func (m *Machine) Enter(startStateID int) error {
 	m.currentState = *m.states[m.currentStateID]
 	err := m.currentState.Enter(m.previousStateID)
 	return err
+}
+
+func (m *Machine) GetIDCurrentState() int {
+	if m.currentState != nil {
+		return m.currentState.ID()
+	}
+	return -1
 }
 
 func (m *Machine) Update() (error, int) {

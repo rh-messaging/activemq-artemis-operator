@@ -1,6 +1,8 @@
 package common
 
 import (
+	"encoding/json"
+
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -35,4 +37,16 @@ func CompareRequiredResources(res1 *corev1.ResourceRequirements, res2 *corev1.Re
 		return false
 	}
 	return true
+}
+
+func ToJson(obj interface{}) (string, error) {
+	bytes, err := json.Marshal(obj)
+	if err == nil {
+		return string(bytes), nil
+	}
+	return "", err
+}
+
+func FromJson(jsonStr *string, obj interface{}) error {
+	return json.Unmarshal([]byte(*jsonStr), obj)
 }

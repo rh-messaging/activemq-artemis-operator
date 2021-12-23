@@ -4,7 +4,6 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/random"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,7 +37,7 @@ func MakeStringDataMap(keyName string, valueName string, key string, value strin
 }
 
 //func MakeSecret(customResource *brokerv2alpha1.ActiveMQArtemis, secretName string, stringData map[string]string) corev1.Secret {
-func MakeSecret(namespacedName types.NamespacedName, secretName string, stringData map[string]string) corev1.Secret {
+func MakeSecret(namespacedName types.NamespacedName, secretName string, stringData map[string]string, labels map[string]string) corev1.Secret {
 
 	secretDefinition := corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
@@ -46,7 +45,7 @@ func MakeSecret(namespacedName types.NamespacedName, secretName string, stringDa
 			Kind:       "Secret",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:    selectors.LabelBuilder.Labels(),
+			Labels:    labels,
 			Name:      secretName,
 			Namespace: namespacedName.Namespace,
 		},
@@ -57,29 +56,71 @@ func MakeSecret(namespacedName types.NamespacedName, secretName string, stringDa
 }
 
 //func NewSecret(customResource *brokerv2alpha1.ActiveMQArtemis, secretName string, stringData map[string]string) *corev1.Secret {
-func NewSecret(namespacedName types.NamespacedName, secretName string, stringData map[string]string) *corev1.Secret {
+func NewSecret(namespacedName types.NamespacedName, secretName string, stringData map[string]string, labels map[string]string) *corev1.Secret {
 
-	secretDefinition := MakeSecret(namespacedName, secretName, stringData)
+	secretDefinition := MakeSecret(namespacedName, secretName, stringData, labels)
 
 	return &secretDefinition
 }
 
-func Create(owner metav1.Object, namespacedName types.NamespacedName, stringDataMap map[string]string, client client.Client, scheme *runtime.Scheme) *corev1.Secret {
+func CreateOrUpdate(owner metav1.Object, namespacedName types.NamespacedName, stringDataMap map[string]string, labels map[string]string, client client.Client, scheme *runtime.Scheme) error {
 
 	var err error = nil
-	secretDefinition := NewSecret(namespacedName, namespacedName.Name, stringDataMap)
+	secretDefinition := NewSecret(namespacedName, namespacedName.Name, stringDataMap, labels)
 
 	if err = resources.Retrieve(namespacedName, client, secretDefinition); err != nil {
 		if errors.IsNotFound(err) {
 			err = resources.Create(owner, namespacedName, client, scheme, secretDefinition)
+			if err != nil {
+				log.Error(err, "failed to create secret", "secret", namespacedName)
+			}
+		} else {
+			log.Error(err, "Error retrieving secret", "secret", namespacedName.Name)
+		}
+	} else {
+		//Update
+		secretDefinition = NewSecret(namespacedName, namespacedName.Name, stringDataMap, labels)
+		if err = resources.Update(namespacedName, client, secretDefinition); err != nil {
+			log.Error(err, "Failed to update secret", "secret", namespacedName.Name)
+		}
+	}
+
+	return err
+}
+
+func Create(owner metav1.Object, namespacedName types.NamespacedName, stringDataMap map[string]string, labels map[string]string, client client.Client, scheme *runtime.Scheme) *corev1.Secret {
+
+	var err error = nil
+	secretDefinition := NewSecret(namespacedName, namespacedName.Name, stringDataMap, labels)
+
+	if err = resources.Retrieve(namespacedName, client, secretDefinition); err != nil {
+		if errors.IsNotFound(err) {
+			err = resources.Create(owner, namespacedName, client, scheme, secretDefinition)
+			if err != nil {
+				log.Error(err, "failed to create secret", "secret", namespacedName)
+			}
 		}
 	}
 
 	return secretDefinition
 }
 
+func Delete(namespacedName types.NamespacedName, stringDataMap map[string]string, labels map[string]string, client client.Client) {
+	secretDefinition := NewSecret(namespacedName, namespacedName.Name, stringDataMap, labels)
+	resources.Delete(namespacedName, client, secretDefinition)
+}
+
+func RetriveSecret(namespacedName types.NamespacedName, secretName string, labels map[string]string, client client.Client) (*corev1.Secret, error) {
+	stringData := make(map[string]string)
+	secretDefinition := MakeSecret(namespacedName, secretName, stringData, labels)
+	if err := resources.Retrieve(namespacedName, client, &secretDefinition); err != nil {
+		return nil, err
+	}
+	return &secretDefinition, nil
+}
+
 func GetValueFromSecret(namespace string, autoCreateSecret bool, autoGenValue bool,
-	secretName string, key string, client client.Client, scheme *runtime.Scheme, owner metav1.Object) *string {
+	secretName string, key string, labels map[string]string, client client.Client, scheme *runtime.Scheme, owner metav1.Object) *string {
 	//check if the secret exists.
 	namespacedName := types.NamespacedName{
 		Name:      secretName,
@@ -88,7 +129,7 @@ func GetValueFromSecret(namespace string, autoCreateSecret bool, autoGenValue bo
 	// Attempt to retrieve the secret
 	stringDataMap := make(map[string]string)
 
-	secretDefinition := NewSecret(namespacedName, secretName, stringDataMap)
+	secretDefinition := NewSecret(namespacedName, secretName, stringDataMap, labels)
 
 	if err := resources.Retrieve(namespacedName, client, secretDefinition); err != nil {
 		if errors.IsNotFound(err) {

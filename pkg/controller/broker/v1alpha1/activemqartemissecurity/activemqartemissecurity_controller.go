@@ -8,7 +8,10 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/lsrcrs"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/random"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -82,6 +85,8 @@ func (r *ReconcileActiveMQArtemisSecurity) Reconcile(request reconcile.Request) 
 			v2alpha5.RemoveBrokerConfigHandler(request.NamespacedName)
 			// Setting err to nil to prevent requeue
 			err = nil
+			//clean the CR
+			lsrcrs.DeleteLastSuccessfulReconciledCR(request.NamespacedName, "security", getLabels(instance), r.client)
 		} else {
 			log.Error(err, "Reconcile errored thats not IsNotFound, requeuing request", "Request Namespace", request.Namespace, "Request Name", request.Name)
 		}
@@ -89,12 +94,35 @@ func (r *ReconcileActiveMQArtemisSecurity) Reconcile(request reconcile.Request) 
 		return reconcile.Result{}, err
 	}
 
-	reqLogger.Info("Fetched instance", "the instance", instance)
-	v2alpha5.AddBrokerConfigHandler(request.NamespacedName, &ActiveMQArtemisSecurityConfigHandler{
+	toReconcile := true
+	if securityHandler := v2alpha5.GetBrokerConfigHandler(request.NamespacedName); securityHandler == nil {
+		log.Info("Operator doesn't have the security handler, try retrive it from secret")
+		if existingHandler := lsrcrs.RetrieveLastSuccessfulReconciledCR(request.NamespacedName, "security", r.client, getLabels(instance)); existingHandler != nil {
+			//compare resource version
+			if existingHandler.Checksum == instance.ResourceVersion {
+				log.V(1).Info("The incoming security CR is identical to stored CR, no reconcile")
+				toReconcile = false
+			}
+		}
+	}
+
+	if err := v2alpha5.AddBrokerConfigHandler(request.NamespacedName, &ActiveMQArtemisSecurityConfigHandler{
 		instance,
 		request.NamespacedName,
 		r,
-	})
+	}, toReconcile); err != nil {
+		log.Error(err, "failed to config security cr", "request", request.NamespacedName)
+		return reconcile.Result{}, nil
+	}
+	//persist the CR
+	crstr, merr := common.ToJson(instance)
+	if merr != nil {
+		log.Error(merr, "failed to marshal cr")
+	}
+
+	lsrcrs.StoreLastSuccessfulReconciledCR(instance, instance.Name, instance.Namespace, "security",
+		crstr, "", instance.ResourceVersion, getLabels(instance), r.client, r.scheme)
+
 	return reconcile.Result{}, nil
 }
 
@@ -102,6 +130,12 @@ type ActiveMQArtemisSecurityConfigHandler struct {
 	SecurityCR     *brokerv1alpha1.ActiveMQArtemisSecurity
 	NamespacedName types.NamespacedName
 	owner          *ReconcileActiveMQArtemisSecurity
+}
+
+func getLabels(cr *brokerv1alpha1.ActiveMQArtemisSecurity) map[string]string {
+	labelBuilder := selectors.LabelerData{}
+	labelBuilder.Base(cr.Name).Suffix("sec").Generate()
+	return labelBuilder.Labels()
 }
 
 func (r *ActiveMQArtemisSecurityConfigHandler) IsApplicableFor(brokerNamespacedName types.NamespacedName) bool {
@@ -161,6 +195,13 @@ func (r *ActiveMQArtemisSecurityConfigHandler) processCrPasswords() *brokerv1alp
 	return result
 }
 
+func (r *ActiveMQArtemisSecurityConfigHandler) GetDefaultLabels() map[string]string {
+	defaultLabelData := selectors.LabelerData{}
+	defaultLabelData.Base(r.SecurityCR.Name).Suffix("app").Generate()
+	return defaultLabelData.Labels()
+
+}
+
 //retrive value from secret, generate value if not exist.
 func (r *ActiveMQArtemisSecurityConfigHandler) getPassword(secretName string, key string) *string {
 	//check if the secret exists.
@@ -171,7 +212,7 @@ func (r *ActiveMQArtemisSecurityConfigHandler) getPassword(secretName string, ke
 	// Attempt to retrieve the secret
 	stringDataMap := make(map[string]string)
 
-	secretDefinition := secrets.NewSecret(namespacedName, secretName, stringDataMap)
+	secretDefinition := secrets.NewSecret(namespacedName, secretName, stringDataMap, r.GetDefaultLabels())
 
 	if err := resources.Retrieve(namespacedName, r.owner.client, secretDefinition); err != nil {
 		if errors.IsNotFound(err) {

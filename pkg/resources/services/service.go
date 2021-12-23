@@ -2,7 +2,6 @@ package services
 
 import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -19,9 +18,7 @@ var PingNameBuilder namer.NamerData
 //var RouteNameBuilderArray []namer.NamerData
 
 // newServiceForPod returns an activemqartemis service for the pod just created
-func NewHeadlessServiceForCR(namespacedName types.NamespacedName, servicePorts *[]corev1.ServicePort) *corev1.Service {
-
-	labels := selectors.LabelBuilder.Labels()
+func NewHeadlessServiceForCR(namespacedName types.NamespacedName, servicePorts *[]corev1.ServicePort, labels map[string]string) *corev1.Service {
 
 	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -46,9 +43,7 @@ func NewHeadlessServiceForCR(namespacedName types.NamespacedName, servicePorts *
 	return svc
 }
 
-func NewHeadlessServiceForCR2(serviceName string, namespacedName types.NamespacedName, servicePorts *[]corev1.ServicePort) *corev1.Service {
-
-	labels := selectors.LabelBuilder.Labels()
+func NewHeadlessServiceForCR2(serviceName string, namespacedName types.NamespacedName, servicePorts *[]corev1.ServicePort, labels map[string]string) *corev1.Service {
 
 	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -75,7 +70,7 @@ func NewHeadlessServiceForCR2(serviceName string, namespacedName types.Namespace
 
 // newServiceForPod returns an activemqartemis service for the pod just created
 //func NewServiceDefinitionForCR(cr *brokerv2alpha1.ActiveMQArtemis, nameSuffix string, portNumber int32, selectorLabels map[string]string) *corev1.Service {
-func NewServiceDefinitionForCR(namespacedName types.NamespacedName, nameSuffix string, portNumber int32, selectorLabels map[string]string) *corev1.Service {
+func NewServiceDefinitionForCR(namespacedName types.NamespacedName, nameSuffix string, portNumber int32, selectorLabels map[string]string, labels map[string]string) *corev1.Service {
 
 	port := corev1.ServicePort{
 		Name:       nameSuffix,
@@ -93,7 +88,7 @@ func NewServiceDefinitionForCR(namespacedName types.NamespacedName, nameSuffix s
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: nil,
-			Labels:      selectors.LabelBuilder.Labels(),
+			Labels:      labels,
 			Name:        namespacedName.Name + "-" + nameSuffix + "-svc",
 			Namespace:   namespacedName.Namespace,
 		},

@@ -70,7 +70,10 @@ func (rs *ContainerRunningState) Update() (error, int) {
 	}
 	ssNamespacedName := types.NamespacedName{Name: rs.parentFSM.GetStatefulSetName(), Namespace: rs.parentFSM.customResource.Namespace}
 	currentStatefulSet := &appsv1.StatefulSet{}
+	var newss *appsv1.StatefulSet
+
 	err = rs.parentFSM.r.client.Get(context.TODO(), ssNamespacedName, currentStatefulSet)
+
 	firstTime := false
 	for {
 		if err != nil && errors.IsNotFound(err) {
@@ -86,13 +89,15 @@ func (rs *ContainerRunningState) Update() (error, int) {
 			break
 		}
 
-		statefulSetUpdates, _ = reconciler.Process(rs.parentFSM, rs.parentFSM.r.client, rs.parentFSM.r.scheme, firstTime)
+		statefulSetUpdates, _, newss = reconciler.Process(rs.parentFSM, rs.parentFSM.r.client, rs.parentFSM.r.scheme, firstTime)
 		break
 	}
 
 	if statefulSetUpdates > 0 {
-		if err := resources.Update(rs.parentFSM.namespacedName, rs.parentFSM.r.client, currentStatefulSet); err != nil {
-			reqLogger.Error(err, "Failed to update StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
+		//https://stackoverflow.com/questions/65987577/kubectl-apply-reports-error-operation-cannot-be-fulfilled-on-serviceaccounts
+		currentStatefulSet.ResourceVersion = ""
+		if err := resources.Update(rs.parentFSM.namespacedName, rs.parentFSM.r.client, newss); err != nil {
+			reqLogger.Error(err, "Failed to update StatefulSet.", "Deployment.Namespace", newss.Namespace, "Deployment.Name", newss.Name)
 		}
 		nextStateID = ScalingID
 	}

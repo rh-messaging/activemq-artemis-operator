@@ -90,15 +90,15 @@ func (c *AddressObserver) Run(C chan types.NamespacedName) error {
 //that why we need one more property (targetBrokerCrName)
 //and only apply addresses to those pods that in that SS.
 //The property should be optional to keep backward compatibility
-//and return error if multiple statefulsets exists while the property
-//is not specified. (or apply to all pods)
+//and if multiple statefulsets exists while the property
+//is not specified, apply to all pods)
 func (c *AddressObserver) newPodReady(ready *types.NamespacedName) {
 
 	log.Info("New pod ready.", "Pod", ready)
 
 	//find out real name of the pod basename-(num - 1)
 	//podBaseNames is our interested statefulsets name
-	podBaseName, podSerial := GetStatefulSetNameForPod(ready)
+	podBaseName, podSerial, labels := GetStatefulSetNameForPod(ready)
 	if podBaseName == "" {
 		log.Info("Pod is not a candidate")
 		return
@@ -121,10 +121,10 @@ func (c *AddressObserver) newPodReady(ready *types.NamespacedName) {
 		return
 	}
 
-	c.checkCRsForNewPod(pod)
+	c.checkCRsForNewPod(pod, labels)
 }
 
-func (c *AddressObserver) checkCRsForNewPod(newPod *corev1.Pod) {
+func (c *AddressObserver) checkCRsForNewPod(newPod *corev1.Pod, labels map[string]string) {
 	//get the address cr instances
 	addressInstances, err := c.getAddressInstances(newPod)
 	if err != nil || len(addressInstances.Items) == 0 {
@@ -172,7 +172,7 @@ func (c *AddressObserver) checkCRsForNewPod(newPod *corev1.Pod) {
 			var jolokiaSecretName string = podCrName + "-jolokia-secret"
 			log.Info("Recreating address resources on new Pod", "Name", newPod.Name, "secret name", jolokiaSecretName)
 			jolokiaUser, jolokiaPassword, jolokiaProtocol := resolveJolokiaRequestParams(newPod.Namespace,
-				&a, c.opclient, c.opscheme, jolokiaSecretName, &newPod.Spec.Containers, podNamespacedName, statefulset)
+				&a, c.opclient, c.opscheme, jolokiaSecretName, &newPod.Spec.Containers, podNamespacedName, statefulset, labels)
 
 			log.Info("New Jolokia with ", "User: ", jolokiaUser, "Protocol: ", jolokiaProtocol)
 			artemis := mgmt.GetArtemis(newPod.Status.PodIP, "8161", "amq-broker", jolokiaUser, jolokiaPassword, jolokiaProtocol)

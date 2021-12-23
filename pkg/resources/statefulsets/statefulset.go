@@ -4,7 +4,6 @@ import (
 	"context"
 
 	svc "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/services"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,9 +18,8 @@ import (
 var log = logf.Log.WithName("package statefulsets")
 var NameBuilder namer.NamerData
 
-func MakeStatefulSet(namespacedName types.NamespacedName, annotations map[string]string, replicas int32, pts corev1.PodTemplateSpec) (*appsv1.StatefulSet, appsv1.StatefulSetSpec) {
+func MakeStatefulSet(namespacedName types.NamespacedName, annotations map[string]string, labels map[string]string, replicas int32, pts corev1.PodTemplateSpec) (*appsv1.StatefulSet, appsv1.StatefulSetSpec) {
 
-	labels := selectors.LabelBuilder.Labels()
 	ss := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "StatefulSet",
@@ -46,9 +44,8 @@ func MakeStatefulSet(namespacedName types.NamespacedName, annotations map[string
 	return ss, Spec
 }
 
-func MakeStatefulSet2(ssName string, svcHeadlessName string, namespacedName types.NamespacedName, annotations map[string]string, replicas int32, pts corev1.PodTemplateSpec) (*appsv1.StatefulSet, appsv1.StatefulSetSpec) {
+func MakeStatefulSet2(ssName string, svcHeadlessName string, namespacedName types.NamespacedName, annotations map[string]string, labels map[string]string, replicas int32, pts corev1.PodTemplateSpec) (*appsv1.StatefulSet, appsv1.StatefulSetSpec) {
 
-	labels := selectors.LabelBuilder.Labels()
 	ss := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "StatefulSet",
@@ -76,7 +73,7 @@ func MakeStatefulSet2(ssName string, svcHeadlessName string, namespacedName type
 
 var GLOBAL_CRNAME string = ""
 
-func RetrieveStatefulSet(statefulsetName string, namespacedName types.NamespacedName, client client.Client) (*appsv1.StatefulSet, error) {
+func RetrieveStatefulSet(statefulsetName string, namespacedName types.NamespacedName, labels map[string]string, client client.Client) (*appsv1.StatefulSet, error) {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
@@ -92,7 +89,7 @@ func RetrieveStatefulSet(statefulsetName string, namespacedName types.Namespaced
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        statefulsetName,
 			Namespace:   namespacedName.Namespace,
-			Labels:      selectors.LabelBuilder.Labels(),
+			Labels:      labels,
 			Annotations: nil,
 		},
 	}

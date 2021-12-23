@@ -2,10 +2,14 @@ package v2alpha5activemqartemis
 
 import (
 	"context"
+	"fmt"
 
 	brokerv2alpha5 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha5"
 	nsoptions "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/namespaces"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/lsrcrs"
 
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -40,14 +44,23 @@ func GetBrokerConfigHandler(brokerNamespacedName types.NamespacedName) (handler 
 	return nil
 }
 
-func UpdatePodForSecurity(securityHandlerNamespacedName types.NamespacedName, handler ActiveMQArtemisConfigHandler) {
+func UpdatePodForSecurity(securityHandlerNamespacedName types.NamespacedName, handler ActiveMQArtemisConfigHandler) error {
+	success := true
 	for nsn, fsm := range namespacedNameToFSM {
 		if handler.IsApplicableFor(nsn) {
 			fsm.SetPodInvalid(true)
 			log.Info("Need update fsm for security", "fsm", nsn)
-			fsm.Update()
+			if err, _ := fsm.Update(); err != nil {
+				success = false
+				log.Error(err, "error in updating security", "cr", fsm.namespacedName)
+			}
 		}
 	}
+	if success {
+		return nil
+	}
+	err := fmt.Errorf("error in update security, please see log for details")
+	return err
 }
 
 func RemoveBrokerConfigHandler(namespacedName types.NamespacedName) {
@@ -60,15 +73,17 @@ func RemoveBrokerConfigHandler(namespacedName types.NamespacedName) {
 	}
 }
 
-func AddBrokerConfigHandler(namespacedName types.NamespacedName, handler ActiveMQArtemisConfigHandler) {
-	oldHandler, ok := namespaceToConfigHandler[namespacedName]
-	namespaceToConfigHandler[namespacedName] = handler
-	log.Info("A config handler has been added", "handler", handler)
-	if ok {
-		log.Info("There is an old config handler so need update")
-		UpdatePodForSecurity(namespacedName, oldHandler)
+func AddBrokerConfigHandler(namespacedName types.NamespacedName, handler ActiveMQArtemisConfigHandler, toReconcile bool) error {
+	if _, ok := namespaceToConfigHandler[namespacedName]; ok {
+		log.V(1).Info("There is an old config handler, it'll be replaced")
 	}
-	UpdatePodForSecurity(namespacedName, handler)
+	namespaceToConfigHandler[namespacedName] = handler
+	log.V(1).Info("A new config handler has been added", "handler", handler)
+	if toReconcile {
+		log.V(1).Info("Updating broker security")
+		return UpdatePodForSecurity(namespacedName, handler)
+	}
+	return nil
 }
 
 /**
@@ -175,6 +190,8 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 				reqLogger.Info("Removing namespacedName tracking for " + namespacedName.String())
 				// If so we should no longer track it
 				amqbfsm = namespacedNameToFSM[namespacedName]
+				//remove the fsm secret
+				lsrcrs.DeleteLastSuccessfulReconciledCR(request.NamespacedName, "broker", amqbfsm.namers.LabelBuilder.Labels(), r.client)
 				amqbfsm.Exit()
 				delete(namespacedNameToFSM, namespacedName)
 				amqbfsm = nil
@@ -196,6 +213,41 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 	// for the given fsm, do an update
 	// - update first level sets? what if the operator has gone away and come back? stateless?
 	if namespacedNameFSM = namespacedNameToFSM[namespacedName]; namespacedNameFSM == nil {
+		log.Info("Didn't find fsm for the CR, try to search history", "requested", namespacedName)
+		//try to retrieve last successful reconciled CR
+		lsrcr := lsrcrs.RetrieveLastSuccessfulReconciledCR(namespacedName, "broker", r.client, GetDefaultLabels(customResource))
+		if lsrcr != nil {
+			log.Info("There is a LastSuccessfulReconciledCR")
+			//restoring fsm
+			var fsmData ActiveMQArtemisFSMData
+			var fsm *ActiveMQArtemisFSM
+			if merr := common.FromJson(&lsrcr.Data, &fsmData); merr != nil {
+				log.Error(merr, "failed to unmarshal fsm, create a new one")
+				fsm = MakeActiveMQArtemisFSM(customResource, namespacedName, r)
+			} else {
+				log.Info("recreate fsm from data")
+				storedCR := brokerv2alpha5.ActiveMQArtemis{}
+				merr := common.FromJson(&lsrcr.CR, &storedCR)
+				if merr != nil {
+					log.Error(merr, "failed to unmarshal cr, using existing one")
+					fsm = MakeActiveMQArtemisFSMFromData(&fsmData, customResource, namespacedName, r)
+				} else {
+					log.Info("Restoring fsm")
+					fsm = MakeActiveMQArtemisFSMFromData(&fsmData, &storedCR, namespacedName, r)
+				}
+			}
+			namespacedNameToFSM[namespacedName] = fsm
+			if lsrcr.Checksum == customResource.ResourceVersion {
+				//this is an operator restart. Don't do reconcile
+				log.Info("Detected possible operator restart with no broker CR changes", "res", customResource.ResourceVersion)
+				return r.result, nil
+			}
+			log.Info("A new version of CR comes in", "old", lsrcr.Checksum, "new", customResource.ResourceVersion)
+		}
+	}
+
+	if namespacedNameFSM = namespacedNameToFSM[namespacedName]; namespacedNameFSM == nil {
+
 		amqbfsm = MakeActiveMQArtemisFSM(customResource, namespacedName, r)
 		namespacedNameToFSM[namespacedName] = amqbfsm
 
@@ -209,18 +261,48 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 		err, _ = amqbfsm.Update()
 	}
 
+	//persist the CR
+	if err == nil {
+		fsmData := amqbfsm.GetFSMData()
+		fsmstr, merr := common.ToJson(&fsmData)
+		if merr != nil {
+			log.Error(merr, "failed to marshal fsm")
+		}
+		crstr, merr := common.ToJson(customResource)
+		if merr != nil {
+			log.Error(merr, "failed to marshal cr")
+		}
+		lsrcrs.StoreLastSuccessfulReconciledCR(customResource, customResource.Name,
+			customResource.Namespace, "broker", crstr, fsmstr, customResource.ResourceVersion,
+			amqbfsm.namers.LabelBuilder.Labels(), r.client, r.scheme)
+	}
 	// Single exit, return the result and error condition
 	return r.result, err
 }
 
-//get the statefulset names
-func GetDeployedStatefuleSetNames(targetCrNames []types.NamespacedName) []types.NamespacedName {
+func GetDefaultLabels(cr *brokerv2alpha5.ActiveMQArtemis) map[string]string {
+	defaultLabelData := selectors.LabelerData{}
+	defaultLabelData.Base(cr.Name).Suffix("app").Generate()
+	return defaultLabelData.Labels()
+}
 
-	var result []types.NamespacedName = nil
+type StatefulSetInfo struct {
+	NamespacedName types.NamespacedName
+	Labels         map[string]string
+}
+
+//get the statefulset names
+func GetDeployedStatefuleSetNames(targetCrNames []types.NamespacedName) []StatefulSetInfo {
+
+	var result []StatefulSetInfo = nil
 
 	if len(targetCrNames) == 0 {
 		for _, fsm := range namespacedNameToFSM {
-			result = append(result, fsm.GetStatefulSetNamespacedName())
+			info := StatefulSetInfo{
+				NamespacedName: fsm.GetStatefulSetNamespacedName(),
+				Labels:         fsm.namers.LabelBuilder.Labels(),
+			}
+			result = append(result, info)
 		}
 		return result
 	}
@@ -229,7 +311,11 @@ func GetDeployedStatefuleSetNames(targetCrNames []types.NamespacedName) []types.
 		log.Info("Trying to get target fsm", "target", target)
 		if fsm := namespacedNameToFSM[target]; fsm != nil {
 			log.Info("got fsm", "fsm", fsm, "ss namer", fsm.namers.SsNameBuilder.Name())
-			result = append(result, fsm.GetStatefulSetNamespacedName())
+			info := StatefulSetInfo{
+				NamespacedName: fsm.GetStatefulSetNamespacedName(),
+				Labels:         fsm.namers.LabelBuilder.Labels(),
+			}
+			result = append(result, info)
 		}
 	}
 	return result

@@ -106,6 +106,8 @@ type Controller struct {
 	// sts --> ssNames
 	ssNamesMap map[types.NamespacedName]map[string]string
 
+	ssLabels map[string]string
+
 	stopCh chan struct{}
 
 	client client.Client
@@ -120,7 +122,8 @@ func NewController(
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	namespace string,
 	localOnly bool,
-	client client.Client) *Controller {
+	client client.Client,
+	labels map[string]string) *Controller {
 
 	// obtain references to shared index informers for the Deployment and Foo
 	// types.
@@ -151,6 +154,7 @@ func NewController(
 		recorder:           recorder,
 		localOnly:          localOnly,
 		ssNamesMap:         make(map[types.NamespacedName]map[string]string),
+		ssLabels:           labels,
 		stopCh:             make(chan struct{}),
 		client:             client,
 	}
@@ -725,7 +729,7 @@ func (c *Controller) getClusterCredentials(namespace string, ssNames map[string]
 	stringDataMap["AMQ_CLUSTER_USER"] = ""
 	stringDataMap["AMQ_CLUSTER_PASSWORD"] = ""
 
-	secretDefinition := secrets.NewSecret(namespacedName, secretName, stringDataMap)
+	secretDefinition := secrets.NewSecret(namespacedName, secretName, stringDataMap, c.ssLabels)
 
 	log.Info("Try retrieving cluster credentials from secret", "secret", namespacedName)
 	if err := resources.Retrieve(namespacedName, c.client, secretDefinition); err != nil {

@@ -37,5 +37,3 @@ func (l *LabelerData) Generate() {
 	l.labels[LabelAppKey] = l.baseName + "-" + l.suffix //"-app"
 	l.labels[LabelResourceKey] = l.baseName
 }
-
-var LabelBuilder LabelerData

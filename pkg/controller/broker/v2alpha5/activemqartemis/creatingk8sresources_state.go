@@ -6,9 +6,7 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/pods"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
 	svc "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/services"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/volumes"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/fsm"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
@@ -58,6 +56,7 @@ func (rs *CreatingK8sResourcesState) ID() int {
 	return CreatingK8sResourcesID
 }
 
+//Think about removing this and use namers in amqbfsm
 func (rs *CreatingK8sResourcesState) generateNames() {
 	// Initialize the kubernetes names
 	ss.NameBuilder.Base(rs.parentFSM.customResource.Name).Suffix("ss").Generate()
@@ -79,9 +78,8 @@ func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 
 	var err error = nil
 
+	//todo: remove this and use fsm
 	rs.generateNames()
-	selectors.LabelBuilder.Base(rs.parentFSM.customResource.Name).Suffix("app").Generate()
-	volumes.GLOBAL_DATA_PATH = "/opt/" + rs.parentFSM.customResource.Name + "/data"
 
 	// Precreate empty credentials and netty secrets
 	_ = rs.generateSecrets()
@@ -101,14 +99,14 @@ func (rs *CreatingK8sResourcesState) generateSecrets() *corev1.Secret {
 		"AMQ_USER":             "",
 		"AMQ_PASSWORD":         "",
 	}
-	secretDefinition := secrets.Create(rs.parentFSM.customResource, namespacedName, stringDataMap, rs.parentFSM.r.client, rs.parentFSM.r.scheme)
+	secretDefinition := secrets.Create(rs.parentFSM.customResource, namespacedName, stringDataMap, rs.parentFSM.namers.LabelBuilder.Labels(), rs.parentFSM.r.client, rs.parentFSM.r.scheme)
 
 	namespacedName.Name = rs.parentFSM.GetNettySecretName()
 	nettyDataMap := map[string]string{
 		"AMQ_ACCEPTORS":  "",
 		"AMQ_CONNECTORS": "",
 	}
-	secretDefinition = secrets.Create(rs.parentFSM.customResource, namespacedName, nettyDataMap, rs.parentFSM.r.client, rs.parentFSM.r.scheme)
+	secretDefinition = secrets.Create(rs.parentFSM.customResource, namespacedName, nettyDataMap, rs.parentFSM.namers.LabelBuilder.Labels(), rs.parentFSM.r.client, rs.parentFSM.r.scheme)
 
 	return secretDefinition
 }
@@ -131,7 +129,7 @@ func (rs *CreatingK8sResourcesState) Enter(previousStateID int) error {
 		// No brokers running; safe to touch journals etc...
 	}
 
-	_, stepsComplete = reconciler.Process(rs.parentFSM, rs.parentFSM.r.client, rs.parentFSM.r.scheme, firstTime)
+	_, stepsComplete, _ = reconciler.Process(rs.parentFSM, rs.parentFSM.r.client, rs.parentFSM.r.scheme, firstTime)
 	rs.stepsComplete = stepsComplete
 
 	return nil
@@ -162,7 +160,7 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 		if rs.stepsComplete&CreatedStatefulSet > 0 { //&&
 			firstTime := false
 
-			_, _ = reconciler.Process(rs.parentFSM, rs.parentFSM.r.client, rs.parentFSM.r.scheme, firstTime)
+			_, _, _ = reconciler.Process(rs.parentFSM, rs.parentFSM.r.client, rs.parentFSM.r.scheme, firstTime)
 			if rs.parentFSM.customResource.Spec.DeploymentPlan.Size != currentStatefulSet.Status.ReadyReplicas {
 				if rs.parentFSM.customResource.Spec.DeploymentPlan.Size > 0 {
 					nextStateID = ScalingID

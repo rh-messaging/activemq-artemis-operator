@@ -4,6 +4,7 @@ import (
 	brokerv2alpha5 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha5"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/fsm"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -66,6 +67,8 @@ type Namers struct {
 	SecretsCredentialsNameBuilder namer.NamerData
 	SecretsConsoleNameBuilder     namer.NamerData
 	SecretsNettyNameBuilder       namer.NamerData
+	LabelBuilder                  selectors.LabelerData
+	GLOBAL_DATA_PATH              string
 }
 
 type ActiveMQArtemisFSM struct {
@@ -78,6 +81,116 @@ type ActiveMQArtemisFSM struct {
 	podInvalid         bool
 }
 
+//used for persistence of fsm
+type ActiveMQArtemisFSMData struct {
+	MCurrentStateID                        int   `json:"mcurrentstateid,omitempty"`
+	MNextStateID                           int   `json:"mnextstateid,omitempty"`
+	MPreviousStateID                       int   `json:"mpreviousstateid,omitempty"`
+	MNumStates                             int   `json:"mnumstates,omitempty"`
+	MActive                                bool  `json:"mactive,omitempty"`
+	MIDCurrentState                        int   `json:"midcurrentstate"`
+	StateCreateK8sStepsComplete            uint8 `json:"statecreatek8sstepscomplete,omitempty"`
+	StateScalingEnteringObservedGeneration int64 `json:"statescalingenteringobservedgeneration,omitempty"`
+}
+
+func MakeActiveMQArtemisFSMFromData(fsmData *ActiveMQArtemisFSMData, instance *brokerv2alpha5.ActiveMQArtemis, _namespacedName types.NamespacedName, r *ReconcileActiveMQArtemis) *ActiveMQArtemisFSM {
+
+	var creatingK8sResourceIState fsm.IState
+	var containerRunningIState fsm.IState
+	var scalingIState fsm.IState
+
+	amqbfsm := ActiveMQArtemisFSM{
+		m: fsm.CreateMachine(fsmData.MCurrentStateID,
+			fsmData.MNextStateID,
+			fsmData.MPreviousStateID,
+			fsmData.MNumStates,
+			fsmData.MActive),
+	}
+
+	amqbfsm.namespacedName = _namespacedName
+	amqbfsm.customResource = instance
+	amqbfsm.prevCustomResource = &brokerv2alpha5.ActiveMQArtemis{}
+	amqbfsm.r = r
+	amqbfsm.namers = amqbfsm.MakeNamers()
+	amqbfsm.podInvalid = false
+
+	creatingK8sResourceState := CreatingK8sResourcesState{
+		s:              fsm.MakeState(CreatingK8sResources, CreatingK8sResourcesID),
+		namespacedName: _namespacedName,
+		parentFSM:      &amqbfsm,
+		stepsComplete:  fsmData.StateCreateK8sStepsComplete,
+	}
+	creatingK8sResourceIState = &creatingK8sResourceState
+	amqbfsm.Add(&creatingK8sResourceIState)
+
+	containerRunningState := MakeContainerRunningState(&amqbfsm, _namespacedName)
+	containerRunningIState = &containerRunningState
+	amqbfsm.Add(&containerRunningIState)
+
+	scalingState := ScalingState{
+		s:                          fsm.MakeState(Scaling, ScalingID),
+		namespacedName:             _namespacedName,
+		parentFSM:                  &amqbfsm,
+		enteringObservedGeneration: fsmData.StateScalingEnteringObservedGeneration,
+	}
+	scalingIState = &scalingState
+	amqbfsm.Add(&scalingIState)
+
+	switch fsmData.MCurrentStateID {
+	case CreatingK8sResourcesID:
+		log.Info("restoring curent state to be creatk8s")
+		amqbfsm.m.SetCurrentState(creatingK8sResourceIState)
+	case ContainerRunningID:
+		log.Info("restoring urrent state to running")
+		amqbfsm.m.SetCurrentState(containerRunningIState)
+	case ScalingID:
+		log.Info("restoring current to scaling")
+		amqbfsm.m.SetCurrentState(scalingIState)
+	}
+
+	return &amqbfsm
+}
+
+func (amqbfsm *ActiveMQArtemisFSM) GetFSMData() *ActiveMQArtemisFSMData {
+
+	var stepsComplete uint8 = 0
+	var enteringObservedGeneration int64 = 0
+
+	machine, ok := amqbfsm.m.(*fsm.Machine)
+	if !ok {
+		log.Error(nil, "cannot get fsm machine")
+		newMachine := fsm.MakeMachine()
+		machine = &newMachine
+	}
+
+	istate := machine.GetState(CreatingK8sResourcesID)
+	creatingK8sState, ok := (*istate).(*CreatingK8sResourcesState)
+	if !ok {
+		log.Error(nil, "fsm doesn't have creatingk8sresource state")
+	} else {
+		stepsComplete = creatingK8sState.stepsComplete
+	}
+	istate = machine.GetState(ScalingID)
+	scalingState, ok := (*istate).(*ScalingState)
+	if !ok {
+		log.Error(nil, "fsm doesn't have Scaling state")
+	} else {
+		enteringObservedGeneration = scalingState.enteringObservedGeneration
+	}
+
+	data := ActiveMQArtemisFSMData{
+		MCurrentStateID:                        machine.GetCurrentStateID(),
+		MNextStateID:                           machine.GetNextStateID(),
+		MPreviousStateID:                       machine.GetPreviousStateID(),
+		MNumStates:                             machine.GetNumStates(),
+		MActive:                                machine.GetActive(),
+		MIDCurrentState:                        machine.GetIDCurrentState(),
+		StateCreateK8sStepsComplete:            stepsComplete,
+		StateScalingEnteringObservedGeneration: enteringObservedGeneration,
+	}
+	return &data
+}
+
 func (amqbfsm *ActiveMQArtemisFSM) MakeNamers() *Namers {
 	newNamers := Namers{
 		SsGlobalName:                  "",
@@ -88,6 +201,8 @@ func (amqbfsm *ActiveMQArtemisFSM) MakeNamers() *Namers {
 		SecretsCredentialsNameBuilder: namer.NamerData{},
 		SecretsConsoleNameBuilder:     namer.NamerData{},
 		SecretsNettyNameBuilder:       namer.NamerData{},
+		LabelBuilder:                  selectors.LabelerData{},
+		GLOBAL_DATA_PATH:              "/opt/" + amqbfsm.customResource.Name + "/data",
 	}
 	newNamers.SsNameBuilder.Base(amqbfsm.customResource.Name).Suffix("ss").Generate()
 	newNamers.SsGlobalName = amqbfsm.customResource.Name
@@ -97,8 +212,8 @@ func (amqbfsm *ActiveMQArtemisFSM) MakeNamers() *Namers {
 	newNamers.SecretsCredentialsNameBuilder.Prefix(amqbfsm.customResource.Name).Base("credentials").Suffix("secret").Generate()
 	newNamers.SecretsConsoleNameBuilder.Prefix(amqbfsm.customResource.Name).Base("console").Suffix("secret").Generate()
 	newNamers.SecretsNettyNameBuilder.Prefix(amqbfsm.customResource.Name).Base("netty").Suffix("secret").Generate()
+	newNamers.LabelBuilder.Base(amqbfsm.customResource.Name).Suffix("app").Generate()
 
-	log.Info("mmmm all namers in fsm generated!", "ssbuild", newNamers.SsNameBuilder.Name())
 	return &newNamers
 }
 
