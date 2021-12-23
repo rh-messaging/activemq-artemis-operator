@@ -9,7 +9,6 @@ import (
 
 	svc "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/services"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/volumes"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/fsm"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -83,8 +82,6 @@ func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 	var err error = nil
 
 	rs.generateNames()
-	selectors.LabelBuilder.Base(rs.parentFSM.customResource.Name).Suffix("app").Generate()
-	volumes.GLOBAL_DATA_PATH = "/opt/" + rs.parentFSM.customResource.Name + "/data"
 
 	// Precreate empty credentials and netty secrets
 	_ = rs.generateSecrets()
@@ -104,14 +101,14 @@ func (rs *CreatingK8sResourcesState) generateSecrets() *corev1.Secret {
 		"AMQ_USER":             "",
 		"AMQ_PASSWORD":         "",
 	}
-	secretDefinition := secrets.Create(rs.parentFSM.customResource, namespacedName, stringDataMap, rs.parentFSM.r.client, rs.parentFSM.r.scheme)
+	secretDefinition := secrets.Create(rs.parentFSM.customResource, namespacedName, stringDataMap, selectors.GetLabels(rs.parentFSM.customResource.Name), rs.parentFSM.r.client, rs.parentFSM.r.scheme)
 
 	namespacedName.Name = secrets.NettyNameBuilder.Name()
 	nettyDataMap := map[string]string{
 		"AMQ_ACCEPTORS":  "",
 		"AMQ_CONNECTORS": "",
 	}
-	secretDefinition = secrets.Create(rs.parentFSM.customResource, namespacedName, nettyDataMap, rs.parentFSM.r.client, rs.parentFSM.r.scheme)
+	secretDefinition = secrets.Create(rs.parentFSM.customResource, namespacedName, nettyDataMap, selectors.GetLabels(rs.parentFSM.customResource.Name), rs.parentFSM.r.client, rs.parentFSM.r.scheme)
 
 	return secretDefinition
 }

@@ -3,11 +3,13 @@ package v2alpha2activemqartemis
 import (
 	"context"
 	"fmt"
+
 	"github.com/RHsyseng/operator-utils/pkg/olm"
 	"github.com/RHsyseng/operator-utils/pkg/resource"
 	"github.com/RHsyseng/operator-utils/pkg/resource/compare"
 	"github.com/RHsyseng/operator-utils/pkg/resource/read"
 	"github.com/RHsyseng/operator-utils/pkg/resource/write"
+
 	//v2alpha1activemqartemisaddress "github.com/artemiscloud/activemq-artemis-operator/pkg/controller/broker/v2alpha1/activemqartemisaddress"
 	activemqartemisscaledown "github.com/artemiscloud/activemq-artemis-operator/pkg/controller/broker/v2alpha1/activemqartemisscaledown"
 	v2alpha2activemqartemisaddress "github.com/artemiscloud/activemq-artemis-operator/pkg/controller/broker/v2alpha2/activemqartemisaddress"
@@ -138,7 +140,7 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(customResourc
 	}
 
 	if firstTime {
-		if persistentSyncCausedUpdateOn(deploymentPlan, currentStatefulSet) {
+		if persistentSyncCausedUpdateOn(deploymentPlan, currentStatefulSet, customResource) {
 			reconciler.statefulSetUpdates |= statefulSetPersistentUpdated
 		}
 	}
@@ -216,7 +218,7 @@ func syncMessageMigration(customResource *brokerv2alpha2.ActiveMQArtemis, client
 			Kind:       "ActiveMQArtemisScaledown",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:    selectors.LabelBuilder.Labels(),
+			Labels:    selectors.GetLabels(customResource.Name),
 			Name:      customResource.Name,
 			Namespace: customResource.Namespace,
 		},
@@ -262,7 +264,7 @@ func sourceEnvVarFromSecret(customResource *brokerv2alpha2.ActiveMQArtemis, curr
 		stringDataMap[k] = (*envVars)[k]
 	}
 
-	nettySecret := secrets.NewSecret(namespacedName, secretName, stringDataMap)
+	nettySecret := secrets.NewSecret(namespacedName, secretName, stringDataMap, selectors.GetLabels(customResource.Name))
 	if err = resources.Retrieve(namespacedName, client, nettySecret); err != nil {
 		if errors.IsNotFound(err) {
 			requestedResources = append(requestedResources, nettySecret)
@@ -429,7 +431,7 @@ func configureAcceptorsExposure(customResource *brokerv2alpha2.ActiveMQArtemis, 
 	ordinalString := ""
 	causedUpdate := false
 
-	originalLabels := selectors.LabelBuilder.Labels()
+	originalLabels := selectors.GetLabels(customResource.Name)
 	namespacedName := types.NamespacedName{
 		Name:      customResource.Name,
 		Namespace: customResource.Namespace,
@@ -443,7 +445,7 @@ func configureAcceptorsExposure(customResource *brokerv2alpha2.ActiveMQArtemis, 
 		serviceRoutelabels["statefulset.kubernetes.io/pod-name"] = statefulsets.NameBuilder.Name() + "-" + ordinalString
 
 		for _, acceptor := range customResource.Spec.Acceptors {
-			serviceDefinition := svc.NewServiceDefinitionForCR(namespacedName, acceptor.Name+"-"+ordinalString, acceptor.Port, serviceRoutelabels)
+			serviceDefinition := svc.NewServiceDefinitionForCR(namespacedName, acceptor.Name+"-"+ordinalString, acceptor.Port, serviceRoutelabels, selectors.GetLabels(customResource.Name))
 			serviceNamespacedName := types.NamespacedName{
 				Name:      serviceDefinition.Name,
 				Namespace: customResource.Namespace,
@@ -480,7 +482,7 @@ func configureConnectorsExposure(customResource *brokerv2alpha2.ActiveMQArtemis,
 	ordinalString := ""
 	causedUpdate := false
 
-	originalLabels := selectors.LabelBuilder.Labels()
+	originalLabels := selectors.GetLabels(customResource.Name)
 	namespacedName := types.NamespacedName{
 		Name:      customResource.Name,
 		Namespace: customResource.Namespace,
@@ -494,7 +496,7 @@ func configureConnectorsExposure(customResource *brokerv2alpha2.ActiveMQArtemis,
 		serviceRoutelabels["statefulset.kubernetes.io/pod-name"] = statefulsets.NameBuilder.Name() + "-" + ordinalString
 
 		for _, connector := range customResource.Spec.Connectors {
-			serviceDefinition := svc.NewServiceDefinitionForCR(namespacedName, connector.Name+"-"+ordinalString, connector.Port, serviceRoutelabels)
+			serviceDefinition := svc.NewServiceDefinitionForCR(namespacedName, connector.Name+"-"+ordinalString, connector.Port, serviceRoutelabels, selectors.GetLabels(customResource.Name))
 
 			serviceNamespacedName := types.NamespacedName{
 				Name:      serviceDefinition.Name,
@@ -534,7 +536,7 @@ func configureConsoleExposure(customResource *brokerv2alpha2.ActiveMQArtemis, cl
 	causedUpdate := false
 	console := customResource.Spec.Console
 
-	originalLabels := selectors.LabelBuilder.Labels()
+	originalLabels := selectors.GetLabels(customResource.Name)
 	namespacedName := types.NamespacedName{
 		Name:      customResource.Name,
 		Namespace: customResource.Namespace,
@@ -551,7 +553,7 @@ func configureConsoleExposure(customResource *brokerv2alpha2.ActiveMQArtemis, cl
 		targetPortName := "wconsj" + "-" + ordinalString
 		targetServiceName := customResource.Name + "-" + targetPortName + "-svc"
 
-		serviceDefinition := svc.NewServiceDefinitionForCR(namespacedName, targetPortName, portNumber, serviceRoutelabels)
+		serviceDefinition := svc.NewServiceDefinitionForCR(namespacedName, targetPortName, portNumber, serviceRoutelabels, selectors.GetLabels(customResource.Name))
 
 		serviceNamespacedName := types.NamespacedName{
 			Name:      serviceDefinition.Name,
@@ -614,7 +616,7 @@ func generateConsoleSSLFlags(customResource *brokerv2alpha2.ActiveMQArtemis, cli
 		Namespace: customResource.Namespace,
 	}
 	stringDataMap := map[string]string{}
-	userPasswordSecret := secrets.NewSecret(namespacedName, secretName, stringDataMap)
+	userPasswordSecret := secrets.NewSecret(namespacedName, secretName, stringDataMap, selectors.GetLabels(customResource.Name))
 
 	keyStorePassword := "password"
 	keyStorePath := "/etc/" + secretName + "-volume/broker.ks"
@@ -658,7 +660,7 @@ func generateAcceptorConnectorSSLArguments(customResource *brokerv2alpha2.Active
 		Namespace: customResource.Namespace,
 	}
 	stringDataMap := map[string]string{}
-	userPasswordSecret := secrets.NewSecret(namespacedName, secretName, stringDataMap)
+	userPasswordSecret := secrets.NewSecret(namespacedName, secretName, stringDataMap, selectors.GetLabels(customResource.Name))
 
 	keyStorePassword := "password"
 	keyStorePath := "\\/etc\\/" + secretName + "-volume\\/broker.ks"
@@ -803,7 +805,7 @@ func aioSyncCausedUpdateOn(deploymentPlan *brokerv2alpha2.DeploymentPlanType, cu
 	return extraArgsNeedsUpdate
 }
 
-func persistentSyncCausedUpdateOn(deploymentPlan *brokerv2alpha2.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
+func persistentSyncCausedUpdateOn(deploymentPlan *brokerv2alpha2.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet, customResource *brokerv2alpha2.ActiveMQArtemis) bool {
 
 	foundDataDir := false
 	foundDataDirLogging := false
@@ -817,12 +819,13 @@ func persistentSyncCausedUpdateOn(deploymentPlan *brokerv2alpha2.DeploymentPlanT
 	// ensure password and username are valid if can't via openapi validation?
 	if deploymentPlan.PersistenceEnabled {
 
+		globalDataPath := "/opt/" + customResource.Name + "/data"
 		envVarArray := []corev1.EnvVar{}
 		// Find the existing values
 		for _, v := range currentStatefulSet.Spec.Template.Spec.Containers[0].Env {
 			if v.Name == "AMQ_DATA_DIR" {
 				foundDataDir = true
-				if v.Value != volumes.GLOBAL_DATA_PATH {
+				if v.Value != globalDataPath {
 					dataDirNeedsUpdate = true
 				}
 			}
@@ -837,7 +840,7 @@ func persistentSyncCausedUpdateOn(deploymentPlan *brokerv2alpha2.DeploymentPlanT
 		if !foundDataDir || dataDirNeedsUpdate {
 			newDataDirValue := corev1.EnvVar{
 				"AMQ_DATA_DIR",
-				volumes.GLOBAL_DATA_PATH,
+				globalDataPath,
 				nil,
 			}
 			envVarArray = append(envVarArray, newDataDirValue)
@@ -1163,9 +1166,11 @@ func MakeVolumes(cr *brokerv2alpha2.ActiveMQArtemis) []corev1.Volume {
 
 func MakeVolumeMounts(cr *brokerv2alpha2.ActiveMQArtemis) []corev1.VolumeMount {
 
+	globalDataPath := "/opt/" + cr.Name + "/data"
+
 	volumeMounts := []corev1.VolumeMount{}
 	if cr.Spec.DeploymentPlan.PersistenceEnabled {
-		persistentCRVlMnt := volumes.MakePersistentVolumeMount(cr.Name)
+		persistentCRVlMnt := volumes.MakePersistentVolumeMount(cr.Name, globalDataPath)
 		volumeMounts = append(volumeMounts, persistentCRVlMnt...)
 	}
 
@@ -1219,7 +1224,7 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha2.ActiveMQArtemis) cor
 
 	terminationGracePeriodSeconds := int64(60)
 
-	pts := pods.MakePodTemplateSpec(namespacedName, selectors.LabelBuilder.Labels())
+	pts := pods.MakePodTemplateSpec(namespacedName, selectors.GetLabels(customResource.Name))
 	Spec := corev1.PodSpec{}
 	Containers := []corev1.Container{}
 	container := containers.MakeContainer(customResource.Name, customResource.Spec.DeploymentPlan.Image, MakeEnvVarArrayForCR(customResource))
@@ -1249,7 +1254,7 @@ func NewStatefulSetForCR(cr *brokerv2alpha2.ActiveMQArtemis) *appsv1.StatefulSet
 		Name:      cr.Name,
 		Namespace: cr.Namespace,
 	}
-	ss, Spec := statefulsets.MakeStatefulSet(namespacedName, cr.Annotations, cr.Spec.DeploymentPlan.Size, NewPodTemplateSpecForCR(cr))
+	ss, Spec := statefulsets.MakeStatefulSet(namespacedName, cr.Annotations, selectors.GetLabels(cr.Name), cr.Spec.DeploymentPlan.Size, NewPodTemplateSpecForCR(cr))
 
 	if cr.Spec.DeploymentPlan.PersistenceEnabled {
 		Spec.VolumeClaimTemplates = *NewPersistentVolumeClaimArrayForCR(cr, 1)
@@ -1270,7 +1275,7 @@ func NewPersistentVolumeClaimArrayForCR(cr *brokerv2alpha2.ActiveMQArtemis, arra
 	}
 
 	for i := 0; i < arrayLength; i++ {
-		pvc = persistentvolumeclaims.NewPersistentVolumeClaimForCR(namespacedName)
+		pvc = persistentvolumeclaims.NewPersistentVolumeClaimForCR(namespacedName, selectors.GetLabels(cr.Name))
 		pvcArray = append(pvcArray, *pvc)
 	}
 

@@ -2,6 +2,7 @@ package v2alpha2activemqartemis
 
 import (
 	"context"
+
 	"github.com/RHsyseng/operator-utils/pkg/resource"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
@@ -11,11 +12,11 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/serviceports"
 	svc "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/services"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/volumes"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/fsm"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/random"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	appsv1 "k8s.io/api/apps/v1"
+
 	//"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1 "k8s.io/api/core/v1"
@@ -111,7 +112,7 @@ func (rs *CreatingK8sResourcesState) generateSecrets() *corev1.Secret {
 	environments.GLOBAL_AMQ_CLUSTER_USER = clusterUser
 	environments.GLOBAL_AMQ_CLUSTER_PASSWORD = clusterPassword
 
-	secretDefinition := secrets.NewSecret(namespacedName, namespacedName.Name, stringDataMap)
+	secretDefinition := secrets.NewSecret(namespacedName, namespacedName.Name, stringDataMap, selectors.GetLabels(rs.parentFSM.namespacedName.Name))
 	//secretDefinition := secrets.Create(rs.parentFSM.customResource, namespacedName, stringDataMap, rs.parentFSM.r.client, rs.parentFSM.r.scheme)
 	return secretDefinition
 }
@@ -124,19 +125,17 @@ func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 	firstTime := true
 
 	rs.generateNames()
-	selectors.LabelBuilder.Base(rs.parentFSM.customResource.Name).Suffix("app").Generate()
 	secretDefinition := rs.generateSecrets()
 
 	//volumes.GLOBAL_DATA_PATH = environments.GetPropertyForCR("AMQ_DATA_DIR", rs.parentFSM.customResource, "/opt/"+rs.parentFSM.customResource.Name+"/data")
-	volumes.GLOBAL_DATA_PATH = "/opt/" + rs.parentFSM.customResource.Name + "/data"
-	labels := selectors.LabelBuilder.Labels()
+	labels := selectors.GetLabels(rs.parentFSM.namespacedName.Name)
 
 	namespacedName := types.NamespacedName{
 		Name:      rs.parentFSM.customResource.Name,
 		Namespace: rs.parentFSM.customResource.Namespace,
 	}
 	statefulsetDefinition := NewStatefulSetForCR(rs.parentFSM.customResource)
-	headlessServiceDefinition := svc.NewHeadlessServiceForCR(namespacedName, serviceports.GetDefaultPorts())
+	headlessServiceDefinition := svc.NewHeadlessServiceForCR(namespacedName, serviceports.GetDefaultPorts(), labels)
 	pingServiceDefinition := svc.NewPingServiceDefinitionForCR(namespacedName, labels, labels)
 
 	//for upgrade

@@ -9,6 +9,7 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -262,7 +263,7 @@ func getPodBrokers(instance *brokerv2alpha2.ActiveMQArtemisAddress, request reco
 		Namespace: request.Namespace,
 	}
 
-	statefulset, err := ss.RetrieveStatefulSet(ss.NameBuilder.Name(), ssNamespacedName, client)
+	statefulset, err := ss.RetrieveStatefulSet(ss.NameBuilder.Name(), ssNamespacedName, selectors.GetLabels(instance.Name), client)
 	if nil != err {
 		reqLogger.Info("Statefulset: " + ssNamespacedName.Name + " not found")
 	} else {
@@ -354,7 +355,7 @@ func getEnvVarValueFromSecret(envName string, varSource *corev1.EnvVarSource, na
 	stringDataMap := map[string]string{
 		envName: "",
 	}
-	theSecret := secrets.NewSecret(namespacedName, secretName, stringDataMap)
+	theSecret := secrets.NewSecret(namespacedName, secretName, stringDataMap, selectors.GetLabels(statefulset.Name))
 	var err error = nil
 	if err = resources.Retrieve(namespacedName, client, theSecret); err != nil {
 		if errors.IsNotFound(err) {
