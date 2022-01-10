@@ -170,6 +170,11 @@ func AddEnvVarForBasic(requireLogin string, journalType string) []corev1.EnvVar 
 			svc.PingNameBuilder.Name(),
 			nil,
 		},
+		{
+			"OPENSHIFT_DNS_PING_SERVICE_PORT",
+			"7800",
+			nil,
+		},
 	}
 
 	return envVarArray
