@@ -1735,7 +1735,9 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 
 	terminationGracePeriodSeconds := int64(60)
 
-	pts := pods.MakePodTemplateSpec(namespacedName, fsm.namers.LabelBuilder.Labels())
+	podLabels := getPodLabels(fsm, fsm.customResource)
+	pts := pods.MakePodTemplateSpec(namespacedName, podLabels)
+
 	Spec := corev1.PodSpec{}
 	Containers := []corev1.Container{}
 
@@ -2037,9 +2039,9 @@ func determineImageToUse(customResource *brokerv2alpha5.ActiveMQArtemis, imageTy
 	return imageName
 }
 
-func getPodLabels(customResource *brokerv2alpha5.ActiveMQArtemis) map[string]string {
+func getPodLabels(fsm *ActiveMQArtemisFSM, customResource *brokerv2alpha5.ActiveMQArtemis) map[string]string {
 	podLabels := make(map[string]string)
-	labels := selectors.LabelBuilder.Labels()
+	labels := fsm.namers.LabelBuilder.Labels()
 	for k, v := range labels {
 		podLabels[k] = v
 	}
