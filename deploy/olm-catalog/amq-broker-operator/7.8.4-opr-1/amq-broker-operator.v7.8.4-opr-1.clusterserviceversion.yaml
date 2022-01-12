@@ -11,8 +11,8 @@ metadata:
     categories: "Streaming & Messaging"
     certified: "false"
     description: AMQ Broker Operator provides the ability to deploy and manage stateful AMQ Broker clusters
-    # containerImage: registry.redhat.io/amq7/amq-broker-rhel7-operator:7.8-16
-    containerImage: registry.redhat.io/amq7/amq-broker-rhel7-operator@sha256:742994d32528c10ccba895475772e412cd390b14dcd19ff61d4e5d8a8955785d
+    # containerImage: registry.redhat.io/amq7/amq-broker-rhel7-operator:7.8-17
+    containerImage: registry.redhat.io/amq7/amq-broker-rhel7-operator@sha256:0f5c32b31104e87617c81572c85b584c3e52cafebaf20dac5d6eb2b51c890cf2
     createdAt: 2021-06-18T00:02:04Z
     capabilities: Seamless Upgrades
     repository: https://github.com/rh-messaging/activemq-artemis-operator
@@ -981,8 +981,8 @@ spec:
                 serviceAccountName: amq-broker-operator
                 containers:
                   - name: amq-broker-operator
-                    # image: registry.redhat.io/amq7/amq-broker-rhel7-operator:7.8-16
-                    image: registry.redhat.io/amq7/amq-broker-rhel7-operator@sha256:742994d32528c10ccba895475772e412cd390b14dcd19ff61d4e5d8a8955785d
+                    # image: registry.redhat.io/amq7/amq-broker-rhel7-operator:7.8-17
+                    image: registry.redhat.io/amq7/amq-broker-rhel7-operator@sha256:0f5c32b31104e87617c81572c85b584c3e52cafebaf20dac5d6eb2b51c890cf2
                     args:
                       # Explicitly set the logging level.
                       # Valid values are debug, info, and error
