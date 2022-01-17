@@ -16,7 +16,7 @@ import (
 var (
 	NameBuilder namer.NamerData
 
-	labels = selectors.LabelBuilder.Labels()
+	labels = selectors.GetLabels("activemq-artemis-test")
 	f      = false
 	t      = true
 
@@ -156,6 +156,6 @@ var (
 			Labels:    AMQinstance.Labels,
 		},
 		//Spec: pods.NewPodTemplateSpecForCR(&AMQinstance).Spec,
-		Spec: pods.MakePodTemplateSpec(namespacedName, selectors.LabelBuilder.Labels()).Spec,
+		Spec: pods.MakePodTemplateSpec(namespacedName, selectors.GetLabels(AMQinstance.Name)).Spec,
 	}
 )
