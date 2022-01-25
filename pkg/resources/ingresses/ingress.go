@@ -1,25 +1,38 @@
 package ingresses
 
 import (
-	svc "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/services"
 	//"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
-	extv1b1 "k8s.io/api/extensions/v1beta1"
+
+	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"os"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime"
 )
 
 var log = logf.Log.WithName("package ingresses")
 
+//leave this for backward compatibility
+func NewIngressForCR(namespacedName types.NamespacedName, labels map[string]string, targetServiceName string, targetPortName string) *netv1.Ingress {
+	return NewIngressForCRWithSSL(namespacedName, labels, targetServiceName, targetPortName, false)
+}
+
 // Create newIngressForCR method to create exposed ingress
 //func NewIngressForCR(cr *v2alpha1.ActiveMQArtemis, target string) *extv1b1.Ingress {
-func NewIngressForCR(namespacedName types.NamespacedName, labels map[string]string, targetServiceName string, targetPortName string) *extv1b1.Ingress {
+func NewIngressForCRWithSSL(namespacedName types.NamespacedName, labels map[string]string, targetServiceName string, targetPortName string, sslEnabled bool) *netv1.Ingress {
 
-	ingress := &extv1b1.Ingress{
+	portName := ""
+	portNumber := -1
+	portValue := intstr.FromString(targetPortName)
+	if portNumber = portValue.IntValue(); portNumber == 0 {
+		portName = portValue.String()
+	}
+
+	pathType := netv1.PathTypePrefix
+
+	ingress := &netv1.Ingress{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "extensions/v1beta1",
+			APIVersion: "networking.k8s.io/v1",
 			Kind:       "Ingress",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -27,18 +40,19 @@ func NewIngressForCR(namespacedName types.NamespacedName, labels map[string]stri
 			Name:      targetServiceName + "-ing",
 			Namespace: namespacedName.Namespace,
 		},
-		Spec: extv1b1.IngressSpec{
-			Rules: []extv1b1.IngressRule{
+		Spec: netv1.IngressSpec{
+			Rules: []netv1.IngressRule{
 				{
-					Host: os.Getenv("KUBERNETES_SERVICE_HOST"),
-					IngressRuleValue: extv1b1.IngressRuleValue{
-						HTTP: &extv1b1.HTTPIngressRuleValue{
-							Paths: []extv1b1.HTTPIngressPath{
-								extv1b1.HTTPIngressPath{
-									Path: "/",
-									Backend: extv1b1.IngressBackend{
-										ServiceName: svc.HeadlessNameBuilder.Name(),
-										ServicePort: intstr.FromString(targetPortName),
+					IngressRuleValue: netv1.IngressRuleValue{
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{
+								{
+									Path:     "/",
+									PathType: &pathType,
+									Backend: netv1.IngressBackend{
+										Service: &netv1.IngressServiceBackend{
+											Name: targetServiceName,
+										},
 									},
 								},
 							},
@@ -47,6 +61,29 @@ func NewIngressForCR(namespacedName types.NamespacedName, labels map[string]stri
 				},
 			},
 		},
+	}
+	if portName == "" {
+		ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port = netv1.ServiceBackendPort{
+			Number: int32(portNumber),
+		}
+	} else {
+		ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port = netv1.ServiceBackendPort{
+			Name: portName,
+		}
+	}
+	if sslEnabled {
+		//ingress assumes TLS termination at the ingress point and uses default https port 443
+		//it requires a host name that matches the certificate's CN value
+		ingress.Spec.Rules[0].Host = "www.mgmtconsole.com"
+		tls := []netv1.IngressTLS{
+			{
+				Hosts: []string{
+					"www.mgmtconsole.com",
+				},
+				SecretName: "console-secret",
+			},
+		}
+		ingress.Spec.TLS = tls
 	}
 	return ingress
 }

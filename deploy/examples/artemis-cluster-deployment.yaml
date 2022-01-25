@@ -1,8 +1,0 @@
-apiVersion: broker.amq.io/v2alpha5
-kind: ActiveMQArtemis
-metadata:
-  name: ex-aao
-spec:
-  deploymentPlan:
-    size: 2
-    image: placeholder

@@ -21,7 +21,7 @@ package externalversions
 import (
 	"fmt"
 
-	v2alpha1 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	v2alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -53,11 +53,11 @@ func (f *genericInformer) Lister() cache.GenericLister {
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
 	// Group=broker.amq.io, Version=v2alpha1
-	case v2alpha1.SchemeGroupVersion.WithResource("activemqartemises"):
+	case v2alpha1.GroupVersion.WithResource("activemqartemises"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Broker().V2alpha1().ActiveMQArtemises().Informer()}, nil
-	case v2alpha1.SchemeGroupVersion.WithResource("activemqartemisaddresses"):
+	case v2alpha1.GroupVersion.WithResource("activemqartemisaddresses"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Broker().V2alpha1().ActiveMQArtemisAddresses().Informer()}, nil
-	case v2alpha1.SchemeGroupVersion.WithResource("activemqartemisscaledowns"):
+	case v2alpha1.GroupVersion.WithResource("activemqartemisscaledowns"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Broker().V2alpha1().ActiveMQArtemisScaledowns().Informer()}, nil
 
 	}

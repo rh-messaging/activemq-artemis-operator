@@ -17,9 +17,7 @@ limitations under the License.
 package v2alpha3
 
 import (
-	v2alpha3 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha3"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/scheme"
-	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
+	v2alpha3 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha3"
 	rest "k8s.io/client-go/rest"
 )
 
@@ -71,10 +69,9 @@ func New(c rest.Interface) *BrokerV2alpha3Client {
 }
 
 func setConfigDefaults(config *rest.Config) error {
-	gv := v2alpha3.SchemeGroupVersion
+	gv := v2alpha3.GroupVersion
 	config.GroupVersion = &gv
 	config.APIPath = "/apis"
-	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}
 
 	if config.UserAgent == "" {
 		config.UserAgent = rest.DefaultKubernetesUserAgent()

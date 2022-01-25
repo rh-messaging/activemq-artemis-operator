@@ -17,7 +17,12 @@ limitations under the License.
 package scheme
 
 import (
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/apis"
+	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
+	brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha1"
+	brokerv2alpha2 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha2"
+	brokerv2alpha3 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha3"
+	brokerv2alpha4 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha4"
+	brokerv2alpha5 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha5"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -48,5 +53,10 @@ func init() {
 // After this, RawExtensions in Kubernetes types will serialize kube-aggregator types
 // correctly.
 func AddToScheme(scheme *runtime.Scheme) {
-	apis.AddToScheme(scheme)
+	brokerv2alpha1.SchemeBuilder.AddToScheme(scheme)
+	brokerv2alpha2.SchemeBuilder.AddToScheme(scheme)
+	brokerv2alpha3.SchemeBuilder.AddToScheme(scheme)
+	brokerv2alpha4.SchemeBuilder.AddToScheme(scheme)
+	brokerv2alpha5.SchemeBuilder.AddToScheme(scheme)
+	brokerv1beta1.SchemeBuilder.AddToScheme(scheme)
 }

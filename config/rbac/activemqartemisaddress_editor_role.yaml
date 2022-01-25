@@ -1,0 +1,24 @@
+# permissions for end users to edit activemqartemisaddresses.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: activemqartemisaddress-editor-role
+rules:
+- apiGroups:
+  - broker.amq.io
+  resources:
+  - activemqartemisaddresses
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - broker.amq.io
+  resources:
+  - activemqartemisaddresses/status
+  verbs:
+  - get

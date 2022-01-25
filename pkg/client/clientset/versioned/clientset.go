@@ -17,13 +17,15 @@ limitations under the License.
 package versioned
 
 import (
+	"fmt"
+
 	brokerv1alpha1 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v1alpha1"
+	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v1beta1"
 	brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha1"
 	brokerv2alpha2 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha2"
 	brokerv2alpha3 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha3"
 	brokerv2alpha4 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha4"
 	brokerv2alpha5 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha5"
-	glog "github.com/golang/glog"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -37,7 +39,7 @@ type Interface interface {
 	BrokerV2alpha4() brokerv2alpha4.BrokerV2alpha4Interface
 	BrokerV2alpha5() brokerv2alpha5.BrokerV2alpha5Interface
 	// Deprecated: please explicitly pick a version if possible.
-	Broker() brokerv2alpha5.BrokerV2alpha5Interface
+	Broker() brokerv1beta1.BrokerV1beta1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
@@ -132,7 +134,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 
 	cs.DiscoveryClient, err = discovery.NewDiscoveryClientForConfig(&configShallowCopy)
 	if err != nil {
-		glog.Errorf("failed to create the DiscoveryClient: %v", err)
+		fmt.Printf("failed to create the DiscoveryClient: %v\n", err)
 		return nil, err
 	}
 	return &cs, nil

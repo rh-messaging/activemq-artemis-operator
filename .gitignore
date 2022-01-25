@@ -81,3 +81,9 @@ tags
 .project
 
 amqversion/*
+
+# Since using sdk v1.15.0
+tmp
+bin
+*.log
+

@@ -2,11 +2,12 @@ package config_test
 
 import (
 	"fmt"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha3"
+	"testing"
+
+	"github.com/artemiscloud/activemq-artemis-operator/api/v2alpha3"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/config"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"testing"
 )
 
 func TestConfigUtils(t *testing.T) {

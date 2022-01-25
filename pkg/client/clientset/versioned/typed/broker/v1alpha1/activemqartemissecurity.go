@@ -17,7 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
+	"context"
+
+	v1alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v1alpha1"
 	scheme "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -67,7 +69,7 @@ func (c *activeMQArtemisSecurities) Get(name string, options v1.GetOptions) (res
 		Resource("activemqartemissecurities").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -79,7 +81,7 @@ func (c *activeMQArtemisSecurities) List(opts v1.ListOptions) (result *v1alpha1.
 		Namespace(c.ns).
 		Resource("activemqartemissecurities").
 		VersionedParams(&opts, scheme.ParameterCodec).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -91,7 +93,7 @@ func (c *activeMQArtemisSecurities) Watch(opts v1.ListOptions) (watch.Interface,
 		Namespace(c.ns).
 		Resource("activemqartemissecurities").
 		VersionedParams(&opts, scheme.ParameterCodec).
-		Watch()
+		Watch(context.TODO())
 }
 
 // Create takes the representation of a activeMQArtemisSecurity and creates it.  Returns the server's representation of the activeMQArtemisSecurity, and an error, if there is any.
@@ -101,7 +103,7 @@ func (c *activeMQArtemisSecurities) Create(activeMQArtemisSecurity *v1alpha1.Act
 		Namespace(c.ns).
 		Resource("activemqartemissecurities").
 		Body(activeMQArtemisSecurity).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -114,7 +116,7 @@ func (c *activeMQArtemisSecurities) Update(activeMQArtemisSecurity *v1alpha1.Act
 		Resource("activemqartemissecurities").
 		Name(activeMQArtemisSecurity.Name).
 		Body(activeMQArtemisSecurity).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -130,7 +132,7 @@ func (c *activeMQArtemisSecurities) UpdateStatus(activeMQArtemisSecurity *v1alph
 		Name(activeMQArtemisSecurity.Name).
 		SubResource("status").
 		Body(activeMQArtemisSecurity).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -142,7 +144,7 @@ func (c *activeMQArtemisSecurities) Delete(name string, options *v1.DeleteOption
 		Resource("activemqartemissecurities").
 		Name(name).
 		Body(options).
-		Do().
+		Do(context.TODO()).
 		Error()
 }
 
@@ -153,7 +155,7 @@ func (c *activeMQArtemisSecurities) DeleteCollection(options *v1.DeleteOptions, 
 		Resource("activemqartemissecurities").
 		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Body(options).
-		Do().
+		Do(context.TODO()).
 		Error()
 }
 
@@ -166,7 +168,7 @@ func (c *activeMQArtemisSecurities) Patch(name string, pt types.PatchType, data 
 		SubResource(subresources...).
 		Name(name).
 		Body(data).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }

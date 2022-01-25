@@ -18,6 +18,8 @@ package fake
 
 import (
 	clientset "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned"
+	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v1beta1"
+	fakebrokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v1beta1/fake"
 	brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha1"
 	fakebrokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha1/fake"
 	brokerv2alpha2 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha2"
@@ -47,9 +49,12 @@ func NewSimpleClientset(objects ...runtime.Object) *Clientset {
 		}
 	}
 
-	fakePtr := testing.Fake{}
-	fakePtr.AddReactor("*", "*", testing.ObjectReaction(o))
-	fakePtr.AddWatchReactor("*", func(action testing.Action) (handled bool, ret watch.Interface, err error) {
+	clientset := Clientset{}
+	clientset.Fake = testing.Fake{}
+
+	//	fakePtr := testing.Fake{}
+	clientset.Fake.AddReactor("*", "*", testing.ObjectReaction(o))
+	clientset.Fake.AddWatchReactor("*", func(action testing.Action) (handled bool, ret watch.Interface, err error) {
 		gvr := action.GetResource()
 		ns := action.GetNamespace()
 		watch, err := o.Watch(gvr, ns)
@@ -58,8 +63,9 @@ func NewSimpleClientset(objects ...runtime.Object) *Clientset {
 		}
 		return true, watch, nil
 	})
+	clientset.discovery = &fakediscovery.FakeDiscovery{Fake: &clientset.Fake}
 
-	return &Clientset{fakePtr, &fakediscovery.FakeDiscovery{Fake: &fakePtr}}
+	return &clientset
 }
 
 // Clientset implements clientset.Interface. Meant to be embedded into a
@@ -101,7 +107,12 @@ func (c *Clientset) BrokerV2alpha5() brokerv2alpha5.BrokerV2alpha5Interface {
 	return &fakebrokerv2alpha5.FakeBrokerV2alpha5{Fake: &c.Fake}
 }
 
-// Broker retrieves the BrokerV2alpha4Client
-func (c *Clientset) Broker() brokerv2alpha5.BrokerV2alpha5Interface {
-	return &fakebrokerv2alpha5.FakeBrokerV2alpha5{Fake: &c.Fake}
+// BrokerV1beta1 retrieves the BrokerV1beta1Client
+func (c *Clientset) BrokerV1beta1() brokerv1beta1.BrokerV1beta1Interface {
+	return &fakebrokerv1beta1.FakeBrokerV1beta1{Fake: &c.Fake}
+}
+
+// Broker retrieves the BrokerV1Beta1Client
+func (c *Clientset) Broker() brokerv1beta1.BrokerV1beta1Interface {
+	return &fakebrokerv1beta1.FakeBrokerV1beta1{Fake: &c.Fake}
 }

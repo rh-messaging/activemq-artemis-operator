@@ -1,0 +1,24 @@
+# permissions for end users to edit activemqartemisscaledowns.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: activemqartemisscaledown-editor-role
+rules:
+- apiGroups:
+  - broker.amq.io
+  resources:
+  - activemqartemisscaledowns
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - broker.amq.io
+  resources:
+  - activemqartemisscaledowns/status
+  verbs:
+  - get

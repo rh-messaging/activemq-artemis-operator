@@ -78,12 +78,12 @@ func PodBelongsToStatefulset(pod *types.NamespacedName, ssName *types.Namespaced
 
 	//first check that their namespaces must match
 	if ssName.Namespace != pod.Namespace {
-		err := fmt.Errorf("the pod and statefulset are not in the same namespace", "pod", pod.Namespace, "ss", ssName.Namespace)
+		err := fmt.Errorf("the pod and statefulset are not in the same namespace, pod ns: %v, ss ns: %v", pod.Namespace, ssName.Namespace)
 		return err, false, -1
 	}
 	//next pod's name should be prefixed with statefulset's
 	if !strings.HasPrefix(pod.Name, ssName.Name) {
-		err := fmt.Errorf("The pod's name doesn't have the statefulset's name as its prefix", "pod", pod.Name, "ss", ssName.Name)
+		err := fmt.Errorf("the pod's name doesn't have the statefulset's name as its prefix, pod name: %v, ss name: %v", pod.Name, ssName.Name)
 		return err, false, -1
 	}
 	//next try to extract the pod name's number part
@@ -91,7 +91,7 @@ func PodBelongsToStatefulset(pod *types.NamespacedName, ssName *types.Namespaced
 	//convert to int
 	i, err := strconv.Atoi(podSerial)
 	if err != nil || i < 0 {
-		err := fmt.Errorf("failed to convert pod number", "pod", pod.Name, "ssName", ssName.Name)
+		err := fmt.Errorf("failed to convert pod number, pod name: %v, ss name: %v", pod.Name, ssName.Name)
 		return err, false, -1
 	}
 

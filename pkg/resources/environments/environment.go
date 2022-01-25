@@ -1,6 +1,7 @@
 package environments
 
 import (
+	"context"
 	"math"
 	"os"
 	"strconv"
@@ -17,7 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime"
 )
 
 var log = logf.Log.WithName("package environments")
@@ -77,24 +78,29 @@ func DetectOpenshift() (bool, error) {
 	scheme := runtime.NewScheme()
 	codecs := serializer.NewCodecFactory(scheme)
 
-	cfg.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: codecs}
-
 	if cfg.UserAgent == "" {
 		cfg.UserAgent = rest.DefaultKubernetesUserAgent()
 	}
 
 	cfg.GroupVersion = &gv
 
-	client, err := rest.RESTClientFor(cfg)
+	serializerInfos := codecs.SupportedMediaTypes()
+	for _, info := range serializerInfos {
+		cfg.NegotiatedSerializer = serializer.NegotiatedSerializerWrapper(info)
+		client, err := rest.RESTClientFor(cfg)
 
-	if err != nil {
-		log.Error(err, "Error getting client: %v")
-		return false, err
+		if err != nil {
+			log.Error(err, "Error getting client", "with type", info)
+			continue
+		}
+
+		_, err = client.Get().DoRaw(context.TODO())
+
+		if err == nil {
+			return true, nil
+		}
 	}
-
-	_, err = client.Get().DoRaw()
-
-	return err == nil, nil
+	return false, nil
 }
 
 func AddEnvVarForBasic(requireLogin string, journalType string) []corev1.EnvVar {
@@ -246,6 +252,11 @@ func AddEnvVarForBasic2(requireLogin string, journalType string, svcPingName str
 		{
 			"PING_SVC_NAME",
 			svcPingName,
+			nil,
+		},
+		{
+			"OPENSHIFT_DNS_PING_SERVICE_PORT",
+			"7800",
 			nil,
 		},
 	}

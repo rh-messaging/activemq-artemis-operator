@@ -1,0 +1,10 @@
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemisAddress
+metadata:
+  name: ex-aaoaddress
+spec:
+  addressName: myAddress0
+  queueName: myQueue0
+  routingType: anycast
+  removeFromBrokerOnDelete: true
+

@@ -19,7 +19,9 @@ limitations under the License.
 package v2alpha1
 
 import (
-	v2alpha1 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	"context"
+
+	v2alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha1"
 	scheme "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -69,7 +71,7 @@ func (c *activeMQArtemisScaledowns) Get(name string, options v1.GetOptions) (res
 		Resource("activemqartemisscaledowns").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -81,7 +83,7 @@ func (c *activeMQArtemisScaledowns) List(opts v1.ListOptions) (result *v2alpha1.
 		Namespace(c.ns).
 		Resource("activemqartemisscaledowns").
 		VersionedParams(&opts, scheme.ParameterCodec).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -93,7 +95,7 @@ func (c *activeMQArtemisScaledowns) Watch(opts v1.ListOptions) (watch.Interface,
 		Namespace(c.ns).
 		Resource("activemqartemisscaledowns").
 		VersionedParams(&opts, scheme.ParameterCodec).
-		Watch()
+		Watch(context.TODO())
 }
 
 // Create takes the representation of a activeMQArtemisScaledown and creates it.  Returns the server's representation of the activeMQArtemisScaledown, and an error, if there is any.
@@ -103,7 +105,7 @@ func (c *activeMQArtemisScaledowns) Create(activeMQArtemisScaledown *v2alpha1.Ac
 		Namespace(c.ns).
 		Resource("activemqartemisscaledowns").
 		Body(activeMQArtemisScaledown).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -116,7 +118,7 @@ func (c *activeMQArtemisScaledowns) Update(activeMQArtemisScaledown *v2alpha1.Ac
 		Resource("activemqartemisscaledowns").
 		Name(activeMQArtemisScaledown.Name).
 		Body(activeMQArtemisScaledown).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -132,7 +134,7 @@ func (c *activeMQArtemisScaledowns) UpdateStatus(activeMQArtemisScaledown *v2alp
 		Name(activeMQArtemisScaledown.Name).
 		SubResource("status").
 		Body(activeMQArtemisScaledown).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -144,7 +146,7 @@ func (c *activeMQArtemisScaledowns) Delete(name string, options *v1.DeleteOption
 		Resource("activemqartemisscaledowns").
 		Name(name).
 		Body(options).
-		Do().
+		Do(context.TODO()).
 		Error()
 }
 
@@ -155,7 +157,7 @@ func (c *activeMQArtemisScaledowns) DeleteCollection(options *v1.DeleteOptions, 
 		Resource("activemqartemisscaledowns").
 		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Body(options).
-		Do().
+		Do(context.TODO()).
 		Error()
 }
 
@@ -168,7 +170,7 @@ func (c *activeMQArtemisScaledowns) Patch(name string, pt types.PatchType, data 
 		SubResource(subresources...).
 		Name(name).
 		Body(data).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }

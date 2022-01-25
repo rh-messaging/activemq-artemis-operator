@@ -1,0 +1,20 @@
+# permissions for end users to view activemqartemissecurities.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: activemqartemissecurity-viewer-role
+rules:
+- apiGroups:
+  - broker.amq.io
+  resources:
+  - activemqartemissecurities
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - broker.amq.io
+  resources:
+  - activemqartemissecurities/status
+  verbs:
+  - get

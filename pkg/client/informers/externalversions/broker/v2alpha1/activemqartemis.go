@@ -21,7 +21,7 @@ package v2alpha1
 import (
 	time "time"
 
-	brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha1"
 	versioned "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/artemiscloud/activemq-artemis-operator/pkg/client/informers/externalversions/internalinterfaces"
 	v2alpha1 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/listers/broker/v2alpha1"

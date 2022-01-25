@@ -1,0 +1,15 @@
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: ex-aao
+  application: ex-aao-app
+spec:
+  deploymentPlan:
+    image: placeholder
+    size: 2
+    requireLogin: false
+    persistenceEnabled: false
+    journalType: nio
+    messageMigration: false
+    managementRBACEnabled: true
+

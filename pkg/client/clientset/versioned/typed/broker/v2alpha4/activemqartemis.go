@@ -17,7 +17,9 @@ limitations under the License.
 package v2alpha4
 
 import (
-	v2alpha4 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha4"
+	"context"
+
+	v2alpha4 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha4"
 	scheme "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -67,7 +69,7 @@ func (c *activeMQArtemises) Get(name string, options v1.GetOptions) (result *v2a
 		Resource("activemqartemises").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -79,7 +81,7 @@ func (c *activeMQArtemises) List(opts v1.ListOptions) (result *v2alpha4.ActiveMQ
 		Namespace(c.ns).
 		Resource("activemqartemises").
 		VersionedParams(&opts, scheme.ParameterCodec).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -91,7 +93,7 @@ func (c *activeMQArtemises) Watch(opts v1.ListOptions) (watch.Interface, error) 
 		Namespace(c.ns).
 		Resource("activemqartemises").
 		VersionedParams(&opts, scheme.ParameterCodec).
-		Watch()
+		Watch(context.TODO())
 }
 
 // Create takes the representation of a activeMQArtemis and creates it.  Returns the server's representation of the activeMQArtemis, and an error, if there is any.
@@ -101,7 +103,7 @@ func (c *activeMQArtemises) Create(activeMQArtemis *v2alpha4.ActiveMQArtemis) (r
 		Namespace(c.ns).
 		Resource("activemqartemises").
 		Body(activeMQArtemis).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -114,7 +116,7 @@ func (c *activeMQArtemises) Update(activeMQArtemis *v2alpha4.ActiveMQArtemis) (r
 		Resource("activemqartemises").
 		Name(activeMQArtemis.Name).
 		Body(activeMQArtemis).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -130,7 +132,7 @@ func (c *activeMQArtemises) UpdateStatus(activeMQArtemis *v2alpha4.ActiveMQArtem
 		Name(activeMQArtemis.Name).
 		SubResource("status").
 		Body(activeMQArtemis).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }
@@ -142,7 +144,7 @@ func (c *activeMQArtemises) Delete(name string, options *v1.DeleteOptions) error
 		Resource("activemqartemises").
 		Name(name).
 		Body(options).
-		Do().
+		Do(context.TODO()).
 		Error()
 }
 
@@ -153,7 +155,7 @@ func (c *activeMQArtemises) DeleteCollection(options *v1.DeleteOptions, listOpti
 		Resource("activemqartemises").
 		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Body(options).
-		Do().
+		Do(context.TODO()).
 		Error()
 }
 
@@ -166,7 +168,7 @@ func (c *activeMQArtemises) Patch(name string, pt types.PatchType, data []byte, 
 		SubResource(subresources...).
 		Name(name).
 		Body(data).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	return
 }

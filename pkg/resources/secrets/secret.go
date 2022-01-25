@@ -9,11 +9,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
-var log = logf.Log.WithName("package secrets")
+var log = ctrl.Log.WithName("package secrets")
 var CredentialsNameBuilder namer.NamerData
 var ConsoleNameBuilder namer.NamerData
 var NettyNameBuilder namer.NamerData
