@@ -49,6 +49,7 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -631,12 +632,25 @@ func isDrainPod(pod *corev1.Pod) bool {
 // string which is then put onto the work queue. This method should *not* be
 // passed resources of any type other than StatefulSet.
 func (c *Controller) enqueueStatefulSet(obj interface{}) {
+	var enquequingSTS *appsv1.StatefulSet
+	enquequingSTS, ok := obj.(*appsv1.StatefulSet)
+	if !ok {
+		runtime.HandleError(fmt.Errorf("error enquequing statefulset object, invalid type"))
+		return
+	}
+
 	var key string
 	var err error
 	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
 		runtime.HandleError(err)
 		return
 	}
+
+	if enquequingSTS.ObjectMeta.Labels[selectors.LabelResourceKey] == "" {
+		dlog.Info("Skipping statefulset", "key", key, "controller ns", c.name)
+		return
+	}
+
 	dlog.Info("Enquequing statefulset", "key", key, "controller ns", c.name)
 	c.workqueue.AddRateLimited(key)
 }
