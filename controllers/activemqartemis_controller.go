@@ -206,9 +206,9 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 					fsm = MakeActiveMQArtemisFSMFromData(&fsmData, &storedCR, namespacedName, r)
 				}
 			}
-			namespacedNameToFSM[namespacedName] = fsm
 			if lsrcr.Checksum == customResource.ResourceVersion {
 				//this is an operator restart. Don't do reconcile
+				namespacedNameToFSM[namespacedName] = fsm
 				reqLogger.Info("Detected possible operator restart with no broker CR changes", "res", customResource.ResourceVersion)
 				return r.Result, nil
 			}
