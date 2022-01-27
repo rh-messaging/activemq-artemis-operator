@@ -19,6 +19,8 @@ package draincontroller
 import (
 	"context"
 	"fmt"
+	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
+	//"github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v1beta1"
 	"os"
 	"time"
 
@@ -44,7 +46,7 @@ import (
 	"strconv"
 	"strings"
 
-	brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha1"
+	//brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha1"
 	rbacutil "github.com/artemiscloud/activemq-artemis-operator/pkg/rbac"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
@@ -56,7 +58,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var dlog = ctrl.Log.WithName("controller_v2alpha1activemqartemisscaledown")
+var dlog = ctrl.Log.WithName("controller_v1beta1activemqartemisscaledown")
 
 const controllerAgentName = "statefulset-drain-controller"
 const AnnotationStatefulSet = "statefulsets.kubernetes.io/drainer-pod-owner" // TODO: can we replace this with an OwnerReference with the StatefulSet as the owner?
@@ -104,6 +106,7 @@ type Controller struct {
 	recorder record.EventRecorder
 
 	localOnly bool
+	resources corev1.ResourceRequirements
 
 	// sts --> ssNames
 	ssNamesMap map[types.NamespacedName]map[string]string
@@ -123,9 +126,8 @@ func NewController(
 	kubeclientset kubernetes.Interface,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	namespace string,
-	localOnly bool,
 	client client.Client,
-	labels map[string]string) *Controller {
+	instance *brokerv1beta1.ActiveMQArtemisScaledown) *Controller {
 
 	// obtain references to shared index informers for the Deployment and Foo
 	// types.
@@ -154,9 +156,10 @@ func NewController(
 		podsSynced:         podInformer.Informer().HasSynced,
 		workqueue:          workqueue.NewNamedRateLimitingQueue(itemExponentialFailureRateLimiter, "StatefulSets"),
 		recorder:           recorder,
-		localOnly:          localOnly,
+		localOnly:          instance.Spec.LocalOnly,
+		resources:          instance.Spec.Resources,
 		ssNamesMap:         make(map[types.NamespacedName]map[string]string),
-		ssLabels:           labels,
+		ssLabels:           instance.Labels,
 		stopCh:             make(chan struct{}),
 		client:             client,
 	}
@@ -193,7 +196,7 @@ func NewController(
 	return controller
 }
 
-func (c *Controller) AddInstance(instance *brokerv2alpha1.ActiveMQArtemisScaledown) {
+func (c *Controller) AddInstance(instance *brokerv1beta1.ActiveMQArtemisScaledown) {
 	namespacedName := types.NamespacedName{
 		instance.Annotations["CRNAMESPACE"],
 		namer.CrToSS(instance.Annotations["CRNAME"]),
@@ -794,6 +797,7 @@ func (c *Controller) newPod(sts *appsv1.StatefulSet, ordinal int) (*corev1.Pod, 
 		podTemplateJson = strings.Replace(podTemplateJson, "SERVICE_ACCOUNT_NAME", DrainServiceAccountName, 1)
 	}
 	image := sts.Spec.Template.Spec.Containers[0].Image
+	//sts.Spec.Template.Spec.Containers[0].Resources = c.resources
 	if "" == image {
 		return nil, fmt.Errorf("No drain pod image configured for StatefulSet " + sts.Name)
 	}
@@ -830,6 +834,7 @@ func (c *Controller) newPod(sts *appsv1.StatefulSet, ordinal int) (*corev1.Pod, 
 	//}))
 
 	pod.Spec.RestartPolicy = corev1.RestartPolicyOnFailure
+	pod.Spec.Containers[0].Resources = c.resources
 
 	for _, pvcTemplate := range sts.Spec.VolumeClaimTemplates {
 		pod.Spec.Volumes = append(pod.Spec.Volumes, corev1.Volume{ // TODO: override existing volumes with the same name

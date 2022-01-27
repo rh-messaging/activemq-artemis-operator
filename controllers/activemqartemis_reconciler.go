@@ -9,7 +9,6 @@ import (
 	"github.com/RHsyseng/operator-utils/pkg/olm"
 	"github.com/RHsyseng/operator-utils/pkg/resource/compare"
 	"github.com/RHsyseng/operator-utils/pkg/resource/read"
-	brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/containers"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/ingresses"
@@ -483,7 +482,7 @@ func syncMessageMigration(fsm *ActiveMQArtemisFSM, client rtclient.Client, schem
 	ssNames["SERVICE_ACCOUNT_NAME"] = os.Getenv("SERVICE_ACCOUNT")
 	ssNames["AMQ_CREDENTIALS_SECRET_NAME"] = fsm.GetCredentialsSecretName()
 
-	scaledown := &brokerv2alpha1.ActiveMQArtemisScaledown{
+	scaledown := &brokerv1beta1.ActiveMQArtemisScaledown{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "ActiveMQArtemisScaledown",
@@ -494,10 +493,11 @@ func syncMessageMigration(fsm *ActiveMQArtemisFSM, client rtclient.Client, schem
 			Namespace:   fsm.customResource.Namespace,
 			Annotations: ssNames,
 		},
-		Spec: brokerv2alpha1.ActiveMQArtemisScaledownSpec{
+		Spec: brokerv1beta1.ActiveMQArtemisScaledownSpec{
 			LocalOnly: isLocalOnly(),
+			Resources: fsm.customResource.Spec.DeploymentPlan.Resources,
 		},
-		Status: brokerv2alpha1.ActiveMQArtemisScaledownStatus{},
+		Status: brokerv1beta1.ActiveMQArtemisScaledownStatus{},
 	}
 
 	if nil == fsm.customResource.Spec.DeploymentPlan.MessageMigration {
