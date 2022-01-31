@@ -560,7 +560,10 @@ func sourceEnvVarFromSecret(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1.
 	if err = resources.Retrieve(namespacedName, client, secretDefinition); err != nil {
 		if errors.IsNotFound(err) {
 			log.V(1).Info("Did not find secret " + secretName)
-			requestedResources = append(requestedResources, secretDefinition)
+
+			if !isResourceAlreadyRequested(log, secretName) {
+				requestedResources = append(requestedResources, secretDefinition)
+			}
 		}
 	} else { // err == nil so it already exists
 		// Exists now
@@ -651,7 +654,10 @@ func sourceEnvVarFromSecret2(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1
 	if err = resources.Retrieve(namespacedName, client, secretDefinition); err != nil {
 		if errors.IsNotFound(err) {
 			log.V(1).Info("Did not find secret " + secretName)
-			requestedResources = append(requestedResources, secretDefinition)
+
+			if !isResourceAlreadyRequested(log, secretName) {
+				requestedResources = append(requestedResources, secretDefinition)
+			}
 		}
 	} else { // err == nil so it already exists
 		// Exists now
@@ -716,6 +722,19 @@ func sourceEnvVarFromSecret2(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1
 	}
 
 	return retVal
+}
+
+func isResourceAlreadyRequested(log logr.Logger, resourceName string) bool {
+	// Check requestedResources to see if we already have this resourceName
+	log.V(1).Info("Checking to see if we've already requested " + resourceName + " creation")
+	resourceNameIsDuplicate := false
+	for index := range requestedResources {
+		if requestedResources[index].GetName() == resourceName {
+			resourceNameIsDuplicate = true
+			break
+		}
+	}
+	return resourceNameIsDuplicate
 }
 
 func generateAcceptorsString(fsm *ActiveMQArtemisFSM, client rtclient.Client) string {
