@@ -13,7 +13,7 @@ WORKDIR ${GOPATH}/src/github.com/artemiscloud/activemq-artemis-operator
 
 RUN /opt/rh/go-toolset-1.13/root/usr/bin/go build -o /tmp/activemq-artemis-operator/${BROKER_NAME}-operator /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/cmd/manager
 
-FROM registry.access.redhat.com/ubi8:8.5-214 AS base-env
+FROM registry.access.redhat.com/ubi8:8.5-226 AS base-env
 
 ENV BROKER_NAME=amq-broker
 ENV OPERATOR=/home/${BROKER_NAME}-operator/bin/${BROKER_NAME}-operator
