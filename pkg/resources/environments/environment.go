@@ -1,22 +1,16 @@
 package environments
 
 import (
-	"context"
+	"errors"
 	"math"
 	"os"
 	"strconv"
 	"strings"
 
 	svc "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/services"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/random"
 	corev1 "k8s.io/api/core/v1"
-
-	"k8s.io/client-go/rest"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
-
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 
 	logf "sigs.k8s.io/controller-runtime"
 )
@@ -65,42 +59,14 @@ func DetectOpenshift() (bool, error) {
 		return strings.ToLower(value) == "true", nil
 	}
 
-	cfg, err := config.GetConfig()
-	if err != nil {
-		log.Error(err, "Error getting config: %v")
-		return false, err
+	// Find out if we're on OpenShift or Kubernetes
+	stateManager := common.GetStateManager()
+	openshift, keyExists := stateManager.GetState(common.OpenShiftAPIServerKind).(bool)
+
+	if keyExists {
+		return openshift, nil
 	}
-
-	groupName := "route.openshift.io"
-	gv := schema.GroupVersion{Group: groupName, Version: "v1"}
-	cfg.APIPath = "/apis"
-
-	scheme := runtime.NewScheme()
-	codecs := serializer.NewCodecFactory(scheme)
-
-	if cfg.UserAgent == "" {
-		cfg.UserAgent = rest.DefaultKubernetesUserAgent()
-	}
-
-	cfg.GroupVersion = &gv
-
-	serializerInfos := codecs.SupportedMediaTypes()
-	for _, info := range serializerInfos {
-		cfg.NegotiatedSerializer = serializer.NegotiatedSerializerWrapper(info)
-		client, err := rest.RESTClientFor(cfg)
-
-		if err != nil {
-			log.Error(err, "Error getting client", "with type", info)
-			continue
-		}
-
-		_, err = client.Get().DoRaw(context.TODO())
-
-		if err == nil {
-			return true, nil
-		}
-	}
-	return false, nil
+	return false, errors.New("environment not yet determined")
 }
 
 func AddEnvVarForBasic(requireLogin string, journalType string) []corev1.EnvVar {

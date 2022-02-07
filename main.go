@@ -46,6 +46,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	nsoptions "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/namespaces"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/sdkk8sutil"
 
@@ -115,6 +116,13 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
+	// Get a config to talk to the apiserver
+	cfg, err := config.GetConfig()
+	if err != nil {
+		log.Error(err, "Error getting config for APIServer")
+		os.Exit(1)
+	}
+
 	isOpenshift, err1 := environments.DetectOpenshift()
 	if err1 != nil {
 		log.Error(err1, "Failed to get env")
@@ -155,13 +163,6 @@ func main() {
 		log.Error(err, "failed to set operator's watch namespace to env")
 	}
 
-	// Get a config to talk to the apiserver
-	cfg, err := config.GetConfig()
-	if err != nil {
-		log.Error(err, "")
-		os.Exit(1)
-	}
-
 	ctx := context.TODO()
 
 	mgrOptions := ctrl.Options{
@@ -189,10 +190,18 @@ func main() {
 		nsoptions.SetWatchNamespace(watchNameSpace)
 	}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), mgrOptions)
+	mgr, err := ctrl.NewManager(cfg, mgrOptions)
 	if err != nil {
 		log.Error(err, "unable to start manager")
 		os.Exit(1)
+	}
+
+	// Create and start a new auto detect process for this operator
+	autodetect, err := common.NewAutoDetect(mgr)
+	if err != nil {
+		log.Error(err, "failed to start the background process to auto-detect the operator capabilities")
+	} else {
+		autodetect.Start()
 	}
 
 	// Set the service account name for the drainer pod

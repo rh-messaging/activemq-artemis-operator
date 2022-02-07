@@ -86,6 +86,18 @@ func Update(namespacedName types.NamespacedName, client client.Client, clientObj
 	return err
 }
 
+func UpdateStatus(namespacedName types.NamespacedName, client client.Client, clientObject client.Object) error {
+	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
+	objectTypeString := reflect.TypeOf(clientObject.(runtime.Object)).String()
+	reqLogger.V(1).Info("Updating status "+objectTypeString, "obj", clientObject)
+
+	var err error = nil
+	if err = client.Status().Update(context.TODO(), clientObject); err != nil {
+		reqLogger.Error(err, "Failed to update status on "+objectTypeString)
+	}
+	return err
+}
+
 func Delete(namespacedName types.NamespacedName, client client.Client, clientObject client.Object) error {
 
 	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)

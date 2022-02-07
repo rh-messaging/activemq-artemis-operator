@@ -308,8 +308,8 @@ func (amqbfsm *ActiveMQArtemisFSM) Update() (error, int) {
 	// Was the current state complete?
 	amqbfsm.r.Result = ctrl.Result{}
 	err, nextStateID := amqbfsm.m.Update()
-	ssNamespacedName := types.NamespacedName{Name: amqbfsm.namers.SsNameBuilder.Name(), Namespace: amqbfsm.customResource.Namespace}
-	UpdatePodStatus(amqbfsm.customResource, amqbfsm.r.Client, ssNamespacedName)
+	namespacedName := types.NamespacedName{Name: amqbfsm.customResource.Name, Namespace: amqbfsm.customResource.Namespace}
+	UpdatePodStatus(amqbfsm.customResource, amqbfsm.r.Client, namespacedName)
 
 	return err, nextStateID
 }

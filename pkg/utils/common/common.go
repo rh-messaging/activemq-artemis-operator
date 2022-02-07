@@ -6,6 +6,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// extra kinds
+const (
+	RouteKind              = "Route"
+	OpenShiftAPIServerKind = "OpenShiftAPIServer"
+)
+
 func compareQuantities(resList1 corev1.ResourceList, resList2 corev1.ResourceList, keys []corev1.ResourceName) bool {
 
 	for _, key := range keys {

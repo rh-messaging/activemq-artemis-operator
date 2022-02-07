@@ -17,13 +17,13 @@ limitations under the License.
 package controllers
 
 import (
+	"context"
 	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
@@ -35,15 +35,23 @@ import (
 	brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha1"
 	brokerv2alpha3 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha3"
 	brokerv2alpha5 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha5"
+
 	//+kubebuilder:scaffold:imports
+
+	nsoptions "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/namespaces"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
-var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
+var ctx context.Context
+var cancel context.CancelFunc
+var stateManager *common.StateManager
+var autodetect *common.Background
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -56,6 +64,10 @@ func TestAPIs(t *testing.T) {
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
+	ctx, cancel = context.WithCancel(context.TODO())
+
+	// for run in ide
+	// os.Setenv("KUBEBUILDER_ASSETS", " .. <path from makefile> /kubebuilder-envtest/k8s/1.22.1-linux-amd64")
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
@@ -87,10 +99,50 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
+	// start our controler
+	k8Manager, err := ctrl.NewManager(cfg, ctrl.Options{
+		Scheme: scheme.Scheme,
+	})
+	Expect(err).ToNot(HaveOccurred())
+
+	stateManager = common.GetStateManager()
+
+	// Create and start a new auto detect process for this operator
+	autodetect, err := common.NewAutoDetect(k8Manager)
+	if err != nil {
+		logf.Log.Error(err, "failed to start the background process to auto-detect the operator capabilities")
+	} else {
+		autodetect.Start()
+	}
+
+	// watch all namespaces by default
+	nsoptions.SetWatchAll(true)
+	if err = (&ActiveMQArtemisReconciler{
+		Client: k8Manager.GetClient(),
+		Scheme: k8Manager.GetScheme(),
+		Result: ctrl.Result{},
+	}).SetupWithManager(k8Manager); err != nil {
+		logf.Log.Error(err, "unable to create controller", "controller", "ActiveMQArtemisReconciler")
+	}
+
+	go func() {
+		defer GinkgoRecover()
+		err = k8Manager.Start(ctx)
+		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
+	}()
+
 }, 60)
 
 var _ = AfterSuite(func() {
 	By("tearing down the test environment")
+
+	cancel()
+	if autodetect != nil {
+		autodetect.Stop()
+	}
+	if stateManager != nil {
+		stateManager.Clear()
+	}
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })

@@ -17,19 +17,18 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/routes"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/serviceports"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/channels"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/config"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/cr2jinja2"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	"github.com/artemiscloud/activemq-artemis-operator/version"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
@@ -376,7 +375,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessDeploymentPlan(fsm *Acti
 	return reconciler.statefulSetUpdates
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAddressSettings(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis, client client.Client) bool {
+func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAddressSettings(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) bool {
 
 	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
 	log.Info("Process addresssettings")
@@ -411,7 +410,7 @@ func compareAddressSettings(currentAddressSettings *brokerv1beta1.AddressSetting
 	return false
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAcceptorsAndConnectors(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
+func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAcceptorsAndConnectors(fsm *ActiveMQArtemisFSM, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
 
 	var retVal uint32 = statefulSetNotUpdated
 
@@ -540,7 +539,7 @@ func isLocalOnly() bool {
 	return false
 }
 
-func sourceEnvVarFromSecret(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1.StatefulSet, envVars *map[string]string, secretName string, client client.Client, scheme *runtime.Scheme) uint32 {
+func sourceEnvVarFromSecret(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1.StatefulSet, envVars *map[string]string, secretName string, client rtclient.Client, scheme *runtime.Scheme) uint32 {
 
 	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
 
@@ -632,7 +631,7 @@ func sourceEnvVarFromSecret(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1.
 	return retVal
 }
 
-func sourceEnvVarFromSecret2(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1.StatefulSet, envVars *map[string]ValueInfo, secretName string, client client.Client, scheme *runtime.Scheme) uint32 {
+func sourceEnvVarFromSecret2(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1.StatefulSet, envVars *map[string]ValueInfo, secretName string, client rtclient.Client, scheme *runtime.Scheme) uint32 {
 
 	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
 
@@ -1557,7 +1556,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) deleteResource(customResource *
 	return deleted, stepsComplete
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) createRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, requested rtclient.Object, reqLogger logr.Logger, createError error, kind string) (error, error) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) createRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, requested rtclient.Object, reqLogger logr.Logger, createError error, kind string) (error, error) {
 
 	var err error = nil
 
@@ -1571,7 +1570,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) createRequestedResource(customR
 	return err, createError
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) updateRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, requested rtclient.Object, reqLogger logr.Logger, updateError error, kind string) (error, error) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) updateRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, requested rtclient.Object, reqLogger logr.Logger, updateError error, kind string) (error, error) {
 
 	var err error = nil
 
@@ -1585,7 +1584,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) updateRequestedResource(customR
 	return err, updateError
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) deleteRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, requested rtclient.Object, reqLogger logr.Logger, deleteError error, kind string) (error, error) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) deleteRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, requested rtclient.Object, reqLogger logr.Logger, deleteError error, kind string) (error, error) {
 
 	var err error = nil
 
@@ -2177,7 +2176,7 @@ func NewStatefulSetForCR(fsm *ActiveMQArtemisFSM) *appsv1.StatefulSet {
 		Name:      fsm.customResource.Name,
 		Namespace: fsm.customResource.Namespace,
 	}
-	ss, Spec := statefulsets.MakeStatefulSet2(fsm.GetStatefulSetName(), fsm.GetHeadlessServiceName(), namespacedName, fsm.customResource.Annotations, fsm.namers.LabelBuilder.Labels(), fsm.customResource.Spec.DeploymentPlan.Size, NewPodTemplateSpecForCR(fsm))
+	ss, Spec := ss.MakeStatefulSet2(fsm.GetStatefulSetName(), fsm.GetHeadlessServiceName(), namespacedName, fsm.customResource.Annotations, fsm.namers.LabelBuilder.Labels(), fsm.customResource.Spec.DeploymentPlan.Size, NewPodTemplateSpecForCR(fsm))
 
 	if fsm.customResource.Spec.DeploymentPlan.PersistenceEnabled {
 		Spec.VolumeClaimTemplates = *NewPersistentVolumeClaimArrayForCR(fsm, 1)
@@ -2211,12 +2210,12 @@ func NewPersistentVolumeClaimArrayForCR(fsm *ActiveMQArtemisFSM, arrayLength int
 }
 
 // TODO: Test namespacedName to ensure it's the right namespacedName
-func UpdatePodStatus(cr *brokerv1beta1.ActiveMQArtemis, client client.Client, ssNamespacedName types.NamespacedName) error {
+func UpdatePodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namespacedName types.NamespacedName) error {
 
 	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.V(1).Info("Updating status for pods")
 
-	podStatus := GetPodStatus(cr, client, ssNamespacedName)
+	podStatus := GetPodStatus(cr, client, namespacedName)
 
 	reqLogger.V(1).Info("PodStatus are to be updated.............................", "info:", podStatus)
 	reqLogger.V(1).Info("Ready Count........................", "info:", len(podStatus.Ready))
@@ -2226,7 +2225,7 @@ func UpdatePodStatus(cr *brokerv1beta1.ActiveMQArtemis, client client.Client, ss
 	if !reflect.DeepEqual(podStatus, cr.Status.PodStatus) {
 		cr.Status.PodStatus = podStatus
 
-		err := resources.Update(ssNamespacedName, client, cr)
+		err := resources.UpdateStatus(namespacedName, client, cr)
 		if err != nil {
 			reqLogger.Error(err, "Failed to update pods status")
 			return err
@@ -2247,19 +2246,19 @@ func GetPodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, nam
 	var lastStatus olm.DeploymentStatus
 
 	if lastStatus, lastStatusExist := lastStatusMap[namespacedName]; !lastStatusExist {
-		ctrl.Log.Info("Creating lastStatus for new ss", "name", namespacedName)
+		ctrl.Log.Info("Creating lastStatus for new CR", "name", namespacedName)
 		lastStatus = olm.DeploymentStatus{}
 		lastStatusMap[namespacedName] = lastStatus
 	}
 
+	ssNamespacedName := types.NamespacedName{Name: namer.CrToSS(namespacedName.Name), Namespace: namespacedName.Namespace}
 	sfsFound := &appsv1.StatefulSet{}
-
-	err := client.Get(context.TODO(), namespacedName, sfsFound)
+	err := client.Get(context.TODO(), ssNamespacedName, sfsFound)
 	if err == nil {
 		status = olm.GetSingleStatefulSetStatus(*sfsFound)
 	} else {
 		dsFound := &appsv1.DaemonSet{}
-		err = client.Get(context.TODO(), namespacedName, dsFound)
+		err = client.Get(context.TODO(), ssNamespacedName, dsFound)
 		if err == nil {
 			status = olm.GetSingleDaemonSetStatus(*dsFound)
 		}
