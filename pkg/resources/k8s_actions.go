@@ -3,7 +3,6 @@ package resources
 import (
 	"context"
 	"reflect"
-	"sync"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -65,14 +64,8 @@ func Retrieve(namespacedName types.NamespacedName, client client.Client, clientO
 	return err
 }
 
-var mu sync.Mutex
-
 func Update(namespacedName types.NamespacedName, client client.Client, clientObject client.Object) error {
 
-	//added this simple lock to guard against concurrent updates
-	//occasionally it's seem that update fails. Hopefully this lock
-	//fix this.
-	mu.Lock()
 	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
 	objectTypeString := reflect.TypeOf(clientObject.(runtime.Object)).String()
 	reqLogger.V(1).Info("Updating "+objectTypeString, "obj", clientObject)
@@ -82,7 +75,6 @@ func Update(namespacedName types.NamespacedName, client client.Client, clientObj
 		reqLogger.Error(err, "Failed to update "+objectTypeString)
 	}
 
-	mu.Unlock()
 	return err
 }
 
