@@ -50,7 +50,6 @@ import (
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/sdkk8sutil"
 
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
 	routev1 "github.com/openshift/api/route/v1"
 
 	brokerv1alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v1alpha1"
@@ -121,18 +120,6 @@ func main() {
 	if err != nil {
 		log.Error(err, "Error getting config for APIServer")
 		os.Exit(1)
-	}
-
-	isOpenshift, err1 := environments.DetectOpenshift()
-	if err1 != nil {
-		log.Error(err1, "Failed to get env")
-		os.Exit(1)
-	}
-
-	if isOpenshift {
-		log.Info("environment is openshift")
-	} else {
-		log.Info("environment is not openshift")
 	}
 
 	printVersion()

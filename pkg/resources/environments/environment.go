@@ -61,10 +61,16 @@ func DetectOpenshift() (bool, error) {
 
 	// Find out if we're on OpenShift or Kubernetes
 	stateManager := common.GetStateManager()
-	openshift, keyExists := stateManager.GetState(common.OpenShiftAPIServerKind).(bool)
+	isOpenshift, keyExists := stateManager.GetState(common.OpenShiftAPIServerKind).(bool)
 
 	if keyExists {
-		return openshift, nil
+		if isOpenshift {
+			log.Info("environment is openshift")
+		} else {
+			log.Info("environment is not openshift")
+		}
+
+		return isOpenshift, nil
 	}
 	return false, errors.New("environment not yet determined")
 }
