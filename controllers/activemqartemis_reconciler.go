@@ -1,10 +1,14 @@
 package controllers
 
 import (
+	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"hash/adler32"
 	osruntime "runtime"
+	"sort"
 
 	"github.com/RHsyseng/operator-utils/pkg/olm"
 	"github.com/RHsyseng/operator-utils/pkg/resource/compare"
@@ -109,7 +113,7 @@ type ActiveMQArtemisIReconciler interface {
 func (reconciler *ActiveMQArtemisReconcilerImpl) Process(fsm *ActiveMQArtemisFSM, client rtclient.Client, scheme *runtime.Scheme, firstTime bool) (uint32, uint8, *appsv1.StatefulSet) {
 
 	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
-	log.Info("Reconciler Processing...", "Operator version", version.Version, "ActiveMQArtemis release", fsm.customResource.Spec.Version)
+	log.Info("Reconciler Processing...", "Operator version", version.Version, "ActiveMQArtemis release", fsm.customResource.Spec.Version, "firstTime:", firstTime)
 
 	currentStatefulSet, firstTime := reconciler.ProcessStatefulSet(fsm, client, log, firstTime)
 
@@ -123,8 +127,10 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) Process(fsm *ActiveMQArtemisFSM
 
 	requestedResources = append(requestedResources, currentStatefulSet)
 
-	stepsComplete := reconciler.ProcessResources(fsm, client, scheme, currentStatefulSet)
+	// this should apply any deltas/updates
+	stepsComplete := reconciler.ProcessResources(fsm, client, scheme)
 
+	// why if process resssources has just updated/created etc
 	if statefulSetUpdates > 0 {
 		ssNamespacedName := fsm.GetStatefulSetNamespacedName()
 		currentStatefulSet.ResourceVersion = ""
@@ -132,6 +138,8 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) Process(fsm *ActiveMQArtemisFSM
 			log.Error(err, "Failed to update StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
 		}
 	}
+
+	log.Info("Reconciler Processing... complete", "CRD ver:", fsm.customResource.ObjectMeta.ResourceVersion, "CRD Gen:", fsm.customResource.ObjectMeta.Generation)
 
 	return statefulSetUpdates, stepsComplete, currentStatefulSet
 }
@@ -192,41 +200,47 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(fsm *ActiveM
 		if !statefulsetRecreationRequired {
 			statefulsetRecreationRequired = checkGeneralStatefulSetUpdate(fsm, currentStatefulSet)
 		}
+
+		if !statefulsetRecreationRequired {
+			if checkHasChanged(fsm.customResource, fsm.prevCustomResource) {
+				log.Info("There are probe changes in the cr")
+				statefulsetRecreationRequired = true
+			}
+		}
+
 		if statefulsetRecreationRequired {
 			log.Info("Recreating existing statefulset")
+			// TODO: can we depend on processResources to do the update rather than delete here.
+			// in that way all resources are tracked there.
 			deleteErr := resources.Delete(ssNamespacedName, client, currentStatefulSet)
 			if nil == deleteErr {
 				log.Info(fmt.Sprintf("sucessfully deleted ownerReference[0].APIVersion: %s, recreating v1beta1 version for use", ownerReferenceArray[0].APIVersion))
-				currentStatefulSet = NewStatefulSetForCR(fsm)
+				currentStatefulSet = NewStatefulSetForCR(fsm) // calls to a NewPodTemplateSpecForCR
 				firstTime = true
 			} else {
 				log.Info("statefulset recreation failed!")
 			}
 		}
 
-		//update statefulset with customer resource
-		log.Info("Calling ProcessAddressSettings")
-		if reconciler.ProcessAddressSettings(fsm.customResource, fsm.prevCustomResource, client) {
-			log.Info("There are new address settings change in the cr, creating a new pod template to update")
-			*fsm.prevCustomResource = *fsm.customResource
-			//currentStatefulSet.Spec.Template = NewPodTemplateSpecForCR(fsm)
-			//newPodTemplateCreated = true
-			fsm.SetPodInvalid(true)
-		}
+		if !firstTime {
 
-		//check the rest of the cr for changes
-		// we could probably do this as part of the ame if statement above
-		if checkHasChanged(fsm.customResource, fsm.prevCustomResource) {
-			*fsm.prevCustomResource = *fsm.customResource
-			//currentStatefulSet.Spec.Template = NewPodTemplateSpecForCR(fsm)
-			fsm.SetPodInvalid(true)
-		}
-		if fsm.GetPodInvalid() {
-			currentStatefulSet.Spec.Template = NewPodTemplateSpecForCR(fsm)
-			fsm.SetPodInvalid(false)
+			invalidatePodOnBrokerPropertiesChange(fsm)
+
+			log.Info("Calling ProcessAddressSettings", "CR", fsm.customResource.Generation, "Prev", fsm.prevCustomResource.Generation)
+			if reconciler.ProcessAddressSettings(fsm.customResource, fsm.prevCustomResource, client) {
+				log.Info("There are address settings changes in the cr")
+				fsm.SetPodInvalid(true)
+			}
+
+			if fsm.GetPodInvalid() {
+				log.Info("Updating the pod template for ss as is marked invalid due to change in cr")
+				currentStatefulSet.Spec.Template = NewPodTemplateSpecForCR(fsm)
+				fsm.SetPodInvalid(false)
+			}
 		}
 	}
 
+	// Revisit : these resources need to be based on any existing
 	labels := fsm.namers.LabelBuilder.Labels()
 	headlessServiceDefinition := svc.NewHeadlessServiceForCR2(fsm.GetHeadlessServiceName(), ssNamespacedName, serviceports.GetDefaultPorts(), labels)
 	if isClustered(fsm.customResource) {
@@ -236,6 +250,20 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(fsm *ActiveM
 	requestedResources = append(requestedResources, headlessServiceDefinition)
 
 	return currentStatefulSet, firstTime
+}
+
+func invalidatePodOnBrokerPropertiesChange(fsm *ActiveMQArtemisFSM) {
+
+	// we always want to make the same desired resources
+	fsm.SetPodInvalid(true)
+
+	// lets log any difference, but any difference will be captured in the pod template rebuild
+	prevBrokerProperties := fsm.prevCustomResource.Spec.BrokerProperties
+	currBrokerProperties := fsm.customResource.Spec.BrokerProperties
+
+	if HexShaHashOfMap(prevBrokerProperties) != HexShaHashOfMap(currBrokerProperties) {
+		clog.Info("BrokerProperties has changed, stateful set pod template needs update", "old", prevBrokerProperties, "new", currBrokerProperties)
+	}
 }
 
 func checkGeneralStatefulSetUpdate(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1.StatefulSet) bool {
@@ -587,10 +615,6 @@ func sourceEnvVarFromSecret(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1.
 	if err = resources.Retrieve(namespacedName, client, secretDefinition); err != nil {
 		if errors.IsNotFound(err) {
 			log.V(1).Info("Did not find secret " + secretName)
-
-			if !isResourceAlreadyRequested(log, secretName) {
-				requestedResources = append(requestedResources, secretDefinition)
-			}
 		}
 	} else { // err == nil so it already exists
 		// Exists now
@@ -620,6 +644,7 @@ func sourceEnvVarFromSecret(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1.
 			retVal = statefulSetAcceptorsUpdated
 		}
 	}
+	requestedResources = append(requestedResources, secretDefinition)
 
 	log.Info("Populating env vars from secret " + secretName)
 	for envVarName := range *envVars {
@@ -681,10 +706,6 @@ func sourceEnvVarFromSecret2(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1
 	if err = resources.Retrieve(namespacedName, client, secretDefinition); err != nil {
 		if errors.IsNotFound(err) {
 			log.V(1).Info("Did not find secret " + secretName)
-
-			if !isResourceAlreadyRequested(log, secretName) {
-				requestedResources = append(requestedResources, secretDefinition)
-			}
 		}
 	} else { // err == nil so it already exists
 		// Exists now
@@ -716,6 +737,9 @@ func sourceEnvVarFromSecret2(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1
 			retVal = statefulSetAcceptorsUpdated
 		}
 	}
+
+	// ensure processResources sees it
+	requestedResources = append(requestedResources, secretDefinition)
 
 	log.Info("Populating env vars from secret " + secretName)
 	for envVarName := range *envVars {
@@ -749,19 +773,6 @@ func sourceEnvVarFromSecret2(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1
 	}
 
 	return retVal
-}
-
-func isResourceAlreadyRequested(log logr.Logger, resourceName string) bool {
-	// Check requestedResources to see if we already have this resourceName
-	log.V(1).Info("Checking to see if we've already requested " + resourceName + " creation")
-	resourceNameIsDuplicate := false
-	for index := range requestedResources {
-		if requestedResources[index].GetName() == resourceName {
-			resourceNameIsDuplicate = true
-			break
-		}
-	}
-	return resourceNameIsDuplicate
 }
 
 func generateAcceptorsString(fsm *ActiveMQArtemisFSM, client rtclient.Client) string {
@@ -1412,7 +1423,7 @@ func clusterSyncCausedUpdateOn(deploymentPlan *brokerv1beta1.DeploymentPlanType,
 	return !isClustered
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(fsm *ActiveMQArtemisFSM, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint8 {
+func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(fsm *ActiveMQArtemisFSM, client rtclient.Client, scheme *runtime.Scheme) uint8 {
 
 	reqLogger := clog.WithValues("ActiveMQArtemis Name", fsm.customResource.Name)
 	reqLogger.Info("Processing resources")
@@ -1436,6 +1447,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(fsm *ActiveMQA
 		reqLogger.Error(err, "error getting deployed resources", "returned", stepsComplete)
 		return stepsComplete
 	}
+	reqLogger.Info("Processing resources", "deployed:", len(deployed), ", requested:", len(requestedResources))
 
 	requested := compare.NewMapBuilder().Add(requestedResources...).ResourceMap()
 	comparator := compare.NewMapComparator()
@@ -1512,20 +1524,6 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) updateResource(customResource *
 
 	err, updateError = reconciler.updateRequestedResource(customResource, client, scheme, namespacedName, requested, reqLogger, updateError, kind)
 	if nil == updateError && nil != err {
-		//switch kind {
-		//case ss.NameBuilder.Name():
-		//	//stepsComplete |= CreatedStatefulSet
-		//	ss.GLOBAL_CRNAME = customResource.Name
-		//case svc.HeadlessNameBuilder.Name():
-		//	//stepsComplete |= CreatedHeadlessService
-		//case svc.PingNameBuilder.Name():
-		//	//stepsComplete |= CreatedPingService
-		//case secrets.CredentialsNameBuilder.Name():
-		//	//stepsComplete |= CreatedCredentialsSecret
-		//case secrets.NettyNameBuilder.Name():
-		//	//stepsComplete |= CreatedNettySecret
-		//default:
-		//}
 		reqLogger.V(1).Info("updateResource updated " + kind)
 	} else if nil != updateError {
 		reqLogger.Info("updateResource Failed to update resource " + kind)
@@ -1545,20 +1543,6 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) deleteResource(customResource *
 
 	err, deleteError = reconciler.deleteRequestedResource(customResource, client, scheme, namespacedName, requested, reqLogger, deleteError, kind)
 	if nil == deleteError && nil != err {
-		//switch kind {
-		//case ss.NameBuilder.Name():
-		//	//stepsComplete |= CreatedStatefulSet
-		//	ss.GLOBAL_CRNAME = customResource.Name
-		//case svc.HeadlessNameBuilder.Name():
-		//	//stepsComplete |= CreatedHeadlessService
-		//case svc.PingNameBuilder.Name():
-		//	//stepsComplete |= CreatedPingService
-		//case secrets.CredentialsNameBuilder.Name():
-		//	//stepsComplete |= CreatedCredentialsSecret
-		//case secrets.NettyNameBuilder.Name():
-		//	//stepsComplete |= CreatedNettySecret
-		//default:
-		//}
 		reqLogger.V(1).Info("deleteResource deleted " + kind)
 	} else if nil != deleteError {
 		reqLogger.Info("deleteResource Failed to delete resource " + kind)
@@ -1571,11 +1555,8 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) createRequestedResource(customR
 
 	var err error = nil
 
-	if err = resources.Retrieve(namespacedName, client, requested); err != nil {
-		reqLogger.Info("createResource Failed to Retrieve " + namespacedName.Name)
-		if createError = resources.Create(customResource, namespacedName, client, scheme, requested); createError == nil {
-			reqLogger.Info("Created kind " + kind + " named " + namespacedName.Name)
-		}
+	if createError = resources.Create(customResource, namespacedName, client, scheme, requested); createError == nil {
+		reqLogger.Info("Created kind " + kind + " named " + namespacedName.Name)
 	}
 
 	return err, createError
@@ -1585,11 +1566,17 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) updateRequestedResource(customR
 
 	var err error = nil
 
-	if err = resources.Retrieve(namespacedName, client, requested); err != nil {
-		reqLogger.Info("updateResource Failed to Retrieve " + namespacedName.Name)
+	// we don't want the get to overwrite our 'desired' content
+	current := requested.DeepCopyObject().(rtclient.Object)
+	if err = resources.Retrieve(namespacedName, client, current); err == nil {
+
 		if updateError = resources.Update(namespacedName, client, requested); updateError == nil {
 			reqLogger.Info("updated kind " + kind + " named " + namespacedName.Name)
+		} else {
+			reqLogger.Info("updated Failed for kind "+kind+" named "+namespacedName.Name, "error", updateError)
 		}
+	} else {
+		reqLogger.Info("updateResource Failed to Retrieve "+namespacedName.Name, "error", err)
 	}
 
 	return err, updateError
@@ -1599,11 +1586,13 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) deleteRequestedResource(customR
 
 	var err error = nil
 
-	if err = resources.Retrieve(namespacedName, client, requested); err != nil {
-		reqLogger.Info("deleteResource Failed to Retrieve " + namespacedName.Name)
+	// not sure it is necessary to check if the resoure exists
+	if err = resources.Retrieve(namespacedName, client, requested); err == nil {
 		if deleteError = resources.Delete(namespacedName, client, requested); deleteError == nil {
 			reqLogger.Info("deleted kind " + kind + " named " + namespacedName.Name)
 		}
+	} else {
+		reqLogger.Info("deleteResource Failed to Retrieve " + namespacedName.Name)
 	}
 
 	return err, deleteError
@@ -1623,6 +1612,7 @@ func getDeployedResources(instance *brokerv1beta1.ActiveMQArtemis, client rtclie
 			&appsv1.StatefulSetList{},
 			&routev1.RouteList{},
 			&corev1.SecretList{},
+			&corev1.ConfigMapList{},
 		)
 	} else {
 		resourceMap, err = reader.ListAll(
@@ -1631,6 +1621,7 @@ func getDeployedResources(instance *brokerv1beta1.ActiveMQArtemis, client rtclie
 			&appsv1.StatefulSetList{},
 			&netv1.IngressList{},
 			&corev1.SecretList{},
+			&corev1.ConfigMapList{},
 		)
 	}
 	if err != nil {
@@ -1751,9 +1742,8 @@ func MakeContainerPorts(cr *brokerv1beta1.ActiveMQArtemis) []corev1.ContainerPor
 
 func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 
-	// Log where we are and what we're doing
 	reqLogger := ctrl.Log.WithName(fsm.customResource.Name)
-	reqLogger.V(1).Info("NewPodTemplateSpecForCR")
+	reqLogger.V(1).Info("NewPodTemplateSpecForCR", "Version", fsm.customResource.ObjectMeta.ResourceVersion, "Generation", fsm.customResource.ObjectMeta.Generation)
 
 	namespacedName := types.NamespacedName{
 		Name:      fsm.customResource.Name,
@@ -1789,7 +1779,11 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 	reqLogger.V(1).Info("now ports added to container", "new len", len(container.Ports))
 
 	reqLogger.Info("Checking out extraMounts", "extra config", fsm.customResource.Spec.DeploymentPlan.ExtraMounts)
-	extraVolumes, extraVolumeMounts := createExtraConfigmapsAndSecrets(&container, &fsm.customResource.Spec.DeploymentPlan.ExtraMounts)
+	brokerPropertiesConfigMapName := addConfigMapForBrokerProperties(fsm)
+	configMapsToCreate := []string{brokerPropertiesConfigMapName}
+	configMapsToCreate = append(configMapsToCreate, fsm.customResource.Spec.DeploymentPlan.ExtraMounts.ConfigMaps...)
+
+	extraVolumes, extraVolumeMounts := createExtraConfigmapsAndSecrets(&container, configMapsToCreate, fsm.customResource.Spec.DeploymentPlan.ExtraMounts.Secrets)
 
 	reqLogger.Info("Extra volumes", "volumes", extraVolumes)
 	reqLogger.Info("Extra mounts", "mounts", extraVolumeMounts)
@@ -1964,6 +1958,15 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 
 	clog.Info("Total volumes ", "volumes", Spec.Volumes)
 
+	// this depends on init container passing --java-opts to artemis create via launch.sh *and* it
+	// not getting munged on the way.
+	// REVISIT: should an existing value be respected here, only when we expose JAVA_OPTS in the CR?
+	javaOpts := corev1.EnvVar{
+		Name:  "JAVA_OPTS",
+		Value: "-Dbroker.properties=/amq/extra/configmaps/" + brokerPropertiesConfigMapName + "/broker.properties",
+	}
+	environments.Create(Spec.InitContainers, &javaOpts)
+
 	var initArgs []string = []string{"-c"}
 
 	//provide a way to configuration after launch.sh
@@ -2118,6 +2121,90 @@ func configureReadinessProbe(probe *corev1.Probe) *corev1.Probe {
 	}
 }
 
+func addConfigMapForBrokerProperties(fsm *ActiveMQArtemisFSM) string {
+
+	// fetch and do idempotent transform based on CR
+	configMapName := types.NamespacedName{
+		Namespace: fsm.customResource.Namespace,
+		Name:      "broker-properties-" + HexShaHashOfMap(fsm.customResource.Spec.BrokerProperties),
+	}
+	var desired *corev1.ConfigMap = &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ConfigMap",
+			APIVersion: "k8s.io.api.core.v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:         configMapName.Name,
+			GenerateName: "",
+			Namespace:    configMapName.Namespace,
+		},
+	}
+	err := resources.Retrieve(configMapName, fsm.r.Client, desired)
+	if err != nil {
+		desired = &corev1.ConfigMap{
+
+			ObjectMeta: metav1.ObjectMeta{
+				Name:                       configMapName.Name,
+				GenerateName:               "",
+				Namespace:                  configMapName.Namespace,
+				SelfLink:                   "",
+				UID:                        "",
+				ResourceVersion:            "",
+				Generation:                 0,
+				CreationTimestamp:          metav1.Time{},
+				DeletionTimestamp:          &metav1.Time{},
+				DeletionGracePeriodSeconds: new(int64),
+				Labels:                     map[string]string{},
+				Annotations:                map[string]string{},
+				OwnerReferences:            []metav1.OwnerReference{},
+				Finalizers:                 []string{},
+				ClusterName:                "",
+				ManagedFields:              []metav1.ManagedFieldsEntry{},
+			},
+			Immutable:  common.NewTrue(),
+			BinaryData: map[string][]byte{},
+		}
+	}
+
+	desired.Data = brokerPropertiesData(fsm.customResource.Spec.BrokerProperties)
+
+	clog.V(1).Info("Requesting configMap for broker propertiesp", "name", configMapName.Name, "requests len", len(requestedResources))
+	requestedResources = append(requestedResources, desired)
+
+	clog.V(1).Info("Requesting mount for broker properties config map")
+	return configMapName.Name
+}
+
+func HexShaHashOfMap(props map[string]string) string {
+
+	// sort the keys for consistency
+	sortedKeys := make([]string, 0, len(props))
+	for k := range props {
+		sortedKeys = append(sortedKeys, k)
+	}
+	sort.Strings(sortedKeys)
+
+	digest := adler32.New()
+	for _, k := range sortedKeys {
+		digest.Write([]byte(k))
+		digest.Write([]byte(props[k]))
+	}
+
+	return hex.EncodeToString(digest.Sum(nil))
+}
+
+func brokerPropertiesData(props map[string]string) map[string]string {
+	buf := &bytes.Buffer{}
+	fmt.Fprintln(buf, "# generated by crd")
+	fmt.Fprintln(buf, "#")
+
+	for k, v := range props {
+		fmt.Fprintf(buf, "%s=%s\n", k, v)
+	}
+
+	return map[string]string{"broker.properties": buf.String()}
+}
+
 func configPodSecurity(podSpec *corev1.PodSpec, podSecurity *brokerv1beta1.PodSecurityType) {
 	if podSecurity.ServiceAccountName != nil {
 		clog.Info("Pod serviceAccountName specified", "existing", podSpec.ServiceAccountName, "new", *podSecurity.ServiceAccountName)
@@ -2223,7 +2310,7 @@ func determineCompactVersionToUse(customResource *brokerv1beta1.ActiveMQArtemis)
 	return compactVersionToUse
 }
 
-func createExtraConfigmapsAndSecrets(brokerContainer *corev1.Container, extraMounts *brokerv1beta1.ExtraMountsType) ([]corev1.Volume, []corev1.VolumeMount) {
+func createExtraConfigmapsAndSecrets(brokerContainer *corev1.Container, configMaps []string, secrets []string) ([]corev1.Volume, []corev1.VolumeMount) {
 
 	var extraVolumes []corev1.Volume
 	var extraVolumeMounts []corev1.VolumeMount
@@ -2231,8 +2318,8 @@ func createExtraConfigmapsAndSecrets(brokerContainer *corev1.Container, extraMou
 	cfgMapPathBase := "/amq/extra/configmaps/"
 	secretPathBase := "/amq/extra/secrets/"
 
-	if len(extraMounts.ConfigMaps) > 0 {
-		for _, cfgmap := range extraMounts.ConfigMaps {
+	if len(configMaps) > 0 {
+		for _, cfgmap := range configMaps {
 			if cfgmap == "" {
 				clog.Info("No ConfigMap name specified, ignore", "configMap", cfgmap)
 				continue
@@ -2247,8 +2334,8 @@ func createExtraConfigmapsAndSecrets(brokerContainer *corev1.Container, extraMou
 		}
 	}
 
-	if len(extraMounts.Secrets) > 0 {
-		for _, secret := range extraMounts.Secrets {
+	if len(secrets) > 0 {
+		for _, secret := range secrets {
 			if secret == "" {
 				clog.Info("No Secret name specified, ignore", "Secret", secret)
 				continue

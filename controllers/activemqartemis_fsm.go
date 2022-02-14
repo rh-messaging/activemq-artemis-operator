@@ -316,6 +316,9 @@ func (amqbfsm *ActiveMQArtemisFSM) Update() (error, int) {
 
 func (amqbfsm *ActiveMQArtemisFSM) Exit() error {
 
+	// intent here is to delete any owned resources, requested resources is empty
+	reconciler.ProcessResources(amqbfsm, amqbfsm.r.Client, amqbfsm.r.Scheme)
+
 	amqbfsm.r.Result = ctrl.Result{}
 	err := amqbfsm.m.Exit()
 

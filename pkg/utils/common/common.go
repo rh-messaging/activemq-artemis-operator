@@ -67,3 +67,8 @@ func SetManager(mgr manager.Manager) {
 func GetManager() manager.Manager {
 	return theManager
 }
+
+func NewTrue() *bool {
+	b := true
+	return &b
+}

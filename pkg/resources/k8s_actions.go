@@ -16,7 +16,6 @@ import (
 
 var log = ctrl.Log.WithName("package k8s_actions")
 
-//func Create(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, objectDefinition runtime.Object) error {
 func Create(owner v1.Object, namespacedName types.NamespacedName, client client.Client, scheme *runtime.Scheme, clientObject client.Object) error {
 
 	// Log where we are and what we're doing
@@ -24,7 +23,6 @@ func Create(owner v1.Object, namespacedName types.NamespacedName, client client.
 	objectTypeString := reflect.TypeOf(clientObject.(runtime.Object)).String()
 	reqLogger.Info("Creating new " + objectTypeString)
 
-	// Define the headless Service for the StatefulSet
 	// Set ActiveMQArtemis instance as the owner and controller
 	var err error = nil
 	if err = controllerutil.SetControllerReference(owner, clientObject.(v1.Object), scheme); err != nil {
@@ -33,7 +31,6 @@ func Create(owner v1.Object, namespacedName types.NamespacedName, client client.
 	}
 	reqLogger.V(1).Info("Set controller reference for new " + objectTypeString)
 
-	// Call k8s create for service
 	if err = client.Create(context.TODO(), clientObject); err != nil {
 		// Add error detail for use later
 		reqLogger.Info("Failed to create new " + objectTypeString)
@@ -75,7 +72,6 @@ func RetrieveWithRetry(namespacedName types.NamespacedName, theClient client.Cli
 	return err
 }
 
-// TODO: Evaluate performance impact of using reflect
 func Retrieve(namespacedName types.NamespacedName, client client.Client, objectDefinition client.Object) error {
 	return RetrieveWithRetry(namespacedName, client, objectDefinition, false)
 }
@@ -141,7 +137,6 @@ func configureExposure(owner v1.Object, client client.Client, scheme *runtime.Sc
 	serviceIsNotFound := false
 	causedUpdate := true
 
-	//if err = Retrieve(customResource, namespacedName, client, objectDefinition); err != nil {
 	if err = Retrieve(namespacedName, client, clientObject); err != nil {
 		if errors.IsNotFound(err) {
 			reqLogger.Info(namespacedName.Name + " " + "not found")
@@ -155,7 +150,6 @@ func configureExposure(owner v1.Object, client client.Client, scheme *runtime.Sc
 	if enable && serviceIsNotFound {
 		reqLogger.Info("Creating " + namespacedName.Name)
 		if err = Create(owner, namespacedName, client, scheme, clientObject); err != nil {
-			//reqLogger.Info("Failure to create " + baseServiceName + " service " + ordinalString)
 			causedUpdate = true
 		}
 	}
@@ -164,7 +158,6 @@ func configureExposure(owner v1.Object, client client.Client, scheme *runtime.Sc
 	if !enable && !serviceIsNotFound {
 		reqLogger.Info("Deleting " + namespacedName.Name)
 		if err = Delete(namespacedName, client, clientObject); err != nil {
-			//reqLogger.Info("Failure to delete " + baseServiceName + " service " + ordinalString)
 			causedUpdate = true
 		}
 	}

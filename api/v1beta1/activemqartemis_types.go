@@ -41,9 +41,10 @@ type ActiveMQArtemisSpec struct {
 	Connectors []ConnectorType `json:"connectors,omitempty"`
 	Console    ConsoleType     `json:"console,omitempty"`
 	// The version of the broker deployment.
-	Version         string                  `json:"version,omitempty"`
-	Upgrades        ActiveMQArtemisUpgrades `json:"upgrades,omitempty"`
-	AddressSettings AddressSettingsType     `json:"addressSettings,omitempty"`
+	Version          string                  `json:"version,omitempty"`
+	Upgrades         ActiveMQArtemisUpgrades `json:"upgrades,omitempty"`
+	AddressSettings  AddressSettingsType     `json:"addressSettings,omitempty"`
+	BrokerProperties map[string]string       `json:"brokerProperties,omitempty"`
 }
 
 type AddressSettingsType struct {

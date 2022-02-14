@@ -426,6 +426,10 @@ spec:
                   connecting to the broker and the web console. If left empty, it
                   will be generated.
                 type: string
+              brokerProperties:
+                additionalProperties:
+                  type: string
+                type: object
               connectors:
                 items:
                   properties:

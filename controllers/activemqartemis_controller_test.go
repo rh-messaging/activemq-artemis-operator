@@ -20,21 +20,23 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
+	"strconv"
 	"strings"
 
-	"fmt"
-	//"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	appsv1 "k8s.io/api/apps/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
@@ -52,13 +54,46 @@ var _ = Describe("artemis controller", func() {
 	// Define utility constants for object names and testing timeouts/durations and intervals.
 	const (
 		namespace = "default"
-		timeout   = time.Second * 30
+		timeout   = time.Second * 15
 		duration  = time.Second * 10
 		interval  = time.Millisecond * 250
+		verobse   = false
 	)
+
+	// see what has changed from the controllers perspective
+	var wi watch.Interface
+	BeforeEach(func() {
+
+		wc, _ := client.NewWithWatch(testEnv.Config, client.Options{})
+
+		// see what changed
+		var err error
+		wi, err = wc.Watch(ctx, &brokerv1beta1.ActiveMQArtemisList{}, &client.ListOptions{})
+		if err != nil {
+			fmt.Printf("Err on watch:  %v\n", err)
+		}
+		go func() {
+			for event := range wi.ResultChan() {
+				switch co := event.Object.(type) {
+				case client.Object:
+					if verobse {
+						fmt.Printf("%v ActiveMQArtemisList CRD: ResourceVersion: %v Generation: %v, OR: %v\n", event.Type, co.GetResourceVersion(), co.GetGeneration(), co.GetOwnerReferences())
+						fmt.Printf("Object: %v\n", event.Object)
+					}
+				}
+			}
+		}()
+	})
+
+	AfterEach(func() {
+		if wi != nil {
+			wi.Stop()
+		}
+	})
 
 	Context("Tolerations Test", func() {
 		It("passing in 2 tolerations", func() {
+
 			By("Creating a crd with 2 tolerations")
 			ctx := context.Background()
 			crd := generateArtemisSpec(namespace)
@@ -83,9 +118,10 @@ var _ = Describe("artemis controller", func() {
 
 			By("Making sure that the CRD gets deployed " + crd.ObjectMeta.Name)
 			Eventually(func() bool {
-				return checkCrdCreated(crd.ObjectMeta.Name, namespace, createdCrd)
+				return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd)
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
+
 			By("Checking that Stateful Set is Created with the tolerations " + namer.CrToSS(createdCrd.Name))
 			Eventually(func() bool {
 				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
@@ -105,28 +141,29 @@ var _ = Describe("artemis controller", func() {
 			Expect(createdSs.Spec.Template.Spec.Tolerations[1].Value == "No").Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Tolerations[1].Effect == "NoSchedule").Should(BeTrue())
 
-			original := generateOriginalArtemisSpec(namespace, createdCrd.Name)
-			Eventually(func() bool {
-				return checkCrdUpTodate(crd.ObjectMeta.Name, namespace, createdCrd, original)
-			}, timeout, interval).Should(BeTrue())
-			original.Spec.DeploymentPlan.Tolerations = []corev1.Toleration{
-				{
-					Key:    "yes",
-					Value:  "No",
-					Effect: "NoSchedule",
-				},
-			}
+			By("Redeploying the CRD with different Tolerations")
 
-			By("Redeploying the CRD with different Tolerations " + original.Name)
 			Eventually(func() bool {
-				err := k8sClient.Update(ctx, original)
 
-				if err != nil {
-					fmt.Printf("Error updating cr: %v\n", err)
+				// fetch, modify and update (we compete with the status updates)
+
+				ok := getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd)
+				if !ok {
 					return false
 				}
-				return true
+
+				createdCrd.Spec.DeploymentPlan.Tolerations = []corev1.Toleration{
+					{
+						Key:    "yes",
+						Value:  "No",
+						Effect: "NoSchedule",
+					},
+				}
+
+				err := k8sClient.Update(ctx, createdCrd)
+				return err == nil
 			}, timeout, interval).Should(Equal(true))
+
 			By("and checking there is just a single Toleration")
 			Eventually(func() bool {
 				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
@@ -148,6 +185,7 @@ var _ = Describe("artemis controller", func() {
 			Eventually(func() bool {
 				return checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd)
 			}, timeout, interval).Should(BeTrue())
+
 		})
 	})
 
@@ -173,7 +211,7 @@ var _ = Describe("artemis controller", func() {
 
 			By("Making sure that the CRD gets deployed")
 			Eventually(func() bool {
-				return checkCrdCreated(crd.ObjectMeta.Name, namespace, createdCrd)
+				return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd)
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
 
@@ -211,10 +249,9 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(Equal(true))
 
 			By("Updating the CR")
-			original := generateOriginalArtemisSpec(namespace, createdCrd.Name)
-			Eventually(func() bool {
-				return checkCrdUpTodate(crd.ObjectMeta.Name, namespace, createdCrd, original)
-			}, timeout, interval).Should(BeTrue())
+			Eventually(func() bool { return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd) }, timeout, interval).Should(BeTrue())
+			original := createdCrd
+
 			original.Spec.DeploymentPlan.LivenessProbe.PeriodSeconds = 15
 			original.Spec.DeploymentPlan.LivenessProbe.InitialDelaySeconds = 16
 			original.Spec.DeploymentPlan.LivenessProbe.TimeoutSeconds = 17
@@ -224,10 +261,10 @@ var _ = Describe("artemis controller", func() {
 				Command: []string{"/broker/bin/artemis check node"},
 			}
 			original.Spec.DeploymentPlan.LivenessProbe.Exec = &exec
-			original.ObjectMeta.ResourceVersion = createdCrd.GetResourceVersion()
-			By("Redeploying the CRD")
+			By("Redeploying the modified CRD")
 			Expect(k8sClient.Update(ctx, original)).Should(Succeed())
 
+			By("Retrieving the new SS to find the modification")
 			Eventually(func() bool {
 				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
 
@@ -249,9 +286,7 @@ var _ = Describe("artemis controller", func() {
 
 			By("check it has gone")
 			Expect(k8sClient.Delete(ctx, createdCrd))
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
+			Eventually(func() bool { return checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd) }, timeout, interval).Should(BeTrue())
 		})
 
 		It("Override Liveness Probe Exec", func() {
@@ -273,7 +308,7 @@ var _ = Describe("artemis controller", func() {
 
 			By("Making sure that the CRD gets deployed")
 			Eventually(func() bool {
-				return checkCrdCreated(crd.ObjectMeta.Name, namespace, createdCrd)
+				return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd)
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
 
@@ -310,7 +345,7 @@ var _ = Describe("artemis controller", func() {
 			createdSs := &appsv1.StatefulSet{}
 			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
 			Eventually(func() bool {
-				return checkCrdCreated(crd.ObjectMeta.Name, namespace, createdCrd)
+				return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd)
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
 
@@ -358,7 +393,7 @@ var _ = Describe("artemis controller", func() {
 
 			By("Making sure that the CRD gets deployed")
 			Eventually(func() bool {
-				return checkCrdCreated(crd.ObjectMeta.Name, namespace, createdCrd)
+				return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd)
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
 
@@ -406,7 +441,7 @@ var _ = Describe("artemis controller", func() {
 
 			By("Making sure that the CRD gets deployed")
 			Eventually(func() bool {
-				return checkCrdCreated(crd.ObjectMeta.Name, namespace, createdCrd)
+				return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd)
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
 
@@ -444,7 +479,7 @@ var _ = Describe("artemis controller", func() {
 			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
 
 			Eventually(func() bool {
-				return checkCrdCreated(crd.ObjectMeta.Name, namespace, createdCrd)
+				return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd)
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
 
@@ -474,7 +509,7 @@ var _ = Describe("artemis controller", func() {
 		})
 	})
 
-	Context("With deployed controller", func() {
+	Context("Status", func() {
 		It("Expect pod desc", func() {
 			By("By creating a new crd")
 			ctx := context.Background()
@@ -484,7 +519,7 @@ var _ = Describe("artemis controller", func() {
 			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
 
 			Eventually(func() bool {
-				return checkCrdCreated(crd.ObjectMeta.Name, namespace, createdCrd)
+				return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd)
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
 
@@ -497,10 +532,8 @@ var _ = Describe("artemis controller", func() {
 
 				err := k8sClient.Get(ctx, key, createdSs)
 				if err != nil {
-					fmt.Printf("Error getting ss: %v\n", err)
 					return -1, err
 				}
-				fmt.Printf("CR: %v\n", createdSs)
 
 				// presence is good enough... check on this status just for kicks
 				return int(createdSs.Status.Replicas), err
@@ -512,23 +545,182 @@ var _ = Describe("artemis controller", func() {
 				err := k8sClient.Get(ctx, key, createdCrd)
 
 				if err != nil {
-					fmt.Printf("Error getting CR: %v\n", err)
 					return -1, err
 				}
-				fmt.Printf("CR: %v\n", createdCrd)
 
-				if len(createdCrd.Status.PodStatus.Stopped) > 0 {
-					fmt.Printf("Stopped: %v\n", createdCrd.Status.PodStatus.Stopped[0])
-				}
 				return len(createdCrd.Status.PodStatus.Stopped), nil
 			}, timeout, interval).Should(Equal(1))
-			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
 
 			By("check it has gone")
 			Eventually(func() bool {
 				return checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd)
 			}, timeout, interval).Should(BeTrue())
 		})
+	})
+
+	Context("BrokerProperties", func() {
+		It("Expect vol mount via config map", func() {
+			By("By creating a new crd with BrokerProperties in the spec")
+			ctx := context.Background()
+			crd := generateArtemisSpec(namespace)
+
+			crd.Spec.BrokerProperties = map[string]string{
+				"globalMaxSize": "512m",
+			}
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+			Eventually(func() bool { return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd) }, timeout, interval).Should(BeTrue())
+			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
+
+			hexShaOriginal := HexShaHashOfMap(crd.Spec.BrokerProperties)
+
+			By("By finding a new config map with broker props")
+			configMap := &corev1.ConfigMap{}
+			key := types.NamespacedName{Name: "broker-properties-" + hexShaOriginal, Namespace: crd.ObjectMeta.Namespace}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, key, configMap)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			By("By checking the container stateful set for java opts")
+			Eventually(func() (bool, error) {
+				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
+				createdSs := &appsv1.StatefulSet{}
+
+				err := k8sClient.Get(ctx, key, createdSs)
+				if err != nil {
+					return false, err
+				}
+
+				found := false
+				for _, container := range createdSs.Spec.Template.Spec.InitContainers {
+					for _, env := range container.Env {
+						if env.Name == "JAVA_OPTS" {
+							if strings.Contains(env.Value, "broker.properties") {
+								found = true
+							}
+						}
+					}
+				}
+
+				return found, err
+			}, duration, interval).Should(Equal(true))
+
+			By("By checking the stateful set for volume mount path")
+			Eventually(func() (bool, error) {
+				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
+				createdSs := &appsv1.StatefulSet{}
+
+				err := k8sClient.Get(ctx, key, createdSs)
+				if err != nil {
+					return false, err
+				}
+
+				found := false
+				for _, container := range createdSs.Spec.Template.Spec.Containers {
+					for _, vm := range container.VolumeMounts {
+						// mount path can't have a .
+						if strings.Contains(vm.MountPath, "broker-properties") {
+							found = true
+						}
+					}
+				}
+
+				return found, err
+			}, duration, interval).Should(Equal(true))
+
+			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
+
+			By("check it has gone")
+			Eventually(func() bool {
+				return checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+
+		})
+
+		It("Expect new config map on update to BrokerProperties", func() {
+			By("By creating a crd with BrokerProperties in the spec")
+			ctx := context.Background()
+			crd := generateArtemisSpec(namespace)
+
+			crd.Spec.BrokerProperties = map[string]string{
+				"globalMaxSize": "64g",
+			}
+			hexShaOriginal := HexShaHashOfMap(crd.Spec.BrokerProperties)
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			By("By eventualy finding a matching config map with broker props")
+			configMapList := &corev1.ConfigMapList{}
+			opts := &client.ListOptions{
+				Namespace: namespace,
+			}
+			Eventually(func() bool {
+				err := k8sClient.List(ctx, configMapList, opts)
+				if err != nil {
+					fmt.Printf("error getting list of configopts map! %v", err)
+				}
+				for _, cm := range configMapList.Items {
+					if strings.Contains(cm.ObjectMeta.Name, hexShaOriginal) {
+						return true
+					}
+				}
+				return false
+			}, timeout, interval).Should(BeTrue())
+
+			By("updating the crd, expect new ConfigMap name")
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+			By("pushing the update on the current version...")
+			Eventually(func() bool {
+
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: crd.ObjectMeta.Name, Namespace: crd.ObjectMeta.Namespace}, createdCrd)
+				if err == nil {
+
+					// add a new property
+					createdCrd.Spec.BrokerProperties["gen"] = strconv.FormatInt(createdCrd.ObjectMeta.Generation, 10)
+
+					err = k8sClient.Update(ctx, createdCrd)
+					if err != nil {
+						fmt.Printf("error on update! %v\n", err)
+					}
+				}
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			hexShaModified := HexShaHashOfMap(createdCrd.Spec.BrokerProperties)
+
+			By("finding the updated config map using the sha")
+			Eventually(func() bool {
+				err := k8sClient.List(ctx, configMapList, opts)
+
+				if err == nil && len(configMapList.Items) > 0 {
+
+					for _, cm := range configMapList.Items {
+						if strings.Contains(cm.ObjectMeta.Name, hexShaModified) {
+							return true
+						}
+					}
+				}
+				return false
+			}, timeout, interval).Should(BeTrue())
+
+			// cleanup
+			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
+			By("check it has gone")
+			Eventually(func() bool {
+				return checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+
+			By("verifying no config maps leaked")
+			Eventually(func() bool {
+				k8sClient.List(ctx, configMapList, opts)
+				return len(configMapList.Items) == 0
+			}, timeout, interval).Should(BeTrue())
+
+		})
+
 	})
 
 	Context("With delopyed controller", func() {
@@ -566,9 +758,6 @@ var _ = Describe("artemis controller", func() {
 				key := types.NamespacedName{Name: crd.Name + "-" + "new-acceptor-0-svc", Namespace: namespace}
 				acceptorService := &corev1.Service{}
 				err := k8sClient.Get(context.Background(), key, acceptorService)
-				if err != nil {
-					fmt.Printf("we got error getting acceptor service %v\n", err)
-				}
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
@@ -576,9 +765,6 @@ var _ = Describe("artemis controller", func() {
 				key := types.NamespacedName{Name: crd.Name + "-" + "new-connector-0-svc", Namespace: namespace}
 				connectorService := &corev1.Service{}
 				err := k8sClient.Get(context.Background(), key, connectorService)
-				if err != nil {
-					fmt.Printf("we got error getting connector service %v\n", err)
-				}
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
@@ -639,16 +825,7 @@ func randString() string {
 	return b.String()
 }
 
-func checkCrdUpTodate(name string, nameSpace string, crd *brokerv1beta1.ActiveMQArtemis, original *brokerv1beta1.ActiveMQArtemis) bool {
-	key := types.NamespacedName{Name: name, Namespace: nameSpace}
-	err := k8sClient.Get(ctx, key, crd)
-	originalversion := original.ObjectMeta.ResourceVersion
-	fmt.Printf("Original Version %v Updated Version %v\n", originalversion, crd.ObjectMeta.ResourceVersion)
-	original.ObjectMeta.ResourceVersion = crd.ObjectMeta.ResourceVersion
-	return err == nil && crd.ObjectMeta.ResourceVersion == originalversion
-}
-
-func checkCrdCreated(name string, nameSpace string, crd *brokerv1beta1.ActiveMQArtemis) bool {
+func getPersistedVersionedCrd(name string, nameSpace string, crd *brokerv1beta1.ActiveMQArtemis) bool {
 	key := types.NamespacedName{Name: name, Namespace: nameSpace}
 	err := k8sClient.Get(ctx, key, crd)
 	return err == nil
