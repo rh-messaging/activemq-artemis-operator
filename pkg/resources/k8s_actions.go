@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -42,8 +43,7 @@ func Create(owner v1.Object, namespacedName types.NamespacedName, client client.
 	return err
 }
 
-// TODO: Evaluate performance impact of using reflect
-func Retrieve(namespacedName types.NamespacedName, client client.Client, objectDefinition runtime.Object) error {
+func RetrieveWithRetry(namespacedName types.NamespacedName, theClient client.Client, objectDefinition runtime.Object, retry bool) error {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
@@ -51,9 +51,18 @@ func Retrieve(namespacedName types.NamespacedName, client client.Client, objectD
 	reqLogger.Info("Retrieving " + objectTypeString)
 
 	var err error = nil
-	if err = client.Get(context.TODO(), namespacedName, objectDefinition); err != nil {
+	if err = theClient.Get(context.TODO(), namespacedName, objectDefinition); err != nil {
 		if errors.IsNotFound(err) {
-			reqLogger.Info(objectTypeString+" IsNotFound", "Namespace", namespacedName.Namespace, "Name", namespacedName.Name)
+			if retry {
+				reqLogger.Info(objectTypeString+" IsNotFound after retry", "Namespace", namespacedName.Namespace, "Name", namespacedName.Name)
+			} else {
+				//retry once using the non-cache client
+				reqLogger.V(1).Info("Retry retrieving object using new non-cached client")
+				newClient, err := client.New(common.GetManager().GetConfig(), client.Options{})
+				if err == nil {
+					return RetrieveWithRetry(namespacedName, newClient, objectDefinition, true)
+				}
+			}
 		} else if runtime.IsNotRegisteredError(err) {
 			reqLogger.Info(objectTypeString+" IsNotRegistered", "Namespace", namespacedName.Namespace, "Name", namespacedName.Name)
 		} else {
@@ -62,6 +71,11 @@ func Retrieve(namespacedName types.NamespacedName, client client.Client, objectD
 	}
 
 	return err
+}
+
+// TODO: Evaluate performance impact of using reflect
+func Retrieve(namespacedName types.NamespacedName, client client.Client, objectDefinition runtime.Object) error {
+	return RetrieveWithRetry(namespacedName, client, objectDefinition, false)
 }
 
 func Update(namespacedName types.NamespacedName, client client.Client, objectDefinition runtime.Object) error {

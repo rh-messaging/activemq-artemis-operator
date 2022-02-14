@@ -3,8 +3,12 @@ package common
 import (
 	"encoding/json"
 
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+
 	corev1 "k8s.io/api/core/v1"
 )
+
+var theManager manager.Manager
 
 func compareQuantities(resList1 corev1.ResourceList, resList2 corev1.ResourceList, keys []corev1.ResourceName) bool {
 
@@ -49,4 +53,10 @@ func ToJson(obj interface{}) (string, error) {
 
 func FromJson(jsonStr *string, obj interface{}) error {
 	return json.Unmarshal([]byte(*jsonStr), obj)
+}
+func SetManager(mgr manager.Manager) {
+	theManager = mgr
+}
+func GetManager() manager.Manager {
+	return theManager
 }

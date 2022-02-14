@@ -87,7 +87,6 @@ func setupAddressObserver(mgr manager.Manager, c chan types.NamespacedName) {
 	}
 
 	log.Info("Finish setup address observer")
-	return
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler

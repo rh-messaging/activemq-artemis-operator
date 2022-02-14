@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/version"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,6 +40,7 @@ var (
 	metricsHost       = "0.0.0.0"
 	metricsPort int32 = 8383
 )
+
 var log = logf.Log.WithName("cmd")
 
 func printVersion() {
@@ -153,6 +155,8 @@ func main() {
 		log.Error(err, "")
 		os.Exit(1)
 	}
+
+	common.SetManager(mgr)
 
 	// Set the service account name for the drainer pod
 	// It will be broken without this as it won't have
