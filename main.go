@@ -79,7 +79,8 @@ func printVersion() {
 	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", goruntime.GOOS, goruntime.GOARCH))
 	log.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion))
 	log.Info(fmt.Sprintf("Version of the operator: %s", version.Version))
-	log.Info(fmt.Sprintf("Supported ActiveMQArtemis Kubernetes Image Versions: %s", getSupportedBrokerVersions()))
+	log.Info(fmt.Sprintf("Product Version: %s", version.LatestVersion))
+	log.Info(fmt.Sprintf("Supported AMQ Broker Product Versions: %s", getSupportedBrokerVersions()))
 }
 
 func init() {

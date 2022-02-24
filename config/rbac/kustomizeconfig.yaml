@@ -2,6 +2,18 @@
 # and the original roleRef name must be the same
 # otherwise it won't do substitute
 nameReference:
+- kind: ServiceAccount
+  version: v1
+  group: rbac.authorization.k8s.io
+  fieldSpecs:
+  - kind: ClusterRoleBinding
+    version: v1
+    group: rbac.authorization.k8s.io
+    path: subjects[0]/name
+  - kind: RoleBinding
+    version: v1
+    group: rbac.authorization.k8s.io
+    path: subjects[0]/name
 - kind: ClusterRole
   version: v1
   group: rbac.authorization.k8s.io

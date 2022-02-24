@@ -1,0 +1,1659 @@
+﻿kind: CustomResourceDefinition
+apiVersion: apiextensions.k8s.io/v1beta1
+metadata:
+  name: activemqartemises.broker.amq.io
+spec:
+  group: broker.amq.io
+  version: v2alpha4
+  names:
+    plural: activemqartemises
+    singular: activemqartemis
+    kind: ActiveMQArtemis
+    listKind: ActiveMQArtemisList
+  scope: Namespaced
+  subresources:
+    status: {}
+    scale:
+      specReplicasPath: .spec.replicas
+      statusReplicasPath: .status.replicas
+  versions:
+    - name: v2alpha4
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          required:
+            - spec
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              properties:
+##### core #####
+                acceptors:
+                  description: Configuration of all acceptors
+                  type: array
+                  minItems: 0
+                  items:
+                    description: A single acceptor configuration
+                    type: object
+                    properties:
+                      amqpMinLargeMessageSize:
+                        description: The default value is 102400 (100KBytes). Setting it to -1 will disable large message support.
+                        type: integer
+                      port:
+                        description: Port number
+                        type: integer
+                      verifyHost:
+                        description: >-
+                          The CN of the connecting client's SSL certificate will
+                          be compared to its hostname to verify they match. This
+                          is useful only for 2-way SSL.
+                        type: boolean
+                      wantClientAuth:
+                        description: >-
+                          Tells a client connecting to this acceptor that 2-way
+                          SSL is requested but not required. Overridden by
+                          needClientAuth.
+                        type: boolean
+                      expose:
+                        description: Whether or not to expose this acceptor
+                        type: boolean
+                      enabledCipherSuites:
+                        description: >-
+                          Comma separated list of cipher suites used for SSL
+                          communication.
+                        type: string
+                      needClientAuth:
+                        description: >-
+                          Tells a client connecting to this acceptor that 2-way
+                          SSL is required. This property takes precedence over
+                          wantClientAuth.
+                        type: boolean
+                      multicastPrefix:
+                        description: To indicate which kind of routing type to use.
+                        type: string
+                      name:
+                        description: The name of the acceptor
+                        type: string
+                      connectionsAllowed:
+                        description: >-
+                          Limits the number of connections which the acceptor
+                          will allow. When this limit is reached a DEBUG level
+                          message is issued to the log, and the connection is
+                          refused.
+                        type: integer
+                      sslEnabled:
+                        description: Whether or not to enable SSL on this port
+                        type: boolean
+                      sniHost:
+                        description: >-
+                          A regular expression used to match the server_name
+                          extension on incoming SSL connections. If the name
+                          doesn't match then the connection to the acceptor will
+                          be rejected.
+                        type: string
+                      enabledProtocols:
+                        description: >-
+                          Comma separated list of protocols used for SSL
+                          communication.
+                        type: string
+                      protocols:
+                        description: The protocols to enable for this acceptor
+                        type: string
+                      sslSecret:
+                        description: Name of the secret to use for ssl information
+                        type: string
+                      sslProvider:
+                        description: >-
+                          Used to change the SSL Provider between JDK and
+                          OPENSSL. The default is JDK.
+                        type: string
+                      anycastPrefix:
+                        description: To indicate which kind of routing type to use.
+                        type: string
+                adminPassword:
+                  description: >-
+                    Password for standard broker user. It is required for
+                    connecting to the broker. If left empty, it will be
+                    generated.
+                  type: string
+                adminUser:
+                  description: >-
+                    User name for standard broker user. It is required for
+                    connecting to the broker. If left empty, it will be
+                    generated.
+                  type: string
+                connectors:
+                  description: Configuration of all connectors
+                  type: array
+                  minItems: 0
+                  items:
+                    description: A single connector configuration
+                    type: object
+                    properties:
+                      port:
+                        description: Port number
+                        type: integer
+                      verifyHost:
+                        description: >-
+                          The CN of the connecting client's SSL certificate will
+                          be compared to its hostname to verify they match. This
+                          is useful only for 2-way SSL.
+                        type: boolean
+                      wantClientAuth:
+                        description: >-
+                          Tells a client connecting to this acceptor that 2-way
+                          SSL is requested but not required. Overridden by
+                          needClientAuth.
+                        type: boolean
+                      expose:
+                        description: Whether or not to expose this connector
+                        type: boolean
+                      enabledCipherSuites:
+                        description: >-
+                          Comma separated list of cipher suites used for SSL
+                          communication.
+                        type: string
+                      host:
+                        description: Hostname or IP to connect to
+                        type: string
+                      needClientAuth:
+                        description: >-
+                          Tells a client connecting to this acceptor that 2-way
+                          SSL is required. This property takes precedence over
+                          wantClientAuth.
+                        type: boolean
+                      name:
+                        description: The name of the acceptor
+                        type: string
+                      sslEnabled:
+                        description: Whether or not to enable SSL on this port
+                        type: boolean
+                      sniHost:
+                        description: >-
+                          A regular expression used to match the server_name
+                          extension on incoming SSL connections. If the name
+                          doesn't match then the connection to the acceptor will
+                          be rejected.
+                        type: string
+                      enabledProtocols:
+                        description: >-
+                          Comma separated list of protocols used for SSL
+                          communication.
+                        type: string
+                      type:
+                        description: The type either tcp or vm
+                        type: string
+                      sslSecret:
+                        description: Name of the secret to use for ssl information
+                        type: string
+                      sslProvider:
+                        description: >-
+                          Used to change the SSL Provider between JDK and
+                          OPENSSL. The default is JDK.
+                        type: string
+################
+                addressSettings:
+                  #id: "urn:jsonschema:activemq:core:ConfigurationType:AddressSettings"
+                  description: a list of address settings
+                  type: object
+                  properties:
+                    applyRule:
+                      description: >-
+                        a flag APPLY_RULE that indicates on what parts of address
+                        settings in broker.xml to perform the merge. It has 3 possible values:
+                        =replace_all
+                        The merge performs merge on the address-settings as a whole part.
+                        =merge_replace
+                        The merge performs merge on each address-setting element
+                        =merge_all
+                        The merge performs merge on each property of every address-setting
+                        This is the default value
+                      type: string
+                    addressSetting:
+                      description: address setting configuration
+                      type: array
+                      items:
+                        #id: "urn:jsonschema:activemq:core:AddressSetting"
+                        type: object
+                        properties:
+                          deadLetterAddress:
+                            description: the address to send dead messages to
+                            type: string
+                          autoCreateDeadLetterResources:
+                            description: >-
+                              whether or not to automatically create the dead-letter-address and/or a corresponding queue
+                              on that address when a message found to be undeliverable
+                            type: boolean
+                          deadLetterQueuePrefix:
+                            description: the prefix to use for auto-created dead letter queues
+                            type: string
+                          deadLetterQueueSuffix:
+                            description: the suffix to use for auto-created dead letter queues
+                            type: string
+                          expiryAddress:
+                            description: the address to send expired messages to
+                            type: string
+                          autoCreateExpiryResources:
+                            description: >-
+                              whether or not to automatically create the expiry-address and/or a corresponding queue
+                              on that address when a message is sent to a matching queue
+                            type: boolean
+                          expiryQueuePrefix:
+                            description: the prefix to use for auto-created expiry queues
+                            type: string
+                          expiryQueueSuffix:
+                            description: the suffix to use for auto-created expiry queues
+                            type: string
+                          expiryDelay:
+                            description: >-
+                              Overrides the expiration time for messages using the default value for expiration time. "-1"
+                              disables this setting.
+                            type: integer
+                          minExpiryDelay:
+                            description: Overrides the expiration time for messages using a lower value. "-1" disables this setting.
+                            type: integer
+                          maxExpiryDelay:
+                            description: Overrides the expiration time for messages using a higher value. "-1" disables this setting.
+                            type: integer
+                          redeliveryDelay:
+                            description: the time (in ms) to wait before redelivering a cancelled message.
+                            type: integer
+                          redeliveryDelayMultiplier:
+                            description: multiplier to apply to the redelivery-delay
+                            type: number
+                          redeliveryCollisionAvoidanceFactor:
+                            description: factor by which to modify the redelivery delay slightly to avoid collisions
+                            type: number
+                          maxRedeliveryDelay:
+                            description: Maximum value for the redelivery-delay
+                            type: integer
+                          maxDeliveryAttempts:
+                            description: how many times to attempt to deliver a message before sending to dead letter address
+                            type: integer
+                          maxSizeBytes:
+                            description: >-
+                              the maximum size in bytes for an address. -1 means no limits. This is used in PAGING, BLOCK and
+                              FAIL policies. Supports byte notation like K, Mb, GB, etc.
+                            type: string
+                          maxSizeBytesRejectThreshold:
+                            description: >-
+                              used with the address full BLOCK policy, the maximum size in bytes an address can reach before
+                              messages start getting rejected. Works in combination with max-size-bytes for AMQP protocol only.
+                              Default = -1 (no limit).
+                            type: integer
+                          pageSizeBytes:
+                            description: >-
+                              The page size in bytes to use for an address. Supports byte notation like K, Mb,
+                              GB, etc.
+                            type: string
+                          pageMaxCacheSize:
+                            description: Number of paging files to cache in memory to avoid IO during paging navigation
+                            type: integer
+                          addressFullPolicy:
+                            description: what happens when an address where maxSizeBytes is specified becomes full
+                            type: string
+                            enum:
+                            - "DROP"
+                            - "FAIL"
+                            - "PAGE"
+                            - "BLOCK"
+                          messageCounterHistoryDayLimit:
+                            description: how many days to keep message counter history for this address
+                            type: integer
+                          lastValueQueue:
+                            description: This is deprecated please use default-last-value-queue instead.
+                            type: boolean
+                          defaultLastValueQueue:
+                            description: whether to treat the queues under the address as a last value queues by default
+                            type: boolean
+                          defaultLastValueKey:
+                            description: the property to use as the key for a last value queue by default
+                            type: string
+                          defaultNonDestructive:
+                            description: whether the queue should be non-destructive by default
+                            type: boolean
+                          defaultExclusiveQueue:
+                            description: whether to treat the queues under the address as exclusive queues by default
+                            type: boolean
+                          defaultGroupRebalance:
+                            description: whether to rebalance groups when a consumer is added
+                            type: boolean
+                          defaultGroupRebalancePauseDispatch:
+                            description: whether to pause dispatch when rebalancing groups
+                            type: boolean
+                          defaultGroupBuckets:
+                            description: number of buckets to use for grouping, -1 (default) is unlimited and uses the raw group, 0 disables message groups.
+                            type: integer
+                          defaultGroupFirstKey:
+                            description: key used to mark a message is first in a group for a consumer
+                            type: string
+                          defaultConsumersBeforeDispatch:
+                            description: the default number of consumers needed before dispatch can start for queues under the address.
+                            type: integer
+                          defaultDelayBeforeDispatch:
+                            description: >-
+                              the default delay (in milliseconds) to wait before dispatching if number of consumers before
+                              dispatch is not met for queues under the address.
+                            type: integer
+                          redistributionDelay:
+                            description: >-
+                              how long (in ms) to wait after the last consumer is closed on a queue before redistributing
+                              messages.
+                            type: integer
+                          sendToDlaOnNoRoute:
+                            description: >-
+                              if there are no queues matching this address, whether to forward message to DLA (if it exists for
+                              this address)
+                            type: boolean
+                          slowConsumerThreshold:
+                            description: >-
+                              The minimum rate of message consumption allowed before a consumer is considered "slow." Measured
+                              in messages-per-second.
+                            type: integer
+                          slowConsumerPolicy:
+                            description: what happens when a slow consumer is identified
+                            type: string
+                            enum:
+                            - "KILL"
+                            - "NOTIFY"
+                          slowConsumerCheckPeriod:
+                            description: How often to check for slow consumers on a particular queue. Measured in seconds.
+                            type: integer
+                          autoCreateJmsQueues:
+                            description: >-
+                              DEPRECATED. whether or not to automatically create JMS queues when a producer sends or a consumer connects to a
+                              queue
+                            type: boolean
+                          autoDeleteJmsQueues:
+                            description: DEPRECATED. whether or not to delete auto-created JMS queues when the queue has 0 consumers and 0 messages
+                            type: boolean
+                          autoCreateJmsTopics:
+                            description: >-
+                              DEPRECATED. whether or not to automatically create JMS topics when a producer sends or a consumer subscribes to
+                              a topic
+                            type: boolean
+                          autoDeleteJmsTopics:
+                            description: DEPRECATED. whether or not to delete auto-created JMS topics when the last subscription is closed
+                            type: boolean
+                          autoCreateQueues:
+                            description: >-
+                              whether or not to automatically create a queue when a client sends a message to or attempts to consume
+                              a message from a queue
+                            type: boolean
+                          autoDeleteQueues:
+                            description: whether or not to delete auto-created queues when the queue has 0 consumers and 0 messages
+                            type: boolean
+                          autoDeleteCreatedQueues:
+                            description: whether or not to delete created queues when the queue has 0 consumers and 0 messages
+                            type: boolean
+                          autoDeleteQueuesDelay:
+                            description: >-
+                              how long to wait (in milliseconds) before deleting auto-created queues after the queue has 0
+                              consumers.
+                            type: integer
+                          autoDeleteQueuesMessageCount:
+                            description: >-
+                              the message count the queue must be at or below before it can be evaluated 
+                              to be auto deleted, 0 waits until empty queue (default) and -1 disables this check.
+                            type: integer
+                          configDeleteQueues:
+                            description: >-
+                              What to do when a queue is no longer in broker.xml.
+                              OFF = will do nothing queues will remain,
+                              FORCE = delete queues even if messages remaining.
+                            type: string
+                            enum:
+                            - "OFF"
+                            - "FORCE"
+                          autoCreateAddresses:
+                            description: >-
+                              whether or not to automatically create addresses when a client sends a message to or attempts to
+                              consume a message from a queue mapped to an address that doesnt exist
+                            type: boolean
+                          autoDeleteAddresses:
+                            description: whether or not to delete auto-created addresses when it no longer has any queues
+                            type: boolean
+                          autoDeleteAddressesDelay:
+                            description: >-
+                              how long to wait (in milliseconds) before deleting auto-created addresses after they no longer
+                              have any queues
+                            type: integer
+                          configDeleteAddresses:
+                            description: >-
+                              What to do when an address is no longer in broker.xml.
+                              OFF = will do nothing addresses will remain,
+                              FORCE = delete address and its queues even if messages remaining.
+                            type: string
+                            enum:
+                            - "OFF"
+                            - "FORCE"
+                          managementBrowsePageSize:
+                            description: how many message a management resource can browse
+                            type: integer
+                          defaultPurgeOnNoConsumers:
+                            description: purge the contents of the queue once there are no consumers
+                            type: boolean
+                          defaultMaxConsumers:
+                            description: the maximum number of consumers allowed on this queue at any one time
+                            type: integer
+                          defaultQueueRoutingType:
+                            description: the routing-type used on auto-created queues
+                            type: string
+                            enum:
+                            - "ANYCAST"
+                            - "MULTICAST"
+                          defaultAddressRoutingType:
+                            description: the routing-type used on auto-created addresses
+                            type: string
+                            enum:
+                            - "ANYCAST"
+                            - "MULTICAST"
+                          defaultConsumerWindowSize:
+                            description: the default window size for a consumer
+                            type: integer
+                          defaultRingSize:
+                            description: >-
+                              the default ring-size value for any matching queue which doesnt have ring-size explicitly
+                              defined
+                            type: integer
+                          retroactiveMessageCount:
+                            description: the number of messages to preserve for future queues created on the matching address
+                            type: integer
+                          enableMetrics:
+                            description: whether or not to enable metrics for metrics plugins on the matching address
+                            type: boolean
+                          match:
+                            description: pattern for matching settings against addresses; can use wildards
+                            type: string
+################
+                console:
+                  description: Configuration for the embedded web console
+                  type: object
+                  properties:
+                    expose:
+                      description: Whether or not to expose this port
+                      type: boolean
+                    sslEnabled:
+                      description: Whether or not to enable SSL on this port
+                      type: boolean
+                    sslSecret:
+                      description: Name of the secret to use for ssl information
+                      type: string
+                    useClientAuth:
+                      description: If the embedded server requires client authentication
+                      type: boolean
+                deploymentPlan:
+                  type: object
+                  properties:
+                    jolokiaAgentEnabled:
+                      description: If true enable the Jolokia JVM Agent
+                      type: boolean
+                    image:
+                      description: The image used for the broker deployment
+                      type: string
+                    initImage:
+                      description: The init container image used to configure broker addresssettings
+                      type: string
+                    journalType:
+                      description: 'If aio use ASYNCIO, if nio use NIO for journal IO'
+                      type: string
+                    managementRBACEnabled:
+                      description: If true enable the management role based access control
+                      type: boolean
+                    messageMigration:
+                      description: If true migrate messages on scaledown
+                      type: boolean
+                    persistenceEnabled:
+                      description: >-
+                        If true use persistent volume via persistent volume
+                        claim for journal storage
+                      type: boolean
+                    requireLogin:
+                      description: >-
+                        If true require user password login credentials for
+                        broker protocol ports
+                      type: boolean
+                    size:
+                      description: The number of broker pods to deploy
+                      type: integer
+                      maximum: 16
+                      minimum: 0
+                    storage:
+                      description: the storage capacity
+                      type: object
+                      properties:
+                        size:
+                          type: string
+                    resources:
+                      type: object
+                      properties:
+                        requests:
+                          type: object
+                          properties:
+                            cpu:
+                              type: string
+                            memory:
+                              type: string
+                        limits:
+                          type: object
+                          properties:
+                            cpu:
+                              type: string
+                            memory:
+                              type: string
+                upgrades:
+                  description: >-
+                    Specify the level of upgrade that should be allowed when an
+                    older product version is detected
+                  type: object
+                  properties:
+                    enabled:
+                      description: >-
+                        Set true to enable automatic micro version product
+                        upgrades, it is disabled by default.
+                      type: boolean
+                    minor:
+                      description: >-
+                        Set true to enable automatic minor product version
+                        upgrades, it is disabled by default. Requires
+                        spec.upgrades.enabled to be true.
+                      type: boolean
+                version:
+                  description: The version of the application deployment.
+                  type: string
+            status:
+              type: object
+              required:
+                - podStatus
+              properties:
+                podStatus:
+                  type: object
+                  properties:
+                    ready:
+                      type: array
+                      items:
+                        type: string
+                    starting:
+                      type: array
+                      items:
+                        type: string
+                    stopped:
+                      type: array
+                      items:
+                        type: string
+    - name: v2alpha3
+      served: true
+      storage: false
+      schema:
+        openAPIV3Schema:
+          required:
+            - spec
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              properties:
+##### core #####
+                acceptors:
+                  description: Configuration of all acceptors
+                  type: array
+                  minItems: 0
+                  items:
+                    description: A single acceptor configuration
+                    type: object
+                    properties:
+                      amqpMinLargeMessageSize:
+                        description: The default value is 102400 (100KBytes). Setting it to -1 will disable large message support.
+                        type: integer
+                      port:
+                        description: Port number
+                        type: integer
+                      verifyHost:
+                        description: >-
+                          The CN of the connecting client's SSL certificate will
+                          be compared to its hostname to verify they match. This
+                          is useful only for 2-way SSL.
+                        type: boolean
+                      wantClientAuth:
+                        description: >-
+                          Tells a client connecting to this acceptor that 2-way
+                          SSL is requested but not required. Overridden by
+                          needClientAuth.
+                        type: boolean
+                      expose:
+                        description: Whether or not to expose this acceptor
+                        type: boolean
+                      enabledCipherSuites:
+                        description: >-
+                          Comma separated list of cipher suites used for SSL
+                          communication.
+                        type: string
+                      needClientAuth:
+                        description: >-
+                          Tells a client connecting to this acceptor that 2-way
+                          SSL is required. This property takes precedence over
+                          wantClientAuth.
+                        type: boolean
+                      multicastPrefix:
+                        description: To indicate which kind of routing type to use.
+                        type: string
+                      name:
+                        description: The name of the acceptor
+                        type: string
+                      connectionsAllowed:
+                        description: >-
+                          Limits the number of connections which the acceptor
+                          will allow. When this limit is reached a DEBUG level
+                          message is issued to the log, and the connection is
+                          refused.
+                        type: integer
+                      sslEnabled:
+                        description: Whether or not to enable SSL on this port
+                        type: boolean
+                      sniHost:
+                        description: >-
+                          A regular expression used to match the server_name
+                          extension on incoming SSL connections. If the name
+                          doesn't match then the connection to the acceptor will
+                          be rejected.
+                        type: string
+                      enabledProtocols:
+                        description: >-
+                          Comma separated list of protocols used for SSL
+                          communication.
+                        type: string
+                      protocols:
+                        description: The protocols to enable for this acceptor
+                        type: string
+                      sslSecret:
+                        description: Name of the secret to use for ssl information
+                        type: string
+                      sslProvider:
+                        description: >-
+                          Used to change the SSL Provider between JDK and
+                          OPENSSL. The default is JDK.
+                        type: string
+                      anycastPrefix:
+                        description: To indicate which kind of routing type to use.
+                        type: string
+                adminPassword:
+                  description: >-
+                    Password for standard broker user. It is required for
+                    connecting to the broker. If left empty, it will be
+                    generated.
+                  type: string
+                adminUser:
+                  description: >-
+                    User name for standard broker user. It is required for
+                    connecting to the broker. If left empty, it will be
+                    generated.
+                  type: string
+                connectors:
+                  description: Configuration of all connectors
+                  type: array
+                  minItems: 0
+                  items:
+                    description: A single connector configuration
+                    type: object
+                    properties:
+                      port:
+                        description: Port number
+                        type: integer
+                      verifyHost:
+                        description: >-
+                          The CN of the connecting client's SSL certificate will
+                          be compared to its hostname to verify they match. This
+                          is useful only for 2-way SSL.
+                        type: boolean
+                      wantClientAuth:
+                        description: >-
+                          Tells a client connecting to this acceptor that 2-way
+                          SSL is requested but not required. Overridden by
+                          needClientAuth.
+                        type: boolean
+                      expose:
+                        description: Whether or not to expose this connector
+                        type: boolean
+                      enabledCipherSuites:
+                        description: >-
+                          Comma separated list of cipher suites used for SSL
+                          communication.
+                        type: string
+                      host:
+                        description: Hostname or IP to connect to
+                        type: string
+                      needClientAuth:
+                        description: >-
+                          Tells a client connecting to this acceptor that 2-way
+                          SSL is required. This property takes precedence over
+                          wantClientAuth.
+                        type: boolean
+                      name:
+                        description: The name of the acceptor
+                        type: string
+                      sslEnabled:
+                        description: Whether or not to enable SSL on this port
+                        type: boolean
+                      sniHost:
+                        description: >-
+                          A regular expression used to match the server_name
+                          extension on incoming SSL connections. If the name
+                          doesn't match then the connection to the acceptor will
+                          be rejected.
+                        type: string
+                      enabledProtocols:
+                        description: >-
+                          Comma separated list of protocols used for SSL
+                          communication.
+                        type: string
+                      type:
+                        description: The type either tcp or vm
+                        type: string
+                      sslSecret:
+                        description: Name of the secret to use for ssl information
+                        type: string
+                      sslProvider:
+                        description: >-
+                          Used to change the SSL Provider between JDK and
+                          OPENSSL. The default is JDK.
+                        type: string
+################
+                addressSettings:
+                  #id: "urn:jsonschema:activemq:core:ConfigurationType:AddressSettings"
+                  description: a list of address settings
+                  type: object
+                  properties:
+                    applyRule:
+                      description: >-
+                        a flag APPLY_RULE that indicates on what parts of address
+                        settings in broker.xml to perform the merge. It has 3 possible values:
+                        =replace_all
+                        The merge performs merge on the address-settings as a whole part.
+                        =merge_replace
+                        The merge performs merge on each address-setting element
+                        =merge_all
+                        The merge performs merge on each property of every address-setting
+                        This is the default value
+                      type: string
+                    addressSetting:
+                      description: address setting configuration
+                      type: array
+                      items:
+                        #id: "urn:jsonschema:activemq:core:AddressSetting"
+                        type: object
+                        properties:
+                          deadLetterAddress:
+                            description: the address to send dead messages to
+                            type: string
+                          autoCreateDeadLetterResources:
+                            description: >-
+                              whether or not to automatically create the dead-letter-address and/or a corresponding queue
+                              on that address when a message found to be undeliverable
+                            type: boolean
+                          deadLetterQueuePrefix:
+                            description: the prefix to use for auto-created dead letter queues
+                            type: string
+                          deadLetterQueueSuffix:
+                            description: the suffix to use for auto-created dead letter queues
+                            type: string
+                          expiryAddress:
+                            description: the address to send expired messages to
+                            type: string
+                          autoCreateExpiryResources:
+                            description: >-
+                              whether or not to automatically create the expiry-address and/or a corresponding queue
+                              on that address when a message is sent to a matching queue
+                            type: boolean
+                          expiryQueuePrefix:
+                            description: the prefix to use for auto-created expiry queues
+                            type: string
+                          expiryQueueSuffix:
+                            description: the suffix to use for auto-created expiry queues
+                            type: string
+                          expiryDelay:
+                            description: >-
+                              Overrides the expiration time for messages using the default value for expiration time. "-1"
+                              disables this setting.
+                            type: integer
+                          minExpiryDelay:
+                            description: Overrides the expiration time for messages using a lower value. "-1" disables this setting.
+                            type: integer
+                          maxExpiryDelay:
+                            description: Overrides the expiration time for messages using a higher value. "-1" disables this setting.
+                            type: integer
+                          redeliveryDelay:
+                            description: the time (in ms) to wait before redelivering a cancelled message.
+                            type: integer
+                          redeliveryDelayMultiplier:
+                            description: multiplier to apply to the redelivery-delay
+                            type: number
+                          redeliveryCollisionAvoidanceFactor:
+                            description: factor by which to modify the redelivery delay slightly to avoid collisions
+                            type: number
+                          maxRedeliveryDelay:
+                            description: Maximum value for the redelivery-delay
+                            type: integer
+                          maxDeliveryAttempts:
+                            description: how many times to attempt to deliver a message before sending to dead letter address
+                            type: integer
+                          maxSizeBytes:
+                            description: >-
+                              the maximum size in bytes for an address. -1 means no limits. This is used in PAGING, BLOCK and
+                              FAIL policies. Supports byte notation like K, Mb, GB, etc.
+                            type: string
+                          maxSizeBytesRejectThreshold:
+                            description: >-
+                              used with the address full BLOCK policy, the maximum size in bytes an address can reach before
+                              messages start getting rejected. Works in combination with max-size-bytes for AMQP protocol only.
+                              Default = -1 (no limit).
+                            type: integer
+                          pageSizeBytes:
+                            description: >-
+                              The page size in bytes to use for an address. Supports byte notation like K, Mb,
+                              GB, etc.
+                            type: string
+                          pageMaxCacheSize:
+                            description: Number of paging files to cache in memory to avoid IO during paging navigation
+                            type: integer
+                          addressFullPolicy:
+                            description: what happens when an address where maxSizeBytes is specified becomes full
+                            type: string
+                            enum:
+                            - "DROP"
+                            - "FAIL"
+                            - "PAGE"
+                            - "BLOCK"
+                          messageCounterHistoryDayLimit:
+                            description: how many days to keep message counter history for this address
+                            type: integer
+                          lastValueQueue:
+                            description: This is deprecated please use default-last-value-queue instead.
+                            type: boolean
+                          defaultLastValueQueue:
+                            description: whether to treat the queues under the address as a last value queues by default
+                            type: boolean
+                          defaultLastValueKey:
+                            description: the property to use as the key for a last value queue by default
+                            type: string
+                          defaultNonDestructive:
+                            description: whether the queue should be non-destructive by default
+                            type: boolean
+                          defaultExclusiveQueue:
+                            description: whether to treat the queues under the address as exclusive queues by default
+                            type: boolean
+                          defaultGroupRebalance:
+                            description: whether to rebalance groups when a consumer is added
+                            type: boolean
+                          defaultGroupRebalancePauseDispatch:
+                            description: whether to pause dispatch when rebalancing groups
+                            type: boolean
+                          defaultGroupBuckets:
+                            description: number of buckets to use for grouping, -1 (default) is unlimited and uses the raw group, 0 disables message groups.
+                            type: integer
+                          defaultGroupFirstKey:
+                            description: key used to mark a message is first in a group for a consumer
+                            type: string
+                          defaultConsumersBeforeDispatch:
+                            description: the default number of consumers needed before dispatch can start for queues under the address.
+                            type: integer
+                          defaultDelayBeforeDispatch:
+                            description: >-
+                              the default delay (in milliseconds) to wait before dispatching if number of consumers before
+                              dispatch is not met for queues under the address.
+                            type: integer
+                          redistributionDelay:
+                            description: >-
+                              how long (in ms) to wait after the last consumer is closed on a queue before redistributing
+                              messages.
+                            type: integer
+                          sendToDlaOnNoRoute:
+                            description: >-
+                              if there are no queues matching this address, whether to forward message to DLA (if it exists for
+                              this address)
+                            type: boolean
+                          slowConsumerThreshold:
+                            description: >-
+                              The minimum rate of message consumption allowed before a consumer is considered "slow." Measured
+                              in messages-per-second.
+                            type: integer
+                          slowConsumerPolicy:
+                            description: what happens when a slow consumer is identified
+                            type: string
+                            enum:
+                            - "KILL"
+                            - "NOTIFY"
+                          slowConsumerCheckPeriod:
+                            description: How often to check for slow consumers on a particular queue. Measured in seconds.
+                            type: integer
+                          autoCreateJmsQueues:
+                            description: >-
+                              DEPRECATED. whether or not to automatically create JMS queues when a producer sends or a consumer connects to a
+                              queue
+                            type: boolean
+                          autoDeleteJmsQueues:
+                            description: DEPRECATED. whether or not to delete auto-created JMS queues when the queue has 0 consumers and 0 messages
+                            type: boolean
+                          autoCreateJmsTopics:
+                            description: >-
+                              DEPRECATED. whether or not to automatically create JMS topics when a producer sends or a consumer subscribes to
+                              a topic
+                            type: boolean
+                          autoDeleteJmsTopics:
+                            description: DEPRECATED. whether or not to delete auto-created JMS topics when the last subscription is closed
+                            type: boolean
+                          autoCreateQueues:
+                            description: >-
+                              whether or not to automatically create a queue when a client sends a message to or attempts to consume
+                              a message from a queue
+                            type: boolean
+                          autoDeleteQueues:
+                            description: whether or not to delete auto-created queues when the queue has 0 consumers and 0 messages
+                            type: boolean
+                          autoDeleteCreatedQueues:
+                            description: whether or not to delete created queues when the queue has 0 consumers and 0 messages
+                            type: boolean
+                          autoDeleteQueuesDelay:
+                            description: >-
+                              how long to wait (in milliseconds) before deleting auto-created queues after the queue has 0
+                              consumers.
+                            type: integer
+                          autoDeleteQueuesMessageCount:
+                            description: >-
+                              the message count the queue must be at or below before it can be evaluated 
+                              to be auto deleted, 0 waits until empty queue (default) and -1 disables this check.
+                            type: integer
+                          configDeleteQueues:
+                            description: >-
+                              What to do when a queue is no longer in broker.xml.
+                              OFF = will do nothing queues will remain,
+                              FORCE = delete queues even if messages remaining.
+                            type: string
+                            enum:
+                            - "OFF"
+                            - "FORCE"
+                          autoCreateAddresses:
+                            description: >-
+                              whether or not to automatically create addresses when a client sends a message to or attempts to
+                              consume a message from a queue mapped to an address that doesnt exist
+                            type: boolean
+                          autoDeleteAddresses:
+                            description: whether or not to delete auto-created addresses when it no longer has any queues
+                            type: boolean
+                          autoDeleteAddressesDelay:
+                            description: >-
+                              how long to wait (in milliseconds) before deleting auto-created addresses after they no longer
+                              have any queues
+                            type: integer
+                          configDeleteAddresses:
+                            description: >-
+                              What to do when an address is no longer in broker.xml.
+                              OFF = will do nothing addresses will remain,
+                              FORCE = delete address and its queues even if messages remaining.
+                            type: string
+                            enum:
+                            - "OFF"
+                            - "FORCE"
+                          managementBrowsePageSize:
+                            description: how many message a management resource can browse
+                            type: integer
+                          defaultPurgeOnNoConsumers:
+                            description: purge the contents of the queue once there are no consumers
+                            type: boolean
+                          defaultMaxConsumers:
+                            description: the maximum number of consumers allowed on this queue at any one time
+                            type: integer
+                          defaultQueueRoutingType:
+                            description: the routing-type used on auto-created queues
+                            type: string
+                            enum:
+                            - "ANYCAST"
+                            - "MULTICAST"
+                          defaultAddressRoutingType:
+                            description: the routing-type used on auto-created addresses
+                            type: string
+                            enum:
+                            - "ANYCAST"
+                            - "MULTICAST"
+                          defaultConsumerWindowSize:
+                            description: the default window size for a consumer
+                            type: integer
+                          defaultRingSize:
+                            description: >-
+                              the default ring-size value for any matching queue which doesnt have ring-size explicitly
+                              defined
+                            type: integer
+                          retroactiveMessageCount:
+                            description: the number of messages to preserve for future queues created on the matching address
+                            type: integer
+                          enableMetrics:
+                            description: whether or not to enable metrics for metrics plugins on the matching address
+                            type: boolean
+                          match:
+                            description: pattern for matching settings against addresses; can use wildards
+                            type: string
+################
+                console:
+                  description: Configuration for the embedded web console
+                  type: object
+                  properties:
+                    expose:
+                      description: Whether or not to expose this port
+                      type: boolean
+                    sslEnabled:
+                      description: Whether or not to enable SSL on this port
+                      type: boolean
+                    sslSecret:
+                      description: Name of the secret to use for ssl information
+                      type: string
+                    useClientAuth:
+                      description: If the embedded server requires client authentication
+                      type: boolean
+                deploymentPlan:
+                  type: object
+                  properties:
+                    image:
+                      description: The image used for the broker deployment
+                      type: string
+                    journalType:
+                      description: 'If aio use ASYNCIO, if nio use NIO for journal IO'
+                      type: string
+                    messageMigration:
+                      description: If true migrate messages on scaledown
+                      type: boolean
+                    persistenceEnabled:
+                      description: >-
+                        If true use persistent volume via persistent volume
+                        claim for journal storage
+                      type: boolean
+                    requireLogin:
+                      description: >-
+                        If true require user password login credentials for
+                        broker protocol ports
+                      type: boolean
+                    size:
+                      description: The number of broker pods to deploy
+                      type: integer
+                      maximum: 16
+                      minimum: 0
+                    storage:
+                      description: the storage capacity
+                      type: object
+                      properties:
+                        size:
+                          type: string
+                    resources:
+                      type: object
+                      properties:
+                        requests:
+                          type: object
+                          properties:
+                            cpu:
+                              type: string
+                            memory:
+                              type: string
+                        limits:
+                          type: object
+                          properties:
+                            cpu:
+                              type: string
+                            memory:
+                              type: string
+                upgrades:
+                  description: >-
+                    Specify the level of upgrade that should be allowed when an
+                    older product version is detected
+                  type: object
+                  properties:
+                    enabled:
+                      description: >-
+                        Set true to enable automatic micro version product
+                        upgrades, it is disabled by default.
+                      type: boolean
+                    minor:
+                      description: >-
+                        Set true to enable automatic minor product version
+                        upgrades, it is disabled by default. Requires
+                        spec.upgrades.enabled to be true.
+                      type: boolean
+                version:
+                  description: The version of the application deployment.
+                  type: string
+            status:
+              type: object
+              required:
+                - podStatus
+              properties:
+                podStatus:
+                  type: object
+                  properties:
+                    ready:
+                      type: array
+                      items:
+                        type: string
+                    starting:
+                      type: array
+                      items:
+                        type: string
+                    stopped:
+                      type: array
+                      items:
+                        type: string
+    - name: v2alpha2
+      served: true
+      storage: false
+      schema:
+        openAPIV3Schema:
+          required:
+            - spec
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              properties:
+                acceptors:
+                  description: Configuration of all acceptors
+                  type: array
+                  minItems: 0
+                  items:
+                    description: A single acceptor configuration
+                    type: object
+                    properties:
+                      port:
+                        description: Port number
+                        type: integer
+                      verifyHost:
+                        description: >-
+                          The CN of the connecting client's SSL certificate will
+                          be compared to its hostname to verify they match. This
+                          is useful only for 2-way SSL.
+                        type: boolean
+                      wantClientAuth:
+                        description: >-
+                          Tells a client connecting to this acceptor that 2-way
+                          SSL is requested but not required. Overridden by
+                          needClientAuth.
+                        type: boolean
+                      expose:
+                        description: Whether or not to expose this acceptor
+                        type: boolean
+                      enabledCipherSuites:
+                        description: >-
+                          Comma separated list of cipher suites used for SSL
+                          communication.
+                        type: string
+                      needClientAuth:
+                        description: >-
+                          Tells a client connecting to this acceptor that 2-way
+                          SSL is required. This property takes precedence over
+                          wantClientAuth.
+                        type: boolean
+                      multicastPrefix:
+                        description: To indicate which kind of routing type to use.
+                        type: string
+                      name:
+                        description: The name of the acceptor
+                        type: string
+                      connectionsAllowed:
+                        description: >-
+                          Limits the number of connections which the acceptor
+                          will allow. When this limit is reached a DEBUG level
+                          message is issued to the log, and the connection is
+                          refused.
+                        type: integer
+                      sslEnabled:
+                        description: Whether or not to enable SSL on this port
+                        type: boolean
+                      sniHost:
+                        description: >-
+                          A regular expression used to match the server_name
+                          extension on incoming SSL connections. If the name
+                          doesn't match then the connection to the acceptor will
+                          be rejected.
+                        type: string
+                      enabledProtocols:
+                        description: >-
+                          Comma separated list of protocols used for SSL
+                          communication.
+                        type: string
+                      protocols:
+                        description: The protocols to enable for this acceptor
+                        type: string
+                      sslSecret:
+                        description: Name of the secret to use for ssl information
+                        type: string
+                      sslProvider:
+                        description: >-
+                          Used to change the SSL Provider between JDK and
+                          OPENSSL. The default is JDK.
+                        type: string
+                      anycastPrefix:
+                        description: To indicate which kind of routing type to use.
+                        type: string
+                adminPassword:
+                  description: >-
+                    Password for standard broker user. It is required for
+                    connecting to the broker. If left empty, it will be
+                    generated.
+                  type: string
+                adminUser:
+                  description: >-
+                    User name for standard broker user. It is required for
+                    connecting to the broker. If left empty, it will be
+                    generated.
+                  type: string
+                connectors:
+                  description: Configuration of all connectors
+                  type: array
+                  minItems: 0
+                  items:
+                    description: A single connector configuration
+                    type: object
+                    properties:
+                      port:
+                        description: Port number
+                        type: integer
+                      verifyHost:
+                        description: >-
+                          The CN of the connecting client's SSL certificate will
+                          be compared to its hostname to verify they match. This
+                          is useful only for 2-way SSL.
+                        type: boolean
+                      wantClientAuth:
+                        description: >-
+                          Tells a client connecting to this acceptor that 2-way
+                          SSL is requested but not required. Overridden by
+                          needClientAuth.
+                        type: boolean
+                      expose:
+                        description: Whether or not to expose this connector
+                        type: boolean
+                      enabledCipherSuites:
+                        description: >-
+                          Comma separated list of cipher suites used for SSL
+                          communication.
+                        type: string
+                      host:
+                        description: Hostname or IP to connect to
+                        type: string
+                      needClientAuth:
+                        description: >-
+                          Tells a client connecting to this acceptor that 2-way
+                          SSL is required. This property takes precedence over
+                          wantClientAuth.
+                        type: boolean
+                      name:
+                        description: The name of the acceptor
+                        type: string
+                      sslEnabled:
+                        description: Whether or not to enable SSL on this port
+                        type: boolean
+                      sniHost:
+                        description: >-
+                          A regular expression used to match the server_name
+                          extension on incoming SSL connections. If the name
+                          doesn't match then the connection to the acceptor will
+                          be rejected.
+                        type: string
+                      enabledProtocols:
+                        description: >-
+                          Comma separated list of protocols used for SSL
+                          communication.
+                        type: string
+                      type:
+                        description: The type either tcp or vm
+                        type: string
+                      sslSecret:
+                        description: Name of the secret to use for ssl information
+                        type: string
+                      sslProvider:
+                        description: >-
+                          Used to change the SSL Provider between JDK and
+                          OPENSSL. The default is JDK.
+                        type: string
+                console:
+                  description: Configuration for the embedded web console
+                  type: object
+                  properties:
+                    expose:
+                      description: Whether or not to expose this port
+                      type: boolean
+                    sslEnabled:
+                      description: Whether or not to enable SSL on this port
+                      type: boolean
+                    sslSecret:
+                      description: Name of the secret to use for ssl information
+                      type: string
+                    useClientAuth:
+                      description: If the embedded server requires client authentication
+                      type: boolean
+                deploymentPlan:
+                  type: object
+                  properties:
+                    image:
+                      description: The image used for the broker deployment
+                      type: string
+                    journalType:
+                      description: 'If aio use ASYNCIO, if nio use NIO for journal IO'
+                      type: string
+                    messageMigration:
+                      description: If true migrate messages on scaledown
+                      type: boolean
+                    persistenceEnabled:
+                      description: >-
+                        If true use persistent volume via persistent volume
+                        claim for journal storage
+                      type: boolean
+                    requireLogin:
+                      description: >-
+                        If true require user password login credentials for
+                        broker protocol ports
+                      type: boolean
+                    size:
+                      description: The number of broker pods to deploy
+                      type: integer
+                      maximum: 16
+                      minimum: 0
+                upgrades:
+                  description: >-
+                    Specify the level of upgrade that should be allowed when an
+                    older product version is detected
+                  type: object
+                  properties:
+                    enabled:
+                      description: >-
+                        Set true to enable automatic micro version product
+                        upgrades, it is disabled by default.
+                      type: boolean
+                    minor:
+                      description: >-
+                        Set true to enable automatic minor product version
+                        upgrades, it is disabled by default. Requires
+                        spec.upgrades.enabled to be true.
+                      type: boolean
+                version:
+                  description: The version of the application deployment.
+                  type: string
+            status:
+              type: object
+              required:
+                - podStatus
+              properties:
+                podStatus:
+                  type: object
+                  properties:
+                    ready:
+                      type: array
+                      items:
+                        type: string
+                    starting:
+                      type: array
+                      items:
+                        type: string
+                    stopped:
+                      type: array
+                      items:
+                        type: string
+    - name: v2alpha1
+      served: true
+      storage: false
+      schema:
+        openAPIV3Schema:
+          type: object
+          required:
+            - spec
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              properties:
+                acceptors:
+                  description: Configuration of all acceptors
+                  type: array
+                  minItems: 0
+                  items:
+                    description: A single acceptor configuration
+                    type: object
+                    properties:
+                      port:
+                        description: Port number
+                        type: integer
+                      verifyHost:
+                        description: >-
+                          The CN of the connecting client's SSL certificate will
+                          be compared to its hostname to verify they match. This
+                          is useful only for 2-way SSL.
+                        type: boolean
+                      wantClientAuth:
+                        description: >-
+                          Tells a client connecting to this acceptor that 2-way
+                          SSL is requested but not required. Overridden by
+                          needClientAuth.
+                        type: boolean
+                      expose:
+                        description: Whether or not to expose this acceptor
+                        type: boolean
+                      enabledCipherSuites:
+                        description: >-
+                          Comma separated list of cipher suites used for SSL
+                          communication.
+                        type: string
+                      needClientAuth:
+                        description: >-
+                          Tells a client connecting to this acceptor that 2-way
+                          SSL is required. This property takes precedence over
+                          wantClientAuth.
+                        type: boolean
+                      multicastPrefix:
+                        description: To indicate which kind of routing type to use.
+                        type: string
+                      name:
+                        description: The name of the acceptor
+                        type: string
+                      connectionsAllowed:
+                        description: >-
+                          Limits the number of connections which the acceptor
+                          will allow. When this limit is reached a DEBUG level
+                          message is issued to the log, and the connection is
+                          refused.
+                        type: integer
+                      sslEnabled:
+                        description: Whether or not to enable SSL on this port
+                        type: boolean
+                      sniHost:
+                        description: >-
+                          A regular expression used to match the server_name
+                          extension on incoming SSL connections. If the name
+                          doesn't match then the connection to the acceptor will
+                          be rejected.
+                        type: string
+                      enabledProtocols:
+                        description: >-
+                          Comma separated list of protocols used for SSL
+                          communication.
+                        type: string
+                      protocols:
+                        description: The protocols to enable for this acceptor
+                        type: string
+                      sslSecret:
+                        description: Name of the secret to use for ssl information
+                        type: string
+                      sslProvider:
+                        description: >-
+                          Used to change the SSL Provider between JDK and
+                          OPENSSL. The default is JDK.
+                        type: string
+                      anycastPrefix:
+                        description: To indicate which kind of routing type to use.
+                        type: string
+                adminPassword:
+                  description: >-
+                    Password for standard broker user. It is required for
+                    connecting to the broker. If left empty, it will be
+                    generated.
+                  type: string
+                adminUser:
+                  description: >-
+                    User name for standard broker user. It is required for
+                    connecting to the broker. If left empty, it will be
+                    generated.
+                  type: string
+                connectors:
+                  description: Configuration of all connectors
+                  type: array
+                  minItems: 0
+                  items:
+                    description: A single connector configuration
+                    type: object
+                    properties:
+                      port:
+                        description: Port number
+                        type: integer
+                      verifyHost:
+                        description: >-
+                          The CN of the connecting client's SSL certificate will
+                          be compared to its hostname to verify they match. This
+                          is useful only for 2-way SSL.
+                        type: boolean
+                      wantClientAuth:
+                        description: >-
+                          Tells a client connecting to this acceptor that 2-way
+                          SSL is requested but not required. Overridden by
+                          needClientAuth.
+                        type: boolean
+                      expose:
+                        description: Whether or not to expose this connector
+                        type: boolean
+                      enabledCipherSuites:
+                        description: >-
+                          Comma separated list of cipher suites used for SSL
+                          communication.
+                        type: string
+                      host:
+                        description: Hostname or IP to connect to
+                        type: string
+                      needClientAuth:
+                        description: >-
+                          Tells a client connecting to this acceptor that 2-way
+                          SSL is required. This property takes precedence over
+                          wantClientAuth.
+                        type: boolean
+                      name:
+                        description: The name of the acceptor
+                        type: string
+                      sslEnabled:
+                        description: Whether or not to enable SSL on this port
+                        type: boolean
+                      sniHost:
+                        description: >-
+                          A regular expression used to match the server_name
+                          extension on incoming SSL connections. If the name
+                          doesn't match then the connection to the acceptor will
+                          be rejected.
+                        type: string
+                      enabledProtocols:
+                        description: >-
+                          Comma separated list of protocols used for SSL
+                          communication.
+                        type: string
+                      type:
+                        description: The type either tcp or vm
+                        type: string
+                      sslSecret:
+                        description: Name of the secret to use for ssl information
+                        type: string
+                      sslProvider:
+                        description: >-
+                          Used to change the SSL Provider between JDK and
+                          OPENSSL. The default is JDK.
+                        type: string
+                console:
+                  description: Configuration for the embedded web console
+                  type: object
+                  properties:
+                    expose:
+                      description: Whether or not to expose this port
+                      type: boolean
+                    sslEnabled:
+                      description: Whether or not to enable SSL on this port
+                      type: boolean
+                    sslSecret:
+                      description: Name of the secret to use for ssl information
+                      type: string
+                    useClientAuth:
+                      description: If the embedded server requires client authentication
+                      type: boolean
+                deploymentPlan:
+                  type: object
+                  properties:
+                    image:
+                      description: The image used for the broker deployment
+                      type: string
+                    journalType:
+                      description: 'If aio use ASYNCIO, if nio use NIO for journal IO'
+                      type: string
+                    messageMigration:
+                      description: If true migrate messages on scaledown
+                      type: boolean
+                    persistenceEnabled:
+                      description: >-
+                        If true use persistent volume via persistent volume
+                        claim for journal storage
+                      type: boolean
+                    requireLogin:
+                      description: >-
+                        If true require user password login credentials for
+                        broker protocol ports
+                      type: boolean
+                    size:
+                      description: The number of broker pods to deploy
+                      type: integer
+                      maximum: 16
+                      minimum: 0
+            status:
+              type: object
+              required:
+                - podStatus
+              properties:
+                podStatus:
+                  type: object
+                  properties:
+                    ready:
+                      type: array
+                      items:
+                        type: string
+                    starting:
+                      type: array
+                      items:
+                        type: string
+                    stopped:
+                      type: array
+                      items:
+                        type: string
+    - name: v1alpha1
+      served: false
+      storage: false
+  conversion:
+    strategy: None
+  preserveUnknownFields: true

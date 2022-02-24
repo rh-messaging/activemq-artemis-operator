@@ -12,5 +12,11 @@ nameReference:
   - kind: Deployment
     version: apps/v1
     path: spec/template/spec/volumes/secret/secretName
-  
+- kind: ServiceAccount
+  version: v1
+  fieldSpecs:
+  - path: spec/template/spec/serviceAccountName
+    version: apps/v1
+    kind: Deployment
+
     
