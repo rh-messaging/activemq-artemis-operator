@@ -1,12 +1,15 @@
 package services
 
 import (
+	"context"
+
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	logf "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var log = logf.Log.WithName("package services")
@@ -43,27 +46,30 @@ func NewHeadlessServiceForCR(namespacedName types.NamespacedName, servicePorts *
 	return svc
 }
 
-func NewHeadlessServiceForCR2(serviceName string, namespacedName types.NamespacedName, servicePorts *[]corev1.ServicePort, labels map[string]string) *corev1.Service {
+func NewHeadlessServiceForCR2(client client.Client, serviceName string, namespace string, servicePorts *[]corev1.ServicePort, labels map[string]string) *corev1.Service {
 
 	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Service",
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: nil,
-			Labels:      labels,
-			Name:        serviceName,
-			Namespace:   namespacedName.Namespace,
-		},
-		Spec: corev1.ServiceSpec{
-			Type:                     "ClusterIP",
-			Ports:                    *servicePorts,
-			Selector:                 labels,
-			ClusterIP:                "None",
-			PublishNotReadyAddresses: true,
-		},
+		ObjectMeta: metav1.ObjectMeta{},
+		Spec:       corev1.ServiceSpec{},
 	}
+
+	// fetch  existing state
+	client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: serviceName}, svc)
+
+	// apply desired state
+	svc.ObjectMeta.Labels = labels
+	svc.ObjectMeta.Name = serviceName
+	svc.ObjectMeta.Namespace = namespace
+
+	svc.Spec.Type = "ClusterIP"
+	svc.Spec.Ports = *servicePorts
+	svc.Spec.Selector = labels
+	svc.Spec.ClusterIP = "None"
+	svc.Spec.PublishNotReadyAddresses = true
 
 	return svc
 }
@@ -138,7 +144,7 @@ func NewPingServiceDefinitionForCR(namespacedName types.NamespacedName, labels m
 	return svc
 }
 
-func NewPingServiceDefinitionForCR2(serviceName string, namespacedName types.NamespacedName, labels map[string]string, selectorLabels map[string]string) *corev1.Service {
+func NewPingServiceDefinitionForCR2(client client.Client, serviceName string, namespace string, labels map[string]string, selectorLabels map[string]string) *corev1.Service {
 
 	port := corev1.ServicePort{
 		Protocol:   "TCP",
@@ -148,25 +154,27 @@ func NewPingServiceDefinitionForCR2(serviceName string, namespacedName types.Nam
 	ports := []corev1.ServicePort{}
 	ports = append(ports, port)
 
+	// fetch any existing svc state
 	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Service",
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: nil,
-			Labels:      labels,
-			Name:        serviceName,
-			Namespace:   namespacedName.Namespace,
-		},
-		Spec: corev1.ServiceSpec{
-			Type:                     "ClusterIP",
-			Ports:                    ports,
-			Selector:                 selectorLabels,
-			ClusterIP:                "None",
-			PublishNotReadyAddresses: true,
-		},
+		ObjectMeta: metav1.ObjectMeta{},
+		Spec:       corev1.ServiceSpec{},
 	}
+	client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: serviceName}, svc)
+
+	// apply desired
+	svc.ObjectMeta.Labels = labels
+	svc.ObjectMeta.Name = serviceName
+	svc.ObjectMeta.Namespace = namespace
+
+	svc.Spec.Type = "ClusterIP"
+	svc.Spec.Ports = ports
+	svc.Spec.Selector = selectorLabels
+	svc.Spec.ClusterIP = "None"
+	svc.Spec.PublishNotReadyAddresses = true
 
 	return svc
 }

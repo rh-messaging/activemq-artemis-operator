@@ -240,11 +240,10 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(fsm *ActiveM
 		}
 	}
 
-	// Revisit : these resources need to be based on any existing
 	labels := fsm.namers.LabelBuilder.Labels()
-	headlessServiceDefinition := svc.NewHeadlessServiceForCR2(fsm.GetHeadlessServiceName(), ssNamespacedName, serviceports.GetDefaultPorts(), labels)
+	headlessServiceDefinition := svc.NewHeadlessServiceForCR2(client, fsm.GetHeadlessServiceName(), ssNamespacedName.Namespace, serviceports.GetDefaultPorts(), labels)
 	if isClustered(fsm.customResource) {
-		pingServiceDefinition := svc.NewPingServiceDefinitionForCR2(fsm.GetPingServiceName(), ssNamespacedName, labels, labels)
+		pingServiceDefinition := svc.NewPingServiceDefinitionForCR2(client, fsm.GetPingServiceName(), ssNamespacedName.Namespace, labels, labels)
 		requestedResources = append(requestedResources, pingServiceDefinition)
 	}
 	requestedResources = append(requestedResources, headlessServiceDefinition)
