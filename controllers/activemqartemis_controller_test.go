@@ -1063,6 +1063,48 @@ var _ = Describe("artemis controller", func() {
 			Eventually(checkCrdDeleted(crd.Name, namespace, &crd), timeout, interval).Should(BeTrue())
 		})
 	})
+
+	Context("With delopyed controller", func() {
+		It("Checking storageClassName is configured", func() {
+			By("By creating a new crd")
+			ctx := context.Background()
+			crd := generateArtemisSpec(namespace)
+
+			crd.Spec.DeploymentPlan = brokerv1beta1.DeploymentPlanType{
+				Size:               1,
+				PersistenceEnabled: true,
+				Storage: brokerv1beta1.StorageType{
+					StorageClassName: "some-storage-class",
+				},
+			}
+
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: crd.Name, Namespace: namespace}
+				err := k8sClient.Get(ctx, key, &crd)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			createdSs := &appsv1.StatefulSet{}
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(crd.Name), Namespace: namespace}
+				err := k8sClient.Get(ctx, key, createdSs)
+				return err == nil
+			}, timeout, interval).Should(Equal(true))
+
+			volumeTemplates := createdSs.Spec.VolumeClaimTemplates
+			Expect(len(volumeTemplates)).To(Equal(1))
+
+			storageClassName := volumeTemplates[0].Spec.StorageClassName
+			Expect(*storageClassName).To(Equal("some-storage-class"))
+
+			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
+
+			By("check it has gone")
+			Eventually(checkCrdDeleted(crd.Name, namespace, &crd), timeout, interval).Should(BeTrue())
+		})
+	})
 })
 
 func generateArtemisSpec(namespace string) brokerv1beta1.ActiveMQArtemis {

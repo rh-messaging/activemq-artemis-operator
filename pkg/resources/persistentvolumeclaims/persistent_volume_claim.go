@@ -36,7 +36,7 @@ func NewPersistentVolumeClaimForCR(namespacedName types.NamespacedName, labels m
 	return pvc
 }
 
-func NewPersistentVolumeClaimWithCapacity(namespacedName types.NamespacedName, capacity string, labels map[string]string) *corev1.PersistentVolumeClaim {
+func NewPersistentVolumeClaimWithCapacityAndStorageClassName(namespacedName types.NamespacedName, capacity string, labels map[string]string, storageClassName string) *corev1.PersistentVolumeClaim {
 
 	pvc := &corev1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
@@ -57,6 +57,10 @@ func NewPersistentVolumeClaimWithCapacity(namespacedName types.NamespacedName, c
 				},
 			},
 		},
+	}
+
+	if storageClassName != "" {
+		pvc.Spec.StorageClassName = &storageClassName
 	}
 
 	return pvc

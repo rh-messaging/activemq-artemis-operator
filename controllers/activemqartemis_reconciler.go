@@ -2166,6 +2166,7 @@ func NewPersistentVolumeClaimArrayForCR(fsm *ActiveMQArtemisFSM, arrayLength int
 	var pvc *corev1.PersistentVolumeClaim = nil
 	capacity := "2Gi"
 	pvcArray := make([]corev1.PersistentVolumeClaim, 0, arrayLength)
+	storageClassName := ""
 
 	namespacedName := types.NamespacedName{
 		Name:      fsm.customResource.Name,
@@ -2176,8 +2177,12 @@ func NewPersistentVolumeClaimArrayForCR(fsm *ActiveMQArtemisFSM, arrayLength int
 		capacity = fsm.customResource.Spec.DeploymentPlan.Storage.Size
 	}
 
+	if "" != fsm.customResource.Spec.DeploymentPlan.Storage.StorageClassName {
+		storageClassName = fsm.customResource.Spec.DeploymentPlan.Storage.StorageClassName
+	}
+
 	for i := 0; i < arrayLength; i++ {
-		pvc = persistentvolumeclaims.NewPersistentVolumeClaimWithCapacity(namespacedName, capacity, fsm.namers.LabelBuilder.Labels())
+		pvc = persistentvolumeclaims.NewPersistentVolumeClaimWithCapacityAndStorageClassName(namespacedName, capacity, fsm.namers.LabelBuilder.Labels(), storageClassName)
 		pvcArray = append(pvcArray, *pvc)
 	}
 

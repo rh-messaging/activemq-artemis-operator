@@ -866,6 +866,9 @@ spec:
                     properties:
                       size:
                         type: string
+                      storageClassName:
+                        description: The storageClassName to be used in PVC
+                        type: string
                     type: object
                   tolerations:
                     items:

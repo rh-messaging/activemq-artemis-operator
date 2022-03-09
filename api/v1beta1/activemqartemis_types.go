@@ -234,6 +234,8 @@ type ExtraMountsType struct {
 
 type StorageType struct {
 	Size string `json:"size,omitempty"`
+	// The storageClassName to be used in PVC
+	StorageClassName string `json:"storageClassName,omitempty"`
 }
 
 type AcceptorType struct {
