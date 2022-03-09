@@ -550,6 +550,27 @@ var _ = Describe("artemis controller", func() {
 
 				return len(createdCrd.Status.PodStatus.Stopped), nil
 			}, timeout, interval).Should(Equal(1))
+
+			By("Checking presence of secrets")
+			secretList := &corev1.SecretList{}
+			opts := &client.ListOptions{
+				Namespace: namespace,
+			}
+			Eventually(func() int {
+				err := k8sClient.List(ctx, secretList, opts)
+				if err != nil {
+					fmt.Printf("error getting secretList! %v", err)
+				}
+				count := 0
+				for _, s := range secretList.Items {
+					if strings.Contains(s.ObjectMeta.Name, createdCrd.Name) {
+						count++
+					}
+				}
+				return count
+			}, timeout, interval).Should(Equal(3))
+
+			By("deleting crd")
 			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
 
 			By("check it has gone")

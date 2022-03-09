@@ -78,6 +78,7 @@ const (
 
 var defaultMessageMigration bool = true
 var requestedResources []rtclient.Object
+var deployed map[reflect.Type][]rtclient.Object
 var lastStatusMap map[types.NamespacedName]olm.DeploymentStatus = make(map[types.NamespacedName]olm.DeploymentStatus)
 
 // the helper script looks for "/amq/scripts/post-config.sh"
@@ -115,6 +116,8 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) Process(fsm *ActiveMQArtemisFSM
 	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
 	log.Info("Reconciler Processing...", "Operator version", version.Version, "ActiveMQArtemis release", fsm.customResource.Spec.Version, "firstTime:", firstTime)
 
+	reconciler.CurrentDeployedResources(fsm, client)
+
 	currentStatefulSet, firstTime := reconciler.ProcessStatefulSet(fsm, client, log, firstTime)
 
 	statefulSetUpdates := reconciler.ProcessDeploymentPlan(fsm, client, scheme, currentStatefulSet, firstTime)
@@ -130,7 +133,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) Process(fsm *ActiveMQArtemisFSM
 	// this should apply any deltas/updates
 	stepsComplete := reconciler.ProcessResources(fsm, client, scheme)
 
-	// why if process resssources has just updated/created etc
+	// why if process resssources has just updated/created etc, it does not seem to work on a stateful set!
 	if statefulSetUpdates > 0 {
 		ssNamespacedName := fsm.GetStatefulSetNamespacedName()
 		currentStatefulSet.ResourceVersion = ""
@@ -210,16 +213,8 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(fsm *ActiveM
 
 		if statefulsetRecreationRequired {
 			log.Info("Recreating existing statefulset")
-			// TODO: can we depend on processResources to do the update rather than delete here.
-			// in that way all resources are tracked there.
-			deleteErr := resources.Delete(ssNamespacedName, client, currentStatefulSet)
-			if nil == deleteErr {
-				log.Info(fmt.Sprintf("sucessfully deleted ownerReference[0].APIVersion: %s, recreating v1beta1 version for use", ownerReferenceArray[0].APIVersion))
-				currentStatefulSet = NewStatefulSetForCR(fsm) // calls to a NewPodTemplateSpecForCR
-				firstTime = true
-			} else {
-				log.Info("statefulset recreation failed!")
-			}
+			currentStatefulSet = NewStatefulSetForCR(fsm) // calls to a NewPodTemplateSpecForCR
+			firstTime = true
 		}
 
 		if !firstTime {
@@ -1422,6 +1417,31 @@ func clusterSyncCausedUpdateOn(deploymentPlan *brokerv1beta1.DeploymentPlanType,
 	return !isClustered
 }
 
+func (reconciler *ActiveMQArtemisReconcilerImpl) CurrentDeployedResources(fsm *ActiveMQArtemisFSM, client rtclient.Client) {
+	reqLogger := clog.WithValues("ActiveMQArtemis Name", fsm.customResource.Name)
+	reqLogger.Info("currentDeployedResources")
+
+	var err error
+	deployed, err = getDeployedResources(fsm.customResource, client)
+	if err != nil {
+		reqLogger.Error(err, "error getting deployed resources")
+	}
+
+	// track persisted cr secret
+	for _, secret := range deployed[reflect.TypeOf(corev1.Secret{})] {
+		if strings.HasPrefix(secret.GetName(), "secret-broker-") {
+			// track this as it is managed by the controller state machine, not by reconcile
+			requestedResources = append(requestedResources, secret)
+		}
+	}
+
+	for t, objs := range deployed {
+		for _, obj := range objs {
+			reqLogger.Info("Deployed ", "Type", t, "Name", obj.GetName())
+		}
+	}
+}
+
 func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(fsm *ActiveMQArtemisFSM, client rtclient.Client, scheme *runtime.Scheme) uint8 {
 
 	reqLogger := clog.WithValues("ActiveMQArtemis Name", fsm.customResource.Name)
@@ -1429,7 +1449,6 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(fsm *ActiveMQA
 
 	var err error = nil
 	var createError error = nil
-	var deployed map[reflect.Type][]rtclient.Object
 	var hasUpdates bool
 	var stepsComplete uint8 = 0
 
@@ -1441,12 +1460,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(fsm *ActiveMQA
 		requestedResources[index].SetNamespace(fsm.customResource.Namespace)
 	}
 
-	deployed, err = getDeployedResources(fsm.customResource, client)
-	if err != nil {
-		reqLogger.Error(err, "error getting deployed resources", "returned", stepsComplete)
-		return stepsComplete
-	}
-	reqLogger.Info("Processing resources", "deployed:", len(deployed), ", requested:", len(requestedResources))
+	reqLogger.Info("Processing resources", "num requested", len(requestedResources))
 
 	requested := compare.NewMapBuilder().Add(requestedResources...).ResourceMap()
 	comparator := compare.NewMapComparator()
