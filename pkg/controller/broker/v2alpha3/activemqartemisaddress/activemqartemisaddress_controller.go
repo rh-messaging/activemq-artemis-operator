@@ -152,7 +152,8 @@ func (r *ReconcileActiveMQArtemisAddress) Reconcile(request reconcile.Request) (
 			// Delete action
 			if lookupSucceeded {
 				if addressInstance.AddressResource.Spec.RemoveFromBrokerOnDelete {
-					deleteQueue(&addressInstance, request, r.client, r.scheme)
+					err = deleteQueue(&addressInstance, request, r.client, r.scheme)
+					return reconcile.Result{}, err
 				} else {
 					log.Info("Not to delete address", "address", addressInstance)
 				}
@@ -191,9 +192,11 @@ func (r *ReconcileActiveMQArtemisAddress) Reconcile(request reconcile.Request) (
 			log.Error(merr, "failed to marshal cr")
 		}
 		lsrcrs.StoreLastSuccessfulReconciledCR(instance, instance.Name, instance.Namespace, "address", crstr, "", instance.ResourceVersion, getLabels(instance), r.client, r.scheme)
+	} else {
+		log.Error(err, "failed to create address resource, request will be requeued")
 	}
 
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, err
 }
 
 func getLabels(cr *brokerv2alpha3.ActiveMQArtemisAddress) map[string]string {
@@ -249,14 +252,14 @@ func createQueue(instance *AddressDeployment, request reconcile.Request, client 
 				reqLogger.Info("Creating ActiveMQArtemisAddress artemisArray had a nil!")
 				continue
 			}
-			createAddressResource(a, &instance.AddressResource)
+			err = createAddressResource(a, &instance.AddressResource)
 		}
 	}
 
 	return err
 }
 
-func createAddressResource(a *mgmt.Artemis, addressRes *brokerv2alpha3.ActiveMQArtemisAddress) {
+func createAddressResource(a *mgmt.Artemis, addressRes *brokerv2alpha3.ActiveMQArtemisAddress) error {
 	//Now checking if create queue or address
 	var err error
 	if addressRes.Spec.QueueName == nil || *addressRes.Spec.QueueName == "" {
@@ -264,7 +267,7 @@ func createAddressResource(a *mgmt.Artemis, addressRes *brokerv2alpha3.ActiveMQA
 		_, err = a.CreateAddress(addressRes.Spec.AddressName, *addressRes.Spec.RoutingType)
 		if nil != err {
 			log.Error(err, "Creating ActiveMQArtemisAddress error for address", addressRes.Spec.AddressName)
-			return
+			return err
 		} else {
 			log.Info("Created ActiveMQArtemisAddress for address " + addressRes.Spec.AddressName)
 		}
@@ -278,7 +281,7 @@ func createAddressResource(a *mgmt.Artemis, addressRes *brokerv2alpha3.ActiveMQA
 			_, err := a.CreateQueue(addressRes.Spec.AddressName, *addressRes.Spec.QueueName, routingType)
 			if nil != err {
 				log.Error(err, "Creating ActiveMQArtemisAddress error for "+*addressRes.Spec.QueueName)
-				return
+				return err
 			} else {
 				log.Info("Created ActiveMQArtemisAddress for " + *addressRes.Spec.QueueName)
 			}
@@ -287,7 +290,8 @@ func createAddressResource(a *mgmt.Artemis, addressRes *brokerv2alpha3.ActiveMQA
 			queueCfg, ignoreIfExists, err := GetQueueConfig(addressRes)
 			if err != nil {
 				log.Error(err, "Failed to get queue config json string")
-				return
+				//here we return nil as no point to requeue reconcile again
+				return nil
 			}
 			respData, err := a.CreateQueueFromConfig(queueCfg, ignoreIfExists)
 			if nil != err {
@@ -297,15 +301,16 @@ func createAddressResource(a *mgmt.Artemis, addressRes *brokerv2alpha3.ActiveMQA
 					if err != nil {
 						log.Error(err, "Failed to update queue", "details", respData)
 					}
-					return
+					return err
 				}
 				log.Error(err, "Creating ActiveMQArtemisAddress error for "+*addressRes.Spec.QueueName)
-				return
+				return err
 			} else {
 				log.Info("Created ActiveMQArtemisAddress for " + *addressRes.Spec.QueueName)
 			}
 		}
 	}
+	return nil
 }
 
 // This method deals with deleting queues and addresses.
@@ -320,7 +325,7 @@ func deleteQueue(instance *AddressDeployment, request reconcile.Request, client 
 		for _, a := range artemisArray {
 			if instance.AddressResource.Spec.QueueName == nil || *instance.AddressResource.Spec.QueueName == "" {
 				//delete address
-				_, err := a.DeleteAddress(instance.AddressResource.Spec.AddressName)
+				_, err = a.DeleteAddress(instance.AddressResource.Spec.AddressName)
 				if nil != err {
 					reqLogger.Error(err, "Deleting ActiveMQArtemisAddress error for address ", instance.AddressResource.Spec.AddressName)
 					break
@@ -328,7 +333,7 @@ func deleteQueue(instance *AddressDeployment, request reconcile.Request, client 
 				reqLogger.Info("Deleted ActiveMQArtemisAddress for address " + instance.AddressResource.Spec.AddressName)
 			} else {
 				//delete queues
-				_, err := a.DeleteQueue(*instance.AddressResource.Spec.QueueName)
+				_, err = a.DeleteQueue(*instance.AddressResource.Spec.QueueName)
 				if nil != err {
 					reqLogger.Error(err, "Deleting ActiveMQArtemisAddress error for queue "+*instance.AddressResource.Spec.QueueName)
 					break
