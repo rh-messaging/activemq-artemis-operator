@@ -183,13 +183,15 @@ func MakeVolumeMountForCfg2(name string, path string, readOnly bool) corev1.Volu
 }
 
 func MakeVolumeForConfigMap(cfgmapName string) corev1.Volume {
+	defaultMode := corev1.ConfigMapVolumeSourceDefaultMode
 	volume := corev1.Volume{
 		Name: "configmap-" + cfgmapName,
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
-				corev1.LocalObjectReference{Name: cfgmapName},
-				[]corev1.KeyToPath{},
-				nil, nil,
+				LocalObjectReference: corev1.LocalObjectReference{Name: cfgmapName},
+				Items:                []corev1.KeyToPath{},
+				DefaultMode:          &defaultMode,
+				Optional:             nil,
 			},
 		},
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/fsm"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -71,7 +70,7 @@ func (rs *ContainerRunningState) Update() (error, int) {
 	}
 	ssNamespacedName := types.NamespacedName{Name: rs.parentFSM.GetStatefulSetName(), Namespace: rs.parentFSM.customResource.Namespace}
 	currentStatefulSet := &appsv1.StatefulSet{}
-	var newss *appsv1.StatefulSet
+	//	var newss *appsv1.StatefulSet
 
 	err = rs.parentFSM.r.Client.Get(context.TODO(), ssNamespacedName, currentStatefulSet)
 
@@ -90,16 +89,18 @@ func (rs *ContainerRunningState) Update() (error, int) {
 			break
 		}
 
-		statefulSetUpdates, _, newss = reconciler.Process(rs.parentFSM, rs.parentFSM.r.Client, rs.parentFSM.r.Scheme, firstTime)
+		statefulSetUpdates, _, _ = reconciler.Process(rs.parentFSM, rs.parentFSM.r.Client, rs.parentFSM.r.Scheme, firstTime)
 		break
 	}
 
 	if statefulSetUpdates > 0 {
-		//https://stackoverflow.com/questions/65987577/kubectl-apply-reports-error-operation-cannot-be-fulfilled-on-serviceaccounts
-		currentStatefulSet.ResourceVersion = ""
-		if err := resources.Update(rs.parentFSM.namespacedName, rs.parentFSM.r.Client, newss); err != nil {
-			reqLogger.Error(err, "Failed to update StatefulSet.", "Deployment.Namespace", newss.Namespace, "Deployment.Name", newss.Name)
-		}
+		/*
+			//https://stackoverflow.com/questions/65987577/kubectl-apply-reports-error-operation-cannot-be-fulfilled-on-serviceaccounts
+			currentStatefulSet.ResourceVersion = ""
+			if err := resources.Update(rs.parentFSM.namespacedName, rs.parentFSM.r.Client, newss); err != nil {
+				reqLogger.Error(err, "Failed to update StatefulSet.", "Deployment.Namespace", newss.Namespace, "Deployment.Name", newss.Name)
+			}
+		*/
 		nextStateID = ScalingID
 	}
 

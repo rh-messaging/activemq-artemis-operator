@@ -3,14 +3,15 @@ package statefulsets
 import (
 	"context"
 
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/pods"
 	svc "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/services"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	logf "sigs.k8s.io/controller-runtime"
 )
@@ -44,31 +45,36 @@ func MakeStatefulSet(namespacedName types.NamespacedName, annotations map[string
 	return ss, Spec
 }
 
-func MakeStatefulSet2(ssName string, svcHeadlessName string, namespacedName types.NamespacedName, annotations map[string]string, labels map[string]string, replicas int32, pts corev1.PodTemplateSpec) (*appsv1.StatefulSet, appsv1.StatefulSetSpec) {
+func MakeStatefulSet2(currentStateFulSet *appsv1.StatefulSet, ssName string, svcHeadlessName string, namespacedName types.NamespacedName, annotations map[string]string, labels map[string]string, replicas int32) *appsv1.StatefulSet {
 
-	ss := &appsv1.StatefulSet{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "StatefulSet",
-			APIVersion: "apps/v1beta1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        ssName,
-			Namespace:   namespacedName.Namespace,
-			Labels:      labels,
-			Annotations: annotations,
-		},
+	if currentStateFulSet == nil {
+		currentStateFulSet = &appsv1.StatefulSet{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "StatefulSet",
+				APIVersion: "apps/v1beta1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      ssName,
+				Namespace: namespacedName.Namespace,
+			},
+			Spec: appsv1.StatefulSetSpec{
+				Template: *pods.MakePodTemplateSpec(nil, namespacedName, labels),
+			},
+		}
 	}
-	Spec := appsv1.StatefulSetSpec{
-		Replicas:    &replicas,
-		ServiceName: svcHeadlessName,
-		Selector: &metav1.LabelSelector{
-			MatchLabels: labels,
-		},
-		Template: pts,
+	currentStateFulSet.ObjectMeta.Labels = labels
+	currentStateFulSet.ObjectMeta.Annotations = annotations
+
+	currentStateFulSet.Spec.Replicas = &replicas
+	currentStateFulSet.Spec.ServiceName = svcHeadlessName
+	currentStateFulSet.Spec.Selector = &metav1.LabelSelector{
+		MatchLabels: labels,
 	}
 
-	log.Info("created statefulset", "spec", Spec)
-	return ss, Spec
+	currentStateFulSet.Spec.Template = *pods.MakePodTemplateSpec(&currentStateFulSet.Spec.Template, namespacedName, labels)
+
+	log.Info("created statefulset", "spec", currentStateFulSet.Spec)
+	return currentStateFulSet
 }
 
 var GLOBAL_CRNAME string = ""

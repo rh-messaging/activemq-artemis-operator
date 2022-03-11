@@ -425,8 +425,7 @@ func Update(containers []corev1.Container, envVar *corev1.EnvVar) {
 	for i := 0; i < len(containers); i++ {
 		for j := len(containers[i].Env) - 1; j >= 0; j-- {
 			if envVar.Name == containers[i].Env[j].Name {
-				containers[i].Env = remove(containers[i].Env, j)
-				containers[i].Env = append(containers[i].Env, *envVar)
+				containers[i].Env[j] = *envVar
 			}
 		}
 	}

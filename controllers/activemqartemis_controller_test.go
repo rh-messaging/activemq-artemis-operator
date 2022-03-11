@@ -165,16 +165,16 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(Equal(true))
 
 			By("and checking there is just a single Toleration")
-			Eventually(func() bool {
+			Eventually(func() (int, error) {
 				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
 
 				err := k8sClient.Get(ctx, key, createdSs)
 
 				if err != nil {
-					return false
+					return 0, err
 				}
-				return len(createdSs.Spec.Template.Spec.Tolerations) == 1
-			}, timeout, interval).Should(Equal(true))
+				return len(createdSs.Spec.Template.Spec.Tolerations), err
+			}, timeout, interval).Should(Equal(1))
 			Expect(len(createdSs.Spec.Template.Spec.Tolerations) == 1).Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Tolerations[0].Key == "yes").Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Tolerations[0].Value == "No").Should(BeTrue())
@@ -202,7 +202,7 @@ var _ = Describe("artemis controller", func() {
 			livenessProbe.TimeoutSeconds = 7
 			livenessProbe.SuccessThreshold = 8
 			livenessProbe.FailureThreshold = 9
-			crd.Spec.DeploymentPlan.LivenessProbe = livenessProbe
+			crd.Spec.DeploymentPlan.LivenessProbe = &livenessProbe
 			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
 			createdSs := &appsv1.StatefulSet{}
 
@@ -300,7 +300,7 @@ var _ = Describe("artemis controller", func() {
 			}
 			livenessProbe := corev1.Probe{}
 			livenessProbe.Exec = &exec
-			crd.Spec.DeploymentPlan.LivenessProbe = livenessProbe
+			crd.Spec.DeploymentPlan.LivenessProbe = &livenessProbe
 			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
 			createdSs := &appsv1.StatefulSet{}
 			By("Deploying the CRD")
@@ -385,7 +385,7 @@ var _ = Describe("artemis controller", func() {
 			readinessProbe.TimeoutSeconds = 7
 			readinessProbe.SuccessThreshold = 8
 			readinessProbe.FailureThreshold = 9
-			crd.Spec.DeploymentPlan.ReadinessProbe = readinessProbe
+			crd.Spec.DeploymentPlan.ReadinessProbe = &readinessProbe
 			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
 			createdSs := &appsv1.StatefulSet{}
 			By("Deploying the CRD")
@@ -433,7 +433,7 @@ var _ = Describe("artemis controller", func() {
 			}
 			readinessProbe := corev1.Probe{}
 			readinessProbe.Exec = &exec
-			crd.Spec.DeploymentPlan.ReadinessProbe = readinessProbe
+			crd.Spec.DeploymentPlan.ReadinessProbe = &readinessProbe
 			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
 			createdSs := &appsv1.StatefulSet{}
 			By("Deploying the CRD")

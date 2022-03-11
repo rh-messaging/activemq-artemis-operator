@@ -9,26 +9,56 @@ const (
 	TCPLivenessPort = 8161
 )
 
-//func MakeContainer(cr *brokerv2alpha1.ActiveMQArtemis) corev1.Container {
-func MakeContainer(customResourceName string, imageName string, envVarArray []corev1.EnvVar) corev1.Container {
+func MakeContainer(hostingPodSpec *corev1.PodSpec, customResourceName string, imageName string, envVarArray []corev1.EnvVar) *corev1.Container {
 
-	container := corev1.Container{
-		Name:    customResourceName + "-container",
-		Image:   imageName, //cr.Spec.DeploymentPlan.Image,
-		Command: []string{"/opt/amq/bin/launch.sh", "start"},
-		Env:     envVarArray, //environments.MakeEnvVarArrayForCR(cr),
+	name := customResourceName + "-container"
+
+	var container *corev1.Container
+
+	if hostingPodSpec != nil {
+		for _, existingContainer := range hostingPodSpec.Containers {
+			if existingContainer.Name == name {
+				container = &existingContainer
+				break
+			}
+		}
 	}
+	if container == nil {
+		container = &corev1.Container{
+			Name:    name,
+			Command: []string{"/opt/amq/bin/launch.sh", "start"},
+		}
+	}
+
+	container.Image = imageName
+	container.Env = envVarArray
 
 	return container
 }
 
-func MakeInitContainer(containerName string, imageName string, envVarArray []corev1.EnvVar) corev1.Container {
+func MakeInitContainer(hostingPodSpec *corev1.PodSpec, customResourceName string, imageName string, envVarArray []corev1.EnvVar) *corev1.Container {
 
-	container := corev1.Container{
-		Name:  containerName,
-		Image: imageName,
-		Env:   envVarArray,
+	name := customResourceName + "-container-init"
+
+	var container *corev1.Container
+
+	if hostingPodSpec != nil {
+		for _, existingContainer := range hostingPodSpec.InitContainers {
+			if existingContainer.Name == name {
+				container = &existingContainer
+				break
+			}
+		}
 	}
+	if container == nil {
+		container = &corev1.Container{
+			Name:    name,
+			Command: []string{"/bin/bash"},
+		}
+	}
+
+	container.Image = imageName
+	container.Env = envVarArray
 
 	return container
 }

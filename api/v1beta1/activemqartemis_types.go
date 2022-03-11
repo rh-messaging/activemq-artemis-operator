@@ -211,8 +211,8 @@ type DeploymentPlanType struct {
 	// Whether broker is clustered
 	Clustered      *bool           `json:"clustered,omitempty"`
 	PodSecurity    PodSecurityType `json:"podSecurity,omitempty"`
-	LivenessProbe  corev1.Probe    `json:"livenessProbe,omitempty"`
-	ReadinessProbe corev1.Probe    `json:"readinessProbe,omitempty"`
+	LivenessProbe  *corev1.Probe   `json:"livenessProbe,omitempty"`
+	ReadinessProbe *corev1.Probe   `json:"readinessProbe,omitempty"`
 	// Whether or not to install the artemis metrics plugin
 	EnableMetricsPlugin *bool               `json:"enableMetricsPlugin,omitempty"`
 	Tolerations         []corev1.Toleration `json:"tolerations,omitempty"`

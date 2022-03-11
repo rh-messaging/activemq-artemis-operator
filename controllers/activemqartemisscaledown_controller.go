@@ -99,7 +99,6 @@ func (r *ActiveMQArtemisScaledownReconciler) Reconcile(ctx context.Context, requ
 
 	reqLogger.Info("====", "namespace:", namespace)
 	reqLogger.Info("====", "localOnly:", localOnly)
-	reqLogger.Info("====", "requestedResources: ", requestedResources)
 
 	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
 	if err != nil {
