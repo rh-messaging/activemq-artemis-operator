@@ -2,6 +2,7 @@ package common_test
 
 import (
 	"testing"
+	"time"
 
 	"fmt"
 
@@ -24,6 +25,12 @@ var _ = BeforeSuite(func() {
 
 var _ = AfterSuite(func() {
 	fmt.Println("=======After Common Suite========")
+})
+
+var _ = Describe("Common Resync Test", func() {
+	Context("Default Resync Period", func() {
+		Expect(common.GetReconcileResyncPeriod()).To(Equal(10 * time.Hour))
+	})
 })
 
 var _ = Describe("Common Util Test", func() {

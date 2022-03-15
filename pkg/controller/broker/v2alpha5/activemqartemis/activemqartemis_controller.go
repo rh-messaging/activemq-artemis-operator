@@ -28,14 +28,9 @@ var log = logf.Log.WithName("controller_v2alpha5activemqartemis")
 
 var namespacedNameToFSM = make(map[types.NamespacedName]*ActiveMQArtemisFSM)
 
-type ActiveMQArtemisConfigHandler interface {
-	IsApplicableFor(brokerNamespacedName types.NamespacedName) bool
-	Config(initContainers []corev1.Container, outputDirRoot string, yacfgProfileVersion string, yacfgProfileName string) (value []string)
-}
+var namespaceToConfigHandler = make(map[types.NamespacedName]common.ActiveMQArtemisConfigHandler)
 
-var namespaceToConfigHandler = make(map[types.NamespacedName]ActiveMQArtemisConfigHandler)
-
-func GetBrokerConfigHandler(brokerNamespacedName types.NamespacedName) (handler ActiveMQArtemisConfigHandler) {
+func GetBrokerConfigHandler(brokerNamespacedName types.NamespacedName) (handler common.ActiveMQArtemisConfigHandler) {
 	for _, handler := range namespaceToConfigHandler {
 		if handler.IsApplicableFor(brokerNamespacedName) {
 			return handler
@@ -44,7 +39,7 @@ func GetBrokerConfigHandler(brokerNamespacedName types.NamespacedName) (handler 
 	return nil
 }
 
-func UpdatePodForSecurity(securityHandlerNamespacedName types.NamespacedName, handler ActiveMQArtemisConfigHandler) error {
+func UpdatePodForSecurity(securityHandlerNamespacedName types.NamespacedName, handler common.ActiveMQArtemisConfigHandler) error {
 	success := true
 	for nsn, fsm := range namespacedNameToFSM {
 		if handler.IsApplicableFor(nsn) {
@@ -73,7 +68,7 @@ func RemoveBrokerConfigHandler(namespacedName types.NamespacedName) {
 	}
 }
 
-func AddBrokerConfigHandler(namespacedName types.NamespacedName, handler ActiveMQArtemisConfigHandler, toReconcile bool) error {
+func AddBrokerConfigHandler(namespacedName types.NamespacedName, handler common.ActiveMQArtemisConfigHandler, toReconcile bool) error {
 	if _, ok := namespaceToConfigHandler[namespacedName]; ok {
 		log.V(1).Info("There is an old config handler, it'll be replaced")
 	}
@@ -164,7 +159,7 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 
 	if !nsoptions.Match(request.Namespace) {
 		reqLogger.Info("Request not in watch list, ignore", "request", request)
-		return reconcile.Result{}, nil
+		return reconcile.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
 	}
 
 	var err error = nil
@@ -205,7 +200,10 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 		}
 
 		// Add error detail for use later
-		return r.result, err
+		if err != nil {
+			return r.result, err
+		}
+		return reconcile.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
 	}
 
 	// Do lookup to see if we have a fsm for the incoming name in the incoming namespace
@@ -275,6 +273,7 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 		lsrcrs.StoreLastSuccessfulReconciledCR(customResource, customResource.Name,
 			customResource.Namespace, "broker", crstr, fsmstr, customResource.ResourceVersion,
 			amqbfsm.namers.LabelBuilder.Labels(), r.client, r.scheme)
+		return reconcile.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
 	}
 	// Single exit, return the result and error condition
 	return r.result, err

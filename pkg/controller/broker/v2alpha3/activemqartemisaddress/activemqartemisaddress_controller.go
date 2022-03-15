@@ -163,7 +163,7 @@ func (r *ReconcileActiveMQArtemisAddress) Reconcile(request reconcile.Request) (
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			return reconcile.Result{}, nil
+			return reconcile.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
 		}
 		log.Error(err, "Requeue the request for error")
 		return reconcile.Result{}, err
@@ -175,7 +175,7 @@ func (r *ReconcileActiveMQArtemisAddress) Reconcile(request reconcile.Request) (
 			//compare resource version
 			if existingCr.Checksum == instance.ResourceVersion {
 				log.V(1).Info("The incoming address CR is identical to stored CR, don't do reconcile")
-				return reconcile.Result{}, nil
+				return reconcile.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
 			}
 		}
 	}
@@ -196,7 +196,10 @@ func (r *ReconcileActiveMQArtemisAddress) Reconcile(request reconcile.Request) (
 		log.Error(err, "failed to create address resource, request will be requeued")
 	}
 
-	return reconcile.Result{}, err
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	return reconcile.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
 }
 
 func getLabels(cr *brokerv2alpha3.ActiveMQArtemisAddress) map[string]string {
