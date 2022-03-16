@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"reflect"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
@@ -76,28 +77,38 @@ func (r *ActiveMQArtemisSecurityReconciler) Reconcile(ctx context.Context, reque
 			reqLogger.Error(err, "Reconcile errored thats not IsNotFound, requeuing request", "Request Namespace", request.Namespace, "Request Name", request.Name)
 		}
 
-		return ctrl.Result{}, err
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
 	}
 
 	toReconcile := true
+	newHandler := &ActiveMQArtemisSecurityConfigHandler{
+		instance,
+		request.NamespacedName,
+		r,
+	}
+
 	if securityHandler := GetBrokerConfigHandler(request.NamespacedName); securityHandler == nil {
 		reqLogger.Info("Operator doesn't have the security handler, try retrive it from secret")
 		if existingHandler := lsrcrs.RetrieveLastSuccessfulReconciledCR(request.NamespacedName, "security", r.Client, getLabels(instance)); existingHandler != nil {
 			//compare resource version
 			if existingHandler.Checksum == instance.ResourceVersion {
-				elog.V(1).Info("The incoming security CR is identical to stored CR, no reconcile")
+				reqLogger.V(1).Info("The incoming security CR is identical to stored CR, no reconcile")
 				toReconcile = false
 			}
 		}
+	} else {
+		if reflect.DeepEqual(securityHandler, newHandler) {
+			reqLogger.Info("Will not reconcile the same security config")
+			return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
+		}
 	}
 
-	if err := AddBrokerConfigHandler(request.NamespacedName, &ActiveMQArtemisSecurityConfigHandler{
-		instance,
-		request.NamespacedName,
-		r,
-	}, toReconcile); err != nil {
+	if err := AddBrokerConfigHandler(request.NamespacedName, newHandler, toReconcile); err != nil {
 		reqLogger.Error(err, "failed to config security cr", "request", request.NamespacedName)
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, err
 	}
 	//persist the CR
 	crstr, merr := common.ToJson(instance)
@@ -108,7 +119,7 @@ func (r *ActiveMQArtemisSecurityReconciler) Reconcile(ctx context.Context, reque
 	lsrcrs.StoreLastSuccessfulReconciledCR(instance, instance.Name, instance.Namespace, "security",
 		crstr, "", instance.ResourceVersion, getLabels(instance), r.Client, r.Scheme)
 
-	return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
 }
 
 type ActiveMQArtemisSecurityConfigHandler struct {

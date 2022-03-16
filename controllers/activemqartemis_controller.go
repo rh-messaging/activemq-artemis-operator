@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	nsoptions "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/namespaces"
@@ -40,14 +39,9 @@ var clog = ctrl.Log.WithName("controller_v1beta1activemqartemis")
 
 var namespacedNameToFSM = make(map[types.NamespacedName]*ActiveMQArtemisFSM)
 
-type ActiveMQArtemisConfigHandler interface {
-	IsApplicableFor(brokerNamespacedName types.NamespacedName) bool
-	Config(initContainers []corev1.Container, outputDirRoot string, yacfgProfileVersion string, yacfgProfileName string) (value []string)
-}
+var namespaceToConfigHandler = make(map[types.NamespacedName]common.ActiveMQArtemisConfigHandler)
 
-var namespaceToConfigHandler = make(map[types.NamespacedName]ActiveMQArtemisConfigHandler)
-
-func GetBrokerConfigHandler(brokerNamespacedName types.NamespacedName) (handler ActiveMQArtemisConfigHandler) {
+func GetBrokerConfigHandler(brokerNamespacedName types.NamespacedName) (handler common.ActiveMQArtemisConfigHandler) {
 	for _, handler := range namespaceToConfigHandler {
 		if handler.IsApplicableFor(brokerNamespacedName) {
 			return handler
@@ -56,7 +50,7 @@ func GetBrokerConfigHandler(brokerNamespacedName types.NamespacedName) (handler 
 	return nil
 }
 
-func UpdatePodForSecurity(securityHandlerNamespacedName types.NamespacedName, handler ActiveMQArtemisConfigHandler) error {
+func UpdatePodForSecurity(securityHandlerNamespacedName types.NamespacedName, handler common.ActiveMQArtemisConfigHandler) error {
 	success := true
 	for nsn, fsm := range namespacedNameToFSM {
 		if handler.IsApplicableFor(nsn) {
@@ -85,7 +79,7 @@ func RemoveBrokerConfigHandler(namespacedName types.NamespacedName) {
 	}
 }
 
-func AddBrokerConfigHandler(namespacedName types.NamespacedName, handler ActiveMQArtemisConfigHandler, toReconcile bool) error {
+func AddBrokerConfigHandler(namespacedName types.NamespacedName, handler common.ActiveMQArtemisConfigHandler, toReconcile bool) error {
 	if _, ok := namespaceToConfigHandler[namespacedName]; ok {
 		glog.V(1).Info("There is an old config handler, it'll be replaced")
 	}
@@ -134,7 +128,7 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 
 	if !nsoptions.Match(request.Namespace) {
 		reqLogger.Info("Request not in watch list, ignore", "request", request)
-		return reconcile.Result{}, nil
+		return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
 	}
 
 	var err error = nil
@@ -175,7 +169,10 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 		}
 
 		// Add error detail for use later
-		return r.Result, err
+		if err != nil {
+			return r.Result, err
+		}
+		return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
 	}
 
 	// Do lookup to see if we have a fsm for the incoming name in the incoming namespace
@@ -245,8 +242,9 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 		lsrcrs.StoreLastSuccessfulReconciledCR(customResource, customResource.Name,
 			customResource.Namespace, "broker", crstr, fsmstr, customResource.ResourceVersion,
 			amqbfsm.namers.LabelBuilder.Labels(), r.Client, r.Scheme)
+		return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
 	}
-	// Single exit, return the result and error condition
+
 	return r.Result, err
 }
 

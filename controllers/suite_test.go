@@ -53,6 +53,9 @@ var cancel context.CancelFunc
 var stateManager *common.StateManager
 var autodetect *common.Background
 
+var brokerReconciler *ActiveMQArtemisReconciler
+var securityReconciler *ActiveMQArtemisSecurityReconciler
+
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
 
@@ -117,13 +120,24 @@ var _ = BeforeSuite(func() {
 
 	// watch all namespaces by default
 	nsoptions.SetWatchAll(true)
-	if err = (&ActiveMQArtemisReconciler{
+
+	brokerReconciler = &ActiveMQArtemisReconciler{
 		Client: k8Manager.GetClient(),
 		Scheme: k8Manager.GetScheme(),
 		Result: ctrl.Result{},
-	}).SetupWithManager(k8Manager); err != nil {
+	}
+
+	if err = brokerReconciler.SetupWithManager(k8Manager); err != nil {
 		logf.Log.Error(err, "unable to create controller", "controller", "ActiveMQArtemisReconciler")
 	}
+
+	securityReconciler = &ActiveMQArtemisSecurityReconciler{
+		Client: k8Manager.GetClient(),
+		Scheme: k8Manager.GetScheme(),
+	}
+
+	err = securityReconciler.SetupWithManager(k8Manager)
+	Expect(err).ToNot(HaveOccurred(), "failed to create security controller")
 
 	go func() {
 		defer GinkgoRecover()

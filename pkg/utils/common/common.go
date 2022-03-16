@@ -2,8 +2,11 @@ package common
 
 import (
 	"encoding/json"
+	"os"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -14,6 +17,30 @@ const (
 )
 
 var theManager manager.Manager
+
+const DEFAULT_RESYNC_PERIOD = 10 * time.Hour
+
+var resyncPeriod time.Duration = DEFAULT_RESYNC_PERIOD
+
+func init() {
+	if period, defined := os.LookupEnv("RECONCILE_RESYNC_PERIOD"); defined {
+		var err error
+		if resyncPeriod, err = time.ParseDuration(period); err != nil {
+			resyncPeriod = DEFAULT_RESYNC_PERIOD
+		}
+	} else {
+		resyncPeriod = DEFAULT_RESYNC_PERIOD
+	}
+}
+
+func GetReconcileResyncPeriod() time.Duration {
+	return resyncPeriod
+}
+
+type ActiveMQArtemisConfigHandler interface {
+	IsApplicableFor(brokerNamespacedName types.NamespacedName) bool
+	Config(initContainers []corev1.Container, outputDirRoot string, yacfgProfileVersion string, yacfgProfileName string) (value []string)
+}
 
 func compareQuantities(resList1 corev1.ResourceList, resList2 corev1.ResourceList, keys []corev1.ResourceName) bool {
 

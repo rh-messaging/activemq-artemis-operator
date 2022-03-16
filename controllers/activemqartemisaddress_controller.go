@@ -104,7 +104,7 @@ func (r *ActiveMQArtemisAddressReconciler) Reconcile(ctx context.Context, reques
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			return ctrl.Result{}, nil
+			return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
 		}
 		glog.Error(err, "Requeue the request for error")
 		return ctrl.Result{}, err
@@ -116,7 +116,7 @@ func (r *ActiveMQArtemisAddressReconciler) Reconcile(ctx context.Context, reques
 			//compare resource version
 			if existingCr.Checksum == instance.ResourceVersion {
 				glog.V(1).Info("The incoming address CR is identical to stored CR, don't do reconcile")
-				return ctrl.Result{}, nil
+				return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
 			}
 		}
 	}
@@ -134,8 +134,10 @@ func (r *ActiveMQArtemisAddressReconciler) Reconcile(ctx context.Context, reques
 		}
 		lsrcrs.StoreLastSuccessfulReconciledCR(instance, instance.Name, instance.Namespace, "address", crstr, "", instance.ResourceVersion, getAddressLabels(instance), r.Client, r.Scheme)
 	}
-
-	return ctrl.Result{}, nil
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
 }
 
 func getAddressLabels(cr *brokerv1beta1.ActiveMQArtemisAddress) map[string]string {

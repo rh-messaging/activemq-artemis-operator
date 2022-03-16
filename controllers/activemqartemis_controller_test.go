@@ -946,13 +946,13 @@ func randString() string {
 	return b.String()
 }
 
-func getPersistedVersionedCrd(name string, nameSpace string, crd *brokerv1beta1.ActiveMQArtemis) bool {
+func getPersistedVersionedCrd(name string, nameSpace string, object client.Object) bool {
 	key := types.NamespacedName{Name: name, Namespace: nameSpace}
-	err := k8sClient.Get(ctx, key, crd)
+	err := k8sClient.Get(ctx, key, object)
 	return err == nil
 }
 
-func checkCrdDeleted(name string, namespace string, crd *brokerv1beta1.ActiveMQArtemis) bool {
+func checkCrdDeleted(name string, namespace string, crd client.Object) bool {
 	err := k8sClient.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, crd)
 	return errors.IsNotFound(err)
 }
