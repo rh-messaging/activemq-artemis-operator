@@ -236,19 +236,25 @@ func main() {
 		os.Exit(1)
 	}
 
-	log.Info("Setting up webhook functions")
-	if err = (&brokerv1beta1.ActiveMQArtemis{}).SetupWebhookWithManager(mgr); err != nil {
-		log.Error(err, "unable to create webhook", "webhook", "ActiveMQArtemis")
-		os.Exit(1)
+	enableWebhooks := os.Getenv("ENABLE_WEBHOOKS")
+	if enableWebhooks != "false" {
+		log.Info("Setting up webhook functions", "ENABLE_WEBHOOKS", enableWebhooks)
+		if err = (&brokerv1beta1.ActiveMQArtemis{}).SetupWebhookWithManager(mgr); err != nil {
+			log.Error(err, "unable to create webhook", "webhook", "ActiveMQArtemis")
+			os.Exit(1)
+		}
+		if err = (&brokerv1beta1.ActiveMQArtemisSecurity{}).SetupWebhookWithManager(mgr); err != nil {
+			log.Error(err, "unable to create webhook", "webhook", "ActiveMQArtemisSecurity")
+			os.Exit(1)
+		}
+		if err = (&brokerv1beta1.ActiveMQArtemisAddress{}).SetupWebhookWithManager(mgr); err != nil {
+			log.Error(err, "unable to create webhook", "webhook", "ActiveMQArtemisAddress")
+			os.Exit(1)
+		}
+	} else {
+		log.Info("NOT Setting up webhook functions", "ENABLE_WEBHOOKS", enableWebhooks)
 	}
-	if err = (&brokerv1beta1.ActiveMQArtemisSecurity{}).SetupWebhookWithManager(mgr); err != nil {
-		log.Error(err, "unable to create webhook", "webhook", "ActiveMQArtemisSecurity")
-		os.Exit(1)
-	}
-	if err = (&brokerv1beta1.ActiveMQArtemisAddress{}).SetupWebhookWithManager(mgr); err != nil {
-		log.Error(err, "unable to create webhook", "webhook", "ActiveMQArtemisAddress")
-		os.Exit(1)
-	}
+
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

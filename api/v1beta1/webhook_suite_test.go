@@ -21,6 +21,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -106,16 +107,18 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&ActiveMQArtemis{}).SetupWebhookWithManager(mgr)
-	Expect(err).NotTo(HaveOccurred())
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		err = (&ActiveMQArtemis{}).SetupWebhookWithManager(mgr)
+		Expect(err).NotTo(HaveOccurred())
 
-	err = (&ActiveMQArtemisSecurity{}).SetupWebhookWithManager(mgr)
-	Expect(err).NotTo(HaveOccurred())
+		err = (&ActiveMQArtemisSecurity{}).SetupWebhookWithManager(mgr)
+		Expect(err).NotTo(HaveOccurred())
 
-	err = (&ActiveMQArtemisAddress{}).SetupWebhookWithManager(mgr)
-	Expect(err).NotTo(HaveOccurred())
+		err = (&ActiveMQArtemisAddress{}).SetupWebhookWithManager(mgr)
+		Expect(err).NotTo(HaveOccurred())
 
-	//+kubebuilder:scaffold:webhook
+		//+kubebuilder:scaffold:webhook
+	}
 
 	go func() {
 		defer GinkgoRecover()
@@ -125,18 +128,19 @@ var _ = BeforeSuite(func() {
 		}
 	}()
 
-	// wait for the webhook server to get ready
-	dialer := &net.Dialer{Timeout: time.Second}
-	addrPort := fmt.Sprintf("%s:%d", webhookInstallOptions.LocalServingHost, webhookInstallOptions.LocalServingPort)
-	Eventually(func() error {
-		conn, err := tls.DialWithDialer(dialer, "tcp", addrPort, &tls.Config{InsecureSkipVerify: true})
-		if err != nil {
-			return err
-		}
-		conn.Close()
-		return nil
-	}).Should(Succeed())
-
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		// wait for the webhook server to get ready
+		dialer := &net.Dialer{Timeout: time.Second}
+		addrPort := fmt.Sprintf("%s:%d", webhookInstallOptions.LocalServingHost, webhookInstallOptions.LocalServingPort)
+		Eventually(func() error {
+			conn, err := tls.DialWithDialer(dialer, "tcp", addrPort, &tls.Config{InsecureSkipVerify: true})
+			if err != nil {
+				return err
+			}
+			conn.Close()
+			return nil
+		}).Should(Succeed())
+	}
 }, 60)
 
 var _ = AfterSuite(func() {
