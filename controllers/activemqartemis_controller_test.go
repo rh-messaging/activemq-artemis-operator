@@ -299,6 +299,11 @@ var _ = Describe("artemis controller", func() {
 				Command: []string{"/broker/bin/artemis check node"},
 			}
 			livenessProbe := corev1.Probe{}
+			livenessProbe.PeriodSeconds = 5
+			livenessProbe.InitialDelaySeconds = 6
+			livenessProbe.TimeoutSeconds = 7
+			livenessProbe.SuccessThreshold = 8
+			livenessProbe.FailureThreshold = 9
 			livenessProbe.Exec = &exec
 			crd.Spec.DeploymentPlan.LivenessProbe = &livenessProbe
 			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
@@ -327,6 +332,12 @@ var _ = Describe("artemis controller", func() {
 			By("Making sure the Liveness probe is correct")
 			Expect(len(createdSs.Spec.Template.Spec.Containers) == 1).Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.Handler.Exec.Command[0] == "/broker/bin/artemis check node").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds == 5).Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds == 6).Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds == 7).Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.SuccessThreshold == 8).Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.FailureThreshold == 9).Should(BeTrue())
+
 			Expect(k8sClient.Delete(ctx, createdCrd))
 
 			By("check it has gone")
@@ -363,6 +374,8 @@ var _ = Describe("artemis controller", func() {
 
 			Expect(len(createdSs.Spec.Template.Spec.Containers) == 1).Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.Handler.TCPSocket.Port.String() == "8161").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds).Should(BeEquivalentTo(5))
+
 			Expect(k8sClient.Delete(ctx, createdCrd))
 
 			By("check it has gone")
@@ -577,6 +590,93 @@ var _ = Describe("artemis controller", func() {
 			Eventually(func() bool {
 				return checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd)
 			}, timeout, interval).Should(BeTrue())
+		})
+	})
+
+	Context("Env var updates TRIGGERED_ROLL_COUNT checksum", func() {
+		It("Expect TRIGGERED_ROLL_COUNT count non 0", func() {
+			By("By creating a new crd")
+			var checkSum string
+			ctx := context.Background()
+			crd := generateArtemisSpec(namespace)
+
+			crd.Spec.AdminUser = "Joe"
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+			Eventually(func() bool { return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd) }, timeout, interval).Should(BeTrue())
+			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
+
+			By("By checking the container stateful set for TRIGGERED_ROLL_COUNT non zero")
+			Eventually(func() (bool, error) {
+				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
+				createdSs := &appsv1.StatefulSet{}
+
+				err := k8sClient.Get(ctx, key, createdSs)
+				if err != nil {
+					return false, err
+				}
+
+				found := false
+				for _, container := range createdSs.Spec.Template.Spec.Containers {
+					for _, env := range container.Env {
+						if env.Name == "TRIGGERED_ROLL_COUNT" {
+							if env.Value > "0" {
+								checkSum = env.Value
+								found = true
+							}
+						}
+					}
+				}
+				return found, err
+			}, duration, interval).Should(Equal(true))
+
+			By("update env var")
+			Eventually(func() bool {
+
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: crd.ObjectMeta.Name, Namespace: crd.ObjectMeta.Namespace}, createdCrd)
+				if err == nil {
+
+					createdCrd.Spec.AdminUser = "Joseph"
+
+					err = k8sClient.Update(ctx, createdCrd)
+					if err != nil {
+						fmt.Printf("error on update! %v\n", err)
+					}
+				}
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			By("verify different checksum")
+			Eventually(func() (bool, error) {
+				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
+				createdSs := &appsv1.StatefulSet{}
+
+				err := k8sClient.Get(ctx, key, createdSs)
+				if err != nil {
+					return false, err
+				}
+
+				found := false
+				for _, container := range createdSs.Spec.Template.Spec.Containers {
+					for _, env := range container.Env {
+						if env.Name == "TRIGGERED_ROLL_COUNT" {
+							if env.Value != checkSum {
+								found = true
+							}
+						}
+					}
+				}
+				return found, err
+			}, duration, interval).Should(Equal(true))
+
+			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
+
+			By("check it has gone")
+			Eventually(func() bool {
+				return checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+
 		})
 	})
 

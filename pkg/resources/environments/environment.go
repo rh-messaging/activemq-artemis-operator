@@ -2,12 +2,10 @@ package environments
 
 import (
 	"errors"
-	"math"
 	"os"
 	"strconv"
 	"strings"
 
-	svc "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/services"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/random"
 	corev1 "k8s.io/api/core/v1"
@@ -73,84 +71,6 @@ func DetectOpenshift() (bool, error) {
 		return isOpenshift, nil
 	}
 	return false, errors.New("environment not yet determined")
-}
-
-func AddEnvVarForBasic(requireLogin string, journalType string) []corev1.EnvVar {
-
-	envVarArray := []corev1.EnvVar{
-		{
-			"AMQ_ROLE",
-			"admin", //GetPropertyForCR("AMQ_ROLE", cr, "admin"),
-			nil,
-		},
-		{
-			"AMQ_NAME",
-			"amq-broker", //GetPropertyForCR("AMQ_NAME", cr, "amq-broker"),
-			nil,
-		},
-		{
-			"AMQ_TRANSPORTS",
-			"", //GetPropertyForCR("AMQ_TRANSPORTS", cr, ""),
-			nil,
-		},
-		{
-			"AMQ_QUEUES",
-			"", //GetPropertyForCR("AMQ_QUEUES", cr, ""),
-			nil,
-		},
-		{
-			"AMQ_ADDRESSES",
-			"", //GetPropertyForCR("AMQ_ADDRESSES", cr, ""),
-			nil,
-		},
-		{
-			"AMQ_GLOBAL_MAX_SIZE",
-			"100 mb", //GetPropertyForCR("AMQ_GLOBAL_MAX_SIZE", cr, "100 mb"),
-			nil,
-		},
-		{
-			"AMQ_REQUIRE_LOGIN",
-			requireLogin, //GetPropertyForCR("AMQ_REQUIRE_LOGIN", cr, "false"),
-			nil,
-		},
-		{
-			"AMQ_EXTRA_ARGS",
-			"--no-autotune", //GetPropertyForCR("AMQ_EXTRA_ARGS", cr, "--no-autotune"),
-			nil,
-		},
-		{
-			"AMQ_ANYCAST_PREFIX",
-			"", //GetPropertyForCR("AMQ_ANYCAST_PREFIX", cr, ""),
-			nil,
-		},
-		{
-			"AMQ_MULTICAST_PREFIX",
-			"", //GetPropertyForCR("AMQ_MULTICAST_PREFIX", cr, ""),
-			nil,
-		},
-		{
-			"POD_NAMESPACE",
-			"", // Set to the field metadata.namespace in current object
-			nil,
-		},
-		{
-			"AMQ_JOURNAL_TYPE",
-			journalType, //GetPropertyForCR("AMQ_JOURNAL_TYPE", cr, "nio"),
-			nil,
-		},
-		{
-			"TRIGGERED_ROLL_COUNT",
-			"0",
-			nil,
-		},
-		{
-			"PING_SVC_NAME",
-			svc.PingNameBuilder.Name(),
-			nil,
-		},
-	}
-
-	return envVarArray
 }
 
 func AddEnvVarForBasic2(requireLogin string, journalType string, svcPingName string) []corev1.EnvVar {
@@ -371,31 +291,14 @@ func StringSyncCausedUpdateOn(containers []corev1.Container, envVarName string, 
 	return retEnvVar
 }
 
-func IncrementTriggeredRollCount(containers []corev1.Container) error {
-
-	// Find the existing values
-	var err error = nil
-	var triggeredRollCount int = 0
-	for _, v := range containers[0].Env {
-		if v.Name == "TRIGGERED_ROLL_COUNT" {
-			if triggeredRollCount, err = strconv.Atoi(v.Value); err == nil {
-				triggeredRollCount++
-				if math.MaxInt32 == triggeredRollCount {
-					triggeredRollCount = 0
-				}
-			}
-			break
-		}
-	}
+func TrackSecretCheckSumInRollCount(checkSum string, containers []corev1.Container) {
 
 	newTriggeredRollCountEnvVar := corev1.EnvVar{
 		"TRIGGERED_ROLL_COUNT",
-		strconv.Itoa(triggeredRollCount),
+		checkSum,
 		nil,
 	}
 	Update(containers, &newTriggeredRollCountEnvVar)
-
-	return err
 }
 
 func Create(containers []corev1.Container, envVar *corev1.EnvVar) {

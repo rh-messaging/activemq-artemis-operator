@@ -59,19 +59,19 @@ import (
 )
 
 const (
-	statefulSetNotUpdated           = 0
-	statefulSetSizeUpdated          = 1 << 0
-	statefulSetClusterConfigUpdated = 1 << 1
-	statefulSetImageUpdated         = 1 << 2
-	statefulSetPersistentUpdated    = 1 << 3
-	statefulSetAioUpdated           = 1 << 4
-	statefulSetCommonConfigUpdated  = 1 << 5
-	statefulSetRequireLoginUpdated  = 1 << 6
-	//statefulSetRoleUpdated          = 1 << 7
-	statefulSetAcceptorsUpdated  = 1 << 8
-	statefulSetConnectorsUpdated = 1 << 9
-	statefulSetConsoleUpdated    = 1 << 10
-	statefulSetInitImageUpdated  = 1 << 11
+	statefulSetNotUpdated            = 0
+	statefulSetSizeUpdated           = 1 << 0
+	statefulSetClusterConfigUpdated  = 1 << 1
+	statefulSetImageUpdated          = 1 << 2
+	statefulSetPersistentUpdated     = 1 << 3
+	statefulSetAioUpdated            = 1 << 4
+	statefulSetCommonConfigUpdated   = 1 << 5
+	statefulSetRequireLoginUpdated   = 1 << 6
+	statefulSetEnvVarInSecretUpdated = 1 << 7
+	statefulSetAcceptorsUpdated      = 1 << 8
+	statefulSetConnectorsUpdated     = 1 << 9
+	statefulSetConsoleUpdated        = 1 << 10
+	statefulSetInitImageUpdated      = 1 << 11
 
 	livenessProbeGraceTime = 30
 	TCPLivenessPort        = 8161
@@ -134,6 +134,10 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) Process(fsm *ActiveMQArtemisFSM
 
 	statefulSetUpdates |= reconciler.ProcessConsole(fsm, client, scheme, currentStatefulSet)
 
+	// mods to env var values sourced from secrets are not detected by process resources
+	// track updates in trigger env var that has a total checksum
+	trackSecretCheckSumInEnvVar(requestedResources, currentStatefulSet.Spec.Template.Spec.Containers)
+
 	requestedResources = append(requestedResources, currentStatefulSet)
 
 	// this should apply any deltas/updates
@@ -142,6 +146,30 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) Process(fsm *ActiveMQArtemisFSM
 	log.Info("Reconciler Processing... complete", "CRD ver:", fsm.customResource.ObjectMeta.ResourceVersion, "CRD Gen:", fsm.customResource.ObjectMeta.Generation)
 
 	return statefulSetUpdates, stepsComplete, currentStatefulSet
+}
+
+func trackSecretCheckSumInEnvVar(requestedResources []rtclient.Object, container []corev1.Container) {
+
+	// find desired secrets and checksum their 'sorted' values
+	digest := adler32.New()
+	for _, obj := range requestedResources {
+		if secret, ok := obj.(*corev1.Secret); ok {
+			// ignore secret for persistence of cr
+			if strings.HasSuffix(secret.Name, "-secret") {
+				// note use of StringData to match MakeSecret for the initial create case
+				if len(secret.StringData) > 0 {
+					for _, k := range sortedKeys(secret.StringData) {
+						digest.Write([]byte(secret.StringData[k]))
+					}
+				} else {
+					for _, k := range sortedKeysStringKeyByteValue(secret.Data) {
+						digest.Write(secret.Data[k])
+					}
+				}
+			}
+		}
+	}
+	environments.TrackSecretCheckSumInRollCount(hex.EncodeToString(digest.Sum(nil)), container)
 }
 
 func cloneOfDeployed(kind reflect.Type, name string) rtclient.Object {
@@ -254,9 +282,8 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessCredentials(fsm *ActiveM
 		Value:   environments.GLOBAL_AMQ_CLUSTER_PASSWORD,
 		AutoGen: true,
 	}
-	statefulSetUpdates := sourceEnvVarFromSecret2(fsm, currentStatefulSet, &envVars, secretName, client, scheme)
 
-	return statefulSetUpdates
+	return sourceEnvVarFromSecret2(fsm, currentStatefulSet, &envVars, secretName, client, scheme)
 }
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessDeploymentPlan(fsm *ActiveMQArtemisFSM, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool) uint32 {
@@ -485,7 +512,6 @@ func sourceEnvVarFromSecret2(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1
 
 	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
 
-	var err error = nil
 	var retVal uint32 = statefulSetNotUpdated
 
 	namespacedName := types.NamespacedName{
@@ -500,50 +526,31 @@ func sourceEnvVarFromSecret2(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1
 
 	secretDefinition := secrets.NewSecret(namespacedName, secretName, stringDataMap, fsm.namers.LabelBuilder.Labels())
 
-	if err = resources.Retrieve(namespacedName, client, secretDefinition); err != nil {
+	if err := resources.Retrieve(namespacedName, client, secretDefinition); err != nil {
 		if errors.IsNotFound(err) {
 			log.V(1).Info("Did not find secret " + secretName)
 		}
-	} else { // err == nil so it already exists
-		// Exists now
-		// Check the contents against what we just got above
-		log.V(1).Info("Found secret " + secretName)
+	} else {
 
-		var needUpdate bool = false
+		// update
 		for k := range *envVars {
 			elem, ok := secretDefinition.Data[k]
 			if 0 != strings.Compare(string(elem), (*envVars)[k].Value) || !ok {
 				log.V(1).Info("key value not equals or does not exist", "key", k, "exists", ok)
 				if !(*envVars)[k].AutoGen || string(elem) == "" {
 					secretDefinition.Data[k] = []byte((*envVars)[k].Value)
-					needUpdate = true
 				}
 			}
-		}
-		// revisit: if we have a secret named with the checksum of its content, any cange will be a different secret and mount etc
-		// and should trigger an update without further env updates, is that not simpler?
-
-		if needUpdate {
-			log.V(1).Info("Secret " + secretName + " needs update")
-
-			// These updates alone do not trigger a rolling update due to env var update as it's from a secret
-			err = resources.Update(namespacedName, client, secretDefinition)
-
-			// Force the rolling update to occur
-			environments.IncrementTriggeredRollCount(currentStatefulSet.Spec.Template.Spec.Containers)
-
-			//so far it doesn't matter what the value is as long as it's greater than zero
-			retVal = statefulSetAcceptorsUpdated
 		}
 	}
 
 	// ensure processResources sees it
 	requestedResources = append(requestedResources, secretDefinition)
 
-	log.Info("Populating env vars from secret " + secretName)
+	log.Info("Populating env vars references from secret " + secretName)
 
 	for envVarName := range *envVars {
-		acceptorsEnvVarSource := &corev1.EnvVarSource{
+		envVarSource := &corev1.EnvVarSource{
 			SecretKeyRef: &corev1.SecretKeySelector{
 				LocalObjectReference: corev1.LocalObjectReference{
 					Name: secretName,
@@ -556,13 +563,13 @@ func sourceEnvVarFromSecret2(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1
 		envVarDefinition := &corev1.EnvVar{
 			Name:      envVarName,
 			Value:     "",
-			ValueFrom: acceptorsEnvVarSource,
+			ValueFrom: envVarSource,
 		}
 		if retrievedEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, envVarName); nil == retrievedEnvVar {
 			log.V(1).Info("sourceEnvVarFromSecret failed to retrieve " + envVarName + " creating")
 			environments.Create(currentStatefulSet.Spec.Template.Spec.Containers, envVarDefinition)
-			retVal = statefulSetAcceptorsUpdated
 		}
+
 		//custom init container
 		if len(currentStatefulSet.Spec.Template.Spec.InitContainers) > 0 {
 			log.Info("we have custom init-containers")
@@ -1824,7 +1831,6 @@ func configureLivenessProbe(container *corev1.Container, probeFromCR *corev1.Pro
 			clog.V(1).Info("Using user provided Liveness Probe Exec " + probeFromCR.Exec.String())
 			livenessProbe.Exec = probeFromCR.Exec
 		}
-		// REVISIT, what about the handler from the probeFromCR?
 	} else {
 		clog.V(1).Info("Creating Default Liveness Probe")
 
@@ -1970,6 +1976,16 @@ func brokerPropertiesData(props map[string]string) map[string]string {
 }
 
 func sortedKeys(props map[string]string) []string {
+	sortedKeys := make([]string, 0, len(props))
+	for k := range props {
+		sortedKeys = append(sortedKeys, k)
+	}
+	sort.Strings(sortedKeys)
+	return sortedKeys
+}
+
+// generic version?
+func sortedKeysStringKeyByteValue(props map[string][]byte) []string {
 	sortedKeys := make([]string, 0, len(props))
 	for k := range props {
 		sortedKeys = append(sortedKeys, k)
