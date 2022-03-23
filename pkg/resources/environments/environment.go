@@ -248,6 +248,11 @@ func AddEnvVarForBasic2(requireLogin string, journalType string, svcPingName str
 			svcPingName,
 			nil,
 		},
+		{
+			"OPENSHIFT_DNS_PING_SERVICE_PORT",
+			"7800",
+			nil,
+		},
 	}
 
 	return envVarArray
