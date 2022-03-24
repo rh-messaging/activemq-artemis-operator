@@ -84,8 +84,16 @@ help: ## Display this help.
 
 ##@ Development
 
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: controller-gen kustomize
+ifeq ($(ENABLE_WEBHOOKS),true)
+## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+	cd config/manager && $(KUSTOMIZE) edit add resource webhook_secret.yaml 
 	$(CONTROLLER_GEN) rbac:roleName=$(OPERATOR_CLUSTER_ROLE_NAME) crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+else
+## Generate ClusterRole and CustomResourceDefinition objects.
+	cd config/manager && $(KUSTOMIZE) edit remove resource webhook_secret.yaml 
+	$(CONTROLLER_GEN) rbac:roleName=$(OPERATOR_CLUSTER_ROLE_NAME) crd paths="./..." output:crd:artifacts:config=config/crd/bases
+endif
 
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
