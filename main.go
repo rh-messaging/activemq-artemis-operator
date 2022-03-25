@@ -186,7 +186,10 @@ func main() {
 	if err != nil {
 		log.Error(err, "failed to start the background process to auto-detect the operator capabilities")
 	} else {
-		autodetect.Start()
+		if err := autodetect.DetectOpenshift(); err != nil {
+			log.Error(err, "failed in detecting openshift")
+			os.Exit(1)
+		}
 	}
 
 	common.SetManager(mgr)

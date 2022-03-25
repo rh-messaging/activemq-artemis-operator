@@ -16,77 +16,41 @@ limitations under the License.
 package common
 
 import (
-	"time"
-
-	routev1 "github.com/openshift/api/route/v1"
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-// Background represents a procedure that runs in the background, periodically auto-detecting features
-type Background struct {
-	dc     discovery.DiscoveryInterface
-	ticker *time.Ticker
+type AutoDetector struct {
+	dc discovery.DiscoveryInterface
 }
 
 // New creates a new auto-detect runner
-func NewAutoDetect(mgr manager.Manager) (*Background, error) {
+func NewAutoDetect(mgr manager.Manager) (*AutoDetector, error) {
 	dc, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
 	if err != nil {
 		return nil, err
 	}
 
-	return &Background{dc: dc}, nil
+	return &AutoDetector{dc: dc}, nil
 }
 
-// Start initializes the auto-detection process that runs in the background
-func (b *Background) Start() {
-	b.autoDetectCapabilities()
-	// periodically attempts to auto detect all the capabilities for this operator
-	b.ticker = time.NewTicker(5 * time.Second)
-
-	go func() {
-		for range b.ticker.C {
-			b.autoDetectCapabilities()
-		}
-	}()
-}
-
-// Stop causes the background process to stop auto detecting capabilities
-func (b *Background) Stop() {
-	b.ticker.Stop()
-}
-
-func (b *Background) autoDetectCapabilities() {
-	b.detectOpenshift()
-	b.detectMonitoringResources()
-	b.detectRoute()
-}
-
-func (b *Background) detectRoute() {
-	resourceExists, _ := ResourceExists(b.dc, routev1.SchemeGroupVersion.String(), RouteKind)
-	if resourceExists {
-		// Set state that the Route kind exists. Used to determine when a route or an Ingress should be created
-		stateManager := GetStateManager()
-		stateManager.SetState(RouteKind, true)
-	}
-}
-
-func (b *Background) detectMonitoringResources() {
-	// detect the PrometheusRule resource type exist on the cluster
-}
-
-func (b *Background) detectOpenshift() {
+func (b *AutoDetector) DetectOpenshift() error {
 	apiGroupVersion := "operator.openshift.io/v1"
 	kind := OpenShiftAPIServerKind
 	stateManager := GetStateManager()
-	isOpenshift, _ := ResourceExists(b.dc, apiGroupVersion, kind)
+	isOpenshift, err := ResourceExists(b.dc, apiGroupVersion, kind)
+
+	if err != nil {
+		return err
+	}
+
 	if isOpenshift {
 		// Set state that its Openshift (helps to differentiate between openshift and kubernetes)
 		stateManager.SetState(OpenShiftAPIServerKind, true)
 	} else {
 		stateManager.SetState(OpenShiftAPIServerKind, false)
 	}
+	return nil
 }
 
 func ResourceExists(dc discovery.DiscoveryInterface, apiGroupVersion, kind string) (bool, error) {

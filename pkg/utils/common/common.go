@@ -7,6 +7,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -15,6 +16,8 @@ const (
 	RouteKind              = "Route"
 	OpenShiftAPIServerKind = "OpenShiftAPIServer"
 )
+
+var clog = ctrl.Log.WithName("common")
 
 var theManager manager.Manager
 

@@ -51,7 +51,7 @@ var testEnv *envtest.Environment
 var ctx context.Context
 var cancel context.CancelFunc
 var stateManager *common.StateManager
-var autodetect *common.Background
+var autodetect *common.AutoDetector
 
 var brokerReconciler *ActiveMQArtemisReconciler
 var securityReconciler *ActiveMQArtemisSecurityReconciler
@@ -115,7 +115,7 @@ var _ = BeforeSuite(func() {
 	if err != nil {
 		logf.Log.Error(err, "failed to start the background process to auto-detect the operator capabilities")
 	} else {
-		autodetect.Start()
+		autodetect.DetectOpenshift()
 	}
 
 	// watch all namespaces by default
@@ -159,9 +159,6 @@ var _ = AfterSuite(func() {
 	By("tearing down the test environment")
 
 	cancel()
-	if autodetect != nil {
-		autodetect.Stop()
-	}
 	if stateManager != nil {
 		stateManager.Clear()
 	}
