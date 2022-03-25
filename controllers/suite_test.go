@@ -139,6 +139,14 @@ var _ = BeforeSuite(func() {
 	err = securityReconciler.SetupWithManager(k8Manager)
 	Expect(err).ToNot(HaveOccurred(), "failed to create security controller")
 
+	addressReconciler := &ActiveMQArtemisAddressReconciler{
+		Client: k8Manager.GetClient(),
+		Scheme: k8Manager.GetScheme(),
+	}
+
+	err = addressReconciler.SetupWithManager(k8Manager)
+	Expect(err).ToNot(HaveOccurred(), "failed to create address reconciler")
+
 	go func() {
 		defer GinkgoRecover()
 		err = k8Manager.Start(ctx)

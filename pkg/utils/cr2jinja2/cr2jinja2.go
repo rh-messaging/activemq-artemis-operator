@@ -1,6 +1,8 @@
 package cr2jinja2
 
 import (
+	"hash/fnv"
+
 	"github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/api/v2alpha3"
 	"github.com/artemiscloud/activemq-artemis-operator/api/v2alpha4"
@@ -13,8 +15,6 @@ import (
 	"strings"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-
-	"github.com/google/uuid"
 )
 
 var cr2jinja2Log = ctrl.Log.WithName("cr2jinja2")
@@ -68,23 +68,22 @@ func isSpecialValue(value string) bool {
 	return false
 }
 
-func getUUID() *string {
-	id := uuid.New()
-	result := id.String()
-	return &result
+func getUniqueShellSafeSubstution(specialVal string) string {
+	hasher := fnv.New64a()
+	hasher.Write([]byte(specialVal))
+	return strconv.FormatUint(hasher.Sum64(), 10)
 }
 
 //Used to check properties that has a special values
 //which may be misinterpreted by yacfg.
-//so we use a uuid as uniquekey and in the mean time as prop
+//so we use a determined as uniquekey and in the mean time as prop
 func checkStringSpecial(prop *string, specials map[string]string) *string {
 	if nil == prop {
 		return nil
 	} else if isSpecialValue(*prop) {
-		fmt.Println("the value is a special: " + *prop)
-		uniqueKey := getUUID()
-		specials[*uniqueKey] = *prop
-		return uniqueKey
+		uniqueKey := getUniqueShellSafeSubstution(*prop)
+		specials[uniqueKey] = *prop
+		return &uniqueKey
 	}
 	return prop
 }

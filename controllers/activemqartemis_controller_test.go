@@ -844,6 +844,175 @@ var _ = Describe("artemis controller", func() {
 
 	})
 
+	Context("With address settings via updated cr", func() {
+		It("Expect ok deploy", func() {
+			By("By creating a crd without  address spec")
+			ctx := context.Background()
+			crd := generateArtemisSpec(namespace)
+
+			crd.Spec.BrokerProperties = map[string]string{
+				"globalMaxSize": "65g",
+			}
+
+			hexShaOriginal := HexShaHashOfMap(crd.Spec.BrokerProperties)
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			By("By eventualy finding a matching config map with broker props")
+			configMapList := &corev1.ConfigMapList{}
+			opts := &client.ListOptions{
+				Namespace: namespace,
+			}
+			Eventually(func() bool {
+				err := k8sClient.List(ctx, configMapList, opts)
+				if err != nil {
+					fmt.Printf("error getting list of configopts map! %v", err)
+				}
+				for _, cm := range configMapList.Items {
+					if strings.Contains(cm.ObjectMeta.Name, hexShaOriginal) {
+						return true
+					}
+				}
+				return false
+			}, timeout, interval).Should(BeTrue())
+
+			By("updating the crd with address settings")
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+			By("pushing the update on the current version...")
+			Eventually(func() bool {
+
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: crd.ObjectMeta.Name, Namespace: crd.ObjectMeta.Namespace}, createdCrd)
+				if err == nil {
+
+					// add a new property
+					createdCrd.Spec.BrokerProperties["gen"] = strconv.FormatInt(createdCrd.ObjectMeta.Generation, 10)
+
+					// sdd address settings, to an existing crd
+					ma := "merge_all"
+					dlq := "dlq"
+					dlqabc := "dlqabc"
+					maxSize := "10m"
+
+					createdCrd.Spec.AddressSettings = brokerv1beta1.AddressSettingsType{
+						ApplyRule: &ma,
+						AddressSetting: []brokerv1beta1.AddressSettingType{
+							{
+								Match:             "#",
+								DeadLetterAddress: &dlq,
+							},
+							{
+								Match:             "abc#",
+								DeadLetterAddress: &dlqabc,
+								MaxSizeBytes:      &maxSize,
+							},
+						},
+					}
+
+					err = k8sClient.Update(ctx, createdCrd)
+					if err != nil {
+						fmt.Printf("error on update! %v\n", err)
+					}
+				}
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			hexShaModified := HexShaHashOfMap(createdCrd.Spec.BrokerProperties)
+
+			By("finding the updated config map using the sha")
+
+			Eventually(func() bool {
+				err := k8sClient.List(ctx, configMapList, opts)
+
+				if err == nil && len(configMapList.Items) > 0 {
+
+					for _, cm := range configMapList.Items {
+						if strings.Contains(cm.ObjectMeta.Name, hexShaModified) {
+							return true
+						}
+					}
+				}
+				return false
+			}, timeout, interval).Should(BeTrue())
+
+			By("tracking the yaconfig init command and verifying no change on further update")
+			createdSs := &appsv1.StatefulSet{}
+			key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
+
+			Expect(k8sClient.Get(ctx, key, createdSs))
+
+			initArgsString := strings.Join(createdSs.Spec.Template.Spec.InitContainers[0].Args, ",")
+
+			By("pushing another update on the current version...")
+			Eventually(func() bool {
+
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: crd.ObjectMeta.Name, Namespace: crd.ObjectMeta.Namespace}, createdCrd)
+				if err == nil {
+
+					createdCrd.Spec.BrokerProperties["gen2"] = strconv.FormatInt(createdCrd.ObjectMeta.Generation, 10)
+
+					// sdd address settings, to an existing crd
+					ma := "merge_all"
+					dlq := "dlq"
+					dlqabc := "dlqabc"
+					maxSize := "10m"
+
+					createdCrd.Spec.AddressSettings = brokerv1beta1.AddressSettingsType{
+						ApplyRule: &ma,
+						AddressSetting: []brokerv1beta1.AddressSettingType{
+							{
+								Match:             "#",
+								DeadLetterAddress: &dlq,
+							},
+							{
+								Match:             "abc#",
+								DeadLetterAddress: &dlqabc,
+								MaxSizeBytes:      &maxSize,
+							},
+						},
+					}
+
+					err = k8sClient.Update(ctx, createdCrd)
+					if err != nil {
+						fmt.Printf("error on update! %v\n", err)
+					}
+				}
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			hexShaModified = HexShaHashOfMap(createdCrd.Spec.BrokerProperties)
+
+			By("again finding the updated config map using the sha")
+
+			Eventually(func() bool {
+				err := k8sClient.List(ctx, configMapList, opts)
+
+				if err == nil && len(configMapList.Items) > 0 {
+
+					for _, cm := range configMapList.Items {
+						if strings.Contains(cm.ObjectMeta.Name, hexShaModified) {
+							return true
+						}
+					}
+				}
+				return false
+			}, timeout, interval).Should(BeTrue())
+
+			By("verifying init command args did not change")
+			Expect(k8sClient.Get(ctx, key, createdSs))
+
+			updatesInitArgs := strings.Join(createdSs.Spec.Template.Spec.InitContainers[0].Args, ",")
+
+			Expect(initArgsString).To(Equal(updatesInitArgs))
+
+			// cleanup
+			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
+			By("check it has gone")
+			Eventually(func() bool {
+				return checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+
+		})
+	})
 	Context("With delopyed controller", func() {
 		It("Checking acceptor service while expose is false", func() {
 			By("By creating a new crd")

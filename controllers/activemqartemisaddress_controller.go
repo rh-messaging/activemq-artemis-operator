@@ -37,7 +37,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -534,20 +533,16 @@ func GetStatefulSetNameForPod(pod *types.NamespacedName) (string, int, map[strin
 
 func setupAddressObserver(mgr manager.Manager, c chan types.NamespacedName) {
 	glog.Info("Setting up address observer")
-	cfg, err := clientcmd.BuildConfigFromFlags("", "")
-	if err != nil {
-		glog.Error(err, "Error building kubeconfig: %s", err.Error())
-	}
 
-	kubeClient, err := kubernetes.NewForConfig(cfg)
+	kubeClient, err := kubernetes.NewForConfig(mgr.GetConfig())
 	if err != nil {
-		glog.Error(err, "Error building kubernetes clientset: %s", err.Error())
+		glog.Error(err, "Error building kubernetes clientset")
 	}
 
 	observer := NewAddressObserver(kubeClient, mgr.GetClient(), mgr.GetScheme())
 
 	if err = observer.Run(channels.AddressListeningCh); err != nil {
-		glog.Error(err, "Error running controller: %s", err.Error())
+		glog.Error(err, "Error running controller")
 	}
 
 	glog.Info("Finish setup address observer")
