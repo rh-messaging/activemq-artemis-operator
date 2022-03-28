@@ -367,3 +367,75 @@ spec:
 ```
 
 The use of Taints and Tolerations is outside the scope of this document, for full documentation see the [Kubernetes Documentation](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/)
+
+## Configuring Affinity
+
+It is possible to configure Affinity for the container pods, An example of this would be:
+
+
+```yaml
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: broker
+  namespace: activemq-artemis-operator
+spec:
+  deploymentPlan:
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: disktype
+                  operator: In
+                  values:
+                    - ssd
+  acceptors:
+    - name: "artemis"
+      port: 61617
+      protocols: core
+```
+
+Affinity is outside the scope of this document, for full documentation see the [Kubernetes Documentation](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes-using-node-affinity/)
+
+## Configuring Labels and Node Selectors
+
+Labels can be added to the pods by defining them like so:
+
+
+```yaml
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: broker
+  namespace: activemq-artemis-operator
+spec:
+  deploymentPlan:
+    labels:
+      location: "production"
+      partition: "customerA"
+  acceptors:
+    - name: "artemis"
+      port: 61617
+      protocols: core
+```
+
+It is also possible to configure a Node Selector for the container pods, this is configured like:
+
+```yaml
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: broker
+  namespace: activemq-artemis-operator
+spec:
+  deploymentPlan:
+    nodeSelector:
+      location: "production"
+  acceptors:
+    - name: "artemis"
+      port: 61617
+      protocols: core
+```
+
+labels Node Selectors are outside the scope of this document, for full documentation see the [Kubernetes Documentation](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/)

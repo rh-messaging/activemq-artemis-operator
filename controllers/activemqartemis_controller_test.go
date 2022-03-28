@@ -93,6 +93,379 @@ var _ = Describe("artemis controller", func() {
 		}
 	})
 
+	Context("Affinity Test", func() {
+		It("setting Pod Affinity", func() {
+			By("Creating a crd with pod affinity")
+			ctx := context.Background()
+			crd := generateArtemisSpec(namespace)
+			labelSelector := metav1.LabelSelector{}
+			labelSelector.MatchLabels = make(map[string]string)
+			labelSelector.MatchLabels["key"] = "value"
+
+			podAffinityTerm := corev1.PodAffinityTerm{}
+			podAffinityTerm.LabelSelector = &labelSelector
+
+			podAffinity := corev1.PodAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+					podAffinityTerm,
+				},
+			}
+			crd.Spec.DeploymentPlan.Affinity.PodAffinity = &podAffinity
+
+			By("Deploying the CRD " + crd.ObjectMeta.Name)
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+			createdSs := &appsv1.StatefulSet{}
+
+			By("Making sure that the CRD gets deployed " + crd.ObjectMeta.Name)
+			Eventually(func() bool {
+				return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
+			By("Checking that Stateful Set is Created with the node selectors " + namer.CrToSS(createdCrd.Name))
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
+
+				err := k8sClient.Get(ctx, key, createdSs)
+
+				if err != nil {
+					return false
+				}
+				return createdSs.Spec.Template.Spec.Affinity.PodAffinity != nil
+			}, timeout, interval).Should(Equal(true))
+
+			By("Making sure the pd affinity are correct")
+			Expect(createdSs.Spec.Template.Spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution[0].LabelSelector.MatchLabels["key"] == "value").Should(BeTrue())
+
+			By("Updating the CR")
+			Eventually(func() bool { return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd) }, timeout, interval).Should(BeTrue())
+			original := createdCrd
+
+			labelSelector = metav1.LabelSelector{}
+			labelSelector.MatchLabels = make(map[string]string)
+			labelSelector.MatchLabels["key"] = "differentvalue"
+
+			podAffinityTerm = corev1.PodAffinityTerm{}
+			podAffinityTerm.LabelSelector = &labelSelector
+			podAffinity = corev1.PodAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+					podAffinityTerm,
+				},
+			}
+			original.Spec.DeploymentPlan.Affinity.PodAffinity = &podAffinity
+			By("Redeploying the CRD")
+			Expect(k8sClient.Update(ctx, original)).Should(Succeed())
+
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
+
+				err := k8sClient.Get(ctx, key, createdSs)
+
+				if err != nil {
+					return false
+				}
+				return createdSs.Spec.Template.Spec.Affinity.PodAffinity != nil
+			}, timeout, interval).Should(BeTrue())
+
+			By("Making sure the pd affinity are correct")
+			Expect(createdSs.Spec.Template.Spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution[0].LabelSelector.MatchLabels["key"] == "value").Should(BeTrue())
+
+			By("check it has gone")
+			Expect(k8sClient.Delete(ctx, createdCrd))
+			Eventually(func() bool {
+				return checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+		})
+		It("setting Pod AntiAffinity", func() {
+			By("Creating a crd with pod anti affinity")
+			ctx := context.Background()
+			crd := generateArtemisSpec(namespace)
+			labelSelector := metav1.LabelSelector{}
+			labelSelector.MatchLabels = make(map[string]string)
+			labelSelector.MatchLabels["key"] = "value"
+
+			podAffinityTerm := corev1.PodAffinityTerm{}
+			podAffinityTerm.LabelSelector = &labelSelector
+			podAntiAffinity := corev1.PodAntiAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+					podAffinityTerm,
+				},
+			}
+			crd.Spec.DeploymentPlan.Affinity.PodAntiAffinity = &podAntiAffinity
+
+			By("Deploying the CRD " + crd.ObjectMeta.Name)
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+			createdSs := &appsv1.StatefulSet{}
+
+			By("Making sure that the CRD gets deployed " + crd.ObjectMeta.Name)
+			Eventually(func() bool {
+				return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
+			By("Checking that Stateful Set is Created with the node selectors " + namer.CrToSS(createdCrd.Name))
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
+
+				err := k8sClient.Get(ctx, key, createdSs)
+
+				if err != nil {
+					return false
+				}
+				return createdSs.Spec.Template.Spec.Affinity.PodAntiAffinity != nil
+			}, timeout, interval).Should(Equal(true))
+
+			By("Making sure the pd affinity are correct")
+			Expect(createdSs.Spec.Template.Spec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution[0].LabelSelector.MatchLabels["key"] == "value").Should(BeTrue())
+
+			By("Updating the CR")
+			Eventually(func() bool { return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd) }, timeout, interval).Should(BeTrue())
+			original := createdCrd
+
+			labelSelector = metav1.LabelSelector{}
+			labelSelector.MatchLabels = make(map[string]string)
+			labelSelector.MatchLabels["key"] = "differentvalue"
+
+			podAffinityTerm = corev1.PodAffinityTerm{}
+			podAffinityTerm.LabelSelector = &labelSelector
+			podAntiAffinity = corev1.PodAntiAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+					podAffinityTerm,
+				},
+			}
+			original.Spec.DeploymentPlan.Affinity.PodAntiAffinity = &podAntiAffinity
+			By("Redeploying the CRD")
+			Expect(k8sClient.Update(ctx, original)).Should(Succeed())
+
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
+
+				err := k8sClient.Get(ctx, key, createdSs)
+
+				if err != nil {
+					return false
+				}
+				return createdSs.Spec.Template.Spec.Affinity.PodAntiAffinity != nil
+			}, timeout, interval).Should(BeTrue())
+
+			By("Making sure the pd affinity are correct")
+			Expect(createdSs.Spec.Template.Spec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution[0].LabelSelector.MatchLabels["key"] == "value").Should(BeTrue())
+
+			By("check it has gone")
+			Expect(k8sClient.Delete(ctx, createdCrd))
+			Eventually(func() bool {
+				return checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+		})
+		It("setting Node AntiAffinity", func() {
+			By("Creating a crd with node affinity")
+			ctx := context.Background()
+			crd := generateArtemisSpec(namespace)
+
+			nodeSelectorRequirement := corev1.NodeSelectorRequirement{
+				Key:    "foo",
+				Values: make([]string, 1),
+			}
+			nodeSelectorRequirements := [1]corev1.NodeSelectorRequirement{nodeSelectorRequirement}
+			nodeSelectorRequirements[0] = nodeSelectorRequirement
+			nodeSelectorTerm := corev1.NodeSelectorTerm{MatchExpressions: nodeSelectorRequirements[:]}
+			nodeSelectorTerms := [1]corev1.NodeSelectorTerm{nodeSelectorTerm}
+			nodeSelector := corev1.NodeSelector{
+				NodeSelectorTerms: nodeSelectorTerms[:],
+			}
+			nodeAffinity := corev1.NodeAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: &nodeSelector,
+			}
+			crd.Spec.DeploymentPlan.Affinity.NodeAffinity = &nodeAffinity
+
+			By("Deploying the CRD " + crd.ObjectMeta.Name)
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+			createdSs := &appsv1.StatefulSet{}
+
+			By("Making sure that the CRD gets deployed " + crd.ObjectMeta.Name)
+			Eventually(func() bool {
+				return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
+			By("Checking that Stateful Set is Created with the node selectors " + namer.CrToSS(createdCrd.Name))
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
+
+				err := k8sClient.Get(ctx, key, createdSs)
+
+				if err != nil {
+					return false
+				}
+				return createdSs.Spec.Template.Spec.Affinity.NodeAffinity != nil
+			}, timeout, interval).Should(Equal(true))
+
+			By("Making sure the node affinity are correct")
+			Expect(createdSs.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0].Key).Should(Equal("foo"))
+
+			By("Updating the CR")
+			Eventually(func() bool { return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd) }, timeout, interval).Should(BeTrue())
+			original := createdCrd
+
+			nodeSelectorRequirement = corev1.NodeSelectorRequirement{
+				Key:    "bar",
+				Values: make([]string, 2),
+			}
+			nodeSelectorRequirements = [1]corev1.NodeSelectorRequirement{nodeSelectorRequirement}
+			nodeSelectorRequirements[0] = nodeSelectorRequirement
+			nodeSelectorTerm = corev1.NodeSelectorTerm{MatchExpressions: nodeSelectorRequirements[:]}
+			nodeSelectorTerms = [1]corev1.NodeSelectorTerm{nodeSelectorTerm}
+			nodeSelector = corev1.NodeSelector{
+				NodeSelectorTerms: nodeSelectorTerms[:],
+			}
+			nodeAffinity = corev1.NodeAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: &nodeSelector,
+			}
+			original.Spec.DeploymentPlan.Affinity.NodeAffinity = &nodeAffinity
+			By("Redeploying the CRD")
+			Expect(k8sClient.Update(ctx, original)).Should(Succeed())
+
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
+
+				err := k8sClient.Get(ctx, key, createdSs)
+
+				if err != nil {
+					return false
+				}
+				return createdSs.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0].Key == "bar"
+			}, timeout, interval).Should(BeTrue())
+
+			By("Making sure the pod affinity is correct")
+			Expect(createdSs.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0].Key).Should(Equal("bar"))
+
+			By("check it has gone")
+			Expect(k8sClient.Delete(ctx, createdCrd))
+			Eventually(func() bool {
+				return checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+		})
+	})
+
+	Context("Node Selector Test", func() {
+		It("passing in 2 labels", func() {
+			By("Creating a crd with 2 selectors")
+			ctx := context.Background()
+			crd := generateArtemisSpec(namespace)
+			nodeSelector := map[string]string{
+				"location": "production",
+				"type":     "foo",
+			}
+			crd.Spec.DeploymentPlan.NodeSelector = nodeSelector
+
+			By("Deploying the CRD " + crd.ObjectMeta.Name)
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+			createdSs := &appsv1.StatefulSet{}
+
+			By("Making sure that the CRD gets deployed " + crd.ObjectMeta.Name)
+			Eventually(func() bool {
+				return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
+			By("Checking that Stateful Set is Created with the node selectors " + namer.CrToSS(createdCrd.Name))
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
+
+				err := k8sClient.Get(ctx, key, createdSs)
+
+				if err != nil {
+					return false
+				}
+				return len(createdSs.Spec.Template.Spec.NodeSelector) == 2
+			}, timeout, interval).Should(Equal(true))
+
+			By("Making sure the node selectors are correct")
+			Expect(createdSs.Spec.Template.Spec.NodeSelector["location"] == "production").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.NodeSelector["type"] == "foo").Should(BeTrue())
+
+			By("Updating the CR")
+			Eventually(func() bool { return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd) }, timeout, interval).Should(BeTrue())
+			original := createdCrd
+
+			nodeSelector = map[string]string{
+				"type": "foo",
+			}
+			original.Spec.DeploymentPlan.NodeSelector = nodeSelector
+			By("Redeploying the CRD")
+			Expect(k8sClient.Update(ctx, original)).Should(Succeed())
+
+			Eventually(func() int {
+				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
+
+				err := k8sClient.Get(ctx, key, createdSs)
+
+				if err != nil {
+					return -1
+				}
+				return len(createdSs.Spec.Template.Spec.NodeSelector)
+			}, timeout, interval).Should(Equal(1))
+
+			By("Making sure the node selectors are correct")
+			Expect(createdSs.Spec.Template.Spec.NodeSelector["location"] == "production").Should(BeFalse())
+			Expect(createdSs.Spec.Template.Spec.NodeSelector["type"] == "foo").Should(BeTrue())
+
+			By("check it has gone")
+			Expect(k8sClient.Delete(ctx, createdCrd))
+			Eventually(func() bool {
+				return checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+		})
+	})
+
+	Context("Labels Test", func() {
+		It("passing in 2 labels", func() {
+			By("Creating a crd with 2 labels")
+			ctx := context.Background()
+			crd := generateArtemisSpec(namespace)
+			crd.Spec.DeploymentPlan.Labels = make(map[string]string)
+			crd.Spec.DeploymentPlan.Labels["key1"] = "val1"
+			crd.Spec.DeploymentPlan.Labels["key2"] = "val2"
+
+			By("Deploying the CRD " + crd.ObjectMeta.Name)
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+			createdSs := &appsv1.StatefulSet{}
+
+			By("Making sure that the CRD gets deployed " + crd.ObjectMeta.Name)
+			Eventually(func() bool {
+				return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
+			By("Checking that Stateful Set is Created with the labels " + namer.CrToSS(createdCrd.Name))
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
+
+				err := k8sClient.Get(ctx, key, createdSs)
+
+				if err != nil {
+					return false
+				}
+				return len(createdSs.ObjectMeta.Labels) == 4
+			}, timeout, interval).Should(Equal(true))
+
+			By("Making sure the labels are correct")
+			Expect(createdSs.ObjectMeta.Labels["key1"] == "val1").Should(BeTrue())
+			Expect(createdSs.ObjectMeta.Labels["key2"] == "val2").Should(BeTrue())
+
+			By("check it has gone")
+			Expect(k8sClient.Delete(ctx, createdCrd))
+			Eventually(func() bool {
+				return checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+		})
+	})
+
 	Context("Tolerations Test", func() {
 		It("passing in 2 tolerations", func() {
 
@@ -238,18 +611,6 @@ var _ = Describe("artemis controller", func() {
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.SuccessThreshold == 8).Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.FailureThreshold == 9).Should(BeTrue())
 
-			By("Checking that Stateful Set is updated with the Liveness Probe")
-			Eventually(func() bool {
-				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
-
-				err := k8sClient.Get(ctx, key, createdSs)
-
-				if err != nil {
-					return false
-				}
-				return createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.TCPSocket != nil
-			}, timeout, interval).Should(Equal(true))
-
 			By("Updating the CR")
 			Eventually(func() bool { return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd) }, timeout, interval).Should(BeTrue())
 			original := createdCrd
@@ -263,6 +624,7 @@ var _ = Describe("artemis controller", func() {
 				Command: []string{"/broker/bin/artemis check node"},
 			}
 			original.Spec.DeploymentPlan.LivenessProbe.Exec = &exec
+			By("Redeploying the CRD")
 			By("Redeploying the modified CRD")
 			Expect(k8sClient.Update(ctx, original)).Should(Succeed())
 

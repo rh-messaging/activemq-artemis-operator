@@ -216,6 +216,12 @@ type DeploymentPlanType struct {
 	// Whether or not to install the artemis metrics plugin
 	EnableMetricsPlugin *bool               `json:"enableMetricsPlugin,omitempty"`
 	Tolerations         []corev1.Toleration `json:"tolerations,omitempty"`
+	//custom labels provided in the cr
+	Labels map[string]string `json:"labels,omitempty"`
+	//custom node selector
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+	//custom Affinity
+	Affinity corev1.Affinity `json:"affinity,omitempty"`
 }
 
 type PodSecurityType struct {
