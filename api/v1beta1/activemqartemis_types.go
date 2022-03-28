@@ -276,6 +276,8 @@ type AcceptorType struct {
 	SupportAdvisory *bool `json:"supportAdvisory,omitempty"`
 	// If prevents advisory addresses/queues to be registered to management service, default false
 	SuppressInternalManagementObjects *bool `json:"suppressInternalManagementObjects,omitempty"`
+	// Whether to let the acceptor to bind to all interfaces (0.0.0.0)
+	BindToAllInterfaces *bool `json:"bindToAllInterfaces,omitempty"`
 }
 
 type ConnectorType struct {

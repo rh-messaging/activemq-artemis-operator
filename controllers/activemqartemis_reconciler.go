@@ -612,8 +612,12 @@ func generateAcceptorsString(fsm *ActiveMQArtemisFSM, client rtclient.Client) st
 			"all" == strings.ToLower(acceptor.Protocols) {
 			acceptor.Protocols = "AMQP,CORE,HORNETQ,MQTT,OPENWIRE,STOMP"
 		}
+		bindAddress := "ACCEPTOR_IP"
+		if acceptor.BindToAllInterfaces != nil && *acceptor.BindToAllInterfaces {
+			bindAddress = "0.0.0.0"
+		}
 		acceptorEntry = acceptorEntry + "<acceptor name=\"" + acceptor.Name + "\">"
-		acceptorEntry = acceptorEntry + "tcp:" + "\\/\\/" + "ACCEPTOR_IP:"
+		acceptorEntry = acceptorEntry + "tcp:" + "\\/\\/" + bindAddress + ":"
 		acceptorEntry = acceptorEntry + fmt.Sprintf("%d", acceptor.Port)
 		acceptorEntry = acceptorEntry + "?protocols=" + strings.ToUpper(acceptor.Protocols)
 		// TODO: Evaluate more dynamic messageMigration

@@ -46,6 +46,10 @@ spec:
                     anycastPrefix:
                       description: To indicate which kind of routing type to use.
                       type: string
+                    bindToAllInterfaces:
+                      description: Whether to let the acceptor to bind to all interfaces
+                        (0.0.0.0)
+                      type: boolean
                     connectionsAllowed:
                       description: Max number of connections allowed to make
                       type: integer

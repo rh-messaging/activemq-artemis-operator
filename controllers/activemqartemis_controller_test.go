@@ -31,6 +31,8 @@ import (
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
+	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	appsv1 "k8s.io/api/apps/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -1057,6 +1059,227 @@ var _ = Describe("artemis controller", func() {
 				err := k8sClient.Get(context.Background(), key, connectorService)
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
+			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
+
+			By("check it has gone")
+			Eventually(checkCrdDeleted(crd.Name, namespace, &crd), timeout, interval).Should(BeTrue())
+		})
+	})
+
+	Context("With delopyed controller", func() {
+		It("Testing bindToAllInterfaces default", func() {
+			By("By creating a new crd")
+			ctx := context.Background()
+			crd := generateArtemisSpec(namespace)
+
+			crd.Spec.DeploymentPlan = brokerv1beta1.DeploymentPlanType{
+				Size: 1,
+			}
+			crd.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+				{
+					Name: "new-acceptor",
+					Port: 61666,
+				},
+			}
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: crd.Name, Namespace: namespace}
+				err := k8sClient.Get(ctx, key, &crd)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			key := types.NamespacedName{Name: crd.Name, Namespace: namespace}
+			Eventually(func() bool {
+				_, ok := namespacedNameToFSM[key]
+				return ok
+			}, timeout, interval).Should(BeTrue())
+
+			fsm := namespacedNameToFSM[key]
+			ssNamespacedName := fsm.GetStatefulSetNamespacedName()
+			Eventually(func() bool {
+				_, err := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
+				return err == nil
+			}).Should(BeTrue())
+
+			Eventually(func() bool {
+				currentStatefulSet, _ := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
+				len := len(currentStatefulSet.Spec.Template.Spec.InitContainers)
+				return len == 1
+			}).Should(BeTrue())
+
+			currentStatefulSet, _ := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
+			initContainer := currentStatefulSet.Spec.Template.Spec.InitContainers[0]
+			//check AMQ_ACCEPTORS value
+			for _, envVar := range initContainer.Env {
+				if envVar.Name == "AMQ_ACCEPTORS" {
+					secretName := envVar.ValueFrom.SecretKeyRef.Name
+					namespaceName := types.NamespacedName{
+						Name:      secretName,
+						Namespace: namespace,
+					}
+					secret, err := secrets.RetriveSecret(namespaceName, secretName, make(map[string]string), k8sClient)
+					Expect(err).To(BeNil())
+					data := secret.Data[envVar.ValueFrom.SecretKeyRef.Key]
+					//the value is a string of acceptors in xml format:
+					//<acceptor name="new-acceptor">...</acceptor><another one>...
+					//we need to locate our target acceptor and do the check
+					//we use the port as a clue
+					fmt.Printf("got value: %v\n", string(data))
+					Expect(strings.Contains(string(data), "ACCEPTOR_IP:61666")).To(BeTrue())
+				}
+			}
+			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
+
+			By("check it has gone")
+			Eventually(checkCrdDeleted(crd.Name, namespace, &crd), timeout, interval).Should(BeTrue())
+		})
+		It("Testing bindToAllInterfaces being false", func() {
+			By("By creating a new crd")
+			ctx := context.Background()
+			crd := generateArtemisSpec(namespace)
+
+			crd.Spec.DeploymentPlan = brokerv1beta1.DeploymentPlanType{
+				Size: 1,
+			}
+			bindTo := false
+			crd.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+				{
+					Name:                "new-acceptor",
+					Port:                61666,
+					BindToAllInterfaces: &bindTo,
+				},
+			}
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: crd.Name, Namespace: namespace}
+				err := k8sClient.Get(ctx, key, &crd)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			key := types.NamespacedName{Name: crd.Name, Namespace: namespace}
+			Eventually(func() bool {
+				_, ok := namespacedNameToFSM[key]
+				return ok
+			}, timeout, interval).Should(BeTrue())
+
+			fsm := namespacedNameToFSM[key]
+			ssNamespacedName := fsm.GetStatefulSetNamespacedName()
+			Eventually(func() bool {
+				_, err := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
+				return err == nil
+			}).Should(BeTrue())
+
+			Eventually(func() bool {
+				currentStatefulSet, _ := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
+				len := len(currentStatefulSet.Spec.Template.Spec.InitContainers)
+				return len == 1
+			}).Should(BeTrue())
+
+			currentStatefulSet, _ := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
+			initContainer := currentStatefulSet.Spec.Template.Spec.InitContainers[0]
+			//check AMQ_ACCEPTORS value
+			for _, envVar := range initContainer.Env {
+				if envVar.Name == "AMQ_ACCEPTORS" {
+					secretName := envVar.ValueFrom.SecretKeyRef.Name
+					namespaceName := types.NamespacedName{
+						Name:      secretName,
+						Namespace: namespace,
+					}
+					secret, err := secrets.RetriveSecret(namespaceName, secretName, make(map[string]string), k8sClient)
+					Expect(err).To(BeNil())
+					data := secret.Data[envVar.ValueFrom.SecretKeyRef.Key]
+					//the value is a string of acceptors in xml format:
+					//<acceptor name="new-acceptor">...</acceptor><another one>...
+					//we need to locate our target acceptor and do the check
+					//we use the port as a clue
+					fmt.Printf("got value: %v\n", string(data))
+					Expect(strings.Contains(string(data), "ACCEPTOR_IP:61666")).To(BeTrue())
+				}
+			}
+			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
+
+			By("check it has gone")
+			Eventually(checkCrdDeleted(crd.Name, namespace, &crd), timeout, interval).Should(BeTrue())
+		})
+		It("Testing bindToAllInterfaces being true", func() {
+			By("By creating a new crd")
+			ctx := context.Background()
+			crd := generateArtemisSpec(namespace)
+
+			crd.Spec.DeploymentPlan = brokerv1beta1.DeploymentPlanType{
+				Size: 1,
+			}
+			bindToAll := true
+			notbindToAll := false
+			crd.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+				{
+					Name:                "new-acceptor",
+					Port:                61666,
+					BindToAllInterfaces: &bindToAll,
+				},
+				{
+					Name: "new-acceptor-1",
+					Port: 61777,
+				},
+				{
+					Name:                "new-acceptor-2",
+					Port:                61888,
+					BindToAllInterfaces: &notbindToAll,
+				},
+			}
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: crd.Name, Namespace: namespace}
+				err := k8sClient.Get(ctx, key, &crd)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			key := types.NamespacedName{Name: crd.Name, Namespace: namespace}
+			Eventually(func() bool {
+				_, ok := namespacedNameToFSM[key]
+				return ok
+			}, timeout, interval).Should(BeTrue())
+
+			fsm := namespacedNameToFSM[key]
+			ssNamespacedName := fsm.GetStatefulSetNamespacedName()
+			Eventually(func() bool {
+				_, err := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
+				return err == nil
+			}).Should(BeTrue())
+
+			Eventually(func() bool {
+				currentStatefulSet, _ := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
+				len := len(currentStatefulSet.Spec.Template.Spec.InitContainers)
+				return len == 1
+			}).Should(BeTrue())
+
+			currentStatefulSet, _ := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
+			initContainer := currentStatefulSet.Spec.Template.Spec.InitContainers[0]
+			//check AMQ_ACCEPTORS value
+			for _, envVar := range initContainer.Env {
+				if envVar.Name == "AMQ_ACCEPTORS" {
+					secretName := envVar.ValueFrom.SecretKeyRef.Name
+					namespaceName := types.NamespacedName{
+						Name:      secretName,
+						Namespace: namespace,
+					}
+					secret, err := secrets.RetriveSecret(namespaceName, secretName, make(map[string]string), k8sClient)
+					Expect(err).To(BeNil())
+					data := secret.Data[envVar.ValueFrom.SecretKeyRef.Key]
+					//the value is a string of acceptors in xml format:
+					//<acceptor name="new-acceptor">...</acceptor><another one>...
+					//we need to locate our target acceptor and do the check
+					//we use the port as a clue
+					fmt.Printf("got value: %v\n", string(data))
+					Expect(strings.Contains(string(data), "0.0.0.0:61666")).To(BeTrue())
+					//the other one not affected
+					Expect(strings.Contains(string(data), "ACCEPTOR_IP:61777")).To(BeTrue())
+					Expect(strings.Contains(string(data), "ACCEPTOR_IP:61888")).To(BeTrue())
+				}
+			}
 			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
 
 			By("check it has gone")
