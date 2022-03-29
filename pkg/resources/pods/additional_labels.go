@@ -13,7 +13,7 @@ var labelsFor7_9 map[string]string = map[string]string{
 var labelsFor7_10 map[string]string = map[string]string{
 	"com.company":   "Red_Hat",
 	"rht.prod_name": "Red_Hat_Integration",
-	"rht.prod_ver":  "2022.Q1",
+	"rht.prod_ver":  "2022.Q2",
 	"rht.comp":      "Broker_AMQ",
 	"rht.comp_ver":  "7.10.0",
 	"rht.subcomp":   "broker-amq",

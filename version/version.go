@@ -1,9 +1,9 @@
 package version
 
 var (
-	Version = "7.10.0"
+	Version = "7.10.0.ER3"
 	// PriorVersion - prior version
-	PriorVersion = "7.9.2"
+	PriorVersion = "7.9.3"
 )
 
 const (
@@ -11,7 +11,7 @@ const (
 	LatestVersion        = "7.10.0"
 	CompactLatestVersion = "7100"
 	// LastMicroVersion product version supported
-	LastMicroVersion = "7.9.2"
+	LastMicroVersion = "7.9.3"
 	// LastMinorVersion product version supported
 	LastMinorVersion = "7.7.0"
 )
@@ -29,6 +29,7 @@ var OperandVersionFromOperatorVersion map[string]string = map[string]string{
 	"7.9.0":  "7.9.0",
 	"7.9.1":  "7.9.1",
 	"7.9.2":  "7.9.2",
+	"7.9.3":  "7.9.3",
 	"7.10.0": "7.10.0",
 }
 var FullVersionFromMinorVersion map[string]string = map[string]string{
@@ -40,6 +41,7 @@ var FullVersionFromMinorVersion map[string]string = map[string]string{
 	"90":  "7.9.0",
 	"91":  "7.9.1",
 	"92":  "7.9.2",
+	"93":  "7.9.3",
 	"100": "7.10.0",
 }
 
@@ -52,6 +54,7 @@ var CompactFullVersionFromMinorVersion map[string]string = map[string]string{
 	"90":  "790",
 	"91":  "791",
 	"92":  "792",
+	"93":  "793",
 	"100": "7100",
 }
 
@@ -64,6 +67,7 @@ var CompactVersionFromVersion map[string]string = map[string]string{
 	"7.9.0":  "790",
 	"7.9.1":  "791",
 	"7.9.2":  "792",
+	"7.9.3":  "793",
 	"7.10.0": "7100",
 }
 
@@ -76,6 +80,7 @@ var FullVersionFromCompactVersion map[string]string = map[string]string{
 	"790":  "7.9.0",
 	"791":  "7.9.1",
 	"792":  "7.9.2",
+	"793":  "7.9.3",
 	"7100": "7.10.0",
 }
 
@@ -88,6 +93,7 @@ var MinorVersionFromFullVersion map[string]string = map[string]string{
 	"7.9.0":  "90",
 	"7.9.1":  "91",
 	"7.9.2":  "92",
+	"7.9.3":  "93",
 	"7.10.0": "100",
 }
 
@@ -101,6 +107,7 @@ var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
 	"7.9.0":  "7.9.0",
 	"7.9.1":  "7.9.0",
 	"7.9.2":  "7.9.0",
+	"7.9.3":  "7.9.0",
 	"7.10.0": "7.9.0",
 }
 
