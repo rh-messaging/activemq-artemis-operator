@@ -2108,10 +2108,9 @@ func determineImageToUse(customResource *brokerv1beta1.ActiveMQArtemis, imageTyp
 }
 
 func getPodLabels(fsm *ActiveMQArtemisFSM, customResource *brokerv1beta1.ActiveMQArtemis) map[string]string {
-	podLabels := make(map[string]string)
 	labels := fsm.namers.LabelBuilder.Labels()
 	for k, v := range labels {
-		podLabels[k] = v
+		labels[k] = v
 	}
 
 	compactVersion := determineCompactVersionToUse(customResource)
@@ -2122,11 +2121,11 @@ func getPodLabels(fsm *ActiveMQArtemisFSM, customResource *brokerv1beta1.ActiveM
 	if additionalLabels != nil {
 		clog.Info("Adding additional Labels", "broker version", fullVersion, "labels", additionalLabels)
 		for k, v := range additionalLabels {
-			podLabels[k] = v
+			labels[k] = v
 		}
 	}
 
-	return podLabels
+	return labels
 }
 
 func determineCompactVersionToUse(customResource *brokerv1beta1.ActiveMQArtemis) string {

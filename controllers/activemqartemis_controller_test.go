@@ -451,7 +451,7 @@ var _ = Describe("artemis controller", func() {
 				if err != nil {
 					return false
 				}
-				return len(createdSs.ObjectMeta.Labels) == 4
+				return len(createdSs.ObjectMeta.Labels) == 11
 			}, timeout, interval).Should(Equal(true))
 
 			By("Making sure the labels are correct")
