@@ -787,10 +787,6 @@ spec:
                         type: array
                     type: object
                 type: object
-            required:
-            - loginModules
-            - securityDomains
-            - securitySettings
             type: object
           status:
             description: ActiveMQArtemisSecurityStatus defines the observed state

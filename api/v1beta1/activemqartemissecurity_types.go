@@ -28,9 +28,9 @@ type ActiveMQArtemisSecuritySpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	LoginModules     LoginModulesType     `json:"loginModules"`
-	SecurityDomains  SecurityDomainsType  `json:"securityDomains"`
-	SecuritySettings SecuritySettingsType `json:"securitySettings"`
+	LoginModules     LoginModulesType     `json:"loginModules,omitempty"`
+	SecurityDomains  SecurityDomainsType  `json:"securityDomains,omitempty"`
+	SecuritySettings SecuritySettingsType `json:"securitySettings,omitempty"`
 	// Apply this security config to the broker crs in the current namespace. A value of * or empty string means applying to all broker crs. Default apply to all broker crs
 	ApplyToCrNames []string `json:"applyToCrNames,omitempty"`
 }
