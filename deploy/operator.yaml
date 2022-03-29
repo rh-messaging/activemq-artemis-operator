@@ -143,7 +143,7 @@ spec:
           value: registry.redhat.io/amq7/amq-broker-79-openshift-openjdk-11-rhel8@sha256:706946cd84d4efdcecb3b64e0c4cf6c7e9aa53b7cbdc5097276bce99b1d25b4c
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7100_s390x
           value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8@sha256:0a030873a6249374cf05cec6461002e453b06fed8bf2934337ed9c09cd61e31c
-        image: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.10.0
+        image: quay.io/hgao/operator:7.10.ER3-candidate
         livenessProbe:
           httpGet:
             path: /healthz
