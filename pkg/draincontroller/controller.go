@@ -19,7 +19,9 @@ package draincontroller
 import (
 	"context"
 	"fmt"
+
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
+
 	//"github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v1beta1"
 	"os"
 	"time"
@@ -118,6 +120,11 @@ type Controller struct {
 	client client.Client
 }
 
+func eventLog(format string, args ...interface{}) {
+	formatted := fmt.Sprintf(format, args...)
+	dlog.Info(formatted)
+}
+
 // NewController returns a new sample controller
 func NewController(
 	// controller name is the target namespace
@@ -140,7 +147,7 @@ func NewController(
 	// logged for statefulset-drain-controller types.
 	dlog.V(4).Info("Creating event broadcaster")
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(dlog.Info)
+	eventBroadcaster.StartLogging(eventLog)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events(namespace)})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 	itemExponentialFailureRateLimiter := workqueue.NewItemExponentialFailureRateLimiter(5*time.Second, 300*time.Second)
