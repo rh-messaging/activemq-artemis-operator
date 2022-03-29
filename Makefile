@@ -11,6 +11,8 @@ OPERATOR_VERSION := 7.10.0
 OPERATOR_ACCOUNT_NAME := amq-broker-operator
 OPERATOR_CLUSTER_ROLE_NAME := operator
 OPERATOR_IMAGE_REPO := registry.redhat.io/amq7/amq-broker-rhel8-operator
+# directory to hold static resources for deploying operator
+DEPLOY := ./deploy
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -102,7 +104,7 @@ fmt: ## Run go fmt against code.
 	go fmt ./...
 
 vet: ## Run go vet against code.
-	go vet -composites=false ./... 
+	go vet -composites=false ./...
 
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test  ./... $(TEST_ARGS) -coverprofile cover.out
@@ -115,10 +117,10 @@ build: generate fmt vet ## Build manager binary.
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
-docker-build: test ## Build docker image with the manager.
+docker-build: test generate-deploy ## Build docker image with the manager.
 	docker build -t ${IMG} .
 
-docker-build-debug: test ## Build debug version of docker image with the manager.
+docker-build-debug: test generate-deploy ## Build debug version of docker image with the manager.
 	docker build -f Dockerfile_debug -t ${IMG} .
 
 docker-push: ## Push docker image with the manager.
@@ -132,7 +134,7 @@ install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | $(KUBE_CLI) delete -f -
 
-deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+deploy: manifests kustomize generate-deploy ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | $(KUBE_CLI) apply -f -
 
@@ -142,6 +144,10 @@ deploy-dry-run: manifests kustomize ## Create deploy yaml file in tmp/deploy.yam
 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | $(KUBE_CLI) delete -f -
+
+generate-deploy: manifests kustomize ## Generate deployment artifacts in separate files in $(DEPLOY) dir
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/default | hack/static_manifest_gen.sh $(DEPLOY)
 
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen

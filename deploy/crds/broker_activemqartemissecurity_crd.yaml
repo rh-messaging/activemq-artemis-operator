@@ -1,0 +1,776 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.7.0
+  name: activemqartemissecurities.broker.amq.io
+spec:
+  conversion:
+    strategy: Webhook
+    webhook:
+      clientConfig:
+        caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUdpekNDQkhPZ0F3SUJBZ0lVWXh6UkpyemJuUnFBUDhqQ1pETnA5QlRFMW5Zd0RRWUpLb1pJaHZjTkFRRUwKQlFBd2dhc3hDekFKQmdOVkJBWVRBbFZUTVJNd0VRWURWUVFJREFwRFlXeHBabTl5Ym1saE1SUXdFZ1lEVlFRSApEQXRNYjNNZ1FXNW5aV3hsY3pFVk1CTUdBMVVFQ2d3TVFYSjBaVzFwYzBOc2IzVmtNUkV3RHdZRFZRUUxEQWhQCmNHVnlZWFJ2Y2pGSE1FVUdBMVVFQXd3K1lXTjBhWFpsYlhFdFlYSjBaVzFwY3kxM1pXSm9iMjlyTFhObGNuWnAKWTJVdVlXTjBhWFpsYlhFdFlYSjBaVzFwY3kxdmNHVnlZWFJ2Y2k1emRtTXdIaGNOTWpFeE1qSTBNVE0xTXpBegpXaGNOTXpFeE1qSXlNVE0xTXpBeldqQ0JxekVMTUFrR0ExVUVCaE1DVlZNeEV6QVJCZ05WQkFnTUNrTmhiR2xtCmIzSnVhV0V4RkRBU0JnTlZCQWNNQzB4dmN5QkJibWRsYkdWek1SVXdFd1lEVlFRS0RBeEJjblJsYldselEyeHYKZFdReEVUQVBCZ05WQkFzTUNFOXdaWEpoZEc5eU1VY3dSUVlEVlFRRERENWhZM1JwZG1WdGNTMWhjblJsYldsegpMWGRsWW1odmIyc3RjMlZ5ZG1salpTNWhZM1JwZG1WdGNTMWhjblJsYldsekxXOXdaWEpoZEc5eUxuTjJZekNDCkFpSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnSVBBRENDQWdvQ2dnSUJBS3VRT0Y0aHdLK0xRejJnRGZ3aENQczAKeTJVVXp3SmN5SVhWY1VDeElXNDhMeWw1NXdvZkZhWmk1MHRyRisxUzM0OVAvNHFieDZQQVlmbk53Z0gvZmxKNQpXaFZoTG5DTFVrUjZYS3N0WWZIVjZBcW5BSlNXYWZPR2lGb2JHWVI4L1ZrdytKK3dCZHlGamRRc3NDNHczL0J1Cms2U3dLOFVEOFFFa1BKMGpyWHdPNkxvZnRxcVloWmd6N2poTEQxcXkyTDJmTFV6TVh0bEtReHI1Z2FNMzQwZ0cKaU9oNS96SGE1WmNsNXNMSzlRMlRtSk4vMVZGQjNNK2RzOEEreG1oS0pOSVNYaHMzRkpha2FYM05kQ2R4SVdYRQorOUtVU1BteXFKMmFaVEVlUHY2cXpCcVJOSlB6TjFhWURNZitFS2wwZ09hOG9NUzNVQVc3azRyZ2pNVWJ5dVFMCkExb0poVEdQcThiZWEwYUNGK1VaUCtEWFQ1YVJ3UWI4WCt1dWdqSFV4WGkrVndpUnJ1bXFFNWJlZ1kyK0h2Z1EKQWRNM0tSaTBVYVR2UXA4ajJUUG5pMVRCK0FYdmxlNjZwMFp3NE5HcWpaQTdVZGdTZlNBQzkxT1B5bnE0T0QvdQowYnloZVFFTjUvVmtJVzE4UVV6TkMxMVBFWmhFOXhXQ0JvdnEvSytEMjRNcllEb3MrQm84blFSY3c5UjN4ZW8vCmJpd3o2dXlVamJSUEgreStzVlJXeXhsdUNnRnVMdFVuMFlyZTE3Q1FQZnp3aXRNaStZWjhBb3ZYeHZZSlhFSm0KSE9nbzdqOFpFWVlTWDNCNS9GOVoyei9hSlJtc3dTUHVrT0RtZ0REZEJDWURZNk1ya1BYVTZocS8rYmtQcGZJbQp0N05sSHB3N0RuOEYzRzNDdjRBWEFnTUJBQUdqZ2FRd2dhRXdDd1lEVlIwUEJBUURBZ1F3TUJNR0ExVWRKUVFNCk1Bb0dDQ3NHQVFVRkJ3TUJNSDBHQTFVZEVRUjJNSFNDUG1GamRHbDJaVzF4TFdGeWRHVnRhWE10ZDJWaWFHOXYKYXkxelpYSjJhV05sTG1GamRHbDJaVzF4TFdGeWRHVnRhWE10YjNCbGNtRjBiM0l1YzNaamdqSmhiWEV0WW5KdgphMlZ5TFhkbFltaHZiMnN0YzJWeWRtbGpaUzVoYlhFdFluSnZhMlZ5TFc5d1pYSmhkRzl5TG5OMll6QU5CZ2txCmhraUc5dzBCQVFzRkFBT0NBZ0VBU0ZqT1NyMWVaVzh5dlpXTkx0L0hXaU1TK0E3MlNTODkySnhlTlZCTTNEVWUKMEVrSllnaXk1QzJqaWN6WFdLWXl4ZUo2TDdIVWwzNmZRbFptOC9Ea1NETUlrOTByd1dFWE45RUdIRUpIdEN0WAo0L0l4elJsTVJYK1Ric3FJZFF3SjlpNkFtVjBqaUdlcFpEOStpTi9nL2pYT2NSSFAza3dFVWkxcG9Uc3E5ZkZ0ClRtYU9HYjRZeXN5dWx4S1VtcTlDU1NpbkpNeW01S2o0cUFJSEVDS2RaaTg4b2JUeHl6b1VvY1RNeWw5ZXdTU0UKZDQrakRiWTBQWEc5OXpCZ0FKbjVSSEs3Qm0yL1N0MnNZMy9xUWhsbVZSTWg4eU9sZk9OVDc0WlRJSlFvZDljVwpZOHdqMGY4dmx5VVFreGd6OHZyTVpSV3kvNHhhazViTWw0NkE2SEk4SWJ6eldXaEUwTVdPWkprR1MxMHo1dVdHCkNMYyswdHJVcHprNWFoNXU5QVZZQXhYNUlKeDIxdVBYUnUydmZ6VDBYOE9kNkF1SXd3djFLUUxpSFBNWG9sTysKdjhKejNlZEhVMDBlajFPeGN3OGkzbVNyUDVKNVlONkQrdUFhVWtWNTZzMlk0SlNiME41a0kyT2tRNjMwbGRZUApROGNxQVBRczFwODRuK2xveVVrWnZsSUdkNVVYSTZuWXFNTFQ4dGZoVGFzQVNuOW4zREtGRGJ3VE85eG01bldWCjlrZk1HVWdHNWVoLzFVZmxQWlA4UmhkVTlVbjZob1dla3doMkMzTnZTUFhZL1l0ZHVKK295ZjJ2QTdQMXdHSzMKdjJVRDIwL09YUnZxd2dTUlBVOHVtK3NxU0Rab0NKeWxFZXZ4aHFmZXFzUk5vdDAwNGJPY2ZjQlUydnpnR0wwPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+        service:
+          name: webhook-service
+          namespace: activemq-artemis-operator
+          path: /convert
+      conversionReviewVersions:
+      - v1beta1
+  group: broker.amq.io
+  names:
+    kind: ActiveMQArtemisSecurity
+    listKind: ActiveMQArtemisSecurityList
+    plural: activemqartemissecurities
+    singular: activemqartemissecurity
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ActiveMQArtemisSecurity is the Schema for the activemqartemissecurities API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ActiveMQArtemisSecuritySpec defines the desired state of ActiveMQArtemisSecurity
+            properties:
+              applyToCrNames:
+                items:
+                  type: string
+                type: array
+              loginModules:
+                properties:
+                  guestLoginModules:
+                    items:
+                      properties:
+                        guestRole:
+                          type: string
+                        guestUser:
+                          type: string
+                        name:
+                          type: string
+                      type: object
+                    type: array
+                  keycloakLoginModules:
+                    items:
+                      properties:
+                        configuration:
+                          properties:
+                            allowAnyHostName:
+                              type: boolean
+                            alwaysRefreshToken:
+                              type: boolean
+                            authServerUrl:
+                              type: string
+                            autoDetectBearerOnly:
+                              type: boolean
+                            bearerOnly:
+                              type: boolean
+                            clientKeyPassword:
+                              type: string
+                            clientKeyStore:
+                              type: string
+                            clientKeyStorePassword:
+                              type: string
+                            confidentialPort:
+                              format: int32
+                              type: integer
+                            connectionPoolSize:
+                              format: int64
+                              type: integer
+                            corsAllowedHeaders:
+                              type: string
+                            corsAllowedMethods:
+                              type: string
+                            corsExposedHeaders:
+                              type: string
+                            corsMaxAge:
+                              format: int64
+                              type: integer
+                            credentials:
+                              items:
+                                properties:
+                                  key:
+                                    type: string
+                                  value:
+                                    type: string
+                                type: object
+                              type: array
+                            disableTrustManager:
+                              type: boolean
+                            enableBasicAuth:
+                              type: boolean
+                            enableCors:
+                              type: boolean
+                            exposeToken:
+                              type: boolean
+                            ignoreOauthQueryParameter:
+                              type: boolean
+                            minTimeBetweenJwksRequests:
+                              format: int64
+                              type: integer
+                            principalAttribute:
+                              type: string
+                            proxyUrl:
+                              type: string
+                            publicClient:
+                              type: boolean
+                            publicKeyCacheTtl:
+                              format: int64
+                              type: integer
+                            realm:
+                              type: string
+                            realmPublicKey:
+                              type: string
+                            redirectRewriteRules:
+                              items:
+                                properties:
+                                  key:
+                                    type: string
+                                  value:
+                                    type: string
+                                type: object
+                              type: array
+                            registerNodeAtStartup:
+                              type: boolean
+                            registerNodePeriod:
+                              format: int64
+                              type: integer
+                            resource:
+                              type: string
+                            scope:
+                              type: string
+                            sslRequired:
+                              type: string
+                            tokenCookiePath:
+                              type: string
+                            tokenMinimumTimeToLive:
+                              format: int64
+                              type: integer
+                            tokenStore:
+                              type: string
+                            trustStore:
+                              type: string
+                            trustStorePassword:
+                              type: string
+                            turnOffChangeSessionIdOnLogin:
+                              type: boolean
+                            useResourceRoleMappings:
+                              type: boolean
+                            verifyTokenAudience:
+                              type: boolean
+                          required:
+                          - enableBasicAuth
+                          type: object
+                        moduleType:
+                          type: string
+                        name:
+                          type: string
+                      type: object
+                    type: array
+                  propertiesLoginModules:
+                    items:
+                      properties:
+                        name:
+                          type: string
+                        users:
+                          items:
+                            properties:
+                              name:
+                                type: string
+                              password:
+                                type: string
+                              roles:
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          type: array
+                      type: object
+                    type: array
+                type: object
+              securityDomains:
+                properties:
+                  brokerDomain:
+                    properties:
+                      loginModules:
+                        items:
+                          properties:
+                            debug:
+                              type: boolean
+                            flag:
+                              type: string
+                            name:
+                              type: string
+                            reload:
+                              type: boolean
+                          type: object
+                        type: array
+                      name:
+                        type: string
+                    type: object
+                  consoleDomain:
+                    properties:
+                      loginModules:
+                        items:
+                          properties:
+                            debug:
+                              type: boolean
+                            flag:
+                              type: string
+                            name:
+                              type: string
+                            reload:
+                              type: boolean
+                          type: object
+                        type: array
+                      name:
+                        type: string
+                    type: object
+                type: object
+              securitySettings:
+                properties:
+                  broker:
+                    items:
+                      properties:
+                        match:
+                          type: string
+                        permissions:
+                          items:
+                            properties:
+                              operationType:
+                                type: string
+                              roles:
+                                items:
+                                  type: string
+                                type: array
+                            required:
+                            - operationType
+                            type: object
+                          type: array
+                      type: object
+                    type: array
+                  management:
+                    properties:
+                      authorisation:
+                        properties:
+                          allowedList:
+                            items:
+                              properties:
+                                domain:
+                                  type: string
+                                key:
+                                  type: string
+                              type: object
+                            type: array
+                          defaultAccess:
+                            items:
+                              properties:
+                                method:
+                                  type: string
+                                roles:
+                                  items:
+                                    type: string
+                                  type: array
+                              type: object
+                            type: array
+                          roleAccess:
+                            items:
+                              properties:
+                                accessList:
+                                  items:
+                                    properties:
+                                      method:
+                                        type: string
+                                      roles:
+                                        items:
+                                          type: string
+                                        type: array
+                                    type: object
+                                  type: array
+                                domain:
+                                  type: string
+                                key:
+                                  type: string
+                              type: object
+                            type: array
+                        type: object
+                      connector:
+                        properties:
+                          authenticatorType:
+                            type: string
+                          host:
+                            type: string
+                          jmxRealm:
+                            type: string
+                          keyStorePassword:
+                            type: string
+                          keyStorePath:
+                            type: string
+                          keyStoreProvider:
+                            type: string
+                          objectName:
+                            type: string
+                          passwordCodec:
+                            type: string
+                          port:
+                            format: int32
+                            type: integer
+                          rmiRegistryPort:
+                            format: int32
+                            type: integer
+                          secured:
+                            type: boolean
+                          trustStorePassword:
+                            type: string
+                          trustStorePath:
+                            type: string
+                          trustStoreProvider:
+                            type: string
+                        type: object
+                      hawtioRoles:
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                type: object
+            type: object
+          status:
+            description: ActiveMQArtemisSecurityStatus defines the observed state of ActiveMQArtemisSecurity
+            type: object
+        type: object
+    served: true
+    storage: false
+    subresources:
+      status: {}
+  - name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: ActiveMQArtemisSecurity is the Schema for the activemqartemissecurities API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ActiveMQArtemisSecuritySpec defines the desired state of ActiveMQArtemisSecurity
+            properties:
+              applyToCrNames:
+                description: Apply this security config to the broker crs in the current namespace. A value of * or empty string means applying to all broker crs. Default apply to all broker crs
+                items:
+                  type: string
+                type: array
+              loginModules:
+                properties:
+                  guestLoginModules:
+                    items:
+                      properties:
+                        guestRole:
+                          description: The guest user role
+                          type: string
+                        guestUser:
+                          description: The guest user name
+                          type: string
+                        name:
+                          description: Name for GuestLoginModule
+                          type: string
+                      type: object
+                    type: array
+                  keycloakLoginModules:
+                    items:
+                      properties:
+                        configuration:
+                          properties:
+                            allowAnyHostName:
+                              description: If to allow any host name
+                              type: boolean
+                            alwaysRefreshToken:
+                              description: If always refresh token
+                              type: boolean
+                            authServerUrl:
+                              description: URL of the keycloak authentication server
+                              type: string
+                            autoDetectBearerOnly:
+                              description: If auto-detect bearer token only
+                              type: boolean
+                            bearerOnly:
+                              description: If only verify bearer token
+                              type: boolean
+                            clientKeyPassword:
+                              description: Client key password
+                              type: string
+                            clientKeyStore:
+                              description: Path of a client keystore
+                              type: string
+                            clientKeyStorePassword:
+                              description: Client keystore password
+                              type: string
+                            confidentialPort:
+                              description: The confidential port used by the Keycloak server for secure connections over SSL/TLS
+                              format: int32
+                              type: integer
+                            connectionPoolSize:
+                              description: Size of the connection pool
+                              format: int64
+                              type: integer
+                            corsAllowedHeaders:
+                              description: CORS allowed headers
+                              type: string
+                            corsAllowedMethods:
+                              description: CORS allowed methods
+                              type: string
+                            corsExposedHeaders:
+                              description: CORS exposed headers
+                              type: string
+                            corsMaxAge:
+                              description: CORS max age
+                              format: int64
+                              type: integer
+                            credentials:
+                              items:
+                                properties:
+                                  key:
+                                    description: The credentials key
+                                    type: string
+                                  value:
+                                    description: The credentials value
+                                    type: string
+                                type: object
+                              type: array
+                            disableTrustManager:
+                              description: If to disable trust manager
+                              type: boolean
+                            enableBasicAuth:
+                              description: Whether to support basic authentication
+                              type: boolean
+                            enableCors:
+                              description: If to enable CORS
+                              type: boolean
+                            exposeToken:
+                              description: If to expose access token
+                              type: boolean
+                            ignoreOauthQueryParameter:
+                              description: Whether to turn off processing of the access_token query parameter for bearer token processing
+                              type: boolean
+                            minTimeBetweenJwksRequests:
+                              description: Minimum interval between two requests to Keycloak to retrieve new public keys
+                              format: int64
+                              type: integer
+                            principalAttribute:
+                              description: OpenID Connect ID Token attribute to populate the UserPrincipal name with
+                              type: string
+                            proxyUrl:
+                              description: The proxy URL
+                              type: string
+                            publicClient:
+                              description: If it is public client
+                              type: boolean
+                            publicKeyCacheTtl:
+                              description: Maximum interval between two requests to Keycloak to retrieve new public keys
+                              format: int64
+                              type: integer
+                            realm:
+                              description: Realm for KeycloakLoginModule
+                              type: string
+                            realmPublicKey:
+                              description: Public key for the realm
+                              type: string
+                            redirectRewriteRules:
+                              description: The regular expression to which the Redirect URI is to be matched value is the replacement String
+                              items:
+                                properties:
+                                  key:
+                                    description: The credentials key
+                                    type: string
+                                  value:
+                                    description: The credentials value
+                                    type: string
+                                type: object
+                              type: array
+                            registerNodeAtStartup:
+                              description: If register node at startup
+                              type: boolean
+                            registerNodePeriod:
+                              description: Period for re-registering node
+                              format: int64
+                              type: integer
+                            resource:
+                              description: Resource Name
+                              type: string
+                            scope:
+                              description: The OAuth2 scope parameter for DirectAccessGrantsLoginModule
+                              type: string
+                            sslRequired:
+                              description: How SSL is required
+                              type: string
+                            tokenCookiePath:
+                              description: Cookie path for a cookie store
+                              type: string
+                            tokenMinimumTimeToLive:
+                              description: Minimum time to refresh an active access token
+                              format: int64
+                              type: integer
+                            tokenStore:
+                              description: Type of token store. session or cookie
+                              type: string
+                            trustStore:
+                              description: Path of a trust store
+                              type: string
+                            trustStorePassword:
+                              description: Truststore password
+                              type: string
+                            turnOffChangeSessionIdOnLogin:
+                              description: If not to change session id on a successful login
+                              type: boolean
+                            useResourceRoleMappings:
+                              description: If to use resource role mappings
+                              type: boolean
+                            verifyTokenAudience:
+                              description: Verify whether the token contains this client name (resource) as an audience
+                              type: boolean
+                          required:
+                          - enableBasicAuth
+                          type: object
+                        moduleType:
+                          description: Type of KeycloakLoginModule directAccess or bearerToken
+                          type: string
+                        name:
+                          description: Name for KeycloakLoginModule
+                          type: string
+                      type: object
+                    type: array
+                  propertiesLoginModules:
+                    items:
+                      properties:
+                        name:
+                          description: Name for PropertiesLoginModule
+                          type: string
+                        users:
+                          items:
+                            properties:
+                              name:
+                                description: User name to be defined in properties login module
+                                type: string
+                              password:
+                                description: Password to be defined in properties login module
+                                type: string
+                              roles:
+                                description: Roles to be defined in properties login module
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          type: array
+                      type: object
+                    type: array
+                type: object
+              securityDomains:
+                properties:
+                  brokerDomain:
+                    properties:
+                      loginModules:
+                        items:
+                          properties:
+                            debug:
+                              description: Debug option of login modules for broker/console domain
+                              type: boolean
+                            flag:
+                              description: Flag of login modules for broker/console domain
+                              type: string
+                            name:
+                              description: Name for login modules for broker/console domain
+                              type: string
+                            reload:
+                              description: Reload option of login modules for broker/console domain
+                              type: boolean
+                          type: object
+                        type: array
+                      name:
+                        description: Name for the broker/console domain
+                        type: string
+                    type: object
+                  consoleDomain:
+                    properties:
+                      loginModules:
+                        items:
+                          properties:
+                            debug:
+                              description: Debug option of login modules for broker/console domain
+                              type: boolean
+                            flag:
+                              description: Flag of login modules for broker/console domain
+                              type: string
+                            name:
+                              description: Name for login modules for broker/console domain
+                              type: string
+                            reload:
+                              description: Reload option of login modules for broker/console domain
+                              type: boolean
+                          type: object
+                        type: array
+                      name:
+                        description: Name for the broker/console domain
+                        type: string
+                    type: object
+                type: object
+              securitySettings:
+                properties:
+                  broker:
+                    items:
+                      properties:
+                        match:
+                          description: The address match pattern of a security setting
+                          type: string
+                        permissions:
+                          items:
+                            properties:
+                              operationType:
+                                description: The operation type of a security setting
+                                type: string
+                              roles:
+                                description: The roles of a security setting
+                                items:
+                                  type: string
+                                type: array
+                            required:
+                            - operationType
+                            type: object
+                          type: array
+                      type: object
+                    type: array
+                  management:
+                    properties:
+                      authorisation:
+                        properties:
+                          allowedList:
+                            items:
+                              properties:
+                                domain:
+                                  description: The domain of allowedList
+                                  type: string
+                                key:
+                                  description: The key of allowedList
+                                  type: string
+                              type: object
+                            type: array
+                          defaultAccess:
+                            items:
+                              properties:
+                                method:
+                                  description: The method of defaultAccess/roleAccess List
+                                  type: string
+                                roles:
+                                  description: The roles of defaultAccess/roleAccess List
+                                  items:
+                                    type: string
+                                  type: array
+                              type: object
+                            type: array
+                          roleAccess:
+                            items:
+                              properties:
+                                accessList:
+                                  items:
+                                    properties:
+                                      method:
+                                        description: The method of defaultAccess/roleAccess List
+                                        type: string
+                                      roles:
+                                        description: The roles of defaultAccess/roleAccess List
+                                        items:
+                                          type: string
+                                        type: array
+                                    type: object
+                                  type: array
+                                domain:
+                                  description: The domain of roleAccess List
+                                  type: string
+                                key:
+                                  description: The key of roleAccess List
+                                  type: string
+                              type: object
+                            type: array
+                        type: object
+                      connector:
+                        properties:
+                          authenticatorType:
+                            description: The management authentication type
+                            type: string
+                          host:
+                            description: The connector host for connecting to management
+                            type: string
+                          jmxRealm:
+                            description: The JMX realm of management
+                            type: string
+                          keyStorePassword:
+                            description: The keystore password for management connector
+                            type: string
+                          keyStorePath:
+                            description: The keystore path for management connector
+                            type: string
+                          keyStoreProvider:
+                            description: The keystore provider for management connector
+                            type: string
+                          objectName:
+                            description: The JMX object name of management
+                            type: string
+                          passwordCodec:
+                            description: The password codec for management connector
+                            type: string
+                          port:
+                            description: The connector port for connecting to management
+                            format: int32
+                            type: integer
+                          rmiRegistryPort:
+                            description: The RMI registry port for management
+                            format: int32
+                            type: integer
+                          secured:
+                            description: Whether management connection is secured
+                            type: boolean
+                          trustStorePassword:
+                            description: The truststore password for management connector
+                            type: string
+                          trustStorePath:
+                            description: The truststore path for management connector
+                            type: string
+                          trustStoreProvider:
+                            description: The truststore provider for management connector
+                            type: string
+                        type: object
+                      hawtioRoles:
+                        description: The roles allowed to login hawtio
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                type: object
+            required:
+            - loginModules
+            - securityDomains
+            - securitySettings
+            type: object
+          status:
+            description: ActiveMQArtemisSecurityStatus defines the observed state of ActiveMQArtemisSecurity
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

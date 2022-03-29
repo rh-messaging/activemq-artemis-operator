@@ -1,0 +1,352 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.7.0
+  name: activemqartemisaddresses.broker.amq.io
+spec:
+  conversion:
+    strategy: Webhook
+    webhook:
+      clientConfig:
+        caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUdpekNDQkhPZ0F3SUJBZ0lVWXh6UkpyemJuUnFBUDhqQ1pETnA5QlRFMW5Zd0RRWUpLb1pJaHZjTkFRRUwKQlFBd2dhc3hDekFKQmdOVkJBWVRBbFZUTVJNd0VRWURWUVFJREFwRFlXeHBabTl5Ym1saE1SUXdFZ1lEVlFRSApEQXRNYjNNZ1FXNW5aV3hsY3pFVk1CTUdBMVVFQ2d3TVFYSjBaVzFwYzBOc2IzVmtNUkV3RHdZRFZRUUxEQWhQCmNHVnlZWFJ2Y2pGSE1FVUdBMVVFQXd3K1lXTjBhWFpsYlhFdFlYSjBaVzFwY3kxM1pXSm9iMjlyTFhObGNuWnAKWTJVdVlXTjBhWFpsYlhFdFlYSjBaVzFwY3kxdmNHVnlZWFJ2Y2k1emRtTXdIaGNOTWpFeE1qSTBNVE0xTXpBegpXaGNOTXpFeE1qSXlNVE0xTXpBeldqQ0JxekVMTUFrR0ExVUVCaE1DVlZNeEV6QVJCZ05WQkFnTUNrTmhiR2xtCmIzSnVhV0V4RkRBU0JnTlZCQWNNQzB4dmN5QkJibWRsYkdWek1SVXdFd1lEVlFRS0RBeEJjblJsYldselEyeHYKZFdReEVUQVBCZ05WQkFzTUNFOXdaWEpoZEc5eU1VY3dSUVlEVlFRRERENWhZM1JwZG1WdGNTMWhjblJsYldsegpMWGRsWW1odmIyc3RjMlZ5ZG1salpTNWhZM1JwZG1WdGNTMWhjblJsYldsekxXOXdaWEpoZEc5eUxuTjJZekNDCkFpSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnSVBBRENDQWdvQ2dnSUJBS3VRT0Y0aHdLK0xRejJnRGZ3aENQczAKeTJVVXp3SmN5SVhWY1VDeElXNDhMeWw1NXdvZkZhWmk1MHRyRisxUzM0OVAvNHFieDZQQVlmbk53Z0gvZmxKNQpXaFZoTG5DTFVrUjZYS3N0WWZIVjZBcW5BSlNXYWZPR2lGb2JHWVI4L1ZrdytKK3dCZHlGamRRc3NDNHczL0J1Cms2U3dLOFVEOFFFa1BKMGpyWHdPNkxvZnRxcVloWmd6N2poTEQxcXkyTDJmTFV6TVh0bEtReHI1Z2FNMzQwZ0cKaU9oNS96SGE1WmNsNXNMSzlRMlRtSk4vMVZGQjNNK2RzOEEreG1oS0pOSVNYaHMzRkpha2FYM05kQ2R4SVdYRQorOUtVU1BteXFKMmFaVEVlUHY2cXpCcVJOSlB6TjFhWURNZitFS2wwZ09hOG9NUzNVQVc3azRyZ2pNVWJ5dVFMCkExb0poVEdQcThiZWEwYUNGK1VaUCtEWFQ1YVJ3UWI4WCt1dWdqSFV4WGkrVndpUnJ1bXFFNWJlZ1kyK0h2Z1EKQWRNM0tSaTBVYVR2UXA4ajJUUG5pMVRCK0FYdmxlNjZwMFp3NE5HcWpaQTdVZGdTZlNBQzkxT1B5bnE0T0QvdQowYnloZVFFTjUvVmtJVzE4UVV6TkMxMVBFWmhFOXhXQ0JvdnEvSytEMjRNcllEb3MrQm84blFSY3c5UjN4ZW8vCmJpd3o2dXlVamJSUEgreStzVlJXeXhsdUNnRnVMdFVuMFlyZTE3Q1FQZnp3aXRNaStZWjhBb3ZYeHZZSlhFSm0KSE9nbzdqOFpFWVlTWDNCNS9GOVoyei9hSlJtc3dTUHVrT0RtZ0REZEJDWURZNk1ya1BYVTZocS8rYmtQcGZJbQp0N05sSHB3N0RuOEYzRzNDdjRBWEFnTUJBQUdqZ2FRd2dhRXdDd1lEVlIwUEJBUURBZ1F3TUJNR0ExVWRKUVFNCk1Bb0dDQ3NHQVFVRkJ3TUJNSDBHQTFVZEVRUjJNSFNDUG1GamRHbDJaVzF4TFdGeWRHVnRhWE10ZDJWaWFHOXYKYXkxelpYSjJhV05sTG1GamRHbDJaVzF4TFdGeWRHVnRhWE10YjNCbGNtRjBiM0l1YzNaamdqSmhiWEV0WW5KdgphMlZ5TFhkbFltaHZiMnN0YzJWeWRtbGpaUzVoYlhFdFluSnZhMlZ5TFc5d1pYSmhkRzl5TG5OMll6QU5CZ2txCmhraUc5dzBCQVFzRkFBT0NBZ0VBU0ZqT1NyMWVaVzh5dlpXTkx0L0hXaU1TK0E3MlNTODkySnhlTlZCTTNEVWUKMEVrSllnaXk1QzJqaWN6WFdLWXl4ZUo2TDdIVWwzNmZRbFptOC9Ea1NETUlrOTByd1dFWE45RUdIRUpIdEN0WAo0L0l4elJsTVJYK1Ric3FJZFF3SjlpNkFtVjBqaUdlcFpEOStpTi9nL2pYT2NSSFAza3dFVWkxcG9Uc3E5ZkZ0ClRtYU9HYjRZeXN5dWx4S1VtcTlDU1NpbkpNeW01S2o0cUFJSEVDS2RaaTg4b2JUeHl6b1VvY1RNeWw5ZXdTU0UKZDQrakRiWTBQWEc5OXpCZ0FKbjVSSEs3Qm0yL1N0MnNZMy9xUWhsbVZSTWg4eU9sZk9OVDc0WlRJSlFvZDljVwpZOHdqMGY4dmx5VVFreGd6OHZyTVpSV3kvNHhhazViTWw0NkE2SEk4SWJ6eldXaEUwTVdPWkprR1MxMHo1dVdHCkNMYyswdHJVcHprNWFoNXU5QVZZQXhYNUlKeDIxdVBYUnUydmZ6VDBYOE9kNkF1SXd3djFLUUxpSFBNWG9sTysKdjhKejNlZEhVMDBlajFPeGN3OGkzbVNyUDVKNVlONkQrdUFhVWtWNTZzMlk0SlNiME41a0kyT2tRNjMwbGRZUApROGNxQVBRczFwODRuK2xveVVrWnZsSUdkNVVYSTZuWXFNTFQ4dGZoVGFzQVNuOW4zREtGRGJ3VE85eG01bldWCjlrZk1HVWdHNWVoLzFVZmxQWlA4UmhkVTlVbjZob1dla3doMkMzTnZTUFhZL1l0ZHVKK295ZjJ2QTdQMXdHSzMKdjJVRDIwL09YUnZxd2dTUlBVOHVtK3NxU0Rab0NKeWxFZXZ4aHFmZXFzUk5vdDAwNGJPY2ZjQlUydnpnR0wwPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+        service:
+          name: webhook-service
+          namespace: activemq-artemis-operator
+          path: /convert
+      conversionReviewVersions:
+      - v1beta1
+  group: broker.amq.io
+  names:
+    kind: ActiveMQArtemisAddress
+    listKind: ActiveMQArtemisAddressList
+    plural: activemqartemisaddresses
+    singular: activemqartemisaddress
+  scope: Namespaced
+  versions:
+  - name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ActiveMQArtemisAddressSpec defines the desired state of ActiveMQArtemisAddress
+            properties:
+              addressName:
+                description: Address Name
+                type: string
+              applyToCrNames:
+                description: Apply to the broker crs in the current namespace. A value of * or empty string means applying to all broker crs. Default apply to all broker crs
+                items:
+                  type: string
+                type: array
+              password:
+                description: The user's password
+                type: string
+              queueConfiguration:
+                properties:
+                  autoCreateAddress:
+                    description: Whether auto create address
+                    type: boolean
+                  autoDelete:
+                    description: Auto-delete the queue
+                    type: boolean
+                  autoDeleteDelay:
+                    description: Delay (Milliseconds) before auto-delete the queue
+                    format: int64
+                    type: integer
+                  autoDeleteMessageCount:
+                    description: Message count of the queue to allow auto delete
+                    format: int64
+                    type: integer
+                  configurationManaged:
+                    description: ' If the queue is configuration managed'
+                    type: boolean
+                  consumerPriority:
+                    description: Consumer Priority
+                    format: int32
+                    type: integer
+                  consumersBeforeDispatch:
+                    description: Number of consumers required before dispatching messages
+                    format: int32
+                    type: integer
+                  delayBeforeDispatch:
+                    description: Milliseconds to wait for `consumers-before-dispatch` to be met before dispatching messages anyway
+                    format: int64
+                    type: integer
+                  durable:
+                    description: If the queue is durable or not
+                    type: boolean
+                  enabled:
+                    description: If the queue is enabled
+                    type: boolean
+                  exclusive:
+                    description: If the queue is exclusive
+                    type: boolean
+                  filterString:
+                    description: The filter string for the queue
+                    type: string
+                  groupBuckets:
+                    description: Number of messaging group buckets
+                    format: int32
+                    type: integer
+                  groupFirstKey:
+                    description: Header set on the first group message
+                    type: string
+                  groupRebalance:
+                    description: If rebalance the message group
+                    type: boolean
+                  groupRebalancePauseDispatch:
+                    description: If pause message dispatch when rebalancing groups
+                    type: boolean
+                  ignoreIfExists:
+                    description: If ignore if the target queue already exists
+                    type: boolean
+                  lastValue:
+                    description: If it is a last value queue
+                    type: boolean
+                  lastValueKey:
+                    description: The property used for last value queue to identify last values
+                    type: string
+                  maxConsumers:
+                    description: Max number of consumers allowed on this queue
+                    format: int32
+                    type: integer
+                  nonDestructive:
+                    description: If force non-destructive consumers on the queue
+                    type: boolean
+                  purgeOnNoConsumers:
+                    description: Whether to delete all messages when no consumers connected to the queue
+                    type: boolean
+                  ringSize:
+                    description: The size the queue should maintain according to ring semantics
+                    format: int64
+                    type: integer
+                  routingType:
+                    description: The routing type of the queue
+                    type: string
+                  temporary:
+                    description: If the queue is temporary
+                    type: boolean
+                  user:
+                    description: The user associated with the queue
+                    type: string
+                required:
+                - maxConsumers
+                - purgeOnNoConsumers
+                type: object
+              queueName:
+                description: Queue Name
+                type: string
+              removeFromBrokerOnDelete:
+                description: Whether or not delete the queue from broker when CR is undeployed(default false)
+                type: boolean
+              routingType:
+                description: The Routing Type
+                type: string
+              user:
+                description: User name for creating the queue or address
+                type: string
+            type: object
+          status:
+            description: ActiveMQArtemisAddressStatus defines the observed state of ActiveMQArtemisAddress
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+  - name: v2alpha1
+    schema:
+      openAPIV3Schema:
+        description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ActiveMQArtemisAddressSpec defines the desired state of ActiveMQArtemisAddress
+            properties:
+              addressName:
+                type: string
+              queueName:
+                type: string
+              routingType:
+                type: string
+            required:
+            - addressName
+            - queueName
+            - routingType
+            type: object
+          status:
+            description: ActiveMQArtemisAddressStatus defines the observed state of ActiveMQArtemisAddress
+            type: object
+        type: object
+    served: true
+    storage: false
+    subresources:
+      status: {}
+  - name: v2alpha2
+    schema:
+      openAPIV3Schema:
+        description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ActiveMQArtemisAddressSpec defines the desired state of ActiveMQArtemisAddress
+            properties:
+              addressName:
+                type: string
+              queueName:
+                type: string
+              removeFromBrokerOnDelete:
+                type: boolean
+              routingType:
+                type: string
+            required:
+            - addressName
+            - queueName
+            - removeFromBrokerOnDelete
+            - routingType
+            type: object
+          status:
+            description: ActiveMQArtemisAddressStatus defines the observed state of ActiveMQArtemisAddress
+            type: object
+        type: object
+    served: true
+    storage: false
+    subresources:
+      status: {}
+  - name: v2alpha3
+    schema:
+      openAPIV3Schema:
+        description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ActiveMQArtemisAddressSpec defines the desired state of ActiveMQArtemisAddress
+            properties:
+              addressName:
+                type: string
+              applyToCrNames:
+                items:
+                  type: string
+                type: array
+              password:
+                type: string
+              queueConfiguration:
+                properties:
+                  autoCreateAddress:
+                    type: boolean
+                  autoDelete:
+                    type: boolean
+                  autoDeleteDelay:
+                    format: int64
+                    type: integer
+                  autoDeleteMessageCount:
+                    format: int64
+                    type: integer
+                  configurationManaged:
+                    type: boolean
+                  consumerPriority:
+                    format: int32
+                    type: integer
+                  consumersBeforeDispatch:
+                    format: int32
+                    type: integer
+                  delayBeforeDispatch:
+                    format: int64
+                    type: integer
+                  durable:
+                    type: boolean
+                  enabled:
+                    type: boolean
+                  exclusive:
+                    type: boolean
+                  filterString:
+                    type: string
+                  groupBuckets:
+                    format: int32
+                    type: integer
+                  groupFirstKey:
+                    type: string
+                  groupRebalance:
+                    type: boolean
+                  groupRebalancePauseDispatch:
+                    type: boolean
+                  ignoreIfExists:
+                    type: boolean
+                  lastValue:
+                    type: boolean
+                  lastValueKey:
+                    type: string
+                  maxConsumers:
+                    format: int32
+                    type: integer
+                  nonDestructive:
+                    type: boolean
+                  purgeOnNoConsumers:
+                    type: boolean
+                  ringSize:
+                    format: int64
+                    type: integer
+                  routingType:
+                    type: string
+                  temporary:
+                    type: boolean
+                  user:
+                    type: string
+                required:
+                - maxConsumers
+                - purgeOnNoConsumers
+                type: object
+              queueName:
+                type: string
+              removeFromBrokerOnDelete:
+                type: boolean
+              routingType:
+                type: string
+              user:
+                type: string
+            type: object
+          status:
+            description: ActiveMQArtemisAddressStatus defines the observed state of ActiveMQArtemisAddress
+            type: object
+        type: object
+    served: true
+    storage: false
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
