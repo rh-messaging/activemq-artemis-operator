@@ -2265,7 +2265,6 @@ func NewPersistentVolumeClaimArrayForCR(fsm *ActiveMQArtemisFSM, arrayLength int
 	return &pvcArray
 }
 
-// TODO: Test namespacedName to ensure it's the right namespacedName
 func UpdatePodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namespacedName types.NamespacedName) error {
 
 	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", cr.Name)
@@ -2311,13 +2310,7 @@ func GetPodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, nam
 	sfsFound := &appsv1.StatefulSet{}
 	err := client.Get(context.TODO(), ssNamespacedName, sfsFound)
 	if err == nil {
-		status = olm.GetSingleStatefulSetStatus(*sfsFound)
-	} else {
-		dsFound := &appsv1.DaemonSet{}
-		err = client.Get(context.TODO(), ssNamespacedName, dsFound)
-		if err == nil {
-			status = olm.GetSingleDaemonSetStatus(*dsFound)
-		}
+		status = getSingleStatefulSetStatus(sfsFound)
 	}
 
 	// TODO: Remove global usage
@@ -2333,6 +2326,35 @@ func GetPodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, nam
 	lastStatusMap[namespacedName] = status
 
 	return status
+}
+
+func getSingleStatefulSetStatus(ss *appsv1.StatefulSet) olm.DeploymentStatus {
+	var ready, starting, stopped []string
+	var requestedCount = int32(0)
+	if ss.Spec.Replicas != nil {
+		requestedCount = *ss.Spec.Replicas
+	}
+
+	targetCount := ss.Status.Replicas
+	readyCount := ss.Status.ReadyReplicas
+
+	if requestedCount == 0 || targetCount == 0 {
+		stopped = append(stopped, ss.Name)
+	} else {
+		for i := int32(0); i < targetCount; i++ {
+			instanceName := fmt.Sprintf("%s-%d", ss.Name, i)
+			if i < readyCount {
+				ready = append(ready, instanceName)
+			} else {
+				starting = append(starting, instanceName)
+			}
+		}
+	}
+	return olm.DeploymentStatus{
+		Stopped:  stopped,
+		Starting: starting,
+		Ready:    ready,
+	}
 }
 
 func MakeEnvVarArrayForCR(fsm *ActiveMQArtemisFSM) []corev1.EnvVar {

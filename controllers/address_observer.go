@@ -54,7 +54,6 @@ func (c *AddressObserver) Run(C chan types.NamespacedName) error {
 	for {
 		select {
 		case ready := <-C:
-			// NOTE: c will be one ordinal higher than the real podname!
 			olog.Info("address_observer received C", "pod", ready)
 			go c.newPodReady(&ready)
 		default:
@@ -86,7 +85,7 @@ func (c *AddressObserver) newPodReady(ready *types.NamespacedName) {
 		return
 	}
 
-	realPodName := fmt.Sprintf("%s-%d", podBaseName, podSerial-1)
+	realPodName := fmt.Sprintf("%s-%d", podBaseName, podSerial)
 
 	podNamespacedName := types.NamespacedName{ready.Namespace, realPodName}
 	pod := &corev1.Pod{}

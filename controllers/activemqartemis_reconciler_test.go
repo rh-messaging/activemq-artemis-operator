@@ -184,3 +184,26 @@ func TestMapComparatorForStatefulSet(t *testing.T) {
 func semanticEquals(a client.Object, b client.Object) bool {
 	return equality.Semantic.DeepEqual(a, b)
 }
+
+func TestGetSingleStatefulSetStatus(t *testing.T) {
+
+	var expected int32 = int32(1)
+	ss := &appsv1.StatefulSet{}
+	ss.ObjectMeta.Name = "joe"
+	ss.Spec.Replicas = &expected
+	ss.Status.Replicas = 1
+	ss.Status.ReadyReplicas = 1
+
+	statusRunning := getSingleStatefulSetStatus(ss)
+	if statusRunning.Ready[0] != "joe-0" {
+		t.Errorf("not good!, expect correct 0 ordinal" + statusRunning.Ready[0])
+	}
+
+	ss.Status.Replicas = 0
+	ss.Status.ReadyReplicas = 0
+
+	statusRunning = getSingleStatefulSetStatus(ss)
+	if statusRunning.Stopped[0] != "joe" {
+		t.Errorf("not good!, expect ss name in stopped" + statusRunning.Stopped[0])
+	}
+}
