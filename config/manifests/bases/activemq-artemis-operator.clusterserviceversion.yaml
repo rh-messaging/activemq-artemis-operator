@@ -10,6 +10,12 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
+    - description: ActiveMQArtemisScaledown is the Schema for the activemqartemisscaledowns
+        API
+      displayName: Active MQArtemis Scaledown
+      kind: ActiveMQArtemisScaledown
+      name: activemqartemisscaledowns.broker.amq.io
+      version: v1beta1
     - description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses
         API
       displayName: Active MQArtemis Address
@@ -64,12 +70,6 @@ spec:
       kind: ActiveMQArtemis
       name: activemqartemises.broker.amq.io
       version: v2alpha1
-    - description: ActiveMQArtemisScaledown is the Schema for the activemqartemisscaledowns
-        API
-      displayName: Active MQArtemis Scaledown
-      kind: ActiveMQArtemisScaledown
-      name: activemqartemisscaledowns.broker.amq.io
-      version: v1beta1
     - description: ActiveMQArtemisScaledown is the Schema for the activemqartemisscaledowns
         API
       displayName: Active MQArtemis Scaledown

@@ -187,12 +187,36 @@ spec:
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:AdminPassword'
               - 'urn:alm:descriptor:com.tectonic.ui:password'
+          - description: Broker properties used to config broker.xml
+            displayName: Broker Properties
+            path: brokerProperties
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:AdminPassword'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
           - description: The version of the broker deployment.
             displayName: Version
             path: version
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:Version'
               - 'urn:alm:descriptor:com.tectonic.ui:password'
+          - description: The custom node affinity
+            displayName: Node Affinity
+            path: deploymentPlan.affinity.nodeAffinity
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:nodeAffinity'
+          - description: The custom pod affinity
+            displayName: Pod Affinity
+            path: deploymentPlan.affinity.podAffinity
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:podAffinity'
+          - description: The custom pod anti-affinity
+            displayName: Pod Anti-Affinity
+            path: deploymentPlan.affinity.podAntiAffinity
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:podAndiAffinity'
           - description: The number of broker pods to deploy
             displayName: Size
             path: deploymentPlan.size
@@ -235,6 +259,12 @@ spec:
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
               - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Node selector
+            displayName: Node Selecor
+            path: deploymentPlan.nodeSelector
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:selector'
           - description: If true enable the Jolokia JVM Agent
             displayName: JolokiaAgentEnabled
             path: deploymentPlan.jolokiaAgentEnabled
@@ -265,6 +295,12 @@ spec:
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
               - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Custom Labels
+            displayName: Custom Labels
+            path: deploymentPlan.labels
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:label'
           - description: ServiceAccount Name of the pod
             displayName: ServiceAccount Name
             path: deploymentPlan.podSecurity.serviceAccountName
@@ -277,9 +313,177 @@ spec:
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
               - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: The liveness probe command
+            displayName: Liveness Probe Command
+            path: deploymentPlan.livenessProbe.exec.command[0]
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Liveness Probe failureThreashold
+            displayName: Liveness Probe FailureThreshold
+            path: deploymentPlan.livenessProbe.failureThreshold
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: Liveness Probe httpGet host name
+            displayName: Liveness Probe httpGet host name
+            path: deploymentPlan.livenessProbe.httpGet.host
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Liveness Probe httpGet header names
+            displayName: Liveness Probe httpGet header names
+            path: deploymentPlan.livenessProbe.httpGet.httpHeaders[0].name
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Liveness Probe httpGet header values
+            displayName: Liveness Probe httpGet header values
+            path: deploymentPlan.livenessProbe.httpGet.httpHeaders[0].value
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Liveness Probe httpGet path to access the HTTP server
+            displayName: Liveness Probe httpGet path
+            path: deploymentPlan.livenessProbe.httpGet.path
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Liveness Probe httpGet port
+            displayName: Liveness Probe httpGet port
+            path: deploymentPlan.livenessProbe.httpGet.port
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Liveness Probe httpGet scheme
+            displayName: Liveness Probe httpGet scheme
+            path: deploymentPlan.livenessProbe.httpGet.scheme
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Liveness Probe initialDelaySeconds
+            displayName: Liveness Probe initialDelaySeconds
+            path: deploymentPlan.livenessProbe.initialDelaySeconds
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: Liveness Probe periodSeconds
+            displayName: Liveness Probe periodSeconds
+            path: deploymentPlan.livenessProbe.periodSeconds
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: Liveness Probe successThreshold
+            displayName: Liveness Probe successThreshold
+            path: deploymentPlan.livenessProbe.successThreshold
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: Liveness Probe TCP socket host
+            displayName: Liveness Probe TCP socket host
+            path: deploymentPlan.livenessProbe.tcpSocket.host
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Liveness Probe TCP socket port
+            displayName: Liveness Probe TCP socket port
+            path: deploymentPlan.livenessProbe.tcpSocket.port
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Liveness Probe terminationGracePeriodSeconds
+            displayName: Liveness Probe terminationGracePeriodSeconds
+            path: deploymentPlan.livenessProbe.terminationGracePeriodSeconds
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: Liveness Probe timeoutSeconds for broker container
             displayName: TimeoutSeconds
             path: deploymentPlan.livenessProbe.timeoutSeconds
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: The Readiness probe command
+            displayName: Readiness Probe Command
+            path: deploymentPlan.readinessProbe.exec.command[0]
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Readiness Probe failureThreashold
+            displayName: Readiness Probe FailureThreshold
+            path: deploymentPlan.readinessProbe.failureThreshold
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: Readiness Probe httpGet host name
+            displayName: Readiness Probe httpGet host name
+            path: deploymentPlan.readinessProbe.httpGet.host
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Readiness Probe httpGet header names
+            displayName: Readiness Probe httpGet header names
+            path: deploymentPlan.readinessProbe.httpGet.httpHeaders[0].name
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Readiness Probe httpGet header values
+            displayName: Readiness Probe httpGet header values
+            path: deploymentPlan.readinessProbe.httpGet.httpHeaders[0].value
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Readiness Probe httpGet path to access the HTTP server
+            displayName: Readiness Probe httpGet path
+            path: deploymentPlan.readinessProbe.httpGet.path
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Readiness Probe httpGet port
+            displayName: Readiness Probe httpGet port
+            path: deploymentPlan.readinessProbe.httpGet.port
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Readiness Probe httpGet scheme
+            displayName: Readiness Probe httpGet scheme
+            path: deploymentPlan.readinessProbe.httpGet.scheme
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Readiness Probe initialDelaySeconds
+            displayName: Readiness Probe initialDelaySeconds
+            path: deploymentPlan.readinessProbe.initialDelaySeconds
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: Readiness Probe periodSeconds
+            displayName: Readiness Probe periodSeconds
+            path: deploymentPlan.readinessProbe.periodSeconds
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: Readiness Probe successThreshold
+            displayName: Readiness Probe successThreshold
+            path: deploymentPlan.readinessProbe.successThreshold
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: Readiness Probe TCP socket host
+            displayName: Readiness Probe TCP socket host
+            path: deploymentPlan.readinessProbe.tcpSocket.host
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Readiness Probe TCP socket port
+            displayName: Readiness Probe TCP socket port
+            path: deploymentPlan.readinessProbe.tcpSocket.port
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Readiness Probe terminationGracePeriodSeconds
+            displayName: Readiness Probe terminationGracePeriodSeconds
+            path: deploymentPlan.readinessProbe.terminationGracePeriodSeconds
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
               - 'urn:alm:descriptor:com.tectonic.ui:number'
@@ -295,6 +499,48 @@ spec:
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
               - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: Storage size
+            displayName: Storage size
+            path: deploymentPlan.storage.size
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Storage class name
+            displayName: Storage class name
+            path: deploymentPlan.storage.storageClassName
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Toleration effect
+            displayName: Toleration Effect
+            path: deploymentPlan.tolerations[0].effect
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Toleration key
+            displayName: Toleration Key
+            path: deploymentPlan.tolerations[0].key
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Toleration operator
+            displayName: Toleration Operator
+            path: deploymentPlan.tolerations[0].operator
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Toleration tolerationSeconds
+            displayName: Toleration TolerationSeconds
+            path: deploymentPlan.tolerations[0].tolerationSeconds
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:number'
+          - description: Toleration value
+            displayName: Toleration Value
+            path: deploymentPlan.tolerations[0].value
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
 
           - description:  A single acceptor configuration
             displayName: Name
@@ -383,6 +629,12 @@ spec:
           - description: To indicate which kind of routing type to use.
             displayName: AnyCast Prefix
             path: acceptors[0].anycastPrefix
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:acceptors'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: Whether to let the acceptor to bind to all interfaces
+            displayName: Bind To All Interfaces
+            path: acceptors[0].bindToAllInterfaces
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:acceptors'
               - 'urn:alm:descriptor:com.tectonic.ui:text'
@@ -2063,8 +2315,8 @@ spec:
                         #value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8:0.4-10
                         value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8@sha256:343b203648a3a92fa70d66f088e68c2ddd60bf0c9c77f75bcdfc1ca2d7edeb47
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7100_ppc64le
-                        #value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-710-init-openj9-11-rhel8:7.10-5
-                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-710-init-openj9-11-rhel8@sha256:b7874699ddcd94cd51a349dbbaaf1aa5067fd27f2dfe0809e0a3912877df0dce
+                        #value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-710-init-rhel8:7.10-7
+                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-710-init-rhel8@sha256:df38184d6d792a8b3cef38b6ee07c4537c9b79bf13f51523861d7809c453e1d3
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781_ppc64le
                         #value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.8-8
                         value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8@sha256:f2651cb097eb631fc6af90e4a8404d36516aa2205c546125bf0c37739ab525fa
@@ -2084,8 +2336,8 @@ spec:
                         #value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.9-14
                         value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8@sha256:9dcc901c0004e5fad4cd5b35c889e3c433dbe1574fc8dc70273967eeee9321b9
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7100_ppc64le
-                        #value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-710-openshift-openj9-11-rhel8:7.10-7
-                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-710-openshift-openj9-11-rhel8@sha256:0a030873a6249374cf05cec6461002e453b06fed8bf2934337ed9c09cd61e31c
+                        #value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-710-openshift-rhel8:7.10-19
+                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-710-openshift-rhel8@sha256:990a4b189da0c6c8acaec32470c3a4eb2be6699c4dbddc58590b98e6dab67d56
 
                       # S390X
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_781_s390x
@@ -2107,8 +2359,8 @@ spec:
                         #value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8:0.4-10
                         value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8@sha256:343b203648a3a92fa70d66f088e68c2ddd60bf0c9c77f75bcdfc1ca2d7edeb47
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7100_s390x
-                        #value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-710-init-openj9-11-rhel8:7.10-5
-                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-710-init-openj9-11-rhel8@sha256:b7874699ddcd94cd51a349dbbaaf1aa5067fd27f2dfe0809e0a3912877df0dce
+                        #value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-710-init-rhel8:7.10-7
+                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-710-init-rhel8@sha256:df38184d6d792a8b3cef38b6ee07c4537c9b79bf13f51523861d7809c453e1d3
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781_s390x
                         #value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.8-8
                         value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8@sha256:f2651cb097eb631fc6af90e4a8404d36516aa2205c546125bf0c37739ab525fa
@@ -2128,6 +2380,6 @@ spec:
                         #value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.9-14
                         value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8@sha256:9dcc901c0004e5fad4cd5b35c889e3c433dbe1574fc8dc70273967eeee9321b9
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7100_s390x
-                        #value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-710-openshift-openj9-11-rhel8:7.10-7
-                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-710-openshift-openj9-11-rhel8@sha256:0a030873a6249374cf05cec6461002e453b06fed8bf2934337ed9c09cd61e31c
+                        #value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-710-openshift-rhel8:7.10-19
+                        value: registry-proxy.engineering.redhat.com/rh-osbs/amq-broker-7-amq-broker-710-openshift-rhel8@sha256:990a4b189da0c6c8acaec32470c3a4eb2be6699c4dbddc58590b98e6dab67d56
 
