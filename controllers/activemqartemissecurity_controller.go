@@ -228,7 +228,7 @@ func (r *ActiveMQArtemisSecurityConfigHandler) getPassword(secretName string, ke
 	if err := resources.Retrieve(namespacedName, r.owner.Client, secretDefinition); err != nil {
 		if errors.IsNotFound(err) {
 			//create the secret
-			resources.Create(r.SecurityCR, namespacedName, r.owner.Client, r.owner.Scheme, secretDefinition)
+			resources.Create(r.SecurityCR, r.owner.Client, r.owner.Scheme, secretDefinition)
 		}
 	} else {
 		slog.Info("Found secret " + secretName)
@@ -247,14 +247,14 @@ func (r *ActiveMQArtemisSecurityConfigHandler) getPassword(secretName string, ke
 	}
 	secretDefinition.Data[key] = []byte(value)
 	slog.Info("Updating secret", "secret", namespacedName.Name)
-	if err := resources.Update(namespacedName, r.owner.Client, secretDefinition); err != nil {
+	if err := resources.Update(r.owner.Client, secretDefinition); err != nil {
 		slog.Error(err, "failed to update secret", "secret", secretName)
 	}
 	return &value
 }
 
 func (r *ActiveMQArtemisSecurityConfigHandler) Config(initContainers []corev1.Container, outputDirRoot string, yacfgProfileVersion string, yacfgProfileName string) (value []string) {
-	slog.Info("Reconciling security", "cr", r.SecurityCR)
+	ctrl.Log.Info("Reconciling ActiveMQArtemisSecurity", "cr", r.SecurityCR)
 	result := r.processCrPasswords()
 	outputDir := outputDirRoot + "/security"
 	var configCmds = []string{"echo \"making dir " + outputDir + "\"", "mkdir -p " + outputDir}
@@ -291,7 +291,7 @@ func (r *ActiveMQArtemisSecurityConfigHandler) Config(initContainers []corev1.Co
 	}
 	environments.Create(initContainers, &envVar)
 
-	slog.Info("returning config cmds", "value", configCmds)
+	ctrl.Log.Info("returning config cmds", "value", configCmds)
 	return configCmds
 }
 

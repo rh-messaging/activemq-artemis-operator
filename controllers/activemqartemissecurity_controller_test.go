@@ -29,6 +29,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -40,7 +41,6 @@ import (
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -859,6 +859,106 @@ var _ = Describe("security controller", func() {
 		})
 
 	})
+
+	It("reconcile after Broker CR deployed, verify force reconcile", func() {
+
+		By("Creating Broker CR")
+		ctx := context.Background()
+		brokerCrd := generateArtemisSpec(defaultNamespace)
+
+		Expect(k8sClient.Create(ctx, &brokerCrd)).Should(Succeed())
+
+		createdBrokerCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+		Eventually(func() (int, error) {
+			key := types.NamespacedName{Name: brokerCrd.ObjectMeta.Name, Namespace: defaultNamespace}
+			err := k8sClient.Get(ctx, key, createdBrokerCrd)
+
+			if err != nil {
+				return -1, err
+			}
+
+			return len(createdBrokerCrd.Status.PodStatus.Stopped), nil
+		}, timeout, interval).Should(Equal(1))
+
+		// after stable status, determine version
+		createdSs := &appsv1.StatefulSet{}
+
+		By("Making sure that the ss gets deployed " + createdBrokerCrd.ObjectMeta.Name)
+		Eventually(func() bool {
+			key := types.NamespacedName{Name: namer.CrToSS(createdBrokerCrd.Name), Namespace: defaultNamespace}
+
+			err := k8sClient.Get(ctx, key, createdSs)
+
+			return err == nil
+		}, timeout, interval).Should(Equal(true))
+
+		versionSsDeployed := createdSs.ObjectMeta.ResourceVersion
+
+		By("Creating security cr")
+		crd := generateSecuritySpec("", defaultNamespace)
+
+		brokerDomainName := "activemq"
+		loginModuleName := "module1"
+		loginModuleFlag := "sufficient"
+
+		loginModuleList := make([]brokerv1beta1.PropertiesLoginModuleType, 1)
+		propLoginModule := brokerv1beta1.PropertiesLoginModuleType{
+			Name: loginModuleName,
+			Users: []brokerv1beta1.UserType{
+				{
+					Name:     "user1",
+					Password: nil,
+					Roles: []string{
+						"admin", "amq",
+					},
+				},
+			},
+		}
+		loginModuleList = append(loginModuleList, propLoginModule)
+		crd.Spec.LoginModules.PropertiesLoginModules = loginModuleList
+
+		crd.Spec.SecurityDomains.BrokerDomain = brokerv1beta1.BrokerDomainType{
+			Name: &brokerDomainName,
+			LoginModules: []brokerv1beta1.LoginModuleReferenceType{
+				{
+					Name: &loginModuleName,
+					Flag: &loginModuleFlag,
+				},
+			},
+		}
+
+		By("Deploying the CRD " + crd.ObjectMeta.Name)
+		Expect(k8sClient.Create(ctx, crd)).Should(Succeed())
+
+		createdCrd := &brokerv1beta1.ActiveMQArtemisSecurity{}
+
+		By("Making sure that the CRD gets deployed " + crd.ObjectMeta.Name)
+		Eventually(func() bool {
+			return getPersistedVersionedCrd(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
+		}, timeout, interval).Should(BeTrue())
+		Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
+
+		// make sure broker gets new SS for createdBrokerCrd
+		Eventually(func() bool {
+			key := types.NamespacedName{Name: namer.CrToSS(createdBrokerCrd.Name), Namespace: defaultNamespace}
+
+			if err := k8sClient.Get(ctx, key, createdSs); err == nil {
+				return versionSsDeployed != createdSs.GetResourceVersion()
+			} else {
+				return false
+			}
+		}, timeout, interval).Should(Equal(true))
+
+		By("check it has gone")
+		Expect(k8sClient.Delete(ctx, createdCrd))
+		Expect(k8sClient.Delete(ctx, createdCrd))
+		Eventually(func() bool {
+			return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
+		}, timeout, interval).Should(BeTrue())
+
+	})
+
 })
 
 func DeploySecurity(secName string, targetNamespace string, customFunc func(candidate *brokerv1beta1.ActiveMQArtemisSecurity)) (*brokerv1beta1.ActiveMQArtemisSecurity, *brokerv1beta1.ActiveMQArtemisSecurity) {

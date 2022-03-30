@@ -30,16 +30,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
+
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	nsoptions "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/namespaces"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/lsrcrs"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 )
 
 var clog = ctrl.Log.WithName("controller_v1beta1activemqartemis")
-
-var namespacedNameToFSM = make(map[types.NamespacedName]*ActiveMQArtemisFSM)
 
 var namespaceToConfigHandler = make(map[types.NamespacedName]common.ActiveMQArtemisConfigHandler)
 
@@ -97,9 +96,9 @@ func (r *ActiveMQArtemisReconciler) AddBrokerConfigHandler(namespacedName types.
 // ActiveMQArtemisReconciler reconciles a ActiveMQArtemis object
 type ActiveMQArtemisReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	Result ctrl.Result
-	events chan event.GenericEvent
+	Scheme       *runtime.Scheme
+	WatchOptions nsoptions.WatchOptions
+	events       chan event.GenericEvent
 }
 
 //run 'make manifests' after changing the following rbac markers
@@ -130,128 +129,80 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 	reqLogger := ctrl.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling ActiveMQArtemis")
 
-	if !nsoptions.Match(request.Namespace) {
-		reqLogger.Info("Request not in watch list, ignore", "request", request)
-		return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
-	}
-
 	var err error = nil
-	var namespacedNameFSM *ActiveMQArtemisFSM = nil
-	var amqbfsm *ActiveMQArtemisFSM = nil
 
-	customResource := &brokerv1beta1.ActiveMQArtemis{}
-	namespacedName := types.NamespacedName{
-		Name:      request.Name,
-		Namespace: request.Namespace,
-	}
+	if r.WatchOptions.Match(request.Namespace) {
 
-	// Fetch the ActiveMQArtemis instance
-	// When first creating this will have err == nil
-	// When deleting after creation this will have err NotFound
-	// When deleting before creation reconcile won't be called
-	if err = r.Get(context.TODO(), request.NamespacedName, customResource); err != nil {
-		if errors.IsNotFound(err) {
-			reqLogger.Info("ActiveMQArtemis Controller Reconcile encountered a IsNotFound, checking to see if we should delete namespacedName tracking for request NamespacedName " + request.NamespacedName.String())
+		// we are responsible
 
-			// See if we have been tracking this NamespacedName
-			if namespacedNameFSM = namespacedNameToFSM[namespacedName]; namespacedNameFSM != nil {
-				reqLogger.Info("Removing namespacedName tracking for " + namespacedName.String())
-				// If so we should no longer track it
-				amqbfsm = namespacedNameToFSM[namespacedName]
-				//remove the fsm secret
-				lsrcrs.DeleteLastSuccessfulReconciledCR(request.NamespacedName, "broker", amqbfsm.namers.LabelBuilder.Labels(), r.Client)
-				amqbfsm.Exit()
-				delete(namespacedNameToFSM, namespacedName)
-				amqbfsm = nil
-			}
+		customResource := &brokerv1beta1.ActiveMQArtemis{}
 
-			// Setting err to nil to prevent requeue
+		// Fetch the ActiveMQArtemis instance
+		// When first creating this will have err == nil
+		// When deleting after creation this will have err NotFound
+		// When deleting before creation reconcile won't be called
+		if err = r.Get(context.TODO(), request.NamespacedName, customResource); err == nil {
+
+			namer := MakeNamers(customResource)
+			reconciler := ActiveMQArtemisReconcilerImpl{}
+
+			reconciler.Process(customResource, *namer, r.Client, r.Scheme)
+
+			UpdatePodStatus(customResource, r.Client, request.NamespacedName)
+
+		} else if errors.IsNotFound(err) {
+			reqLogger.Info("ActiveMQArtemis Controller Reconcile encountered a IsNotFound, for request NamespacedName " + request.NamespacedName.String())
 			err = nil
-		} else {
-			reqLogger.Error(err, "ActiveMQArtemis Controller Reconcile errored thats not IsNotFound, requeuing request", "Request Namespace", request.Namespace, "Request Name", request.Name)
-			// Leaving err as !nil causes requeue
 		}
-
-		// Add error detail for use later
-		if err != nil {
-			return r.Result, err
-		}
-		return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
-	}
-
-	// Do lookup to see if we have a fsm for the incoming name in the incoming namespace
-	// if not, create it
-	// for the given fsm, do an update
-	// - update first level sets? what if the operator has gone away and come back? stateless?
-	if namespacedNameFSM = namespacedNameToFSM[namespacedName]; namespacedNameFSM == nil {
-		reqLogger.Info("Didn't find fsm for the CR, try to search history", "requested", namespacedName)
-		//try to retrieve last successful reconciled CR
-		lsrcr := lsrcrs.RetrieveLastSuccessfulReconciledCR(namespacedName, "broker", r.Client, GetDefaultLabels(customResource))
-		if lsrcr != nil {
-			reqLogger.Info("There is a LastSuccessfulReconciledCR")
-			//restoring fsm
-			var fsmData ActiveMQArtemisFSMData
-			var fsm *ActiveMQArtemisFSM
-			if merr := common.FromJson(&lsrcr.Data, &fsmData); merr != nil {
-				reqLogger.Error(merr, "failed to unmarshal fsm, create a new one")
-				fsm = MakeActiveMQArtemisFSM(customResource, namespacedName, r)
-			} else {
-				reqLogger.Info("recreate fsm from data")
-				storedCR := brokerv1beta1.ActiveMQArtemis{}
-				merr := common.FromJson(&lsrcr.CR, &storedCR)
-				if merr != nil {
-					reqLogger.Error(merr, "failed to unmarshal cr, using existing one")
-					fsm = MakeActiveMQArtemisFSMFromData(&fsmData, customResource, namespacedName, r)
-				} else {
-					reqLogger.Info("Restoring fsm")
-					fsm = MakeActiveMQArtemisFSMFromData(&fsmData, &storedCR, namespacedName, r)
-				}
-			}
-			if lsrcr.Checksum == customResource.ResourceVersion {
-				//this is an operator restart. Don't do reconcile
-				namespacedNameToFSM[namespacedName] = fsm
-				reqLogger.Info("Detected possible operator restart with no broker CR changes", "res", customResource.ResourceVersion)
-				return r.Result, nil
-			}
-			reqLogger.Info("A new version of CR comes in", "old", lsrcr.Checksum, "new", customResource.ResourceVersion)
-		}
-	}
-
-	if namespacedNameFSM = namespacedNameToFSM[namespacedName]; namespacedNameFSM == nil {
-
-		amqbfsm = MakeActiveMQArtemisFSM(customResource, namespacedName, r)
-		namespacedNameToFSM[namespacedName] = amqbfsm
-
-		// Enter the first state; atm CreatingK8sResourcesState
-		amqbfsm.Enter(CreatingK8sResourcesID)
 	} else {
-		amqbfsm = namespacedNameFSM
-		//remember current customeResource so that we can compare for update
-		amqbfsm.UpdateCustomResource(customResource)
-
-		err, _ = amqbfsm.Update()
+		reqLogger.Info("Request not in watch list, ignore", "request", request)
 	}
 
-	//persist the CR
 	if err == nil {
-		fsmData := amqbfsm.GetFSMData()
-		fsmstr, merr := common.ToJson(&fsmData)
-		if merr != nil {
-			reqLogger.Error(merr, "failed to marshal fsm")
-		}
-		crstr, merr := common.ToJson(customResource)
-		if merr != nil {
-			reqLogger.Error(merr, "failed to marshal cr")
-		}
-		lsrcrs.StoreLastSuccessfulReconciledCR(customResource, customResource.Name,
-			customResource.Namespace, "broker", crstr, fsmstr, customResource.ResourceVersion,
-			amqbfsm.namers.LabelBuilder.Labels(), r.Client, r.Scheme)
-		if !amqbfsm.r.Result.Requeue {
-			return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
-		}
+		return ctrl.Result{}, err
+	} else {
+		reqLogger.Error(err, "ActiveMQArtemis Controller Reconcile, requeuing request", "Request Namespace", request.Namespace, "Request Name", request.Name)
+		return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, err
 	}
+}
 
-	return r.Result, err
+type Namers struct {
+	SsGlobalName                  string
+	SsNameBuilder                 namer.NamerData
+	SvcHeadlessNameBuilder        namer.NamerData
+	SvcPingNameBuilder            namer.NamerData
+	PodsNameBuilder               namer.NamerData
+	SecretsCredentialsNameBuilder namer.NamerData
+	SecretsConsoleNameBuilder     namer.NamerData
+	SecretsNettyNameBuilder       namer.NamerData
+	LabelBuilder                  selectors.LabelerData
+	GLOBAL_DATA_PATH              string
+}
+
+func MakeNamers(customResource *brokerv1beta1.ActiveMQArtemis) *Namers {
+	newNamers := Namers{
+		SsGlobalName:                  "",
+		SsNameBuilder:                 namer.NamerData{},
+		SvcHeadlessNameBuilder:        namer.NamerData{},
+		SvcPingNameBuilder:            namer.NamerData{},
+		PodsNameBuilder:               namer.NamerData{},
+		SecretsCredentialsNameBuilder: namer.NamerData{},
+		SecretsConsoleNameBuilder:     namer.NamerData{},
+		SecretsNettyNameBuilder:       namer.NamerData{},
+		LabelBuilder:                  selectors.LabelerData{},
+		GLOBAL_DATA_PATH:              "/opt/" + customResource.Name + "/data",
+	}
+	newNamers.SsNameBuilder.Base(customResource.Name).Suffix("ss").Generate()
+	newNamers.SsGlobalName = customResource.Name
+	newNamers.SvcHeadlessNameBuilder.Prefix(customResource.Name).Base("hdls").Suffix("svc").Generate()
+	newNamers.SvcPingNameBuilder.Prefix(customResource.Name).Base("ping").Suffix("svc").Generate()
+	newNamers.PodsNameBuilder.Base(customResource.Name).Suffix("container").Generate()
+	newNamers.SecretsCredentialsNameBuilder.Prefix(customResource.Name).Base("credentials").Suffix("secret").Generate()
+	newNamers.SecretsConsoleNameBuilder.Prefix(customResource.Name).Base("console").Suffix("secret").Generate()
+	newNamers.SecretsNettyNameBuilder.Prefix(customResource.Name).Base("netty").Suffix("secret").Generate()
+	newNamers.LabelBuilder.Base(customResource.Name).Suffix("app").Generate()
+
+	return &newNamers
 }
 
 func GetDefaultLabels(cr *brokerv1beta1.ActiveMQArtemis) map[string]string {
@@ -263,36 +214,6 @@ func GetDefaultLabels(cr *brokerv1beta1.ActiveMQArtemis) map[string]string {
 type StatefulSetInfo struct {
 	NamespacedName types.NamespacedName
 	Labels         map[string]string
-}
-
-//get the statefulset names
-func GetDeployedStatefuleSetNames(targetCrNames []types.NamespacedName) []StatefulSetInfo {
-
-	var result []StatefulSetInfo = nil
-
-	if len(targetCrNames) == 0 {
-		for _, fsm := range namespacedNameToFSM {
-			info := StatefulSetInfo{
-				NamespacedName: fsm.GetStatefulSetNamespacedName(),
-				Labels:         fsm.namers.LabelBuilder.Labels(),
-			}
-			result = append(result, info)
-		}
-		return result
-	}
-
-	for _, target := range targetCrNames {
-		clog.Info("Trying to get target fsm", "target", target)
-		if fsm := namespacedNameToFSM[target]; fsm != nil {
-			clog.Info("got fsm", "fsm", fsm, "ss namer", fsm.namers.SsNameBuilder.Name())
-			info := StatefulSetInfo{
-				NamespacedName: fsm.GetStatefulSetNamespacedName(),
-				Labels:         fsm.namers.LabelBuilder.Labels(),
-			}
-			result = append(result, info)
-		}
-	}
-	return result
 }
 
 //only test uses this

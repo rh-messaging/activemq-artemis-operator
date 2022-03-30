@@ -79,7 +79,7 @@ func (c *AddressObserver) newPodReady(ready *types.NamespacedName) {
 
 	//find out real name of the pod basename-(num - 1)
 	//podBaseNames is our interested statefulsets name
-	podBaseName, podSerial, labels := GetStatefulSetNameForPod(ready)
+	podBaseName, podSerial, labels := GetStatefulSetNameForPod(c.opclient, ready)
 	if podBaseName == "" {
 		olog.Info("Pod is not a candidate")
 		return

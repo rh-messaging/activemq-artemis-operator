@@ -70,7 +70,7 @@ func CreateOrUpdate(owner metav1.Object, namespacedName types.NamespacedName, st
 
 	if err = resources.Retrieve(namespacedName, client, secretDefinition); err != nil {
 		if errors.IsNotFound(err) {
-			err = resources.Create(owner, namespacedName, client, scheme, secretDefinition)
+			err = resources.Create(owner, client, scheme, secretDefinition)
 			if err != nil {
 				log.Error(err, "failed to create secret", "secret", namespacedName)
 			}
@@ -80,7 +80,7 @@ func CreateOrUpdate(owner metav1.Object, namespacedName types.NamespacedName, st
 	} else {
 		//Update
 		secretDefinition = NewSecret(namespacedName, namespacedName.Name, stringDataMap, labels)
-		if err = resources.Update(namespacedName, client, secretDefinition); err != nil {
+		if err = resources.Update(client, secretDefinition); err != nil {
 			log.Error(err, "Failed to update secret", "secret", namespacedName.Name)
 		}
 	}
@@ -95,7 +95,7 @@ func Create(owner metav1.Object, namespacedName types.NamespacedName, stringData
 
 	if err = resources.Retrieve(namespacedName, client, secretDefinition); err != nil {
 		if errors.IsNotFound(err) {
-			err = resources.Create(owner, namespacedName, client, scheme, secretDefinition)
+			err = resources.Create(owner, client, scheme, secretDefinition)
 			if err != nil {
 				log.Error(err, "failed to create secret", "secret", namespacedName)
 			}
@@ -107,7 +107,7 @@ func Create(owner metav1.Object, namespacedName types.NamespacedName, stringData
 
 func Delete(namespacedName types.NamespacedName, stringDataMap map[string]string, labels map[string]string, client client.Client) {
 	secretDefinition := NewSecret(namespacedName, namespacedName.Name, stringDataMap, labels)
-	resources.Delete(namespacedName, client, secretDefinition)
+	resources.Delete(client, secretDefinition)
 }
 
 func RetriveSecret(namespacedName types.NamespacedName, secretName string, labels map[string]string, client client.Client) (*corev1.Secret, error) {
@@ -136,7 +136,7 @@ func GetValueFromSecret(namespace string, autoCreateSecret bool, autoGenValue bo
 			if autoCreateSecret {
 				log.Info("Auto create secret", "name", secretName)
 				//create the secret
-				resources.Create(owner, namespacedName, client, scheme, secretDefinition)
+				resources.Create(owner, client, scheme, secretDefinition)
 			} else {
 				log.Info("No secret found", "name", secretName)
 				return nil
@@ -159,7 +159,7 @@ func GetValueFromSecret(namespace string, autoCreateSecret bool, autoGenValue bo
 		}
 		secretDefinition.Data[key] = []byte(value)
 		log.Info("Updating secret", "secret", namespacedName.Name)
-		if err := resources.Update(namespacedName, client, secretDefinition); err != nil {
+		if err := resources.Update(client, secretDefinition); err != nil {
 			log.Error(err, "failed to update secret", "secret", secretName)
 		}
 		return &value

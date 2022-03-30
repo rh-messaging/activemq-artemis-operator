@@ -49,8 +49,6 @@ func init() {
 
 func DetectOpenshift() (bool, error) {
 
-	log.Info("Detect if openshift is running")
-
 	value, ok := os.LookupEnv("OPERATOR_OPENSHIFT")
 	if ok {
 		log.Info("Set by env-var 'OPERATOR_OPENSHIFT': " + value)

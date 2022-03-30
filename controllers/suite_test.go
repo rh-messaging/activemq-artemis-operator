@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	brokerv1alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v1alpha1"
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
@@ -77,6 +78,8 @@ var testEnv *envtest.Environment
 var ctx context.Context
 var cancel context.CancelFunc
 var stateManager *common.StateManager
+var autodetect *common.AutoDetector
+var k8Manager manager.Manager
 
 var brokerReconciler *ActiveMQArtemisReconciler
 var securityReconciler *ActiveMQArtemisSecurityReconciler
@@ -92,6 +95,7 @@ var oprRes = []string{
 }
 
 func TestAPIs(t *testing.T) {
+
 	RegisterFailHandler(Fail)
 
 	RunSpecs(t, "Controller Suite")
@@ -115,7 +119,7 @@ func setUpEnvTest() {
 	setUpK8sClient()
 
 	// start our controler
-	k8Manager, err := ctrl.NewManager(restConfig, ctrl.Options{
+	k8Manager, err = ctrl.NewManager(restConfig, ctrl.Options{
 		Scheme: scheme.Scheme,
 	})
 	Expect(err).ToNot(HaveOccurred())
@@ -130,13 +134,13 @@ func setUpEnvTest() {
 		autodetect.DetectOpenshift()
 	}
 
-	// watch all namespaces by default
-	nsoptions.SetWatchAll(true)
+	nsoptions := nsoptions.WatchOptions{}
+	nsoptions.SetWatchList([]string{"default"})
 
 	brokerReconciler = &ActiveMQArtemisReconciler{
-		Client: k8Manager.GetClient(),
-		Scheme: k8Manager.GetScheme(),
-		Result: ctrl.Result{},
+		Client:       k8Manager.GetClient(),
+		Scheme:       k8Manager.GetScheme(),
+		WatchOptions: nsoptions,
 	}
 
 	if err = brokerReconciler.SetupWithManager(k8Manager); err != nil {
@@ -153,17 +157,19 @@ func setUpEnvTest() {
 	Expect(err).ToNot(HaveOccurred(), "failed to create security controller")
 
 	addressReconciler := &ActiveMQArtemisAddressReconciler{
-		Client: k8Manager.GetClient(),
-		Scheme: k8Manager.GetScheme(),
+		Client:       k8Manager.GetClient(),
+		Scheme:       k8Manager.GetScheme(),
+		WatchOptions: nsoptions,
 	}
 
 	err = addressReconciler.SetupWithManager(k8Manager)
 	Expect(err).ToNot(HaveOccurred(), "failed to create address reconciler")
 
 	scaleDownRconciler := &ActiveMQArtemisScaledownReconciler{
-		Client: k8Manager.GetClient(),
-		Scheme: k8Manager.GetScheme(),
-		Config: k8Manager.GetConfig(),
+		Client:       k8Manager.GetClient(),
+		Scheme:       k8Manager.GetScheme(),
+		Config:       k8Manager.GetConfig(),
+		WatchOptions: nsoptions,
 	}
 
 	err = scaleDownRconciler.SetupWithManager(k8Manager)

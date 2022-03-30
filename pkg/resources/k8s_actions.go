@@ -2,6 +2,7 @@ package resources
 
 import (
 	"context"
+	"net/http"
 	"reflect"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
@@ -16,10 +17,10 @@ import (
 
 var log = ctrl.Log.WithName("package k8s_actions")
 
-func Create(owner v1.Object, namespacedName types.NamespacedName, client client.Client, scheme *runtime.Scheme, clientObject client.Object) error {
+func Create(owner v1.Object, client client.Client, scheme *runtime.Scheme, clientObject client.Object) error {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
+	reqLogger := log.WithValues("ActiveMQArtemis Name", clientObject.GetName(), "Namespace", clientObject.GetNamespace())
 	objectTypeString := reflect.TypeOf(clientObject.(runtime.Object)).String()
 	reqLogger.Info("Creating new " + objectTypeString)
 
@@ -33,9 +34,10 @@ func Create(owner v1.Object, namespacedName types.NamespacedName, client client.
 
 	if err = client.Create(context.TODO(), clientObject); err != nil {
 		// Add error detail for use later
-		reqLogger.Info("Failed to create new " + objectTypeString)
+		reqLogger.Error(err, "Failed to create new "+objectTypeString)
+	} else {
+		reqLogger.Info("Created new " + objectTypeString)
 	}
-	reqLogger.Info("Created new " + objectTypeString)
 
 	return err
 }
@@ -73,25 +75,42 @@ func RetrieveWithRetry(namespacedName types.NamespacedName, theClient client.Cli
 }
 
 func Retrieve(namespacedName types.NamespacedName, client client.Client, objectDefinition client.Object) error {
-	return RetrieveWithRetry(namespacedName, client, objectDefinition, false)
+	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
+	objectTypeString := reflect.TypeOf(objectDefinition.(runtime.Object)).String()
+	reqLogger.Info("Retrieving " + objectTypeString)
+
+	return client.Get(context.TODO(), namespacedName, objectDefinition)
 }
 
-func Update(namespacedName types.NamespacedName, client client.Client, clientObject client.Object) error {
+func Update(client client.Client, clientObject client.Object) error {
 
-	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
+	reqLogger := log.WithValues("ActiveMQArtemis Name", clientObject.GetName(), "Namespace", clientObject.GetNamespace())
 	objectTypeString := reflect.TypeOf(clientObject.(runtime.Object)).String()
 	reqLogger.V(1).Info("Updating "+objectTypeString, "obj", clientObject)
 
 	var err error = nil
 	if err = client.Update(context.TODO(), clientObject); err != nil {
-		reqLogger.Error(err, "Failed to update "+objectTypeString)
+		switch checkForForbidden := err.(type) {
+		case *errors.StatusError:
+			if checkForForbidden.ErrStatus.Status == v1.StatusFailure &&
+				checkForForbidden.ErrStatus.Code == http.StatusUnprocessableEntity &&
+				checkForForbidden.ErrStatus.Reason == v1.StatusReasonInvalid {
+
+				// "StatefulSet.apps is invalid: spec: Forbidden: updates to statefulset spec for fields other than 'replicas', 'template', 'updateStrategy' and 'minReadySeconds' are forbidden"}
+				reqLogger.V(1).Info("Deleting on failed updating "+objectTypeString, "obj", clientObject, "Forbidden", err)
+				err = Delete(client, clientObject)
+				break
+			}
+		default:
+			reqLogger.Error(err, "Failed to update "+objectTypeString)
+		}
 	}
 
 	return err
 }
 
-func UpdateStatus(namespacedName types.NamespacedName, client client.Client, clientObject client.Object) error {
-	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
+func UpdateStatus(client client.Client, clientObject client.Object) error {
+	reqLogger := log.WithValues("ActiveMQArtemis Name", clientObject.GetName(), "Namespace", clientObject.GetNamespace())
 	objectTypeString := reflect.TypeOf(clientObject.(runtime.Object)).String()
 	reqLogger.V(1).Info("Updating status "+objectTypeString, "obj", clientObject)
 
@@ -102,9 +121,9 @@ func UpdateStatus(namespacedName types.NamespacedName, client client.Client, cli
 	return err
 }
 
-func Delete(namespacedName types.NamespacedName, client client.Client, clientObject client.Object) error {
+func Delete(client client.Client, clientObject client.Object) error {
 
-	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
+	reqLogger := log.WithValues("ActiveMQArtemis Name", clientObject.GetName(), "Namespace", clientObject.GetNamespace())
 	objectTypeString := reflect.TypeOf(clientObject.(runtime.Object)).String()
 	reqLogger.Info("Deleting " + objectTypeString)
 
@@ -149,7 +168,7 @@ func configureExposure(owner v1.Object, client client.Client, scheme *runtime.Sc
 	// We want a service to be exposed and currently it is not found
 	if enable && serviceIsNotFound {
 		reqLogger.Info("Creating " + namespacedName.Name)
-		if err = Create(owner, namespacedName, client, scheme, clientObject); err != nil {
+		if err = Create(owner, client, scheme, clientObject); err != nil {
 			causedUpdate = true
 		}
 	}
@@ -157,7 +176,7 @@ func configureExposure(owner v1.Object, client client.Client, scheme *runtime.Sc
 	// We do NOT want a service to be exposed and the service IS found
 	if !enable && !serviceIsNotFound {
 		reqLogger.Info("Deleting " + namespacedName.Name)
-		if err = Delete(namespacedName, client, clientObject); err != nil {
+		if err = Delete(client, clientObject); err != nil {
 			causedUpdate = true
 		}
 	}

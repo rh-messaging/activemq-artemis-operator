@@ -18,8 +18,10 @@ package controllers
 
 import (
 	"context"
+	"reflect"
 	"strconv"
 
+	"github.com/RHsyseng/operator-utils/pkg/resource/read"
 	mgmt "github.com/artemiscloud/activemq-artemis-management"
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
@@ -39,6 +41,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -57,6 +60,7 @@ var namespacedNameToAddressName = make(map[types.NamespacedName]AddressDeploymen
 type ActiveMQArtemisAddressReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	nsoptions.WatchOptions
 }
 
 //+kubebuilder:rbac:groups=broker.amq.io,resources=activemqartemisaddresses,verbs=get;list;watch;create;update;patch;delete
@@ -79,7 +83,7 @@ func (r *ActiveMQArtemisAddressReconciler) Reconcile(ctx context.Context, reques
 	//remove nsoptions package once migration to new sdk ready
 	//as we use the built-in api in main.go to watch
 	//multiple namespaces
-	if !nsoptions.Match(request.Namespace) {
+	if !r.WatchOptions.Match(request.Namespace) {
 		reqLogger.Info("Request not in watch list, ignore", "request", request)
 		return ctrl.Result{}, nil
 	}
@@ -364,9 +368,10 @@ func getPodBrokers(instance *AddressDeployment, request ctrl.Request, client cli
 
 	reqLogger.Info("target Cr names", "result", targetCrNamespacedNames)
 
-	ssInfos := GetDeployedStatefuleSetNames(targetCrNamespacedNames)
+	// can probabally list the required ss directly
+	ssInfos := GetDeployedStatefuleSetNames(client, targetCrNamespacedNames)
 
-	reqLogger.Info("got taget ssNames from broker controller", "ssInfos", ssInfos)
+	reqLogger.Info("got target ssNames from broker controller", "ssInfos", ssInfos)
 
 	for n, info := range ssInfos {
 		reqLogger.Info("Now retrieve ss", "order", n, "ssName", info.NamespacedName)
@@ -416,6 +421,43 @@ func getPodBrokers(instance *AddressDeployment, request ctrl.Request, client cli
 
 	reqLogger.Info("Finally we gathered some mgmt arry", "size", len(artemisArray))
 	return artemisArray
+}
+
+//get the statefulset names
+func GetDeployedStatefuleSetNames(client client.Client, targetCrNames []types.NamespacedName) []StatefulSetInfo {
+
+	var result []StatefulSetInfo = nil
+
+	var resourceMap map[reflect.Type][]rtclient.Object
+
+	// may need to lock down list result with labels
+	resourceMap, _ = read.New(client).ListAll(
+		&appsv1.StatefulSetList{},
+	)
+
+	var match bool = true
+	filtered := len(targetCrNames) > 0
+	for _, ssObject := range resourceMap[reflect.TypeOf(appsv1.StatefulSet{})] {
+
+		if filtered {
+			match = false
+			// track if a match
+			for _, filter := range targetCrNames {
+				if filter.Namespace == ssObject.GetNamespace() && filter.Name == ssObject.GetName() {
+					match = true
+					break
+				}
+			}
+		}
+		if match {
+			info := StatefulSetInfo{
+				NamespacedName: types.NamespacedName{Namespace: ssObject.GetNamespace(), Name: ssObject.GetName()},
+				Labels:         ssObject.GetLabels(),
+			}
+			result = append(result, info)
+		}
+	}
+	return result
 }
 
 func resolveJolokiaRequestParams(namespace string,
@@ -537,7 +579,7 @@ func createTargetCrNamespacedNames(namespace string, targetCrNames []string) []t
 	return result
 }
 
-func GetStatefulSetNameForPod(pod *types.NamespacedName) (string, int, map[string]string) {
+func GetStatefulSetNameForPod(client client.Client, pod *types.NamespacedName) (string, int, map[string]string) {
 	glog.Info("Trying to find SS name for pod", "pod name", pod.Name, "pod ns", pod.Namespace)
 	for crName, addressDeployment := range namespacedNameToAddressName {
 		glog.Info("checking address cr in stock", "cr", crName)
@@ -548,7 +590,7 @@ func GetStatefulSetNameForPod(pod *types.NamespacedName) (string, int, map[strin
 		if len(addressDeployment.SsTargetNameBuilders) == 0 {
 			glog.Info("this cr doesn't have target specified, it will be applied to all")
 			//deploy to all sts, need get from broker controller
-			ssInfos := GetDeployedStatefuleSetNames(nil)
+			ssInfos := GetDeployedStatefuleSetNames(client, nil)
 			if len(ssInfos) == 0 {
 				glog.Info("No statefulset found")
 				return "", -1, nil

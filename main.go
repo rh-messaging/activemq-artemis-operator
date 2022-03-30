@@ -138,6 +138,7 @@ func main() {
 	}
 	//we may get rid of nsoptions as new runtime
 	//lib offers the capability
+	nsoptions := nsoptions.WatchOptions{}
 	nsoptions.SetWatchAll(watchAllNamespaces)
 
 	// Expose the operator's namespace and watchNamespace
@@ -207,18 +208,19 @@ func main() {
 	}
 
 	brokerReconciler := &controllers.ActiveMQArtemisReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Result: ctrl.Result{},
+		Client:       mgr.GetClient(),
+		Scheme:       mgr.GetScheme(),
+		WatchOptions: nsoptions,
 	}
-
 	if err = brokerReconciler.SetupWithManager(mgr); err != nil {
 		log.Error(err, "unable to create controller", "controller", "ActiveMQArtemis")
 		os.Exit(1)
 	}
+
 	if err = (&controllers.ActiveMQArtemisAddressReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:       mgr.GetClient(),
+		Scheme:       mgr.GetScheme(),
+		WatchOptions: nsoptions,
 	}).SetupWithManager(mgr); err != nil {
 		log.Error(err, "unable to create controller", "controller", "ActiveMQArtemisAddress")
 		os.Exit(1)

@@ -11,7 +11,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 func TestHexShaHashOfMap(t *testing.T) {
@@ -53,13 +52,6 @@ func TestHexShaHashOfMap(t *testing.T) {
 }
 
 func TestMapComparatorForStatefulSet(t *testing.T) {
-
-	brokerCr := generateArtemisSpec(defaultNamespace)
-	namespacedName := types.NamespacedName{
-		Name:      brokerCr.Name,
-		Namespace: brokerCr.Namespace,
-	}
-	fsm := NewActiveMQArtemisFSM(&brokerCr, namespacedName, nil)
 
 	ss := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{Kind: "StatefulSet", APIVersion: "apps/v1beta1"},
@@ -143,22 +135,24 @@ func TestMapComparatorForStatefulSet(t *testing.T) {
 		Status: appsv1.StatefulSetStatus{},
 	}
 
-	fsm.requestedResources = append(fsm.requestedResources, ss0)
+	var requestedResources []client.Object
 
-	fsm.requestedResources = append(fsm.requestedResources, ssMod)
+	requestedResources = append(requestedResources, ss0)
 
-	fsm.deployed = make(map[reflect.Type][]client.Object)
+	requestedResources = append(requestedResources, ssMod)
+
+	deployed := make(map[reflect.Type][]client.Object)
 	var deployedSets []client.Object
 	deployedSets = append(deployedSets, ss)
 
 	ssType := reflect.ValueOf(ss).Elem().Type()
-	fsm.deployed[ssType] = deployedSets
+	deployed[ssType] = deployedSets
 
-	requested := compare.NewMapBuilder().Add(fsm.requestedResources...).ResourceMap()
+	requested := compare.NewMapBuilder().Add(requestedResources...).ResourceMap()
 	comparator := compare.NewMapComparator()
 
 	comparator.Comparator.SetDefaultComparator(semanticEquals)
-	deltas := comparator.Compare(fsm.deployed, requested)
+	deltas := comparator.Compare(deployed, requested)
 
 	for resourceType, delta := range deltas {
 		t.Log("", "instances of ", resourceType, "Will create ", len(delta.Added), "update ", len(delta.Updated), "and delete", len(delta.Removed))

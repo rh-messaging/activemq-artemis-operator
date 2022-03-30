@@ -37,9 +37,8 @@ import (
 var slog = ctrl.Log.WithName("controller_v1beta1activemqartemisscaledown")
 
 var (
-	masterURL  string
-	kubeconfig string
-	localOnly  bool
+	namespace string
+	localOnly bool
 )
 
 var StopCh chan struct{}
@@ -53,6 +52,7 @@ type ActiveMQArtemisScaledownReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 	Config *rest.Config
+	nsoptions.WatchOptions
 }
 
 //+kubebuilder:rbac:groups=broker.amq.io,resources=activemqartemisscaledowns,verbs=get;list;watch;create;update;patch;delete
@@ -72,7 +72,7 @@ func (r *ActiveMQArtemisScaledownReconciler) Reconcile(ctx context.Context, requ
 	reqLogger := ctrl.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling ActiveMQArtemisScaledown")
 
-	if !nsoptions.Match(request.Namespace) {
+	if !r.WatchOptions.Match(request.Namespace) {
 		reqLogger.Info("Request not in watch list, ignore", "request", request)
 		return ctrl.Result{}, nil
 	}

@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -13,38 +12,6 @@ import (
 )
 
 var log = logf.Log.WithName("package services")
-
-var HeadlessNameBuilder namer.NamerData
-var PingNameBuilder namer.NamerData
-
-//var ServiceNameBuilderArray []namer.NamerData
-//var RouteNameBuilderArray []namer.NamerData
-
-// newServiceForPod returns an activemqartemis service for the pod just created
-func NewHeadlessServiceForCR(namespacedName types.NamespacedName, servicePorts *[]corev1.ServicePort, labels map[string]string) *corev1.Service {
-
-	svc := &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: nil,
-			Labels:      labels,
-			Name:        HeadlessNameBuilder.Name(),
-			Namespace:   namespacedName.Namespace,
-		},
-		Spec: corev1.ServiceSpec{
-			Type:                     "ClusterIP",
-			Ports:                    *servicePorts,
-			Selector:                 labels,
-			ClusterIP:                "None",
-			PublishNotReadyAddresses: true,
-		},
-	}
-
-	return svc
-}
 
 func NewHeadlessServiceForCR2(client client.Client, serviceName string, namespace string, servicePorts *[]corev1.ServicePort, labels map[string]string) *corev1.Service {
 
@@ -74,9 +41,7 @@ func NewHeadlessServiceForCR2(client client.Client, serviceName string, namespac
 	return svc
 }
 
-// newServiceForPod returns an activemqartemis service for the pod just created
-//func NewServiceDefinitionForCR(cr *brokerv2alpha1.ActiveMQArtemis, nameSuffix string, portNumber int32, selectorLabels map[string]string) *corev1.Service {
-func NewServiceDefinitionForCR(namespacedName types.NamespacedName, nameSuffix string, portNumber int32, selectorLabels map[string]string, labels map[string]string) *corev1.Service {
+func NewServiceDefinitionForCR(client client.Client, crNameSpacedName types.NamespacedName, nameSuffix string, portNumber int32, selectorLabels map[string]string, labels map[string]string) *corev1.Service {
 
 	port := corev1.ServicePort{
 		Name:       nameSuffix,
@@ -87,59 +52,30 @@ func NewServiceDefinitionForCR(namespacedName types.NamespacedName, nameSuffix s
 	ports := []corev1.ServicePort{}
 	ports = append(ports, port)
 
-	svc := &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: nil,
-			Labels:      labels,
-			Name:        namespacedName.Name + "-" + nameSuffix + "-svc",
-			Namespace:   namespacedName.Namespace,
-		},
-		Spec: corev1.ServiceSpec{
-			Type:                     "ClusterIP",
-			Ports:                    ports,
-			Selector:                 selectorLabels,
-			SessionAffinity:          "None",
-			PublishNotReadyAddresses: true,
-		},
-	}
-
-	return svc
-}
-
-// newServiceForPod returns an activemqartemis service for the pod just created
-func NewPingServiceDefinitionForCR(namespacedName types.NamespacedName, labels map[string]string, selectorLabels map[string]string) *corev1.Service {
-
-	port := corev1.ServicePort{
-		Protocol:   "TCP",
-		Port:       8888,
-		TargetPort: intstr.FromInt(int(8888)),
-	}
-	ports := []corev1.ServicePort{}
-	ports = append(ports, port)
+	svcName := types.NamespacedName{Namespace: crNameSpacedName.Namespace, Name: crNameSpacedName.Name + "-" + nameSuffix + "-svc"}
 
 	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Service",
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: nil,
-			Labels:      labels,
-			Name:        PingNameBuilder.Name(),
-			Namespace:   namespacedName.Namespace,
-		},
-		Spec: corev1.ServiceSpec{
-			Type:                     "ClusterIP",
-			Ports:                    ports,
-			Selector:                 selectorLabels,
-			ClusterIP:                "None",
-			PublishNotReadyAddresses: true,
-		},
+		ObjectMeta: metav1.ObjectMeta{},
+		Spec:       corev1.ServiceSpec{},
 	}
+
+	// fetch  existing state
+	client.Get(context.TODO(), svcName, svc)
+
+	// apply desired
+	svc.ObjectMeta.Labels = labels
+	svc.ObjectMeta.Name = svcName.Name
+	svc.ObjectMeta.Namespace = svcName.Namespace
+
+	svc.Spec.Type = "ClusterIP"
+	svc.Spec.Ports = ports
+	svc.Spec.Selector = selectorLabels
+	svc.Spec.SessionAffinity = "None"
+	svc.Spec.PublishNotReadyAddresses = true
 
 	return svc
 }

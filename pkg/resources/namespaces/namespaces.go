@@ -5,24 +5,19 @@ type WatchOptions struct {
 	watchList []string
 }
 
-var watch WatchOptions = WatchOptions{
-	watchAll:  false,
-	watchList: []string{},
-}
-
-func SetWatchAll(watchAll bool) {
+func (watch *WatchOptions) SetWatchAll(watchAll bool) {
 	watch.watchAll = watchAll
 }
 
-func SetWatchList(watchList []string) {
+func (watch *WatchOptions) SetWatchList(watchList []string) {
 	watch.watchList = watchList
 }
 
-func SetWatchNamespace(namespace string) {
+func (watch *WatchOptions) SetWatchNamespace(namespace string) {
 	watch.watchList = []string{namespace}
 }
 
-func Match(namespace string) bool {
+func (watch *WatchOptions) Match(namespace string) bool {
 	if watch.watchAll {
 		return true
 	}

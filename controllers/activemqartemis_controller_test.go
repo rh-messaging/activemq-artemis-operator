@@ -54,9 +54,11 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
+	nsoptions "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/namespaces"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/cr2jinja2"
 
 	"github.com/Azure/go-amqp"
+	netv1 "k8s.io/api/networking/v1"
 )
 
 //Uncomment this and the "test" import if you want to debug this set of tests
@@ -809,12 +811,7 @@ var _ = Describe("artemis controller", func() {
 		crd.Spec.Console.Expose = true
 		crd.Spec.Console.SSLEnabled = true
 
-		namespacedName := types.NamespacedName{
-			Name:      crd.Name,
-			Namespace: namespace,
-		}
 		reconcilerImpl := &ActiveMQArtemisReconcilerImpl{}
-		theFsm := MakeActiveMQArtemisFSM(&crd, namespacedName, brokerReconciler)
 
 		It("deploy broker with ssl enabled console", func() {
 			os.Setenv("OPERATOR_OPENSHIFT", "true")
@@ -831,8 +828,10 @@ var _ = Describe("artemis controller", func() {
 				Name: "init-container",
 			}}
 
-			reconcilerImpl.ProcessConsole(theFsm, brokerReconciler.Client, brokerReconciler.Scheme, currentSS)
-			secretName := theFsm.GetConsoleSecretName()
+			namer := MakeNamers(&crd)
+			reconcilerImpl.ProcessConsole(&crd, *namer, brokerReconciler.Client, brokerReconciler.Scheme, currentSS)
+
+			secretName := namer.SecretsConsoleNameBuilder.Name()
 			internalSecretName := secretName + "-internal"
 			consoleArgs := "AMQ_CONSOLE_ARGS"
 
@@ -840,7 +839,7 @@ var _ = Describe("artemis controller", func() {
 			foundInternalSecret := false
 			defaultSecretPath := "/etc/" + defaultConsoleSecretName + "-volume/"
 			defaultSslArgs := " --ssl-key " + defaultSecretPath + "broker.ks --ssl-key-password password --ssl-trust " + defaultSecretPath + "client.ts --ssl-trust-password password"
-			for _, reqres := range theFsm.requestedResources {
+			for _, reqres := range reconcilerImpl.requestedResources {
 				if reqres.GetObjectKind().GroupVersionKind().Kind == "Secret" {
 					secret := reqres.(*corev1.Secret)
 					if secret.Name == secretName {
@@ -904,7 +903,7 @@ var _ = Describe("artemis controller", func() {
 			})
 
 			By("Check for default CR instance deletion")
-			Expect(k8sClient.Delete(context, retrievedCR))
+			Expect(k8sClient.Delete(context, retrievedCR)).Should(Succeed())
 			Eventually(func() bool {
 				return checkCrdDeleted(defaultCR.ObjectMeta.Name, namespace, retrievedCR)
 			}, timeout, interval).Should(BeTrue())
@@ -969,53 +968,28 @@ var _ = Describe("artemis controller", func() {
 
 			retrievednonDefaultCR := brokerv1beta1.ActiveMQArtemis{}
 			By("Checking to ensure that the non-default CR was created with the right values " + nonDefaultCR.Name)
-			Eventually(func() bool {
+			Eventually(func(g Gomega) {
 				key := types.NamespacedName{Name: nonDefaultCR.Name, Namespace: namespace}
-				retVal := false
-				for {
-					if err := k8sClient.Get(context, key, &retrievednonDefaultCR); nil != err {
-						break
-					}
-					if !reflect.DeepEqual(nonDefaultCR.Spec.DeploymentPlan.PodSecurityContext, retrievednonDefaultCR.Spec.DeploymentPlan.PodSecurityContext) {
-						break
-					}
+				g.Expect(k8sClient.Get(context, key, &retrievednonDefaultCR)).Should(Succeed())
+				g.Expect(reflect.DeepEqual(nonDefaultCR.Spec.DeploymentPlan.PodSecurityContext,
+					retrievednonDefaultCR.Spec.DeploymentPlan.PodSecurityContext)).Should(BeTrue())
 
-					retVal = true
-					break
-				}
-
-				return retVal
-			})
+			}, timeout, interval).Should(Succeed())
 
 			By("Checking that the StatefulSet has been created with the non-default PodSecurityContext " + namer.CrToSS(nonDefaultCR.Name))
-			Eventually(func() bool {
+			Eventually(func(g Gomega) {
 				nonDefaultSS := &appsv1.StatefulSet{}
 				key := types.NamespacedName{Name: namer.CrToSS(nonDefaultCR.Name), Namespace: namespace}
-				retVal := false
-				for {
-					if err := k8sClient.Get(context, key, nonDefaultSS); nil != err {
-						break
-					}
+				g.Expect(k8sClient.Get(context, key, nonDefaultSS)).Should(Succeed())
 
-					if nil == nonDefaultSS.Spec.Template.Spec.SecurityContext {
-						break
-					}
-
-					if !reflect.DeepEqual(nonDefaultCR, nonDefaultSS.Spec.Template.Spec.SecurityContext) {
-						break
-					}
-
-					retVal = true
-					break
-				}
-
-				return retVal
-			})
+				g.Expect(nonDefaultSS.Spec.Template.Spec.SecurityContext).ShouldNot(BeNil())
+				g.Expect(reflect.DeepEqual(nonDefaultCR.Spec.DeploymentPlan.PodSecurityContext, nonDefaultSS.Spec.Template.Spec.SecurityContext)).Should(BeTrue())
+			}, timeout, interval).Should(Succeed())
 
 			By("Check for non-default CR instance deletion")
-			Expect(k8sClient.Delete(context, &retrievednonDefaultCR))
+			Expect(k8sClient.Delete(context, &retrievednonDefaultCR)).Should(Succeed())
 			Eventually(func() bool {
-				return checkCrdDeleted(defaultCR.ObjectMeta.Name, namespace, &retrievednonDefaultCR)
+				return checkCrdDeleted(retrievednonDefaultCR.ObjectMeta.Name, namespace, &retrievednonDefaultCR)
 			}, timeout, interval).Should(BeTrue())
 		})
 	})
@@ -1105,8 +1079,7 @@ var _ = Describe("artemis controller", func() {
 					return false
 				}
 
-				fmt.Printf("checking value of key: %v\n", createdSs.Spec.Template.Spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution[0].LabelSelector.MatchLabels["key"])
-				By("Making sure the pd affinity are correct")
+				By("checking value of key:" + createdSs.Spec.Template.Spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution[0].LabelSelector.MatchLabels["key"])
 				return createdSs.Spec.Template.Spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution[0].LabelSelector.MatchLabels["key"] == "differentvalue"
 
 			}, timeout, interval).Should(BeTrue())
@@ -1196,7 +1169,7 @@ var _ = Describe("artemis controller", func() {
 					return false
 				}
 
-				fmt.Printf("checking value of key: %v\n", createdSs.Spec.Template.Spec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution[0].LabelSelector.MatchLabels["key"])
+				By("checking value of key:" + createdSs.Spec.Template.Spec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution[0].LabelSelector.MatchLabels["key"])
 				return createdSs.Spec.Template.Spec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution[0].LabelSelector.MatchLabels["key"] == "differentvalue"
 
 			}, timeout, interval).Should(BeTrue())
@@ -1410,6 +1383,71 @@ var _ = Describe("artemis controller", func() {
 
 			By("check it has gone")
 			Expect(k8sClient.Delete(ctx, createdCrd))
+
+		})
+	})
+
+	Context("Different namespace, deployed before start", func() {
+		It("Expect pod desc", func() {
+			By("By creating a new crd")
+			ctx := context.Background()
+
+			nonDefaultNamespace := "non-default"
+
+			ns := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: nonDefaultNamespace,
+				},
+			}
+			err := k8sClient.Create(ctx, ns)
+			if err != nil {
+				Expect(errors.IsConflict(err))
+			}
+			crd := generateArtemisSpec(nonDefaultNamespace)
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+			Eventually(func() bool {
+				return getPersistedVersionedCrd(crd.ObjectMeta.Name, nonDefaultNamespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
+
+			// would like more status updates on createdCrd
+
+			By("By checking absence of stateful set")
+			key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: nonDefaultNamespace}
+			createdSs := &appsv1.StatefulSet{}
+			Expect(k8sClient.Get(ctx, key, createdSs)).ShouldNot(Succeed())
+
+			By("By starting reconciler for this namespace")
+
+			nsoptions := nsoptions.WatchOptions{}
+			nsoptions.SetWatchList([]string{"non-default"})
+
+			nonDefaultNsReconciler := &ActiveMQArtemisReconciler{
+				Client:       k8Manager.GetClient(),
+				Scheme:       k8Manager.GetScheme(),
+				WatchOptions: nsoptions,
+			}
+			Expect(nonDefaultNsReconciler.SetupWithManager(k8Manager)).Should(Succeed())
+
+			By("Checking stopped status of CR because we expect it to fail to deploy")
+			Eventually(func() (int, error) {
+				key := types.NamespacedName{Name: crd.ObjectMeta.Name, Namespace: nonDefaultNamespace}
+				err := k8sClient.Get(ctx, key, createdCrd)
+
+				if err != nil {
+					return -1, err
+				}
+
+				return len(createdCrd.Status.PodStatus.Stopped), nil
+			}, timeout, interval).Should(Equal(1))
+
+			By("deleting crd")
+			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
+
+			By("check it has gone")
 			Eventually(func() bool {
 				return checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd)
 			}, timeout, interval).Should(BeTrue())
@@ -1895,7 +1933,7 @@ var _ = Describe("artemis controller", func() {
 					}
 				}
 				return count
-			}, timeout, interval).Should(Equal(3))
+			}, timeout, interval).Should(Equal(2))
 
 			By("deleting crd")
 			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
@@ -2205,6 +2243,40 @@ var _ = Describe("artemis controller", func() {
 			Expect(k8sClient.Delete(ctx, &crd2)).Should(Succeed())
 		})
 
+		It("Expect two crs to coexist", func() {
+			By("By creating two crds with BrokerProperties in the spec")
+			ctx := context.Background()
+			crd1 := generateArtemisSpec(namespace)
+			crd2 := generateArtemisSpec(namespace)
+
+			Expect(k8sClient.Create(ctx, &crd1)).Should(Succeed())
+			Expect(k8sClient.Create(ctx, &crd2)).Should(Succeed())
+
+			By("By eventualy finding two config maps with broker props")
+			configMapList := &corev1.ConfigMapList{}
+			opts := &client.ListOptions{
+				Namespace: namespace,
+			}
+			Eventually(func() int {
+				err := k8sClient.List(ctx, configMapList, opts)
+				if err != nil {
+					fmt.Printf("error getting list of configopts map! %v", err)
+				}
+
+				ret := 0
+				for _, cm := range configMapList.Items {
+					if strings.Contains(cm.ObjectMeta.Name, crd1.Name) || strings.Contains(cm.ObjectMeta.Name, crd2.Name) {
+						ret++
+					}
+				}
+				return ret
+			}, timeout, interval).Should(BeEquivalentTo(2))
+
+			// cleanup
+			Expect(k8sClient.Delete(ctx, &crd1)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, &crd2)).Should(Succeed())
+		})
+
 	})
 
 	Context("With address settings via updated cr", func() {
@@ -2384,7 +2456,135 @@ var _ = Describe("artemis controller", func() {
 
 		})
 	})
-	Context("With deployed controller", func() {
+
+	Context("With address cr", func() {
+		It("Expect ok deploy", func() {
+			By("By creating a crd without  address spec")
+			ctx := context.Background()
+			crd := generateArtemisSpec(namespace)
+
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+			Eventually(func() bool {
+				return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
+
+			By("By deploying address cr for this namespace but not for this CR")
+
+			addressCrd := brokerv1beta1.ActiveMQArtemisAddress{}
+			addressCrd.SetName("a1")
+			addressCrd.SetNamespace(namespace)
+			addressCrd.Spec.AddressName = "a1"
+			routingTypeShouldBeOptional := "MULTICAST"
+			addressCrd.Spec.RoutingType = &routingTypeShouldBeOptional
+			addressCrd.Spec.ApplyToCrNames = []string{"bong"}
+
+			Expect(k8sClient.Create(ctx, &addressCrd)).Should(Succeed())
+
+			By("Checking stopped status of CR")
+			Eventually(func() (int, error) {
+				key := types.NamespacedName{Name: crd.ObjectMeta.Name, Namespace: namespace}
+				err := k8sClient.Get(ctx, key, createdCrd)
+
+				if err != nil {
+					return -1, err
+				}
+
+				return len(createdCrd.Status.PodStatus.Stopped), nil
+			}, timeout, interval).Should(Equal(1))
+
+			By("adding an address via update")
+			createdAddressCr := &brokerv1beta1.ActiveMQArtemisAddress{}
+			Eventually(func() error {
+
+				key := types.NamespacedName{Name: addressCrd.ObjectMeta.Name, Namespace: namespace}
+				err := k8sClient.Get(ctx, key, createdAddressCr)
+
+				if err == nil {
+					// ensure a1 applies to this cr
+					createdAddressCr.Spec.ApplyToCrNames = append(createdAddressCr.Spec.ApplyToCrNames, createdCrd.Name)
+
+					err = k8sClient.Update(ctx, createdAddressCr)
+				}
+
+				return err
+			}, timeout, interval).Should(Succeed())
+
+			// cr gets rconciled, but nothing done yet till pods created
+
+			// cleanup
+			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, createdAddressCr)).Should(Succeed())
+		})
+	})
+
+	Context("With toggle persistence=true", func() {
+		It("Expect ok redeploy", func() {
+			By("By creating a crd without persistence")
+			ctx := context.Background()
+			crd := generateArtemisSpec(namespace)
+
+			crd.Spec.DeploymentPlan.PersistenceEnabled = false
+
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			By("By eventualy finding a matching config map with broker props")
+			createdSs := &appsv1.StatefulSet{}
+
+			By("Making sure that the ss gets deployed " + crd.ObjectMeta.Name)
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(crd.Name), Namespace: namespace}
+
+				err := k8sClient.Get(ctx, key, createdSs)
+
+				return err == nil
+			}, timeout, interval).Should(Equal(true))
+
+			initialVersion := createdSs.ObjectMeta.ResourceVersion
+
+			By("updating the crd for persistence")
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+			Eventually(func() bool {
+
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: crd.ObjectMeta.Name, Namespace: crd.ObjectMeta.Namespace}, createdCrd)
+				if err == nil {
+
+					createdCrd.Spec.DeploymentPlan.PersistenceEnabled = true
+					err = k8sClient.Update(ctx, createdCrd)
+					if err != nil {
+						fmt.Printf("error on update! %v\n", err)
+					}
+				}
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			By("Making sure that the ss gets redeployed " + crd.ObjectMeta.Name)
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(crd.Name), Namespace: namespace}
+
+				err := k8sClient.Get(ctx, key, createdSs)
+
+				if err == nil {
+					// verify persisted with a new revision, update would have failed
+					return createdSs.ObjectMeta.ResourceVersion > "0" && initialVersion != createdSs.ObjectMeta.ResourceVersion
+				}
+				return err == nil
+			}, timeout, interval).Should(Equal(true))
+
+			// cleanup
+			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
+			By("check it has gone")
+			Eventually(func() bool {
+				return checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+
+		})
+	})
+	Context("With delopyed controller - acceptor", func() {
 		It("Checking acceptor service while expose is false", func() {
 			By("By creating a new crd")
 			ctx := context.Background()
@@ -2428,6 +2628,34 @@ var _ = Describe("artemis controller", func() {
 				err := k8sClient.Get(context.Background(), key, connectorService)
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
+
+			By("updating with expose=true")
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: crd.Name, Namespace: namespace}
+				err := k8sClient.Get(ctx, key, &crd)
+				if err == nil {
+					crd.Spec.Acceptors[0].Expose = true
+					crd.Spec.Connectors[0].Expose = true
+
+					err = k8sClient.Update(ctx, &crd)
+				}
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: crd.Name + "-" + "new-acceptor-0-svc-ing", Namespace: namespace}
+				exposure := &netv1.Ingress{}
+				err := k8sClient.Get(context.Background(), key, exposure)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: crd.Name + "-" + "new-connector-0-svc-ing", Namespace: namespace}
+				exposure := &netv1.Ingress{}
+				err := k8sClient.Get(context.Background(), key, exposure)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
 			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
 
 			By("check it has gone")
@@ -2641,48 +2869,33 @@ var _ = Describe("artemis controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, &cr)).Should(Succeed())
 
-			Eventually(func() bool {
-				key := types.NamespacedName{Name: cr.Name, Namespace: namespace}
-				err := k8sClient.Get(ctx, key, &cr)
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
-
-			key := types.NamespacedName{Name: cr.Name, Namespace: namespace}
-			Eventually(func() bool {
-				_, ok := namespacedNameToFSM[key]
-				return ok
-			}, timeout, interval).Should(BeTrue())
-
-			fsm := namespacedNameToFSM[key]
-			ssNamespacedName := fsm.GetStatefulSetNamespacedName()
-			Eventually(func() bool {
-				_, err := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
-				return err == nil
-			}).Should(BeTrue())
-
-			Eventually(func() bool {
-				currentStatefulSet, _ := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
+			ssNamespacedName := types.NamespacedName{Name: namer.CrToSS(cr.Name), Namespace: namespace}
+			Eventually(func(g Gomega) {
+				currentStatefulSet, err := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, nil, k8sClient)
+				g.Expect(err).To(BeNil())
 				len := len(currentStatefulSet.Spec.Template.Spec.InitContainers)
-				return len == 1
-			}).Should(BeTrue())
+				g.Expect(len).Should(BeEquivalentTo(1))
 
-			currentStatefulSet, _ := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
-			initContainer := currentStatefulSet.Spec.Template.Spec.InitContainers[0]
-			//check AMQ_ACCEPTORS value
-			for _, envVar := range initContainer.Env {
-				if envVar.Name == "AMQ_ACCEPTORS" {
-					secretName := envVar.ValueFrom.SecretKeyRef.Name
-					namespaceName := types.NamespacedName{
-						Name:      secretName,
-						Namespace: namespace,
+				initContainer := currentStatefulSet.Spec.Template.Spec.InitContainers[0]
+				By("check AMQ_ACCEPTORS value")
+				for _, envVar := range initContainer.Env {
+					if envVar.Name == "AMQ_ACCEPTORS" {
+						secretName := envVar.ValueFrom.SecretKeyRef.Name
+						namespaceName := types.NamespacedName{
+							Name:      secretName,
+							Namespace: namespace,
+						}
+						secret, err := secrets.RetriveSecret(namespaceName, secretName, make(map[string]string), k8sClient)
+						g.Expect(err).To(BeNil())
+						data := secret.Data[envVar.ValueFrom.SecretKeyRef.Key]
+						By("Checking data:" + string(data))
+						g.Expect(strings.Contains(string(data), "ACCEPTOR_IP:61666")).To(BeTrue())
+						checkSecretHasCorrectKeyValue(g, secretName, namespaceName, envVar.ValueFrom.SecretKeyRef.Key, "keyStoreProvider=SunJCE")
 					}
-					//the value is a string of acceptors in xml format:
-					//<acceptor name="new-acceptor">...</acceptor><another one>...
-					//we need to locate our target acceptor and do the check
-					//we use the port as a clue
-					checkSecretHasCorrectKeyValue(secretName, namespaceName, envVar.ValueFrom.SecretKeyRef.Key, "keyStoreProvider=SunJCE")
 				}
-			}
+
+			}, timeout, interval).Should(Succeed())
+
 			Expect(k8sClient.Delete(ctx, &cr)).Should(Succeed())
 
 			By("check it has gone")
@@ -2707,48 +2920,31 @@ var _ = Describe("artemis controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, &cr)).Should(Succeed())
 
-			Eventually(func() bool {
-				key := types.NamespacedName{Name: cr.Name, Namespace: namespace}
-				err := k8sClient.Get(ctx, key, &cr)
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
-
-			key := types.NamespacedName{Name: cr.Name, Namespace: namespace}
-			Eventually(func() bool {
-				_, ok := namespacedNameToFSM[key]
-				return ok
-			}, timeout, interval).Should(BeTrue())
-
-			fsm := namespacedNameToFSM[key]
-			ssNamespacedName := fsm.GetStatefulSetNamespacedName()
-			Eventually(func() bool {
-				_, err := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
-				return err == nil
-			}).Should(BeTrue())
-
-			Eventually(func() bool {
-				currentStatefulSet, _ := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
+			ssNamespacedName := types.NamespacedName{Name: namer.CrToSS(cr.Name), Namespace: namespace}
+			Eventually(func(g Gomega) {
+				currentStatefulSet, err := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, nil, k8sClient)
+				g.Expect(err).To(BeNil())
 				len := len(currentStatefulSet.Spec.Template.Spec.InitContainers)
-				return len == 1
-			}).Should(BeTrue())
+				g.Expect(len).Should(Equal(1))
 
-			currentStatefulSet, _ := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
-			initContainer := currentStatefulSet.Spec.Template.Spec.InitContainers[0]
-			//check AMQ_ACCEPTORS value
-			for _, envVar := range initContainer.Env {
-				if envVar.Name == "AMQ_ACCEPTORS" {
-					secretName := envVar.ValueFrom.SecretKeyRef.Name
-					namespaceName := types.NamespacedName{
-						Name:      secretName,
-						Namespace: namespace,
+				initContainer := currentStatefulSet.Spec.Template.Spec.InitContainers[0]
+				//check AMQ_ACCEPTORS value
+				for _, envVar := range initContainer.Env {
+					if envVar.Name == "AMQ_ACCEPTORS" {
+						secretName := envVar.ValueFrom.SecretKeyRef.Name
+						namespaceName := types.NamespacedName{
+							Name:      secretName,
+							Namespace: namespace,
+						}
+						//the value is a string of acceptors in xml format:
+						//<acceptor name="new-acceptor">...</acceptor><another one>...
+						//we need to locate our target acceptor and do the check
+						//we use the port as a clue
+						checkSecretHasCorrectKeyValue(g, secretName, namespaceName, envVar.ValueFrom.SecretKeyRef.Key, "trustStoreType=JCEKS")
 					}
-					//the value is a string of acceptors in xml format:
-					//<acceptor name="new-acceptor">...</acceptor><another one>...
-					//we need to locate our target acceptor and do the check
-					//we use the port as a clue
-					checkSecretHasCorrectKeyValue(secretName, namespaceName, envVar.ValueFrom.SecretKeyRef.Key, "trustStoreType=JCEKS")
 				}
-			}
+			}, timeout, interval).Should(Succeed())
+
 			Expect(k8sClient.Delete(ctx, &cr)).Should(Succeed())
 
 			By("check it has gone")
@@ -2773,48 +2969,31 @@ var _ = Describe("artemis controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, &cr)).Should(Succeed())
 
-			Eventually(func() bool {
-				key := types.NamespacedName{Name: cr.Name, Namespace: namespace}
-				err := k8sClient.Get(ctx, key, &cr)
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
+			ssNamespacedName := types.NamespacedName{Name: namer.CrToSS(cr.Name), Namespace: namespace}
 
-			key := types.NamespacedName{Name: cr.Name, Namespace: namespace}
-			Eventually(func() bool {
-				_, ok := namespacedNameToFSM[key]
-				return ok
-			}, timeout, interval).Should(BeTrue())
-
-			fsm := namespacedNameToFSM[key]
-			ssNamespacedName := fsm.GetStatefulSetNamespacedName()
-			Eventually(func() bool {
-				_, err := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
-				return err == nil
-			}).Should(BeTrue())
-
-			Eventually(func() bool {
-				currentStatefulSet, _ := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
+			Eventually(func(g Gomega) {
+				currentStatefulSet, err := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, nil, k8sClient)
+				g.Expect(err).To(BeNil())
 				len := len(currentStatefulSet.Spec.Template.Spec.InitContainers)
-				return len == 1
-			}).Should(BeTrue())
+				g.Expect(len).Should(Equal(1))
 
-			currentStatefulSet, _ := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
-			initContainer := currentStatefulSet.Spec.Template.Spec.InitContainers[0]
-			//check AMQ_ACCEPTORS value
-			for _, envVar := range initContainer.Env {
-				if envVar.Name == "AMQ_ACCEPTORS" {
-					secretName := envVar.ValueFrom.SecretKeyRef.Name
-					namespaceName := types.NamespacedName{
-						Name:      secretName,
-						Namespace: namespace,
+				initContainer := currentStatefulSet.Spec.Template.Spec.InitContainers[0]
+				//check AMQ_ACCEPTORS value
+				for _, envVar := range initContainer.Env {
+					if envVar.Name == "AMQ_ACCEPTORS" {
+						secretName := envVar.ValueFrom.SecretKeyRef.Name
+						namespaceName := types.NamespacedName{
+							Name:      secretName,
+							Namespace: namespace,
+						}
+						//the value is a string of acceptors in xml format:
+						//<acceptor name="new-acceptor">...</acceptor><another one>...
+						//we need to locate our target acceptor and do the check
+						//we use the port as a clue
+						checkSecretHasCorrectKeyValue(g, secretName, namespaceName, envVar.ValueFrom.SecretKeyRef.Key, "trustStoreProvider=SUN")
 					}
-					//the value is a string of acceptors in xml format:
-					//<acceptor name="new-acceptor">...</acceptor><another one>...
-					//we need to locate our target acceptor and do the check
-					//we use the port as a clue
-					checkSecretHasCorrectKeyValue(secretName, namespaceName, envVar.ValueFrom.SecretKeyRef.Key, "trustStoreProvider=SUN")
 				}
-			}
+			}, timeout, interval).Should(Succeed())
 			Expect(k8sClient.Delete(ctx, &cr)).Should(Succeed())
 
 			By("check it has gone")
@@ -3144,15 +3323,13 @@ func checkCrdDeleted(name string, namespace string, crd client.Object) bool {
 	return errors.IsNotFound(err)
 }
 
-func checkSecretHasCorrectKeyValue(secName string, ns types.NamespacedName, key string, expectedValue string) {
-	Eventually(func() bool {
+func checkSecretHasCorrectKeyValue(g Gomega, secName string, ns types.NamespacedName, key string, expectedValue string) {
+	g.Eventually(func(g Gomega) {
 		secret, err := secrets.RetriveSecret(ns, secName, make(map[string]string), k8sClient)
-		if err != nil {
-			return false
-		}
+		g.Expect(err).Should(BeNil())
 		data := secret.Data[key]
-		return strings.Contains(string(data), expectedValue)
-	}, timeout, interval).Should(BeTrue())
+		g.Expect(strings.Contains(string(data), expectedValue)).Should(BeTrue())
+	}, timeout, interval).Should(Succeed())
 }
 
 func DeployCustomBroker(crName string, targetNamespace string, customFunc func(candidate *brokerv1beta1.ActiveMQArtemis)) (*brokerv1beta1.ActiveMQArtemis, *brokerv1beta1.ActiveMQArtemis) {
