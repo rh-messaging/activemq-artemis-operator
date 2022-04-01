@@ -107,7 +107,7 @@ spec:
     - operator
   version: 7.10.0-opr-1
   # what if there is new respins of 7.9 once 7.10 is out in bundle? they use same channel for now.
-  replaces: amq-broker-operator.v7.9.3-opr-3
+  replaces: amq-broker-operator.v7.9.3-opr-2
   maturity: alpha
   maintainers:
     - name: Red Hat
