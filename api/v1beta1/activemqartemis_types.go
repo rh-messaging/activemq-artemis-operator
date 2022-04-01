@@ -223,7 +223,8 @@ type DeploymentPlanType struct {
 	//custom node selector
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 	//custom Affinity
-	Affinity corev1.Affinity `json:"affinity,omitempty"`
+	Affinity           corev1.Affinity            `json:"affinity,omitempty"`
+	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
 }
 
 type PodSecurityType struct {

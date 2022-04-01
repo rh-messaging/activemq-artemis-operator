@@ -21,18 +21,18 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
+	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	"math/rand"
+	"reflect"
 	"strconv"
 	"strings"
-
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"time"
 
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
-	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	appsv1 "k8s.io/api/apps/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -46,11 +46,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// Uncomment this and the "test" import if you want to debug this set of tests
+//Uncomment this and the "test" import if you want to debug this set of tests
 //func TestArtemisController(t *testing.T) {
-// 	RegisterFailHandler(Fail)
-// 	RunSpecs(t, "Artemis Controller Suite")
-// }
+//	RegisterFailHandler(Fail)
+//	RunSpecs(t, "Artemis Controller Suite")
+//}
 
 var _ = Describe("artemis controller", func() {
 
@@ -92,6 +92,153 @@ var _ = Describe("artemis controller", func() {
 		if wi != nil {
 			wi.Stop()
 		}
+	})
+
+	Context("PodSecurityContext Test", func() {
+		It("Setting the pods PodSecurityContext", func() {
+			By("Creating a CR instance with PodSecurityContext configured")
+
+			podSecurityContext := corev1.PodSecurityContext{}
+			retrievedCR := &brokerv1beta1.ActiveMQArtemis{}
+			createdSS := &appsv1.StatefulSet{}
+
+			context := context.Background()
+			defaultCR := generateArtemisSpec(namespace)
+			defaultCR.Spec.DeploymentPlan.PodSecurityContext = &podSecurityContext
+
+			By("Deploying the CR " + defaultCR.ObjectMeta.Name)
+			Expect(k8sClient.Create(context, &defaultCR)).Should(Succeed())
+
+			By("Making sure that the CR gets deployed " + defaultCR.ObjectMeta.Name)
+			Eventually(func() bool {
+				return getPersistedVersionedCrd(defaultCR.ObjectMeta.Name, namespace, retrievedCR)
+			}, timeout, interval).Should(BeTrue())
+			Expect(retrievedCR.Name).Should(Equal(defaultCR.ObjectMeta.Name))
+
+			By("Checking that the StatefulSet has been created with a PodSecurityContext field " + namer.CrToSS(retrievedCR.Name))
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(retrievedCR.Name), Namespace: namespace}
+				if err := k8sClient.Get(context, key, createdSS); nil != err {
+					return false
+				}
+				return nil != createdSS.Spec.Template.Spec.SecurityContext
+			})
+
+			By("Check for default CR instance deletion")
+			Expect(k8sClient.Delete(context, retrievedCR))
+			Eventually(func() bool {
+				return checkCrdDeleted(defaultCR.ObjectMeta.Name, namespace, retrievedCR)
+			}, timeout, interval).Should(BeTrue())
+
+			By("Creating a non-default SELinuxOptions CR instance")
+			nonDefaultCR := generateArtemisSpec(namespace)
+
+			credentialSpecName := "CredentialSpecName0"
+			credentialSpec := "CredentialSpec0"
+			runAsUserName := "RunAsUserName0"
+			hostProcess := false
+			var runAsUser int64 = 1000
+			var runAsGroup int64 = 1001
+			runAsNonRoot := true
+			var supplementalGroupA int64 = 2000
+			var supplementalGroupB int64 = 2001
+			supplementalGroups := []int64{supplementalGroupA, supplementalGroupB}
+			var fsGroup int64 = 3000
+			sysctlA := corev1.Sysctl{
+				Name:  "NameA",
+				Value: "ValueA",
+			}
+			sysctlB := corev1.Sysctl{
+				Name:  "NameB",
+				Value: "ValueB",
+			}
+			sysctls := []corev1.Sysctl{sysctlA, sysctlB}
+
+			fsGCPString := "GroupChangePolicy0"
+			fsGCP := corev1.PodFSGroupChangePolicy(fsGCPString)
+			localhostProfile := "LocalhostProfile0"
+			seccompProfile := corev1.SeccompProfile{
+				Type:             corev1.SeccompProfileTypeUnconfined,
+				LocalhostProfile: &localhostProfile,
+			}
+
+			nonDefaultCR.Spec.DeploymentPlan.PodSecurityContext = &corev1.PodSecurityContext{
+				SELinuxOptions: &corev1.SELinuxOptions{
+					User:  "TestUser0",
+					Role:  "TestRole0",
+					Type:  "TestType0",
+					Level: "TestLevel0",
+				},
+				WindowsOptions: &corev1.WindowsSecurityContextOptions{
+					GMSACredentialSpecName: &credentialSpecName,
+					GMSACredentialSpec:     &credentialSpec,
+					RunAsUserName:          &runAsUserName,
+					HostProcess:            &hostProcess,
+				},
+				RunAsUser:           &runAsUser,
+				RunAsGroup:          &runAsGroup,
+				RunAsNonRoot:        &runAsNonRoot,
+				SupplementalGroups:  supplementalGroups,
+				FSGroup:             &fsGroup,
+				Sysctls:             sysctls,
+				FSGroupChangePolicy: &fsGCP,
+				SeccompProfile:      &seccompProfile,
+			}
+
+			By("Deploying the non-default CR instance named " + nonDefaultCR.Name)
+			Expect(k8sClient.Create(context, &nonDefaultCR)).Should(Succeed())
+
+			retrievednonDefaultCR := brokerv1beta1.ActiveMQArtemis{}
+			By("Checking to ensure that the non-default CR was created with the right values " + nonDefaultCR.Name)
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: nonDefaultCR.Name, Namespace: namespace}
+				retVal := false
+				for {
+					if err := k8sClient.Get(context, key, &retrievednonDefaultCR); nil != err {
+						break
+					}
+					if !reflect.DeepEqual(nonDefaultCR.Spec.DeploymentPlan.PodSecurityContext, retrievednonDefaultCR.Spec.DeploymentPlan.PodSecurityContext) {
+						break
+					}
+
+					retVal = true
+					break
+				}
+
+				return retVal
+			})
+
+			By("Checking that the StatefulSet has been created with the non-default PodSecurityContext " + namer.CrToSS(nonDefaultCR.Name))
+			Eventually(func() bool {
+				nonDefaultSS := &appsv1.StatefulSet{}
+				key := types.NamespacedName{Name: namer.CrToSS(nonDefaultCR.Name), Namespace: namespace}
+				retVal := false
+				for {
+					if err := k8sClient.Get(context, key, nonDefaultSS); nil != err {
+						break
+					}
+
+					if nil == nonDefaultSS.Spec.Template.Spec.SecurityContext {
+						break
+					}
+
+					if !reflect.DeepEqual(nonDefaultCR, nonDefaultSS.Spec.Template.Spec.SecurityContext) {
+						break
+					}
+
+					retVal = true
+					break
+				}
+
+				return retVal
+			})
+
+			By("Check for non-default CR instance deletion")
+			Expect(k8sClient.Delete(context, &retrievednonDefaultCR))
+			Eventually(func() bool {
+				return checkCrdDeleted(defaultCR.ObjectMeta.Name, namespace, &retrievednonDefaultCR)
+			}, timeout, interval).Should(BeTrue())
+		})
 	})
 
 	Context("Affinity Test", func() {

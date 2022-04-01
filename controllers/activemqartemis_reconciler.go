@@ -121,7 +121,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) Process(fsm *ActiveMQArtemisFSM
 	reconciler.CurrentDeployedResources(fsm, client)
 
 	// currentStateful Set is a clone of what exists if already deployed
-	// what follows should transform the resoruces usig the crd
+	// what follows should transform the resources using the crd
 	// if the transformation results in some change, process resources will respect that
 	// comparisons should not be necessary, leave that to process resources
 	currentStatefulSet, firstTime := reconciler.ProcessStatefulSet(fsm, client, log, firstTime)
@@ -1636,6 +1636,8 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM, current *corev1.PodTemplat
 		podSpec.Tolerations = fsm.customResource.Spec.DeploymentPlan.Tolerations
 	}
 
+	configurePodSecurityContext(podSpec, fsm.customResource.Spec.DeploymentPlan.PodSecurityContext)
+
 	newContainersArray := []corev1.Container{}
 	podSpec.Containers = append(newContainersArray, *container)
 	brokerVolumes := MakeVolumes(fsm)
@@ -2048,6 +2050,18 @@ func configureAffinity(podSpec *corev1.PodSpec, affinity *corev1.Affinity) {
 			clog.V(1).Info("Adding Node Affinity")
 			podSpec.Affinity.NodeAffinity = affinity.NodeAffinity
 		}
+	}
+}
+
+func configurePodSecurityContext(podSpec *corev1.PodSpec, podSecurityContext *corev1.PodSecurityContext) {
+	clog.V(1).Info("Configuring PodSecurityContext")
+
+	if nil != podSecurityContext {
+		clog.V(5).Info("Incoming podSecurityContext is NOT nil, assigning")
+		podSpec.SecurityContext = podSecurityContext
+	} else {
+		clog.V(5).Info("Incoming podSecurityContext is nil, creating with default values")
+		podSpec.SecurityContext = &corev1.PodSecurityContext{}
 	}
 }
 
