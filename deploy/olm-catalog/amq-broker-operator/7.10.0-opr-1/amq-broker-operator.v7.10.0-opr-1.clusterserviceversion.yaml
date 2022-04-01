@@ -55,7 +55,7 @@ metadata:
           }
       },
       {
-          "apiVersion": "broker.amq.io/v2alpha1",
+          "apiVersion": "broker.amq.io/v1beta1",
           "kind": "ActiveMQArtemisScaledown",
           "metadata": {
               "name": "ex-aaoscaledown"
