@@ -1635,6 +1635,8 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM, current *corev1.PodTemplat
 		podSpec.Tolerations = fsm.customResource.Spec.DeploymentPlan.Tolerations
 	}
 
+	configurePodSecurityContext(podSpec, fsm.customResource.Spec.DeploymentPlan.PodSecurityContext)
+
 	newContainersArray := []corev1.Container{}
 	podSpec.Containers = append(newContainersArray, *container)
 	brokerVolumes := MakeVolumes(fsm)
