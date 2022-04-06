@@ -24,7 +24,7 @@ func MakeStatefulSet(namespacedName types.NamespacedName, annotations map[string
 	ss := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "StatefulSet",
-			APIVersion: "apps/v1beta1",
+			APIVersion: "apps/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        NameBuilder.Name(),
@@ -51,7 +51,7 @@ func MakeStatefulSet2(currentStateFulSet *appsv1.StatefulSet, ssName string, svc
 		currentStateFulSet = &appsv1.StatefulSet{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "StatefulSet",
-				APIVersion: "apps/v1beta1",
+				APIVersion: "apps/v1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      ssName,
