@@ -135,15 +135,28 @@ func getLabels(cr *brokerv1beta1.ActiveMQArtemisSecurity) map[string]string {
 }
 
 func (r *ActiveMQArtemisSecurityConfigHandler) IsApplicableFor(brokerNamespacedName types.NamespacedName) bool {
+	reqLogger := ctrl.Log.WithValues("IsApplicableFor", brokerNamespacedName)
+
 	applyTo := r.SecurityCR.Spec.ApplyToCrNames
+	reqLogger.V(1).Info("applyTo", "len", len(applyTo), "sec", r.SecurityCR.Spec)
+
+	//currently security doesnt apply to other namespaces than its own
+	if r.NamespacedName.Namespace != brokerNamespacedName.Namespace {
+		reqLogger.V(1).Info("this security cr is not applicable for broker because it's not in my namespace")
+		return false
+	}
 	if len(applyTo) == 0 {
+		reqLogger.V(1).Info("this security cr is applicable for broker because no applyTo is configured")
 		return true
 	}
 	for _, crName := range applyTo {
-		if crName == "*" || crName == "" || (r.NamespacedName.Namespace == brokerNamespacedName.Namespace && crName == brokerNamespacedName.Name) {
+		reqLogger.V(1).Info("Going through applyTo", "crName", crName)
+		if crName == "*" || crName == "" || crName == brokerNamespacedName.Name {
+			reqLogger.V(1).Info("this security cr is applicable for broker as it's either match-all or match name")
 			return true
 		}
 	}
+	reqLogger.V(1).Info("all applyToCrNames checked, no match. Not applicable")
 	return false
 }
 

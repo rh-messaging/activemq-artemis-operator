@@ -53,12 +53,13 @@ func GetBrokerConfigHandler(brokerNamespacedName types.NamespacedName) (handler 
 func UpdatePodForSecurity(securityHandlerNamespacedName types.NamespacedName, handler common.ActiveMQArtemisConfigHandler) error {
 	success := true
 	for nsn, fsm := range namespacedNameToFSM {
+		clog.V(1).Info("Checking each fsm for security update", "fsm nsn", nsn)
 		if handler.IsApplicableFor(nsn) {
 			fsm.SetPodInvalid(true)
-			glog.Info("Need update fsm for security", "fsm", nsn)
+			clog.Info("Need update fsm for security", "fsm", nsn)
 			if err, _ := fsm.Update(); err != nil {
 				success = false
-				glog.Error(err, "error in updating security", "cr", fsm.namespacedName)
+				clog.Error(err, "error in updating security", "cr", fsm.namespacedName)
 			}
 		}
 	}
@@ -70,23 +71,23 @@ func UpdatePodForSecurity(securityHandlerNamespacedName types.NamespacedName, ha
 }
 
 func RemoveBrokerConfigHandler(namespacedName types.NamespacedName) {
-	glog.Info("Removing config handler", "name", namespacedName)
+	clog.Info("Removing config handler", "name", namespacedName)
 	oldHandler, ok := namespaceToConfigHandler[namespacedName]
 	if ok {
 		delete(namespaceToConfigHandler, namespacedName)
-		glog.Info("Handler removed, updating fsm if exists")
+		clog.Info("Handler removed, updating fsm if exists")
 		UpdatePodForSecurity(namespacedName, oldHandler)
 	}
 }
 
 func AddBrokerConfigHandler(namespacedName types.NamespacedName, handler common.ActiveMQArtemisConfigHandler, toReconcile bool) error {
 	if _, ok := namespaceToConfigHandler[namespacedName]; ok {
-		glog.V(1).Info("There is an old config handler, it'll be replaced")
+		clog.V(1).Info("There is an old config handler, it'll be replaced")
 	}
 	namespaceToConfigHandler[namespacedName] = handler
-	glog.V(1).Info("A new config handler has been added", "handler", handler)
+	clog.V(1).Info("A new config handler has been added", "handler", handler)
 	if toReconcile {
-		glog.V(1).Info("Updating broker security")
+		clog.V(1).Info("Updating broker security")
 		return UpdatePodForSecurity(namespacedName, handler)
 	}
 	return nil

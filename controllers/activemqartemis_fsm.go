@@ -1,12 +1,15 @@
 package controllers
 
 import (
+	"reflect"
+
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/fsm"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var fsmLog = ctrl.Log.WithName("activemqartemis_fsm")
@@ -74,6 +77,8 @@ type Namers struct {
 }
 
 type ActiveMQArtemisFSM struct {
+	requestedResources []rtclient.Object
+	deployed           map[reflect.Type][]rtclient.Object
 	m                  fsm.IMachine
 	namespacedName     types.NamespacedName
 	customResource     *brokerv1beta1.ActiveMQArtemis

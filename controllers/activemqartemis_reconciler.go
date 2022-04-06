@@ -78,8 +78,7 @@ const (
 )
 
 var defaultMessageMigration bool = true
-var requestedResources []rtclient.Object
-var deployed map[reflect.Type][]rtclient.Object
+
 var lastStatusMap map[types.NamespacedName]olm.DeploymentStatus = make(map[types.NamespacedName]olm.DeploymentStatus)
 
 // the helper script looks for "/amq/scripts/post-config.sh"
@@ -136,9 +135,9 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) Process(fsm *ActiveMQArtemisFSM
 
 	// mods to env var values sourced from secrets are not detected by process resources
 	// track updates in trigger env var that has a total checksum
-	trackSecretCheckSumInEnvVar(requestedResources, currentStatefulSet.Spec.Template.Spec.Containers)
+	trackSecretCheckSumInEnvVar(fsm.requestedResources, currentStatefulSet.Spec.Template.Spec.Containers)
 
-	requestedResources = append(requestedResources, currentStatefulSet)
+	fsm.requestedResources = append(fsm.requestedResources, currentStatefulSet)
 
 	// this should apply any deltas/updates
 	stepsComplete := reconciler.ProcessResources(fsm, client, scheme)
@@ -172,8 +171,8 @@ func trackSecretCheckSumInEnvVar(requestedResources []rtclient.Object, container
 	environments.TrackSecretCheckSumInRollCount(hex.EncodeToString(digest.Sum(nil)), container)
 }
 
-func cloneOfDeployed(kind reflect.Type, name string) rtclient.Object {
-	for _, obj := range deployed[kind] {
+func cloneOfDeployed(kind reflect.Type, name string, fsm *ActiveMQArtemisFSM) rtclient.Object {
+	for _, obj := range fsm.deployed[kind] {
 		if obj.GetName() == name {
 			return obj.DeepCopyObject().(rtclient.Object)
 		}
@@ -186,7 +185,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(fsm *ActiveM
 	ssNamespacedName := fsm.GetStatefulSetNamespacedName()
 
 	var currentStatefulSet *appsv1.StatefulSet
-	obj := cloneOfDeployed(reflect.TypeOf(appsv1.StatefulSet{}), ssNamespacedName.Name)
+	obj := cloneOfDeployed(reflect.TypeOf(appsv1.StatefulSet{}), ssNamespacedName.Name, fsm)
 	if obj != nil {
 		currentStatefulSet = obj.(*appsv1.StatefulSet)
 	}
@@ -203,9 +202,9 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(fsm *ActiveM
 	headlessServiceDefinition := svc.NewHeadlessServiceForCR2(client, fsm.GetHeadlessServiceName(), ssNamespacedName.Namespace, serviceports.GetDefaultPorts(), labels)
 	if isClustered(fsm.customResource) {
 		pingServiceDefinition := svc.NewPingServiceDefinitionForCR2(client, fsm.GetPingServiceName(), ssNamespacedName.Namespace, labels, labels)
-		requestedResources = append(requestedResources, pingServiceDefinition)
+		fsm.requestedResources = append(fsm.requestedResources, pingServiceDefinition)
 	}
-	requestedResources = append(requestedResources, headlessServiceDefinition)
+	fsm.requestedResources = append(fsm.requestedResources, headlessServiceDefinition)
 
 	return currentStatefulSet, firstTime
 }
@@ -588,7 +587,7 @@ func sourceEnvVarFromSecret2(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1
 	}
 
 	// ensure processResources sees it
-	requestedResources = append(requestedResources, secretDefinition)
+	fsm.requestedResources = append(fsm.requestedResources, secretDefinition)
 
 	log.Info("Populating env vars references from secret " + secretName)
 
@@ -776,12 +775,12 @@ func configureAcceptorsExposure(fsm *ActiveMQArtemisFSM, client rtclient.Client,
 		for _, acceptor := range fsm.customResource.Spec.Acceptors {
 			serviceDefinition := svc.NewServiceDefinitionForCR(namespacedName, acceptor.Name+"-"+ordinalString, acceptor.Port, serviceRoutelabels, fsm.namers.LabelBuilder.Labels())
 
-			requestedResources = append(requestedResources, serviceDefinition)
+			fsm.requestedResources = append(fsm.requestedResources, serviceDefinition)
 			targetPortName := acceptor.Name + "-" + ordinalString
 			targetServiceName := fsm.customResource.Name + "-" + targetPortName + "-svc"
 			routeDefinition := routes.NewRouteDefinitionForCR(namespacedName, serviceRoutelabels, targetServiceName, targetPortName, acceptor.SSLEnabled)
 			if acceptor.Expose {
-				requestedResources = append(requestedResources, routeDefinition)
+				fsm.requestedResources = append(fsm.requestedResources, routeDefinition)
 			}
 		}
 	}
@@ -812,13 +811,13 @@ func configureConnectorsExposure(fsm *ActiveMQArtemisFSM, client rtclient.Client
 		for _, connector := range fsm.customResource.Spec.Connectors {
 			serviceDefinition := svc.NewServiceDefinitionForCR(namespacedName, connector.Name+"-"+ordinalString, connector.Port, serviceRoutelabels, fsm.namers.LabelBuilder.Labels())
 
-			requestedResources = append(requestedResources, serviceDefinition)
+			fsm.requestedResources = append(fsm.requestedResources, serviceDefinition)
 			targetPortName := connector.Name + "-" + ordinalString
 			targetServiceName := fsm.customResource.Name + "-" + targetPortName + "-svc"
 			routeDefinition := routes.NewRouteDefinitionForCR(namespacedName, serviceRoutelabels, targetServiceName, targetPortName, connector.SSLEnabled)
 
 			if connector.Expose {
-				requestedResources = append(requestedResources, routeDefinition)
+				fsm.requestedResources = append(fsm.requestedResources, routeDefinition)
 			}
 		}
 	}
@@ -858,7 +857,7 @@ func configureConsoleExposure(fsm *ActiveMQArtemisFSM, client rtclient.Client, s
 			Namespace: fsm.customResource.Namespace,
 		}
 		if console.Expose {
-			requestedResources = append(requestedResources, serviceDefinition)
+			fsm.requestedResources = append(fsm.requestedResources, serviceDefinition)
 			//causedUpdate, err = resources.Enable(customResource, client, scheme, serviceNamespacedName, serviceDefinition)
 		} else {
 			causedUpdate, err = resources.Disable(fsm.customResource, client, scheme, serviceNamespacedName, serviceDefinition)
@@ -874,13 +873,13 @@ func configureConsoleExposure(fsm *ActiveMQArtemisFSM, client rtclient.Client, s
 			clog.Info("Checking routeDefinition for " + targetPortName)
 			routeDefinition := routes.NewRouteDefinitionForCR(namespacedName, serviceRoutelabels, targetServiceName, targetPortName, console.SSLEnabled)
 			if console.Expose {
-				requestedResources = append(requestedResources, routeDefinition)
+				fsm.requestedResources = append(fsm.requestedResources, routeDefinition)
 			}
 		} else {
 			clog.Info("Environment is not OpenShift, creating ingress")
 			ingressDefinition := ingresses.NewIngressForCRWithSSL(namespacedName, serviceRoutelabels, targetServiceName, targetPortName, console.SSLEnabled)
 			if console.Expose {
-				requestedResources = append(requestedResources, ingressDefinition)
+				fsm.requestedResources = append(fsm.requestedResources, ingressDefinition)
 			}
 		}
 	}
@@ -1261,20 +1260,20 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) CurrentDeployedResources(fsm *A
 	reqLogger.Info("currentDeployedResources")
 
 	var err error
-	deployed, err = getDeployedResources(fsm.customResource, client)
+	fsm.deployed, err = getDeployedResources(fsm.customResource, client)
 	if err != nil {
 		reqLogger.Error(err, "error getting deployed resources")
 	}
 
 	// track persisted cr secret
-	for _, secret := range deployed[reflect.TypeOf(corev1.Secret{})] {
+	for _, secret := range fsm.deployed[reflect.TypeOf(corev1.Secret{})] {
 		if strings.HasPrefix(secret.GetName(), "secret-broker-") {
 			// track this as it is managed by the controller state machine, not by reconcile
-			requestedResources = append(requestedResources, secret)
+			fsm.requestedResources = append(fsm.requestedResources, secret)
 		}
 	}
 
-	for t, objs := range deployed {
+	for t, objs := range fsm.deployed {
 		for _, obj := range objs {
 			reqLogger.Info("Deployed ", "Type", t, "Name", obj.GetName())
 		}
@@ -1295,13 +1294,13 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(fsm *ActiveMQA
 	updated := false
 	removed := false
 
-	for index := range requestedResources {
-		requestedResources[index].SetNamespace(fsm.customResource.Namespace)
+	for index := range fsm.requestedResources {
+		fsm.requestedResources[index].SetNamespace(fsm.customResource.Namespace)
 	}
 
-	reqLogger.Info("Processing resources", "num requested", len(requestedResources))
+	reqLogger.Info("Processing resources", "num requested", len(fsm.requestedResources))
 
-	requested := compare.NewMapBuilder().Add(requestedResources...).ResourceMap()
+	requested := compare.NewMapBuilder().Add(fsm.requestedResources...).ResourceMap()
 	comparator := compare.NewMapComparator()
 
 	comparator.Comparator.SetComparator(reflect.TypeOf(appsv1.StatefulSet{}), func(deployed, requested rtclient.Object) bool {
@@ -1317,7 +1316,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(fsm *ActiveMQA
 		return isEqual
 	})
 
-	deltas := comparator.Compare(deployed, requested)
+	deltas := comparator.Compare(fsm.deployed, requested)
 	namespacedName := types.NamespacedName{
 		Name:      fsm.customResource.Name,
 		Namespace: fsm.customResource.Namespace,
@@ -1344,7 +1343,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(fsm *ActiveMQA
 	}
 
 	//empty the collected objects
-	requestedResources = nil
+	fsm.requestedResources = nil
 
 	return stepsComplete
 }
@@ -2004,8 +2003,8 @@ func addConfigMapForBrokerProperties(fsm *ActiveMQArtemisFSM) string {
 
 	desired.Data = brokerPropertiesData(fsm.customResource.Spec.BrokerProperties)
 
-	clog.V(1).Info("Requesting configMap for broker propertiesp", "name", configMapName.Name, "requests len", len(requestedResources))
-	requestedResources = append(requestedResources, desired)
+	clog.V(1).Info("Requesting configMap for broker propertiesp", "name", configMapName.Name, "requests len", len(fsm.requestedResources))
+	fsm.requestedResources = append(fsm.requestedResources, desired)
 
 	clog.V(1).Info("Requesting mount for broker properties config map")
 	return configMapName.Name

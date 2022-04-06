@@ -58,7 +58,7 @@ func (rs *ContainerRunningState) Enter(previousStateID int) error {
 func (rs *ContainerRunningState) Update() (error, int) {
 
 	// Log where we are and what we're doing
-	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
+	reqLogger := ctrl.Log.WithValues("state", "running", "ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
 	reqLogger.Info("Updating ContainerRunningState")
 
 	var err error = nil
@@ -72,6 +72,7 @@ func (rs *ContainerRunningState) Update() (error, int) {
 	currentStatefulSet := &appsv1.StatefulSet{}
 	//	var newss *appsv1.StatefulSet
 
+	reqLogger.Info("Retrieving current ss", "in ns", ssNamespacedName)
 	err = rs.parentFSM.r.Client.Get(context.TODO(), ssNamespacedName, currentStatefulSet)
 
 	firstTime := false
@@ -89,11 +90,13 @@ func (rs *ContainerRunningState) Update() (error, int) {
 			break
 		}
 
+		reqLogger.Info("Calling reconciler.Process()...")
 		statefulSetUpdates, _, _ = reconciler.Process(rs.parentFSM, rs.parentFSM.r.Client, rs.parentFSM.r.Scheme, firstTime)
 		break
 	}
 
 	if statefulSetUpdates > 0 {
+		reqLogger.Info("Next need be Scaling as ss updated", "ssUpdate", statefulSetUpdates, "saclestate", ScalingID)
 		/*
 			//https://stackoverflow.com/questions/65987577/kubectl-apply-reports-error-operation-cannot-be-fulfilled-on-serviceaccounts
 			currentStatefulSet.ResourceVersion = ""
@@ -104,6 +107,7 @@ func (rs *ContainerRunningState) Update() (error, int) {
 		nextStateID = ScalingID
 	}
 
+	reqLogger.Info("returning", "err", err, "nextstate", nextStateID)
 	return err, nextStateID
 }
 

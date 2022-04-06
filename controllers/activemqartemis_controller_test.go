@@ -1897,19 +1897,41 @@ func generateOriginalArtemisSpec(namespace string, name string) *brokerv1beta1.A
 
 	spec := brokerv1beta1.ActiveMQArtemisSpec{}
 
+	theName := name
+	if name == "" {
+		theName = randString()
+	}
+
 	toCreate := brokerv1beta1.ActiveMQArtemis{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ActiveMQArtemis",
 			APIVersion: brokerv1beta1.GroupVersion.Identifier(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      theName,
 			Namespace: namespace,
 		},
 		Spec: spec,
 	}
 
 	return &toCreate
+}
+
+func DeployBroker(brokerName string, targetNamespace string) (*brokerv1beta1.ActiveMQArtemis, *brokerv1beta1.ActiveMQArtemis) {
+	ctx := context.Background()
+	brokerCrd := generateOriginalArtemisSpec(targetNamespace, brokerName)
+
+	Expect(k8sClient.Create(ctx, brokerCrd)).Should(Succeed())
+
+	createdBrokerCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+	Eventually(func() bool {
+		return getPersistedVersionedCrd(brokerCrd.ObjectMeta.Name, targetNamespace, createdBrokerCrd)
+	}, timeout, interval).Should(BeTrue())
+	Expect(createdBrokerCrd.Name).Should(Equal(createdBrokerCrd.ObjectMeta.Name))
+
+	return brokerCrd, createdBrokerCrd
+
 }
 
 func randString() string {
