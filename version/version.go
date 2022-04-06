@@ -1,17 +1,17 @@
 package version
 
 var (
-	Version = "7.8.5"
+	Version = "7.8.6"
 	// PriorVersion - prior version
-	PriorVersion = "7.8.4"
+	PriorVersion = "7.8.5"
 )
 
 const (
 	// LatestVersion product version supported
-	LatestVersion        = "7.8.5"
-	CompactLatestVersion = "785"
+	LatestVersion        = "7.8.6"
+	CompactLatestVersion = "786"
 	// LastMicroVersion product version supported
-	LastMicroVersion = "7.8.4"
+	LastMicroVersion = "7.8.5"
 	// LastMinorVersion product version supported
 	LastMinorVersion = "7.7.0"
 )
@@ -28,6 +28,7 @@ var OperandVersionFromOperatorVersion map[string]string = map[string]string{
 	"7.8.3":  "7.8.3",
 	"7.8.4":  "7.8.4",
 	"7.8.5":  "7.8.5",
+	"7.8.6":  "7.8.6",
 }
 var FullVersionFromMinorVersion map[string]string = map[string]string{
 	"70": "7.7.0",
@@ -37,6 +38,7 @@ var FullVersionFromMinorVersion map[string]string = map[string]string{
 	"83": "7.8.3",
 	"84": "7.8.4",
 	"85": "7.8.5",
+	"86": "7.8.6",
 }
 
 var CompactFullVersionFromMinorVersion map[string]string = map[string]string{
@@ -47,6 +49,8 @@ var CompactFullVersionFromMinorVersion map[string]string = map[string]string{
 	"83": "783",
 	"84": "784",
 	"85": "785",
+	"85": "785",
+	"86": "786",
 }
 
 var CompactVersionFromVersion map[string]string = map[string]string{
@@ -57,6 +61,7 @@ var CompactVersionFromVersion map[string]string = map[string]string{
 	"7.8.3": "783",
 	"7.8.4": "784",
 	"7.8.5": "785",
+	"7.8.6": "786",
 }
 
 var FullVersionFromCompactVersion map[string]string = map[string]string{
@@ -67,6 +72,7 @@ var FullVersionFromCompactVersion map[string]string = map[string]string{
 	"783": "7.8.3",
 	"784": "7.8.4",
 	"785": "7.8.5",
+	"786": "7.8.6",
 }
 
 var MinorVersionFromFullVersion map[string]string = map[string]string{
@@ -77,6 +83,7 @@ var MinorVersionFromFullVersion map[string]string = map[string]string{
 	"7.8.3": "83",
 	"7.8.4": "84",
 	"7.8.5": "85",
+	"7.8.6": "86",
 }
 
 //The yacfg profile to use for a given full version of broker
@@ -88,5 +95,6 @@ var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
 	"7.8.3": "7.8.2",
 	"7.8.4": "7.8.2",
 	"7.8.5": "7.8.2",
+	"7.8.6": "7.8.2",
 }
 var YacfgProfileName string = "amq_broker"
