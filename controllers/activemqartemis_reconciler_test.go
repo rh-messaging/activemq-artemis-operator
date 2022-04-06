@@ -22,12 +22,12 @@ func TestHexShaHashOfMap(t *testing.T) {
 		t.Errorf("HexShaHashOfMap(nil) = %v, want %v", nilOne, nilTwo)
 	}
 
-	props := map[string]string{"a": "a", "b": "b"}
+	props := []string{"a=a", "b=b"}
 
 	propsOriginal := HexShaHashOfMap(props)
 
 	// modify
-	props["c"] = "c"
+	props = append(props, "c=c")
 
 	propsModified := HexShaHashOfMap(props)
 
@@ -35,15 +35,15 @@ func TestHexShaHashOfMap(t *testing.T) {
 		t.Errorf("HexShaHashOfMap(props mod) = %v, want %v", propsOriginal, propsModified)
 	}
 
-	// revert
-	delete(props, "c")
+	// revert, drop the last entry b/c they are ordered
+	props = append(props[:2])
 
 	if propsOriginal != HexShaHashOfMap(props) {
 		t.Errorf("HexShaHashOfMap(props) with revert = %v, want %v", propsOriginal, HexShaHashOfMap(props))
 	}
 
-	// modify further
-	delete(props, "a")
+	// modify further, drop first entry
+	props = append(props[:1])
 
 	if propsOriginal == HexShaHashOfMap(props) {
 		t.Errorf("HexShaHashOfMap(props) with just a = %v, want %v", propsOriginal, HexShaHashOfMap(props))

@@ -441,10 +441,8 @@ func (in *ActiveMQArtemisSpec) DeepCopyInto(out *ActiveMQArtemisSpec) {
 	in.AddressSettings.DeepCopyInto(&out.AddressSettings)
 	if in.BrokerProperties != nil {
 		in, out := &in.BrokerProperties, &out.BrokerProperties
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
+		*out = make([]string, len(*in))
+		copy(*out, *in)
 	}
 }
 

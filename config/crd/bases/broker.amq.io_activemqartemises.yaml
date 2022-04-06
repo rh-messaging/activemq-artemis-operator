@@ -431,9 +431,11 @@ spec:
                   will be generated.
                 type: string
               brokerProperties:
-                additionalProperties:
+                description: Optional list of key=value properties that are applied
+                  to the broker configuration bean.
+                items:
                   type: string
-                type: object
+                type: array
               connectors:
                 items:
                   properties:
