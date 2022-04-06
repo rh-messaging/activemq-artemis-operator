@@ -35,6 +35,7 @@ import (
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha1"
 	brokerv2alpha3 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha3"
+	brokerv2alpha4 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha4"
 	brokerv2alpha5 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha5"
 
 	//+kubebuilder:scaffold:imports
@@ -83,6 +84,9 @@ var _ = BeforeSuite(func() {
 	Expect(cfg).NotTo(BeNil())
 
 	err = brokerv2alpha5.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = brokerv2alpha4.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = brokerv2alpha3.AddToScheme(scheme.Scheme)

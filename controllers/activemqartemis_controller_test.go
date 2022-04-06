@@ -41,6 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
+	brokerv2alpha4 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha4"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -1637,6 +1638,45 @@ var _ = Describe("artemis controller", func() {
 					Expect(strings.Contains(string(data), "ACCEPTOR_IP:61888")).To(BeTrue())
 				}
 			}
+			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
+
+			By("check it has gone")
+			Eventually(checkCrdDeleted(crd.Name, namespace, &crd), timeout, interval).Should(BeTrue())
+		})
+	})
+
+	Context("With delopyed controller", func() {
+		It("verify old ver support", func() {
+			By("By creating an old crd")
+			ctx := context.Background()
+
+			spec := brokerv2alpha4.ActiveMQArtemisSpec{}
+			crd := brokerv2alpha4.ActiveMQArtemis{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ActiveMQArtemis",
+					APIVersion: brokerv2alpha4.GroupVersion.Identifier(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      randString(),
+					Namespace: namespace,
+				},
+				Spec: spec,
+			}
+
+			crd.Spec.DeploymentPlan = brokerv2alpha4.DeploymentPlanType{
+				Size:               1,
+				PersistenceEnabled: true,
+			}
+
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			createdSs := &appsv1.StatefulSet{}
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(crd.Name), Namespace: namespace}
+				err := k8sClient.Get(ctx, key, createdSs)
+				return err == nil
+			}, timeout, interval).Should(Equal(true))
+
 			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
 
 			By("check it has gone")
