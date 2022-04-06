@@ -49,7 +49,6 @@ var CompactFullVersionFromMinorVersion map[string]string = map[string]string{
 	"83": "783",
 	"84": "784",
 	"85": "785",
-	"85": "785",
 	"86": "786",
 }
 
