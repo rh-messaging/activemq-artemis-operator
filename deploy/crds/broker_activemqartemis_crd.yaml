@@ -55,6 +55,12 @@ spec:
                     expose:
                       description: Whether or not to expose this acceptor
                       type: boolean
+                    keyStoreProvider:
+                      description: Provider used for the keystore; "SUN", "SunJCE", etc. Default is null
+                      type: string
+                    keyStoreType:
+                      description: Type of keystore being used; "JKS", "JCEKS", "PKCS12", etc. Default is "JKS"
+                      type: string
                     multicastPrefix:
                       description: To indicate which kind of routing type to use
                       type: string
@@ -88,6 +94,12 @@ spec:
                     suppressInternalManagementObjects:
                       description: If prevents advisory addresses/queues to be registered to management service, default false
                       type: boolean
+                    trustStoreProvider:
+                      description: Provider used for the truststore; "SUN", "SunJCE", etc. Default in broker is null
+                      type: string
+                    trustStoreType:
+                      description: Type of truststore being used; "JKS", "JCEKS", "PKCS12", etc. Default in broker is "JKS"
+                      type: string
                     verifyHost:
                       description: The CN of the connecting client's SSL certificate will be compared to its hostname to verify they match. This is useful only for 2-way SSL.
                       type: boolean
@@ -354,6 +366,12 @@ spec:
                     host:
                       description: Hostname or IP to connect to
                       type: string
+                    keyStoreProvider:
+                      description: Provider used for the keystore; "SUN", "SunJCE", etc. Default is null
+                      type: string
+                    keyStoreType:
+                      description: Type of keystore being used; "JKS", "JCEKS", "PKCS12", etc. Default is "JKS"
+                      type: string
                     name:
                       description: The name of the connector
                       type: string
@@ -375,6 +393,12 @@ spec:
                       type: string
                     sslSecret:
                       description: Name of the secret to use for ssl information
+                      type: string
+                    trustStoreProvider:
+                      description: Provider used for the truststore; "SUN", "SunJCE", etc. Default in broker is null
+                      type: string
+                    trustStoreType:
+                      description: Type of truststore being used; "JKS", "JCEKS", "PKCS12", etc. Default in broker is "JKS"
                       type: string
                     type:
                       description: The type either tcp or vm

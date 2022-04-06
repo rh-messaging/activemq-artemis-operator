@@ -21,8 +21,14 @@ package controllers
 import (
 	"context"
 	"fmt"
+
+	brokerv2alpha4 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha4"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+
 	"math/rand"
 	"reflect"
 	"strconv"
@@ -33,17 +39,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
 
-	appsv1 "k8s.io/api/apps/v1"
-
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
-	brokerv2alpha4 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha4"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
-	corev1 "k8s.io/api/core/v1"
 )
 
 //Uncomment this and the "test" import if you want to debug this set of tests
@@ -1520,7 +1521,7 @@ var _ = Describe("artemis controller", func() {
 
 		})
 	})
-	Context("With delopyed controller", func() {
+	Context("With deployed controller", func() {
 		It("Checking acceptor service while expose is false", func() {
 			By("By creating a new crd")
 			ctx := context.Background()
@@ -1571,8 +1572,8 @@ var _ = Describe("artemis controller", func() {
 		})
 	})
 
-	Context("With delopyed controller", func() {
-		It("Testing bindToAllInterfaces default", func() {
+	Context("With deployed controller", func() {
+		It("Testing acceptor bindToAllInterfaces default", func() {
 			By("By creating a new crd")
 			ctx := context.Background()
 			crd := generateArtemisSpec(namespace)
@@ -1639,7 +1640,7 @@ var _ = Describe("artemis controller", func() {
 			By("check it has gone")
 			Eventually(checkCrdDeleted(crd.Name, namespace, &crd), timeout, interval).Should(BeTrue())
 		})
-		It("Testing bindToAllInterfaces being false", func() {
+		It("Testing acceptor bindToAllInterfaces being false", func() {
 			By("By creating a new crd")
 			ctx := context.Background()
 			crd := generateArtemisSpec(namespace)
@@ -1708,7 +1709,7 @@ var _ = Describe("artemis controller", func() {
 			By("check it has gone")
 			Eventually(checkCrdDeleted(crd.Name, namespace, &crd), timeout, interval).Should(BeTrue())
 		})
-		It("Testing bindToAllInterfaces being true", func() {
+		It("Testing acceptor bindToAllInterfaces being true", func() {
 			By("By creating a new crd")
 			ctx := context.Background()
 			crd := generateArtemisSpec(namespace)
@@ -1792,7 +1793,291 @@ var _ = Describe("artemis controller", func() {
 		})
 	})
 
-	Context("With delopyed controller", func() {
+	Context("With a deployed controller", func() {
+		//TODO: Remove the 4x duplication and add all acceptor settings
+		It("Testing acceptor keyStoreType being set", func() {
+			By("By creating a new custom resource instance")
+			ctx := context.Background()
+			cr := generateArtemisSpec(namespace)
+
+			cr.Spec.DeploymentPlan = brokerv1beta1.DeploymentPlanType{
+				Size: 1,
+			}
+			keyStoreType := "PKCS12"
+			cr.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+				{
+					Name:         "new-acceptor",
+					Port:         61666,
+					SSLEnabled:   true,
+					KeyStoreType: keyStoreType,
+				},
+			}
+			Expect(k8sClient.Create(ctx, &cr)).Should(Succeed())
+
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: cr.Name, Namespace: namespace}
+				err := k8sClient.Get(ctx, key, &cr)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			key := types.NamespacedName{Name: cr.Name, Namespace: namespace}
+			Eventually(func() bool {
+				_, ok := namespacedNameToFSM[key]
+				return ok
+			}, timeout, interval).Should(BeTrue())
+
+			fsm := namespacedNameToFSM[key]
+			ssNamespacedName := fsm.GetStatefulSetNamespacedName()
+			Eventually(func() bool {
+				_, err := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
+				return err == nil
+			}).Should(BeTrue())
+
+			Eventually(func() bool {
+				currentStatefulSet, _ := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
+				len := len(currentStatefulSet.Spec.Template.Spec.InitContainers)
+				return len == 1
+			}).Should(BeTrue())
+
+			currentStatefulSet, _ := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
+			initContainer := currentStatefulSet.Spec.Template.Spec.InitContainers[0]
+			//check AMQ_ACCEPTORS value
+			for _, envVar := range initContainer.Env {
+				if envVar.Name == "AMQ_ACCEPTORS" {
+					secretName := envVar.ValueFrom.SecretKeyRef.Name
+					namespaceName := types.NamespacedName{
+						Name:      secretName,
+						Namespace: namespace,
+					}
+					secret, err := secrets.RetriveSecret(namespaceName, secretName, make(map[string]string), k8sClient)
+					Expect(err).To(BeNil())
+					data := secret.Data[envVar.ValueFrom.SecretKeyRef.Key]
+					//the value is a string of acceptors in xml format:
+					//<acceptor name="new-acceptor">...</acceptor><another one>...
+					//we need to locate our target acceptor and do the check
+					//we use the port as a clue
+					fmt.Printf("got value: %v\n", string(data))
+					Expect(strings.Contains(string(data), "keyStoreType=PKCS12")).To(BeTrue())
+				}
+			}
+			Expect(k8sClient.Delete(ctx, &cr)).Should(Succeed())
+
+			By("check it has gone")
+			Eventually(checkCrdDeleted(cr.Name, namespace, &cr), timeout, interval).Should(BeTrue())
+		})
+		It("Testing acceptor keyStoreProvider being set", func() {
+			By("By creating a new custom resource instance")
+			ctx := context.Background()
+			cr := generateArtemisSpec(namespace)
+
+			cr.Spec.DeploymentPlan = brokerv1beta1.DeploymentPlanType{
+				Size: 1,
+			}
+			keyStoreProvider := "SunJCE"
+			cr.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+				{
+					Name:             "new-acceptor",
+					Port:             61666,
+					SSLEnabled:       true,
+					KeyStoreProvider: keyStoreProvider,
+				},
+			}
+			Expect(k8sClient.Create(ctx, &cr)).Should(Succeed())
+
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: cr.Name, Namespace: namespace}
+				err := k8sClient.Get(ctx, key, &cr)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			key := types.NamespacedName{Name: cr.Name, Namespace: namespace}
+			Eventually(func() bool {
+				_, ok := namespacedNameToFSM[key]
+				return ok
+			}, timeout, interval).Should(BeTrue())
+
+			fsm := namespacedNameToFSM[key]
+			ssNamespacedName := fsm.GetStatefulSetNamespacedName()
+			Eventually(func() bool {
+				_, err := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
+				return err == nil
+			}).Should(BeTrue())
+
+			Eventually(func() bool {
+				currentStatefulSet, _ := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
+				len := len(currentStatefulSet.Spec.Template.Spec.InitContainers)
+				return len == 1
+			}).Should(BeTrue())
+
+			currentStatefulSet, _ := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
+			initContainer := currentStatefulSet.Spec.Template.Spec.InitContainers[0]
+			//check AMQ_ACCEPTORS value
+			for _, envVar := range initContainer.Env {
+				if envVar.Name == "AMQ_ACCEPTORS" {
+					secretName := envVar.ValueFrom.SecretKeyRef.Name
+					namespaceName := types.NamespacedName{
+						Name:      secretName,
+						Namespace: namespace,
+					}
+					secret, err := secrets.RetriveSecret(namespaceName, secretName, make(map[string]string), k8sClient)
+					Expect(err).To(BeNil())
+					data := secret.Data[envVar.ValueFrom.SecretKeyRef.Key]
+					//the value is a string of acceptors in xml format:
+					//<acceptor name="new-acceptor">...</acceptor><another one>...
+					//we need to locate our target acceptor and do the check
+					//we use the port as a clue
+					fmt.Printf("got value: %v\n", string(data))
+					Expect(strings.Contains(string(data), "keyStoreProvider=SunJCE")).To(BeTrue())
+				}
+			}
+			Expect(k8sClient.Delete(ctx, &cr)).Should(Succeed())
+
+			By("check it has gone")
+			Eventually(checkCrdDeleted(cr.Name, namespace, &cr), timeout, interval).Should(BeTrue())
+		})
+		It("Testing acceptor trustStoreType being set", func() {
+			By("By creating a new custom resource instance")
+			ctx := context.Background()
+			cr := generateArtemisSpec(namespace)
+
+			cr.Spec.DeploymentPlan = brokerv1beta1.DeploymentPlanType{
+				Size: 1,
+			}
+			trustStoreType := "JCEKS"
+			cr.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+				{
+					Name:           "new-acceptor",
+					Port:           61666,
+					SSLEnabled:     true,
+					TrustStoreType: trustStoreType,
+				},
+			}
+			Expect(k8sClient.Create(ctx, &cr)).Should(Succeed())
+
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: cr.Name, Namespace: namespace}
+				err := k8sClient.Get(ctx, key, &cr)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			key := types.NamespacedName{Name: cr.Name, Namespace: namespace}
+			Eventually(func() bool {
+				_, ok := namespacedNameToFSM[key]
+				return ok
+			}, timeout, interval).Should(BeTrue())
+
+			fsm := namespacedNameToFSM[key]
+			ssNamespacedName := fsm.GetStatefulSetNamespacedName()
+			Eventually(func() bool {
+				_, err := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
+				return err == nil
+			}).Should(BeTrue())
+
+			Eventually(func() bool {
+				currentStatefulSet, _ := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
+				len := len(currentStatefulSet.Spec.Template.Spec.InitContainers)
+				return len == 1
+			}).Should(BeTrue())
+
+			currentStatefulSet, _ := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
+			initContainer := currentStatefulSet.Spec.Template.Spec.InitContainers[0]
+			//check AMQ_ACCEPTORS value
+			for _, envVar := range initContainer.Env {
+				if envVar.Name == "AMQ_ACCEPTORS" {
+					secretName := envVar.ValueFrom.SecretKeyRef.Name
+					namespaceName := types.NamespacedName{
+						Name:      secretName,
+						Namespace: namespace,
+					}
+					secret, err := secrets.RetriveSecret(namespaceName, secretName, make(map[string]string), k8sClient)
+					Expect(err).To(BeNil())
+					data := secret.Data[envVar.ValueFrom.SecretKeyRef.Key]
+					//the value is a string of acceptors in xml format:
+					//<acceptor name="new-acceptor">...</acceptor><another one>...
+					//we need to locate our target acceptor and do the check
+					//we use the port as a clue
+					fmt.Printf("got value: %v\n", string(data))
+					Expect(strings.Contains(string(data), "trustStoreType=JCEKS")).To(BeTrue())
+				}
+			}
+			Expect(k8sClient.Delete(ctx, &cr)).Should(Succeed())
+
+			By("check it has gone")
+			Eventually(checkCrdDeleted(cr.Name, namespace, &cr), timeout, interval).Should(BeTrue())
+		})
+		It("Testing acceptor trustStoreProvider being set", func() {
+			By("By creating a new custom resource instance")
+			ctx := context.Background()
+			cr := generateArtemisSpec(namespace)
+
+			cr.Spec.DeploymentPlan = brokerv1beta1.DeploymentPlanType{
+				Size: 1,
+			}
+			trustStoreProvider := "SUN"
+			cr.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+				{
+					Name:               "new-acceptor",
+					Port:               61666,
+					SSLEnabled:         true,
+					TrustStoreProvider: trustStoreProvider,
+				},
+			}
+			Expect(k8sClient.Create(ctx, &cr)).Should(Succeed())
+
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: cr.Name, Namespace: namespace}
+				err := k8sClient.Get(ctx, key, &cr)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			key := types.NamespacedName{Name: cr.Name, Namespace: namespace}
+			Eventually(func() bool {
+				_, ok := namespacedNameToFSM[key]
+				return ok
+			}, timeout, interval).Should(BeTrue())
+
+			fsm := namespacedNameToFSM[key]
+			ssNamespacedName := fsm.GetStatefulSetNamespacedName()
+			Eventually(func() bool {
+				_, err := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
+				return err == nil
+			}).Should(BeTrue())
+
+			Eventually(func() bool {
+				currentStatefulSet, _ := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
+				len := len(currentStatefulSet.Spec.Template.Spec.InitContainers)
+				return len == 1
+			}).Should(BeTrue())
+
+			currentStatefulSet, _ := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, fsm.namers.LabelBuilder.Labels(), k8sClient)
+			initContainer := currentStatefulSet.Spec.Template.Spec.InitContainers[0]
+			//check AMQ_ACCEPTORS value
+			for _, envVar := range initContainer.Env {
+				if envVar.Name == "AMQ_ACCEPTORS" {
+					secretName := envVar.ValueFrom.SecretKeyRef.Name
+					namespaceName := types.NamespacedName{
+						Name:      secretName,
+						Namespace: namespace,
+					}
+					secret, err := secrets.RetriveSecret(namespaceName, secretName, make(map[string]string), k8sClient)
+					Expect(err).To(BeNil())
+					data := secret.Data[envVar.ValueFrom.SecretKeyRef.Key]
+					//the value is a string of acceptors in xml format:
+					//<acceptor name="new-acceptor">...</acceptor><another one>...
+					//we need to locate our target acceptor and do the check
+					//we use the port as a clue
+					fmt.Printf("got value: %v\n", string(data))
+					Expect(strings.Contains(string(data), "trustStoreProvider=SUN")).To(BeTrue())
+				}
+			}
+			Expect(k8sClient.Delete(ctx, &cr)).Should(Succeed())
+
+			By("check it has gone")
+			Eventually(checkCrdDeleted(cr.Name, namespace, &cr), timeout, interval).Should(BeTrue())
+		})
+	})
+
+	Context("With deployed controller", func() {
 		It("verify old ver support", func() {
 			By("By creating an old crd")
 			ctx := context.Background()
@@ -1831,7 +2116,7 @@ var _ = Describe("artemis controller", func() {
 		})
 	})
 
-	Context("With delopyed controller", func() {
+	Context("With deployed controller", func() {
 		It("Checking storageClassName is configured", func() {
 			By("By creating a new crd")
 			ctx := context.Background()
