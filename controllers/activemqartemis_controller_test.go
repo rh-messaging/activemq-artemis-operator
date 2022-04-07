@@ -1040,29 +1040,27 @@ var _ = Describe("artemis controller", func() {
 			Expect(createdSs.Spec.Template.Spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution[0].LabelSelector.MatchLabels["key"] == "value").Should(BeTrue())
 
 			By("Updating the CR")
-			Eventually(func() bool {
-				// we need to update the latest version and deal with update failures
-				return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
-
-			original := createdCrd
-
-			labelSelector = metav1.LabelSelector{}
-			labelSelector.MatchLabels = make(map[string]string)
-			labelSelector.MatchLabels["key"] = "differentvalue"
-
-			podAffinityTerm = corev1.PodAffinityTerm{}
-			podAffinityTerm.LabelSelector = &labelSelector
-			podAffinity = corev1.PodAffinity{
-				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
-					podAffinityTerm,
-				},
-			}
-			original.Spec.DeploymentPlan.Affinity.PodAffinity = &podAffinity
-			By("Redeploying the CRD")
-			Expect(k8sClient.Update(ctx, original)).Should(Succeed())
-
 			Eventually(func(g Gomega) {
+
+				// we need to update the latest version and deal with update failures
+				g.Expect(getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd)).Should(BeTrue())
+				original := createdCrd
+
+				labelSelector = metav1.LabelSelector{}
+				labelSelector.MatchLabels = make(map[string]string)
+				labelSelector.MatchLabels["key"] = "differentvalue"
+
+				podAffinityTerm = corev1.PodAffinityTerm{}
+				podAffinityTerm.LabelSelector = &labelSelector
+				podAffinity = corev1.PodAffinity{
+					RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+						podAffinityTerm,
+					},
+				}
+				original.Spec.DeploymentPlan.Affinity.PodAffinity = &podAffinity
+				By("Redeploying the CRD")
+				g.Expect(k8sClient.Update(ctx, original)).Should(Succeed())
+
 				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
 
 				g.Expect(k8sClient.Get(ctx, key, createdSs))
