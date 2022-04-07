@@ -287,8 +287,6 @@ type AcceptorType struct {
 	SuppressInternalManagementObjects *bool `json:"suppressInternalManagementObjects,omitempty"`
 	// Whether to let the acceptor to bind to all interfaces (0.0.0.0)
 	BindToAllInterfaces *bool `json:"bindToAllInterfaces,omitempty"`
-	// Type of keystore being used; "JKS", "JCEKS", "PKCS12", etc. Default is "JKS"
-	KeyStoreType string `json:"keyStoreType,omitempty"`
 	// Provider used for the keystore; "SUN", "SunJCE", etc. Default is null
 	KeyStoreProvider string `json:"keyStoreProvider,omitempty"`
 	// Type of truststore being used; "JKS", "JCEKS", "PKCS12", etc. Default in broker is "JKS"
@@ -326,8 +324,6 @@ type ConnectorType struct {
 	SNIHost string `json:"sniHost,omitempty"`
 	// Whether or not to expose this connector
 	Expose bool `json:"expose,omitempty"`
-	// Type of keystore being used; "JKS", "JCEKS", "PKCS12", etc. Default is "JKS"
-	KeyStoreType string `json:"keyStoreType,omitempty"`
 	// Provider used for the keystore; "SUN", "SunJCE", etc. Default is null
 	KeyStoreProvider string `json:"keyStoreProvider,omitempty"`
 	// Type of truststore being used; "JKS", "JCEKS", "PKCS12", etc. Default in broker is "JKS"

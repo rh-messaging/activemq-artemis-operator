@@ -68,10 +68,6 @@ spec:
                       description: Provider used for the keystore; "SUN", "SunJCE",
                         etc. Default is null
                       type: string
-                    keyStoreType:
-                      description: Type of keystore being used; "JKS", "JCEKS", "PKCS12",
-                        etc. Default is "JKS"
-                      type: string
                     multicastPrefix:
                       description: To indicate which kind of routing type to use
                       type: string
@@ -472,10 +468,6 @@ spec:
                     keyStoreProvider:
                       description: Provider used for the keystore; "SUN", "SunJCE",
                         etc. Default is null
-                      type: string
-                    keyStoreType:
-                      description: Type of keystore being used; "JKS", "JCEKS", "PKCS12",
-                        etc. Default is "JKS"
                       type: string
                     name:
                       description: The name of the connector
