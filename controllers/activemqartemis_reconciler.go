@@ -1636,8 +1636,6 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM, current *corev1.PodTemplat
 		podSpec.Tolerations = fsm.customResource.Spec.DeploymentPlan.Tolerations
 	}
 
-	configurePodSecurityContext(podSpec, fsm.customResource.Spec.DeploymentPlan.PodSecurityContext)
-
 	newContainersArray := []corev1.Container{}
 	podSpec.Containers = append(newContainersArray, *container)
 	brokerVolumes := MakeVolumes(fsm)
@@ -1853,7 +1851,9 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM, current *corev1.PodTemplat
 	}
 	environments.Create(podSpec.InitContainers, &envBrokerCustomInstanceDir)
 
+	// NOTE: PodSecurity contains a RunAsUser that will be overridden by that in the provided PodSecurityContext if any
 	configPodSecurity(podSpec, &fsm.customResource.Spec.DeploymentPlan.PodSecurity)
+	configurePodSecurityContext(podSpec, fsm.customResource.Spec.DeploymentPlan.PodSecurityContext)
 
 	clog.Info("Final Init spec", "Detail", podSpec.InitContainers)
 
