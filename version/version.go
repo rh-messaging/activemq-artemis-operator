@@ -1,17 +1,17 @@
 package version
 
 var (
-	Version = "7.9.3"
+	Version = "7.9.4"
 	// PriorVersion - prior version
-	PriorVersion = "7.9.2"
+	PriorVersion = "7.9.3"
 )
 
 const (
 	// LatestVersion product version supported
-	LatestVersion        = "7.9.3"
-	CompactLatestVersion = "793"
+	LatestVersion        = "7.9.4"
+	CompactLatestVersion = "794"
 	// LastMicroVersion product version supported
-	LastMicroVersion = "7.9.2"
+	LastMicroVersion = "7.9.3"
 	// LastMinorVersion product version supported
 	LastMinorVersion = "7.7.0"
 )
@@ -30,6 +30,7 @@ var OperandVersionFromOperatorVersion map[string]string = map[string]string{
 	"7.9.1":  "7.9.1",
 	"7.9.2":  "7.9.2",
 	"7.9.3":  "7.9.3",
+	"7.9.4":  "7.9.4",
 }
 var FullVersionFromMinorVersion map[string]string = map[string]string{
 	"70": "7.7.0",
@@ -41,6 +42,7 @@ var FullVersionFromMinorVersion map[string]string = map[string]string{
 	"91": "7.9.1",
 	"92": "7.9.2",
 	"93": "7.9.3",
+	"94": "7.9.4",
 }
 
 var CompactFullVersionFromMinorVersion map[string]string = map[string]string{
@@ -53,6 +55,7 @@ var CompactFullVersionFromMinorVersion map[string]string = map[string]string{
 	"91": "791",
 	"92": "792",
 	"93": "793",
+	"94": "794",
 }
 
 var CompactVersionFromVersion map[string]string = map[string]string{
@@ -65,6 +68,7 @@ var CompactVersionFromVersion map[string]string = map[string]string{
 	"7.9.1": "791",
 	"7.9.2": "792",
 	"7.9.3": "793",
+	"7.9.4": "794",
 }
 
 var FullVersionFromCompactVersion map[string]string = map[string]string{
@@ -77,6 +81,7 @@ var FullVersionFromCompactVersion map[string]string = map[string]string{
 	"791": "7.9.1",
 	"792": "7.9.2",
 	"793": "7.9.3",
+	"794": "7.9.4",
 }
 
 var MinorVersionFromFullVersion map[string]string = map[string]string{
@@ -89,6 +94,7 @@ var MinorVersionFromFullVersion map[string]string = map[string]string{
 	"7.9.1": "91",
 	"7.9.2": "92",
 	"7.9.3": "93",
+	"7.9.4": "94",
 }
 
 //The yacfg profile to use for a given full version of broker
@@ -102,6 +108,7 @@ var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
 	"7.9.1": "7.9.0",
 	"7.9.2": "7.9.0",
 	"7.9.3": "7.9.0",
+	"7.9.4": "7.9.0",
 }
 
 var YacfgProfileName string = "amq_broker"
