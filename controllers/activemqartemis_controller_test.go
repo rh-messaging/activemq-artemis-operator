@@ -1264,6 +1264,28 @@ var _ = Describe("artemis controller", func() {
 				return found, err
 			}, duration, interval).Should(Equal(true))
 
+			By("By checking the container stateful launch set for STATEFUL_SET_ORDINAL")
+			Eventually(func() (bool, error) {
+				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
+				createdSs := &appsv1.StatefulSet{}
+
+				err := k8sClient.Get(ctx, key, createdSs)
+				if err != nil {
+					return false, err
+				}
+
+				found := false
+				for _, container := range createdSs.Spec.Template.Spec.Containers {
+					for _, command := range container.Command {
+						if strings.Contains(command, "STATEFUL_SET_ORDINAL") {
+							found = true
+						}
+					}
+				}
+
+				return found, err
+			}, duration, interval).Should(Equal(true))
+
 			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
 
 			By("check it has gone")
