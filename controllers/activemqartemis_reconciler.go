@@ -1985,7 +1985,7 @@ func addConfigMapForBrokerProperties(fsm *ActiveMQArtemisFSM) string {
 	// fetch and do idempotent transform based on CR
 	configMapName := types.NamespacedName{
 		Namespace: fsm.customResource.Namespace,
-		Name:      "broker-properties-" + HexShaHashOfMap(fsm.customResource.Spec.BrokerProperties),
+		Name:      fsm.customResource.Name + "-props-" + HexShaHashOfMap(fsm.customResource.Spec.BrokerProperties),
 	}
 	var desired *corev1.ConfigMap = &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{

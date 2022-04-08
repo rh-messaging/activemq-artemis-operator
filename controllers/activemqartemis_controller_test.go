@@ -1210,7 +1210,7 @@ var _ = Describe("artemis controller", func() {
 
 			By("By finding a new config map with broker props")
 			configMap := &corev1.ConfigMap{}
-			key := types.NamespacedName{Name: "broker-properties-" + hexShaOriginal, Namespace: crd.ObjectMeta.Namespace}
+			key := types.NamespacedName{Name: crd.ObjectMeta.Name + "-props-" + hexShaOriginal, Namespace: crd.ObjectMeta.Namespace}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, key, configMap)
 				return err == nil
@@ -1254,7 +1254,7 @@ var _ = Describe("artemis controller", func() {
 				for _, container := range createdSs.Spec.Template.Spec.Containers {
 					for _, vm := range container.VolumeMounts {
 						// mount path can't have a .
-						if strings.Contains(vm.MountPath, "broker-properties") {
+						if strings.Contains(vm.MountPath, "-props-") {
 							found = true
 						}
 					}
@@ -1367,6 +1367,40 @@ var _ = Describe("artemis controller", func() {
 
 			// cannot verify no leaks b/c gc is not enabled on envTest
 			// and on delete we don't have any state to determine the owner reference
+		})
+
+		It("Expect two crs to coexist", func() {
+			By("By creating two crds with BrokerProperties in the spec")
+			ctx := context.Background()
+			crd1 := generateArtemisSpec(namespace)
+			crd2 := generateArtemisSpec(namespace)
+
+			Expect(k8sClient.Create(ctx, &crd1)).Should(Succeed())
+			Expect(k8sClient.Create(ctx, &crd2)).Should(Succeed())
+
+			By("By eventualy finding two config maps with broker props")
+			configMapList := &corev1.ConfigMapList{}
+			opts := &client.ListOptions{
+				Namespace: namespace,
+			}
+			Eventually(func() int {
+				err := k8sClient.List(ctx, configMapList, opts)
+				if err != nil {
+					fmt.Printf("error getting list of config opts map! %v", err)
+				}
+
+				ret := 0
+				for _, cm := range configMapList.Items {
+					if strings.Contains(cm.ObjectMeta.Name, crd1.Name) || strings.Contains(cm.ObjectMeta.Name, crd2.Name) {
+						ret++
+					}
+				}
+				return ret
+			}, timeout, interval).Should(BeEquivalentTo(2))
+
+			// cleanup
+			Expect(k8sClient.Delete(ctx, &crd1)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, &crd2)).Should(Succeed())
 		})
 
 	})
@@ -1837,7 +1871,6 @@ var _ = Describe("artemis controller", func() {
 					//<acceptor name="new-acceptor">...</acceptor><another one>...
 					//we need to locate our target acceptor and do the check
 					//we use the port as a clue
-					fmt.Printf("got value: %v\n", string(data))
 					Expect(strings.Contains(string(data), "keyStoreProvider=SunJCE")).To(BeTrue())
 				}
 			}
@@ -1907,7 +1940,6 @@ var _ = Describe("artemis controller", func() {
 					//<acceptor name="new-acceptor">...</acceptor><another one>...
 					//we need to locate our target acceptor and do the check
 					//we use the port as a clue
-					fmt.Printf("got value: %v\n", string(data))
 					Expect(strings.Contains(string(data), "trustStoreType=JCEKS")).To(BeTrue())
 				}
 			}
