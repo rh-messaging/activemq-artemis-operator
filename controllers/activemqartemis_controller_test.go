@@ -108,11 +108,9 @@ var _ = Describe("artemis controller", func() {
 		It("default image to use latest", func() {
 			crd := generateArtemisSpec(namespace)
 			imageToUse := determineImageToUse(&crd, "Kubernetes")
-			fmt.Printf("k8s imageToUse, %v\n", imageToUse)
 			Expect(imageToUse).To(Equal(latestKubeImage), "actual", imageToUse)
 
 			imageToUse = determineImageToUse(&crd, "Init")
-			fmt.Printf("init imageToUse, %v\n", imageToUse)
 			Expect(imageToUse).To(Equal(latestInitImage), "actual", imageToUse)
 		})
 	})
@@ -2231,7 +2229,6 @@ func checkSecretHasCorrectKeyValue(secName string, ns types.NamespacedName, key 
 			return false
 		}
 		data := secret.Data[key]
-		fmt.Printf("got secret value: %v\n", string(data))
 		return strings.Contains(string(data), expectedValue)
 	}, timeout, interval).Should(BeTrue())
 }
