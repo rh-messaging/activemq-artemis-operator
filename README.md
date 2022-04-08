@@ -18,5 +18,5 @@ The [building.md](docs/building.md) describes how to build operator and how to t
 
 ## OLM integration
 
-The [bundle.md](docs/bundle.md) contains instructions for how to build operator bundle images and integrate it into [Openshift Liftcycle Manager](https://olm.operatorframework.io/) framework.
+The [bundle.md](docs/bundle.md) contains instructions for how to build operator bundle images and integrate it into [Operator Liftcycle Manager](https://olm.operatorframework.io/) framework.
 
