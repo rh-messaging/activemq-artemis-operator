@@ -310,37 +310,50 @@ var _ = Describe("artemis controller", func() {
 			Expect(createdSs.Spec.Template.Spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution[0].LabelSelector.MatchLabels["key"] == "value").Should(BeTrue())
 
 			By("Updating the CR")
-			Eventually(func(g Gomega) {
-
+			Eventually(func() bool {
 				// we need to update the latest version and deal with update failures
-				g.Expect(getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd)).Should(BeTrue())
-				original := createdCrd
+				return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
 
-				labelSelector = metav1.LabelSelector{}
-				labelSelector.MatchLabels = make(map[string]string)
-				labelSelector.MatchLabels["key"] = "differentvalue"
+			original := createdCrd
 
-				podAffinityTerm = corev1.PodAffinityTerm{}
-				podAffinityTerm.LabelSelector = &labelSelector
-				podAffinity = corev1.PodAffinity{
-					RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
-						podAffinityTerm,
-					},
-				}
-				original.Spec.DeploymentPlan.Affinity.PodAffinity = &podAffinity
-				By("Redeploying the CRD")
-				g.Expect(k8sClient.Update(ctx, original)).Should(Succeed())
+			labelSelector = metav1.LabelSelector{}
+			labelSelector.MatchLabels = make(map[string]string)
+			labelSelector.MatchLabels["key"] = "differentvalue"
 
+			podAffinityTerm = corev1.PodAffinityTerm{}
+			podAffinityTerm.LabelSelector = &labelSelector
+			podAffinity = corev1.PodAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+					podAffinityTerm,
+				},
+			}
+			original.Spec.DeploymentPlan.Affinity.PodAffinity = &podAffinity
+			By("Redeploying the CRD")
+			Expect(k8sClient.Update(ctx, original)).Should(Succeed())
+
+			Eventually(func() bool {
 				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
 
-				g.Expect(k8sClient.Get(ctx, key, createdSs))
+				err := k8sClient.Get(ctx, key, createdSs)
 
-				g.Expect(createdSs.Spec.Template.Spec.Affinity.PodAffinity).ShouldNot(BeNil())
+				if err != nil {
+					return false
+				}
 
+				if createdSs.Spec.Template.Spec.Affinity.PodAffinity == nil {
+					return false
+				}
+
+				if len(createdSs.Spec.Template.Spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution) != 1 {
+					return false
+				}
+
+				fmt.Printf("checking value of key: %v\n", createdSs.Spec.Template.Spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution[0].LabelSelector.MatchLabels["key"])
 				By("Making sure the pd affinity are correct")
-				g.Expect(createdSs.Spec.Template.Spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution[0].LabelSelector.MatchLabels["key"]).Should(Equal("value"))
+				return createdSs.Spec.Template.Spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution[0].LabelSelector.MatchLabels["key"] == "differentvalue"
 
-			}, timeout, interval).Should(Succeed())
+			}, timeout, interval).Should(BeTrue())
 
 			By("check it has gone")
 			Expect(k8sClient.Delete(ctx, createdCrd))
@@ -410,19 +423,27 @@ var _ = Describe("artemis controller", func() {
 			By("Redeploying the CRD")
 			Expect(k8sClient.Update(ctx, original)).Should(Succeed())
 
-			Eventually(func(g Gomega) {
+			Eventually(func() bool {
 				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
 
-				g.Expect(k8sClient.Get(ctx, key, createdSs)).Should(Succeed())
+				err := k8sClient.Get(ctx, key, createdSs)
 
-				g.Expect(createdSs.Spec.Template.Spec.Affinity.PodAntiAffinity).ShouldNot(BeNil())
+				if err != nil {
+					return false
+				}
 
-				g.Expect(len(createdSs.Spec.Template.Spec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution)).Should(Equal(1))
+				if createdSs.Spec.Template.Spec.Affinity.PodAntiAffinity == nil {
+					return false
+				}
 
-				By("Making sure the pd affinity are correct")
-				g.Expect(createdSs.Spec.Template.Spec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution[0].LabelSelector.MatchLabels["key"] == "value").Should(BeTrue())
+				if len(createdSs.Spec.Template.Spec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution) != 1 {
+					return false
+				}
 
-			}, timeout, interval).Should(Succeed())
+				fmt.Printf("checking value of key: %v\n", createdSs.Spec.Template.Spec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution[0].LabelSelector.MatchLabels["key"])
+				return createdSs.Spec.Template.Spec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution[0].LabelSelector.MatchLabels["key"] == "differentvalue"
+
+			}, timeout, interval).Should(BeTrue())
 
 			By("check it has gone")
 			Expect(k8sClient.Delete(ctx, createdCrd))
@@ -472,7 +493,7 @@ var _ = Describe("artemis controller", func() {
 					return false
 				}
 				return createdSs.Spec.Template.Spec.Affinity.NodeAffinity != nil
-			}, timeout, interval).Should(Equal(true))
+			}, timeout, interval).Should(BeTrue())
 
 			By("Making sure the node affinity are correct")
 			Expect(createdSs.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0].Key).Should(Equal("foo"))
@@ -499,17 +520,21 @@ var _ = Describe("artemis controller", func() {
 			By("Redeploying the CRD")
 			Expect(k8sClient.Update(ctx, original)).Should(Succeed())
 
-			Eventually(func(g Gomega) {
+			Eventually(func(g Gomega) bool {
 				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
 
-				g.Expect(k8sClient.Get(ctx, key, createdSs)).Should(Succeed())
+				if k8sClient.Get(ctx, key, createdSs) != nil {
+					return false
+				}
 
-				g.Expect(len(createdSs.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms)).Should(BeEquivalentTo(1))
+				if len(createdSs.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms) != 1 {
+					return false
+				}
 
 				By("Making sure the pod affinity is correct")
-				g.Expect(createdSs.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0].Key).Should(Equal("bar"))
+				return createdSs.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0].Key == "bar"
 
-			}, timeout, interval).Should(Succeed())
+			}, timeout, interval).Should(BeTrue())
 
 			By("check it has gone")
 			Expect(k8sClient.Delete(ctx, createdCrd))
@@ -1578,11 +1603,19 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			By("verifying init command args did not change")
-			Expect(k8sClient.Get(ctx, key, createdSs))
+			Eventually(func() bool {
+				fmt.Println("========= trying verification")
+				if err := k8sClient.Get(ctx, key, createdSs); err != nil {
+					return false
+				}
 
-			updatesInitArgs := strings.Join(createdSs.Spec.Template.Spec.InitContainers[0].Args, ",")
-
-			Expect(initArgsString).To(Equal(updatesInitArgs))
+				updatesInitArgs := strings.Join(createdSs.Spec.Template.Spec.InitContainers[0].Args, ",")
+				fmt.Printf("===== Got Init args ||%v||\n", updatesInitArgs)
+				fmt.Printf("===== Compare to ||%v||\n", initArgsString)
+				result := initArgsString == updatesInitArgs
+				fmt.Printf("==== The result is %v\n", result)
+				return initArgsString == updatesInitArgs
+			}, timeout, interval).Should(BeTrue())
 
 			// cleanup
 			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
@@ -1885,14 +1918,11 @@ var _ = Describe("artemis controller", func() {
 						Name:      secretName,
 						Namespace: namespace,
 					}
-					secret, err := secrets.RetriveSecret(namespaceName, secretName, make(map[string]string), k8sClient)
-					Expect(err).To(BeNil())
-					data := secret.Data[envVar.ValueFrom.SecretKeyRef.Key]
 					//the value is a string of acceptors in xml format:
 					//<acceptor name="new-acceptor">...</acceptor><another one>...
 					//we need to locate our target acceptor and do the check
 					//we use the port as a clue
-					Expect(strings.Contains(string(data), "keyStoreProvider=SunJCE")).To(BeTrue())
+					checkSecretHasCorrectKeyValue(secretName, namespaceName, envVar.ValueFrom.SecretKeyRef.Key, "keyStoreProvider=SunJCE")
 				}
 			}
 			Expect(k8sClient.Delete(ctx, &cr)).Should(Succeed())
@@ -1954,14 +1984,11 @@ var _ = Describe("artemis controller", func() {
 						Name:      secretName,
 						Namespace: namespace,
 					}
-					secret, err := secrets.RetriveSecret(namespaceName, secretName, make(map[string]string), k8sClient)
-					Expect(err).To(BeNil())
-					data := secret.Data[envVar.ValueFrom.SecretKeyRef.Key]
 					//the value is a string of acceptors in xml format:
 					//<acceptor name="new-acceptor">...</acceptor><another one>...
 					//we need to locate our target acceptor and do the check
 					//we use the port as a clue
-					Expect(strings.Contains(string(data), "trustStoreType=JCEKS")).To(BeTrue())
+					checkSecretHasCorrectKeyValue(secretName, namespaceName, envVar.ValueFrom.SecretKeyRef.Key, "trustStoreType=JCEKS")
 				}
 			}
 			Expect(k8sClient.Delete(ctx, &cr)).Should(Succeed())
@@ -2023,15 +2050,11 @@ var _ = Describe("artemis controller", func() {
 						Name:      secretName,
 						Namespace: namespace,
 					}
-					secret, err := secrets.RetriveSecret(namespaceName, secretName, make(map[string]string), k8sClient)
-					Expect(err).To(BeNil())
-					data := secret.Data[envVar.ValueFrom.SecretKeyRef.Key]
 					//the value is a string of acceptors in xml format:
 					//<acceptor name="new-acceptor">...</acceptor><another one>...
 					//we need to locate our target acceptor and do the check
 					//we use the port as a clue
-					fmt.Printf("got value: %v\n", string(data))
-					Expect(strings.Contains(string(data), "trustStoreProvider=SUN")).To(BeTrue())
+					checkSecretHasCorrectKeyValue(secretName, namespaceName, envVar.ValueFrom.SecretKeyRef.Key, "trustStoreProvider=SUN")
 				}
 			}
 			Expect(k8sClient.Delete(ctx, &cr)).Should(Succeed())
@@ -2199,4 +2222,16 @@ func getPersistedVersionedCrd(name string, nameSpace string, object client.Objec
 func checkCrdDeleted(name string, namespace string, crd client.Object) bool {
 	err := k8sClient.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, crd)
 	return errors.IsNotFound(err)
+}
+
+func checkSecretHasCorrectKeyValue(secName string, ns types.NamespacedName, key string, expectedValue string) {
+	Eventually(func() bool {
+		secret, err := secrets.RetriveSecret(ns, secName, make(map[string]string), k8sClient)
+		if err != nil {
+			return false
+		}
+		data := secret.Data[key]
+		fmt.Printf("got secret value: %v\n", string(data))
+		return strings.Contains(string(data), expectedValue)
+	}, timeout, interval).Should(BeTrue())
 }

@@ -303,20 +303,19 @@ var _ = Describe("security controller", func() {
 					fmt.Printf("error retrieving broker1 ss %v\n", err)
 					return false
 				}
-				return true
-			}, timeout, interval).Should(BeTrue())
 
-			fmt.Printf("ss1 %v\n", requestedSs)
-			initContainer := requestedSs.Spec.Template.Spec.InitContainers[0]
-			secApplied := false
-			for _, arg := range initContainer.Args {
-				fmt.Println("checking arg " + arg)
-				if strings.Contains(arg, "mkdir -p /init_cfg_root/security/security") {
-					secApplied = true
-					break
+				fmt.Printf("ss1 %v\n", requestedSs)
+				initContainer := requestedSs.Spec.Template.Spec.InitContainers[0]
+				secApplied := false
+				for _, arg := range initContainer.Args {
+					fmt.Println("checking arg " + arg)
+					if strings.Contains(arg, "mkdir -p /init_cfg_root/security/security") {
+						secApplied = true
+						break
+					}
 				}
-			}
-			Expect(secApplied).To(BeTrue())
+				return secApplied
+			}, timeout, interval).Should(BeTrue())
 
 			By("Checking security doesn't gets applied to broker2 " + broker2Cr.Name)
 			Eventually(func() bool {
@@ -326,20 +325,19 @@ var _ = Describe("security controller", func() {
 					fmt.Printf("error retrieving broker2 ss %v\n", err)
 					return false
 				}
-				return true
-			}, timeout, interval).Should(BeTrue())
-
-			fmt.Printf("ss2 %v\n", requestedSs)
-			initContainer = requestedSs.Spec.Template.Spec.InitContainers[0]
-			secApplied = false
-			for _, arg := range initContainer.Args {
-				fmt.Println("checking arg " + arg)
-				if strings.Contains(arg, "mkdir -p /init_cfg_root/security/security") {
-					secApplied = true
-					break
+				fmt.Printf("ss2 %v\n", requestedSs)
+				initContainer := requestedSs.Spec.Template.Spec.InitContainers[0]
+				secApplied := false
+				for _, arg := range initContainer.Args {
+					fmt.Println("checking arg " + arg)
+					if strings.Contains(arg, "mkdir -p /init_cfg_root/security/security") {
+						secApplied = true
+						break
+					}
 				}
-			}
-			Expect(secApplied).To(BeFalse())
+				return secApplied
+
+			}, timeout, interval).Should(BeFalse())
 
 			By("Checking security gets applied to broker3 " + broker3Cr.Name)
 			Eventually(func() bool {
@@ -349,20 +347,19 @@ var _ = Describe("security controller", func() {
 					fmt.Printf("error retrieving broker3 ss %v\n", err)
 					return false
 				}
-				return true
-			}, timeout, interval).Should(BeTrue())
-
-			fmt.Printf("ss3 %v\n", requestedSs)
-			initContainer = requestedSs.Spec.Template.Spec.InitContainers[0]
-			secApplied = false
-			for _, arg := range initContainer.Args {
-				fmt.Println("checking arg " + arg)
-				if strings.Contains(arg, "mkdir -p /init_cfg_root/security/security") {
-					secApplied = true
-					break
+				fmt.Printf("ss3 %v\n", requestedSs)
+				initContainer := requestedSs.Spec.Template.Spec.InitContainers[0]
+				secApplied := false
+				for _, arg := range initContainer.Args {
+					fmt.Println("checking arg " + arg)
+					if strings.Contains(arg, "mkdir -p /init_cfg_root/security/security") {
+						secApplied = true
+						break
+					}
 				}
-			}
-			Expect(secApplied).To(BeTrue())
+				return secApplied
+
+			}, timeout, interval).Should(BeTrue())
 
 			By("check it has gone")
 			Expect(k8sClient.Delete(ctx, createdBroker1Cr)).Should(Succeed())
