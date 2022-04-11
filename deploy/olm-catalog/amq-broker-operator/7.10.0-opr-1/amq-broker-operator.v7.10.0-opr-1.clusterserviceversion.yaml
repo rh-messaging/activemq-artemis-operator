@@ -14,8 +14,8 @@ metadata:
     categories: "Streaming & Messaging"
     certified: "false"
     description: AMQ Broker Operator for RHEL 8 (Multiarch) provides the ability to deploy and manage stateful AMQ Broker clusters
-    #containerImage: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator:7.10-3
-    containerImage: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator@sha256:0e4c065d3186027a3511b41a2e3e3b50f7dec88f5c893eccf2166d0e8c61b13e
+    #containerImage: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator:7.10-4
+    containerImage: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator@sha256:1fe90ad0177de260d4037787b213c137330d2dc02bb1110001b24e45a0f1d98e
     createdAt: 2021-06-18T00:02:04Z
     capabilities: Seamless Upgrades
     repository: https://github.com/rh-messaging/activemq-artemis-operator
@@ -2179,7 +2179,7 @@ spec:
                   name: amq-broker-operator
                   com.company: Red_Hat
                   rht.prod_name: Red_Hat_Integration
-                  rht.prod_ver: 2022.Q1
+                  rht.prod_ver: 2022.Q2
                   rht.comp: Broker_AMQ
                   rht.comp_ver: 7.10.0
                   rht.subcomp: broker-amq-operator
@@ -2195,8 +2195,8 @@ spec:
                     secretName: amq-broker-webhook-server-cert
                 containers:
                   - name: amq-broker-operator
-                    #image: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator:7.10-3
-                    image: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator@sha256:0e4c065d3186027a3511b41a2e3e3b50f7dec88f5c893eccf2166d0e8c61b13e
+                    #image: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator:7.10-4
+                    image: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator@sha256:1fe90ad0177de260d4037787b213c137330d2dc02bb1110001b24e45a0f1d98e
                     livenessProbe:
                       httpGet:
                         path: /healthz
