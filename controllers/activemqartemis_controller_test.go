@@ -21,11 +21,13 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"os"
 
 	brokerv2alpha4 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha4"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
+	"github.com/artemiscloud/activemq-artemis-operator/version"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
@@ -94,6 +96,25 @@ var _ = Describe("artemis controller", func() {
 		if wi != nil {
 			wi.Stop()
 		}
+	})
+
+	Context("Versions Test", func() {
+		latestKubeImage := "registry.redhat.io/amq7/amq-broker-rhel8:7.10-19"
+		latestInitImage := "registry.redhat.io/amq7/amq-broker-init-rhel8:7.10-7"
+
+		os.Setenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_"+version.CompactLatestVersion, latestInitImage)
+		os.Setenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_"+version.CompactLatestVersion, latestKubeImage)
+
+		It("default image to use latest", func() {
+			crd := generateArtemisSpec(namespace)
+			imageToUse := determineImageToUse(&crd, "Kubernetes")
+			fmt.Printf("k8s imageToUse, %v\n", imageToUse)
+			Expect(imageToUse).To(Equal(latestKubeImage), "actual", imageToUse)
+
+			imageToUse = determineImageToUse(&crd, "Init")
+			fmt.Printf("init imageToUse, %v\n", imageToUse)
+			Expect(imageToUse).To(Equal(latestInitImage), "actual", imageToUse)
+		})
 	})
 
 	Context("PodSecurityContext Test", func() {

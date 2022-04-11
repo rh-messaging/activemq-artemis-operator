@@ -1,7 +1,7 @@
 package version
 
 var (
-	Version = "7.10.0.ER3"
+	Version = "7.10.0"
 	// PriorVersion - prior version
 	PriorVersion = "7.9.3"
 )
