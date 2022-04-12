@@ -109,6 +109,9 @@ vet: ## Run go vet against code.
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test  ./... $(TEST_ARGS) -coverprofile cover.out
 
+test-mk: manifests generate fmt vet envtest ## Run tests.
+	USE_EXISTING_CLUSTER=true ENABLE_WEBHOOKS=false go test  ./... $(TEST_ARGS) -coverprofile cover.out
+
 ##@ Build
 
 build: generate fmt vet ## Build manager binary.

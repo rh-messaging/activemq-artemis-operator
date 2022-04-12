@@ -64,14 +64,20 @@ var _ = BeforeSuite(func() {
 	ctx, cancel = context.WithCancel(context.TODO())
 
 	By("bootstrapping test environment")
-	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
-		ErrorIfCRDPathMissing: false,
-		WebhookInstallOptions: envtest.WebhookInstallOptions{
-			Paths: []string{filepath.Join("..", "..", "config", "webhook")},
-		},
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		testEnv = &envtest.Environment{
+			CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
+			ErrorIfCRDPathMissing: false,
+			WebhookInstallOptions: envtest.WebhookInstallOptions{
+				Paths: []string{filepath.Join("..", "..", "config", "webhook")},
+			},
+		}
+	} else {
+		testEnv = &envtest.Environment{
+			CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
+			ErrorIfCRDPathMissing: false,
+		}
 	}
-
 	cfg, err := testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())

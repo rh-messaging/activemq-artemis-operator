@@ -1451,7 +1451,7 @@ var _ = Describe("artemis controller", func() {
 
 	Context("With address settings via updated cr", func() {
 		It("Expect ok deploy", func() {
-			By("By creating a crd without  address spec")
+			By("By creating a crd without address spec")
 			ctx := context.Background()
 			crd := generateArtemisSpec(namespace)
 
@@ -1490,7 +1490,7 @@ var _ = Describe("artemis controller", func() {
 					// add a new property
 					createdCrd.Spec.BrokerProperties = append(createdCrd.Spec.BrokerProperties, "gen="+strconv.FormatInt(createdCrd.ObjectMeta.Generation, 10))
 
-					// sdd address settings, to an existing crd
+					// add address settings, to an existing crd
 					ma := "merge_all"
 					dlq := "dlq"
 					dlqabc := "dlqabc"
@@ -1537,13 +1537,20 @@ var _ = Describe("artemis controller", func() {
 				return false
 			}, timeout, interval).Should(BeTrue())
 
-			By("tracking the yaconfig init command and verifying no change on further update")
-			createdSs := &appsv1.StatefulSet{}
+			By("tracking the yaconfig init command with user_address_settings and verifying no change on further update")
 			key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
+			createdSs := &appsv1.StatefulSet{}
+			var initArgsString string
+			Eventually(func(g Gomega) {
 
-			Expect(k8sClient.Get(ctx, key, createdSs))
+				createdSs := &appsv1.StatefulSet{}
 
-			initArgsString := strings.Join(createdSs.Spec.Template.Spec.InitContainers[0].Args, ",")
+				g.Expect(k8sClient.Get(ctx, key, createdSs))
+
+				initArgsString = strings.Join(createdSs.Spec.Template.Spec.InitContainers[0].Args, ",")
+				g.Expect(initArgsString).Should(ContainSubstring("user_address_settings"))
+
+			}, timeout, interval).Should(Succeed())
 
 			By("pushing another update on the current version...")
 			Eventually(func() bool {
@@ -1553,7 +1560,7 @@ var _ = Describe("artemis controller", func() {
 
 					createdCrd.Spec.BrokerProperties = append(createdCrd.Spec.BrokerProperties, "gen2="+strconv.FormatInt(createdCrd.ObjectMeta.Generation, 10))
 
-					// sdd address settings, to an existing crd
+					// add address settings, to an existing crd
 					ma := "merge_all"
 					dlq := "dlq"
 					dlqabc := "dlqabc"
@@ -1602,17 +1609,12 @@ var _ = Describe("artemis controller", func() {
 
 			By("verifying init command args did not change")
 			Eventually(func() bool {
-				fmt.Println("========= trying verification")
 				if err := k8sClient.Get(ctx, key, createdSs); err != nil {
 					return false
 				}
 
-				updatesInitArgs := strings.Join(createdSs.Spec.Template.Spec.InitContainers[0].Args, ",")
-				fmt.Printf("===== Got Init args ||%v||\n", updatesInitArgs)
-				fmt.Printf("===== Compare to ||%v||\n", initArgsString)
-				result := initArgsString == updatesInitArgs
-				fmt.Printf("==== The result is %v\n", result)
-				return initArgsString == updatesInitArgs
+				updatedInitArgs := strings.Join(createdSs.Spec.Template.Spec.InitContainers[0].Args, ",")
+				return initArgsString == updatedInitArgs
 			}, timeout, interval).Should(BeTrue())
 
 			// cleanup
