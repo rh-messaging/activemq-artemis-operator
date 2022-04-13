@@ -47,7 +47,7 @@ func printVersion() {
 	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
 	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 	log.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))
-	log.Info(fmt.Sprintf("Version of the operator: %s-%s", version.Version, "HF3"))
+	log.Info(fmt.Sprintf("Version of the operator: %s-%s", version.Version, "HF4"))
 	log.Info(fmt.Sprintf("Product Version: %s", version.LatestVersion))
 	log.Info(fmt.Sprintf("Supported AMQ Broker Product Versions: %s", getSupportedBrokerVersions()))
 }
