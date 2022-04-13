@@ -142,9 +142,6 @@ spec:
                   user:
                     description: The user associated with the queue
                     type: string
-                required:
-                - maxConsumers
-                - purgeOnNoConsumers
                 type: object
               queueName:
                 description: Queue Name

@@ -57,7 +57,7 @@ type QueueConfigurationType struct {
 	// The user associated with the queue
 	User *string `json:"user,omitempty"`
 	// Max number of consumers allowed on this queue
-	MaxConsumers *int32 `json:"maxConsumers"`
+	MaxConsumers *int32 `json:"maxConsumers,omitempty"`
 	// If the queue is exclusive
 	Exclusive *bool `json:"exclusive,omitempty"`
 	// If rebalance the message group
@@ -75,7 +75,7 @@ type QueueConfigurationType struct {
 	// If force non-destructive consumers on the queue
 	NonDestructive *bool `json:"nonDestructive,omitempty"`
 	// Whether to delete all messages when no consumers connected to the queue
-	PurgeOnNoConsumers *bool `json:"purgeOnNoConsumers"`
+	PurgeOnNoConsumers *bool `json:"purgeOnNoConsumers,omitempty"`
 	// If the queue is enabled
 	Enabled *bool `json:"enabled,omitempty"`
 	// Number of consumers required before dispatching messages
