@@ -21,6 +21,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -98,8 +99,6 @@ var _ = Describe("security controller", func() {
 			realHandler, ok := securityHandler.(*ActiveMQArtemisSecurityConfigHandler)
 			Expect(ok).To(BeTrue())
 
-			fmt.Printf("original handler %p\n", realHandler)
-
 			By("Redeploying the same CR")
 			request := ctrl.Request{
 				NamespacedName: types.NamespacedName{
@@ -121,8 +120,6 @@ var _ = Describe("security controller", func() {
 
 			newRealHandler, ok2 := newHandler.(*ActiveMQArtemisSecurityConfigHandler)
 			Expect(ok2).To(BeTrue())
-
-			fmt.Printf("new handler %p\n", newRealHandler)
 
 			equal := realHandler == newRealHandler
 			Expect(equal).To(BeTrue())
@@ -283,15 +280,12 @@ var _ = Describe("security controller", func() {
 				key := types.NamespacedName{Name: namer.CrToSS(createdBroker1Cr.Name), Namespace: defaultNamespace}
 				err := k8sClient.Get(ctx, key, requestedSs)
 				if err != nil {
-					fmt.Printf("error retrieving broker1 ss %v\n", err)
 					return false
 				}
 
-				fmt.Printf("ss1 %v\n", requestedSs)
 				initContainer := requestedSs.Spec.Template.Spec.InitContainers[0]
 				secApplied := false
 				for _, arg := range initContainer.Args {
-					fmt.Println("checking arg " + arg)
 					if strings.Contains(arg, "mkdir -p /init_cfg_root/security/security") {
 						secApplied = true
 						break
@@ -305,14 +299,11 @@ var _ = Describe("security controller", func() {
 				key := types.NamespacedName{Name: namer.CrToSS(createdBroker2Cr.Name), Namespace: defaultNamespace}
 				err := k8sClient.Get(ctx, key, requestedSs)
 				if err != nil {
-					fmt.Printf("error retrieving broker2 ss %v\n", err)
 					return false
 				}
-				fmt.Printf("ss2 %v\n", requestedSs)
 				initContainer := requestedSs.Spec.Template.Spec.InitContainers[0]
 				secApplied := false
 				for _, arg := range initContainer.Args {
-					fmt.Println("checking arg " + arg)
 					if strings.Contains(arg, "mkdir -p /init_cfg_root/security/security") {
 						secApplied = true
 						break
@@ -330,11 +321,9 @@ var _ = Describe("security controller", func() {
 					fmt.Printf("error retrieving broker3 ss %v\n", err)
 					return false
 				}
-				fmt.Printf("ss3 %v\n", requestedSs)
 				initContainer := requestedSs.Spec.Template.Spec.InitContainers[0]
 				secApplied := false
 				for _, arg := range initContainer.Args {
-					fmt.Println("checking arg " + arg)
 					if strings.Contains(arg, "mkdir -p /init_cfg_root/security/security") {
 						secApplied = true
 						break
@@ -364,6 +353,72 @@ var _ = Describe("security controller", func() {
 			Eventually(func() bool {
 				return checkCrdDeleted(secCrd.ObjectMeta.Name, defaultNamespace, createdSecCrd)
 			}, timeout, interval).Should(BeTrue())
+
+		})
+
+		It("Reconcile security on broker with non shell safe annotations", func() {
+
+			By("Deploying broker")
+			brokerCrd := generateOriginalArtemisSpec(defaultNamespace, randString())
+			brokerCrd.Spec.DeploymentPlan.Size = 1
+			Expect(k8sClient.Create(ctx, brokerCrd)).Should(Succeed())
+
+			createdBrokerCr := &brokerv1beta1.ActiveMQArtemis{}
+
+			Eventually(func() bool {
+				return getPersistedVersionedCrd(brokerCrd.ObjectMeta.Name, defaultNamespace, createdBrokerCr)
+			}, timeout, interval).Should(BeTrue())
+			Expect(brokerCrd.Name).Should(Equal(createdBrokerCr.ObjectMeta.Name))
+
+			_, createdSecCrd := DeploySecurity("", defaultNamespace, func(secCrdToDeploy *brokerv1beta1.ActiveMQArtemisSecurity) {
+				applyToCrs := make([]string, 0)
+				applyToCrs = append(applyToCrs, createdBrokerCr.ObjectMeta.Name)
+				secCrdToDeploy.Spec.ApplyToCrNames = applyToCrs
+				secCrdToDeploy.Annotations = map[string]string{
+					"testannotation": "pltf-amq (1)",
+				}
+			})
+
+			requestedSs := &appsv1.StatefulSet{}
+
+			By("Checking security gets applied to broker1 " + createdBrokerCr.Name)
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(createdBrokerCr.Name), Namespace: defaultNamespace}
+				err := k8sClient.Get(ctx, key, requestedSs)
+				if err != nil {
+					return false
+				}
+
+				initContainer := requestedSs.Spec.Template.Spec.InitContainers[0]
+				secApplied := false
+				emptyMetadata := false
+				for _, arg := range initContainer.Args {
+
+					if strings.Contains(arg, "mkdir -p /init_cfg_root/security/security") {
+						secApplied = true
+
+						if !(strings.Contains(arg, "testannotation")) {
+							emptyMetadata = true
+							break
+						}
+					}
+				}
+				return secApplied && emptyMetadata
+			}, timeout, interval).Should(BeTrue())
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+				By("Checking status of CR because we expect it to deploy on a real cluster")
+				key := types.NamespacedName{Name: createdBrokerCr.ObjectMeta.Name, Namespace: defaultNamespace}
+
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, key, createdBrokerCr)).Should(Succeed())
+
+					g.Expect(len(createdBrokerCr.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+				}, timeout*5, interval).Should(Succeed())
+			}
+
+			Expect(k8sClient.Delete(ctx, createdBrokerCr)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, createdSecCrd)).Should(Succeed())
 
 		})
 	})
@@ -404,8 +459,6 @@ func DeploySecurity(secName string, targetNamespace string, customFunc func(cand
 	}
 
 	customFunc(secCrd)
-
-	fmt.Printf("going to deploy security %v\n", secCrd)
 
 	Expect(k8sClient.Create(ctx, secCrd)).Should(Succeed())
 

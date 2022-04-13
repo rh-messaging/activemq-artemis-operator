@@ -31,6 +31,7 @@ import (
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -296,7 +297,11 @@ func (r *ActiveMQArtemisSecurityConfigHandler) Config(initContainers []corev1.Co
 
 func (r *ActiveMQArtemisSecurityConfigHandler) persistCR(filePath string, cr *brokerv1beta1.ActiveMQArtemisSecurity) (value string, err error) {
 
-	data, err := yaml.Marshal(cr)
+	// remove superfluous data that can trip up the shell
+	stripped := cr.DeepCopy()
+	stripped.ObjectMeta = metav1.ObjectMeta{}
+
+	data, err := yaml.Marshal(stripped)
 	if err != nil {
 		return "", err
 	}
