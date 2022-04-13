@@ -265,6 +265,32 @@ func createAddressResource(a *mgmt.Artemis, addressRes *brokerv1beta1.ActiveMQAr
 	return nil
 }
 
+type AddressRetry struct {
+	address string
+	artemis []*mgmt.Artemis
+}
+
+func (ar *AddressRetry) addToDelete(a *mgmt.Artemis) {
+	ar.artemis = append(ar.artemis, a)
+}
+
+func (ar *AddressRetry) safeDelete() {
+	for _, a := range ar.artemis {
+		glog.Info("Checking parent address for bindings " + ar.address)
+		bindingsData, err := a.ListBindingsForAddress(ar.address)
+		if nil == err {
+			if bindingsData.Value == "" {
+				glog.Info("No bindings found, removing " + ar.address)
+				a.DeleteAddress(ar.address)
+			} else {
+				glog.Info("Bindings found, not removing", "address", ar.address, "bindings", bindingsData.Value)
+			}
+		} else {
+			glog.Error(err, "failed to list bindings", "address", ar.address)
+		}
+	}
+}
+
 // This method deals with deleting queues and addresses.
 func deleteQueue(instance *AddressDeployment, request ctrl.Request, client client.Client, scheme *runtime.Scheme) error {
 
@@ -274,6 +300,10 @@ func deleteQueue(instance *AddressDeployment, request ctrl.Request, client clien
 	var err error = nil
 	artemisArray := getPodBrokers(instance, request, client, scheme)
 	if nil != artemisArray {
+		addressRetry := &AddressRetry{
+			address: instance.AddressResource.Spec.AddressName,
+			artemis: make([]*mgmt.Artemis, 0),
+		}
 		for _, a := range artemisArray {
 			if instance.AddressResource.Spec.QueueName == nil || *instance.AddressResource.Spec.QueueName == "" {
 				//delete address
@@ -290,20 +320,13 @@ func deleteQueue(instance *AddressDeployment, request ctrl.Request, client clien
 					reqLogger.Error(err, "Deleting ActiveMQArtemisAddress error for queue "+*instance.AddressResource.Spec.QueueName)
 					break
 				} else {
-					reqLogger.Info("Deleted ActiveMQArtemisAddress for queue " + *instance.AddressResource.Spec.QueueName)
-					reqLogger.Info("Checking parent address for bindings " + instance.AddressResource.Spec.AddressName)
-					bindingsData, err := a.ListBindingsForAddress(instance.AddressResource.Spec.AddressName)
-					if nil == err {
-						if "" == bindingsData.Value {
-							reqLogger.Info("No bindings found removing " + instance.AddressResource.Spec.AddressName)
-							a.DeleteAddress(instance.AddressResource.Spec.AddressName)
-						} else {
-							reqLogger.Info("Bindings found, not removing " + instance.AddressResource.Spec.AddressName)
-						}
-					}
+					addressRetry.addToDelete(a)
 				}
 			}
 		}
+		// we delete address after all queues are deleted
+		addressRetry.safeDelete()
+		reqLogger.Info("Deleted ActiveMQArtemisAddress for queue " + *instance.AddressResource.Spec.QueueName)
 	}
 
 	return err
