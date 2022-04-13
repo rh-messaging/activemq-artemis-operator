@@ -1,6 +1,7 @@
 package v2alpha5activemqartemis
 
 import (
+	"github.com/RHsyseng/operator-utils/pkg/resource"
 	brokerv2alpha5 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha5"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/fsm"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
@@ -72,6 +73,7 @@ type Namers struct {
 }
 
 type ActiveMQArtemisFSM struct {
+	requestedResources []resource.KubernetesResource
 	m                  fsm.IMachine
 	namespacedName     types.NamespacedName
 	customResource     *brokerv2alpha5.ActiveMQArtemis

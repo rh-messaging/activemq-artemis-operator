@@ -42,6 +42,7 @@ func GetBrokerConfigHandler(brokerNamespacedName types.NamespacedName) (handler 
 func UpdatePodForSecurity(securityHandlerNamespacedName types.NamespacedName, handler common.ActiveMQArtemisConfigHandler) error {
 	success := true
 	for nsn, fsm := range namespacedNameToFSM {
+		log.V(1).Info("Checking each fsm for security update", "fsm nsn", nsn)
 		if handler.IsApplicableFor(nsn) {
 			fsm.SetPodInvalid(true)
 			log.Info("Need update fsm for security", "fsm", nsn)

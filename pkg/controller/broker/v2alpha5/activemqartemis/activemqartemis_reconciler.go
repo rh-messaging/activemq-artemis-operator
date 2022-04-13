@@ -73,7 +73,6 @@ const (
 )
 
 var defaultMessageMigration bool = true
-var requestedResources []resource.KubernetesResource
 var lastStatusMap map[types.NamespacedName]olm.DeploymentStatus = make(map[types.NamespacedName]olm.DeploymentStatus)
 
 // the helper script looks for "/amq/scripts/post-config.sh"
@@ -121,7 +120,7 @@ func (reconciler *ActiveMQArtemisReconciler) Process(fsm *ActiveMQArtemisFSM, cl
 
 	statefulSetUpdates |= reconciler.ProcessConsole(fsm, client, scheme, currentStatefulSet)
 
-	requestedResources = append(requestedResources, currentStatefulSet)
+	fsm.requestedResources = append(fsm.requestedResources, currentStatefulSet)
 
 	stepsComplete := reconciler.ProcessResources(fsm, client, scheme, currentStatefulSet)
 
@@ -227,9 +226,9 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessStatefulSet(fsm *ActiveMQArt
 	headlessServiceDefinition := svc.NewHeadlessServiceForCR2(fsm.GetHeadlessServiceName(), ssNamespacedName, serviceports.GetDefaultPorts(), labels)
 	if isClustered(fsm.customResource) {
 		pingServiceDefinition := svc.NewPingServiceDefinitionForCR2(fsm.GetPingServiceName(), ssNamespacedName, labels, labels)
-		requestedResources = append(requestedResources, pingServiceDefinition)
+		fsm.requestedResources = append(fsm.requestedResources, pingServiceDefinition)
 	}
-	requestedResources = append(requestedResources, headlessServiceDefinition)
+	fsm.requestedResources = append(fsm.requestedResources, headlessServiceDefinition)
 
 	return currentStatefulSet, firstTime
 }
@@ -562,7 +561,7 @@ func sourceEnvVarFromSecret(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1.
 	if err = resources.Retrieve(namespacedName, client, secretDefinition); err != nil {
 		if errors.IsNotFound(err) {
 			log.V(1).Info("Did not find secret " + secretName)
-			requestedResources = append(requestedResources, secretDefinition)
+			fsm.requestedResources = append(fsm.requestedResources, secretDefinition)
 		}
 	} else { // err == nil so it already exists
 		// Exists now
@@ -653,7 +652,7 @@ func sourceEnvVarFromSecret2(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1
 	if err = resources.Retrieve(namespacedName, client, secretDefinition); err != nil {
 		if errors.IsNotFound(err) {
 			log.V(1).Info("Did not find secret " + secretName)
-			requestedResources = append(requestedResources, secretDefinition)
+			fsm.requestedResources = append(fsm.requestedResources, secretDefinition)
 		}
 	} else { // err == nil so it already exists
 		// Exists now
@@ -863,7 +862,7 @@ func configureAcceptorsExposure(fsm *ActiveMQArtemisFSM, client client.Client, s
 				Namespace: fsm.customResource.Namespace,
 			}
 			if acceptor.Expose {
-				requestedResources = append(requestedResources, serviceDefinition)
+				fsm.requestedResources = append(fsm.requestedResources, serviceDefinition)
 				//causedUpdate, err = resources.Enable(customResource, client, scheme, serviceNamespacedName, serviceDefinition)
 			} else {
 				causedUpdate, err = resources.Disable(fsm.customResource, client, scheme, serviceNamespacedName, serviceDefinition)
@@ -876,7 +875,7 @@ func configureAcceptorsExposure(fsm *ActiveMQArtemisFSM, client client.Client, s
 				Namespace: fsm.customResource.Namespace,
 			}
 			if acceptor.Expose {
-				requestedResources = append(requestedResources, routeDefinition)
+				fsm.requestedResources = append(fsm.requestedResources, routeDefinition)
 				//causedUpdate, err = resources.Enable(customResource, client, scheme, routeNamespacedName, routeDefinition)
 			} else {
 				causedUpdate, err = resources.Disable(fsm.customResource, client, scheme, routeNamespacedName, routeDefinition)
@@ -915,7 +914,7 @@ func configureConnectorsExposure(fsm *ActiveMQArtemisFSM, client client.Client, 
 				Namespace: fsm.customResource.Namespace,
 			}
 			if connector.Expose {
-				requestedResources = append(requestedResources, serviceDefinition)
+				fsm.requestedResources = append(fsm.requestedResources, serviceDefinition)
 				//causedUpdate, err = resources.Enable(customResource, client, scheme, serviceNamespacedName, serviceDefinition)
 			} else {
 				causedUpdate, err = resources.Disable(fsm.customResource, client, scheme, serviceNamespacedName, serviceDefinition)
@@ -929,7 +928,7 @@ func configureConnectorsExposure(fsm *ActiveMQArtemisFSM, client client.Client, 
 				Namespace: fsm.customResource.Namespace,
 			}
 			if connector.Expose {
-				requestedResources = append(requestedResources, routeDefinition)
+				fsm.requestedResources = append(fsm.requestedResources, routeDefinition)
 				//causedUpdate, err = resources.Enable(customResource, client, scheme, routeNamespacedName, routeDefinition)
 			} else {
 				causedUpdate, err = resources.Disable(fsm.customResource, client, scheme, routeNamespacedName, routeDefinition)
@@ -972,7 +971,7 @@ func configureConsoleExposure(fsm *ActiveMQArtemisFSM, client client.Client, sch
 			Namespace: fsm.customResource.Namespace,
 		}
 		if console.Expose {
-			requestedResources = append(requestedResources, serviceDefinition)
+			fsm.requestedResources = append(fsm.requestedResources, serviceDefinition)
 			//causedUpdate, err = resources.Enable(customResource, client, scheme, serviceNamespacedName, serviceDefinition)
 		} else {
 			causedUpdate, err = resources.Disable(fsm.customResource, client, scheme, serviceNamespacedName, serviceDefinition)
@@ -992,7 +991,7 @@ func configureConsoleExposure(fsm *ActiveMQArtemisFSM, client client.Client, sch
 				Namespace: fsm.customResource.Namespace,
 			}
 			if console.Expose {
-				requestedResources = append(requestedResources, routeDefinition)
+				fsm.requestedResources = append(fsm.requestedResources, routeDefinition)
 				//causedUpdate, err = resources.Enable(customResource, client, scheme, routeNamespacedName, routeDefinition)
 			} else {
 				causedUpdate, err = resources.Disable(fsm.customResource, client, scheme, routeNamespacedName, routeDefinition)
@@ -1005,7 +1004,7 @@ func configureConsoleExposure(fsm *ActiveMQArtemisFSM, client client.Client, sch
 				Namespace: fsm.customResource.Namespace,
 			}
 			if console.Expose {
-				requestedResources = append(requestedResources, ingressDefinition)
+				fsm.requestedResources = append(fsm.requestedResources, ingressDefinition)
 				//causedUpdate, err = resources.Enable(customResource, client, scheme, ingressNamespacedName, ingressDefinition)
 			} else {
 				causedUpdate, err = resources.Disable(fsm.customResource, client, scheme, ingressNamespacedName, ingressDefinition)
@@ -1400,8 +1399,8 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessResources(fsm *ActiveMQArtem
 	updated := false
 	removed := false
 
-	for index := range requestedResources {
-		requestedResources[index].SetNamespace(fsm.customResource.Namespace)
+	for index := range fsm.requestedResources {
+		fsm.requestedResources[index].SetNamespace(fsm.customResource.Namespace)
 	}
 
 	deployed, err = getDeployedResources(fsm.customResource, client)
@@ -1410,7 +1409,7 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessResources(fsm *ActiveMQArtem
 		return stepsComplete
 	}
 
-	requested := compare.NewMapBuilder().Add(requestedResources...).ResourceMap()
+	requested := compare.NewMapBuilder().Add(fsm.requestedResources...).ResourceMap()
 	comparator := compare.NewMapComparator()
 	deltas := comparator.Compare(deployed, requested)
 	namespacedName := types.NamespacedName{
@@ -1439,7 +1438,7 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessResources(fsm *ActiveMQArtem
 	}
 
 	//empty the collected objects
-	requestedResources = nil
+	fsm.requestedResources = nil
 
 	return stepsComplete
 }
