@@ -148,7 +148,7 @@ type KeycloakModuleConfigurationType struct {
 	// Verify whether the token contains this client name (resource) as an audience
 	VerifyTokenAudience *bool `json:"verifyTokenAudience,omitempty"`
 	// Whether to support basic authentication
-	EnableBasicAuth *bool `json:"enableBasicAuth"`
+	EnableBasicAuth *bool `json:"enableBasicAuth,omitempty"`
 	// The confidential port used by the Keycloak server for secure connections over SSL/TLS
 	ConfidentialPort *int32 `json:"confidentialPort,omitempty"`
 	// The regular expression to which the Redirect URI is to be matched

@@ -528,8 +528,6 @@ spec:
                             verifyTokenAudience:
                               description: Verify whether the token contains this client name (resource) as an audience
                               type: boolean
-                          required:
-                          - enableBasicAuth
                           type: object
                         moduleType:
                           description: Type of KeycloakLoginModule directAccess or bearerToken
