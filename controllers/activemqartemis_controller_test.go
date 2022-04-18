@@ -115,6 +115,76 @@ var _ = Describe("artemis controller", func() {
 		})
 	})
 
+	Context("Console secret Test", func() {
+
+		crd := generateArtemisSpec(namespace)
+		crd.Spec.Console.Expose = true
+		crd.Spec.Console.SSLEnabled = true
+
+		namespacedName := types.NamespacedName{
+			Name:      crd.Name,
+			Namespace: namespace,
+		}
+		reconcilerImpl := &ActiveMQArtemisReconcilerImpl{}
+		theFsm := MakeActiveMQArtemisFSM(&crd, namespacedName, brokerReconciler)
+
+		It("deploy broker with ssl enabled console", func() {
+			os.Setenv("OPERATOR_OPENSHIFT", "true")
+			defer os.Unsetenv("OPERATOR_OPENSHIFT")
+
+			defaultConsoleSecretName := crd.Name + "-console-secret"
+			currentSS := &appsv1.StatefulSet{}
+			currentSS.Name = namer.CrToSS(crd.Name)
+			currentSS.Namespace = namespace
+			currentSS.Spec.Template.Spec.InitContainers = []corev1.Container{{
+				Name: "main-container",
+			}}
+			currentSS.Spec.Template.Spec.Containers = []corev1.Container{{
+				Name: "init-container",
+			}}
+
+			reconcilerImpl.ProcessConsole(theFsm, brokerReconciler.Client, brokerReconciler.Scheme, currentSS)
+			secretName := theFsm.GetConsoleSecretName()
+			internalSecretName := secretName + "-internal"
+			consoleArgs := "AMQ_CONSOLE_ARGS"
+
+			foundSecret := false
+			foundInternalSecret := false
+			defaultSecretPath := "/etc/" + defaultConsoleSecretName + "-volume/"
+			defaultSslArgs := " --ssl-key " + defaultSecretPath + "broker.ks --ssl-key-password password --ssl-trust " + defaultSecretPath + "client.ts --ssl-trust-password password"
+			for _, reqres := range theFsm.requestedResources {
+				if reqres.GetObjectKind().GroupVersionKind().Kind == "Secret" {
+					secret := reqres.(*corev1.Secret)
+					if secret.Name == secretName {
+						foundSecret = true
+					}
+					if secret.Name == internalSecretName {
+						foundInternalSecret = true
+						consoleSslValue := secret.StringData[consoleArgs]
+						Expect(consoleSslValue).To(Equal(defaultSslArgs))
+					}
+				}
+			}
+			Expect(foundSecret).To(BeTrue())
+			Expect(foundInternalSecret).To(BeTrue())
+
+			foundSecretRef := false
+			foundSecretKey := false
+			for _, evar := range currentSS.Spec.Template.Spec.InitContainers[0].Env {
+				if evar.Name == consoleArgs {
+					if evar.ValueFrom.SecretKeyRef.Name == internalSecretName {
+						foundSecretRef = true
+					}
+					if evar.ValueFrom.SecretKeyRef.Key == consoleArgs {
+						foundSecretKey = true
+					}
+				}
+			}
+			Expect(foundSecretRef).To(BeTrue())
+			Expect(foundSecretKey).To(BeTrue())
+		})
+	})
+
 	Context("PodSecurityContext Test", func() {
 		It("Setting the pods PodSecurityContext", func() {
 			By("Creating a CR instance with PodSecurityContext configured")

@@ -96,8 +96,9 @@ type ActiveMQArtemisReconcilerImpl struct {
 }
 
 type ValueInfo struct {
-	Value   string
-	AutoGen bool
+	Value    string
+	AutoGen  bool
+	Internal bool //if true put this value to the internal secret
 }
 
 type ActiveMQArtemisIReconciler interface {
@@ -224,12 +225,12 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessCredentials(fsm *ActiveM
 	envVars := make(map[string]ValueInfo)
 
 	adminUser := ValueInfo{
-		"",
-		false,
+		Value:   "",
+		AutoGen: false,
 	}
 	adminPassword := ValueInfo{
-		"",
-		false,
+		Value:   "",
+		AutoGen: false,
 	}
 	// TODO: Remove singular admin level user and password in favour of at least guest and admin access
 	secretName := fsm.GetCredentialsSecretName()
@@ -462,8 +463,9 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessConsole(fsm *ActiveMQArt
 	sslFlags = generateConsoleSSLFlags(fsm, client, secretName)
 	envVars := make(map[string]ValueInfo)
 	envVars[envVarName] = ValueInfo{
-		Value:   sslFlags,
-		AutoGen: true,
+		Value:    sslFlags,
+		AutoGen:  true,
+		Internal: true,
 	}
 
 	retVal = sourceEnvVarFromSecret2(fsm, currentStatefulSet, &envVars, secretName, client, scheme)
@@ -562,8 +564,14 @@ func sourceEnvVarFromSecret2(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1
 	}
 	// Attempt to retrieve the secret
 	stringDataMap := make(map[string]string)
-	for k := range *envVars {
-		stringDataMap[k] = (*envVars)[k].Value
+	internalStringDataMap := make(map[string]string)
+
+	for k, v := range *envVars {
+		if v.Internal {
+			internalStringDataMap[k] = v.Value
+		} else {
+			stringDataMap[k] = v.Value
+		}
 	}
 
 	secretDefinition := secrets.NewSecret(namespacedName, secretName, stringDataMap, fsm.namers.LabelBuilder.Labels())
@@ -589,13 +597,24 @@ func sourceEnvVarFromSecret2(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1
 	// ensure processResources sees it
 	fsm.requestedResources = append(fsm.requestedResources, secretDefinition)
 
+	internalSecretName := secretName + "-internal"
+	if len(internalStringDataMap) > 0 {
+
+		internalSecretDefinition := secrets.NewSecret(namespacedName, internalSecretName, internalStringDataMap, fsm.namers.LabelBuilder.Labels())
+		fsm.requestedResources = append(fsm.requestedResources, internalSecretDefinition)
+	}
+
 	log.Info("Populating env vars references from secret " + secretName)
 
-	for envVarName := range *envVars {
+	for envVarName, envVarValue := range *envVars {
+		secretNameToUse := secretName
+		if envVarValue.Internal {
+			secretNameToUse = internalSecretName
+		}
 		envVarSource := &corev1.EnvVarSource{
 			SecretKeyRef: &corev1.SecretKeySelector{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: secretName,
+					Name: secretNameToUse,
 				},
 				Key:      envVarName,
 				Optional: nil,
