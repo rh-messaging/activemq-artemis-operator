@@ -2188,11 +2188,6 @@ spec:
                 serviceAccountName: amq-broker-operator
                 securityContext:
                   runAsNonRoot: true
-                volumes:
-                - name: cert
-                  secret:
-                    defaultMode: 420
-                    secretName: amq-broker-webhook-server-cert
                 containers:
                   - name: amq-broker-operator
                     #image: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator:7.10-4
@@ -2203,10 +2198,6 @@ spec:
                         port: 8081
                       initialDelaySeconds: 15
                       periodSeconds: 20
-                    ports:
-                    - containerPort: 9443
-                      name: webhook-server
-                      protocol: TCP
                     readinessProbe:
                       httpGet:
                         path: /readyz
@@ -2244,6 +2235,8 @@ spec:
                         valueFrom:
                           fieldRef:
                             fieldPath: metadata.annotations['olm.targetNamespaces']
+                      - name: ENABLE_WEBHOOKS
+                        value: "false"
 
                       #Below are the environment variables that inform the operator what container images to utilize for each product version.
                       # By default the *_782 values are utilized.
