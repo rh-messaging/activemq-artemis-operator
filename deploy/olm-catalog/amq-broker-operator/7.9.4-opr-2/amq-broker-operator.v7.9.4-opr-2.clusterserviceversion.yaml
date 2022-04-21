@@ -1,7 +1,7 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: amq-broker-operator.v7.9.4-opr-1
+  name: amq-broker-operator.v7.9.4-opr-2
   namespace: placeholder
   labels:
     operator-activemqartemis: "true"
@@ -10,11 +10,12 @@ metadata:
     operatorframework.io/arch.s390x: supported
     operatorframework.io/arch.ppc64le: supported
   annotations:
+    operators.openshift.io/valid-subscription: '["OpenShift Container Platform", "OpenShift Platform Plus", "Red Hat Runtimes", "Red Hat Integration", "Red Hat Process Automation", "Red Hat AMQ", "Red Hat Application Foundations"]'
     categories: "Streaming & Messaging"
     certified: "false"
     description: AMQ Broker Operator for RHEL 8 (Multiarch) provides the ability to deploy and manage stateful AMQ Broker clusters
-    #containerImage: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.9-17
-    containerImage: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:e44b401b66694c878a914fb75461133b74f366e5eeb1b4228dcee17f7fdad830
+    #containerImage: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.9-19
+    containerImage: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:f943c9d29dd4cf23f471b0d5718b68c7f75b31a64685f32ca75ce3bd742209e5
     createdAt: 2021-06-18T00:02:04Z
     capabilities: Seamless Upgrades
     repository: https://github.com/rh-messaging/activemq-artemis-operator
@@ -104,8 +105,8 @@ spec:
   keywords:
     - activemqartemis
     - operator
-  version: 7.9.4-opr-1
-  replaces: amq-broker-operator.v7.9.3-opr-3
+  version: 7.9.4-opr-2
+  # replaces: amq-broker-operator.v7.9.4-opr-1
   maturity: alpha
   maintainers:
     - name: Red Hat
@@ -122,12 +123,12 @@ spec:
       mediatype: image/png
   labels:
     alm-owner-amq-broker: amq-broker-operator
-    operated-by: amq-broker-operator.v7.9.4-opr-1
+    operated-by: amq-broker-operator.v7.9.4-opr-2
   selector:
     matchLabels:
       ActiveMQArtemis: ex-aao
       application: ex-aao-app
-      operated-by: amq-broker-operator.v7.9.4-opr-1
+      operated-by: amq-broker-operator.v7.9.4-opr-2
   installModes:
     - type: OwnNamespace
       supported: true
@@ -1897,8 +1898,8 @@ spec:
                 serviceAccountName: amq-broker-operator
                 containers:
                   - name: amq-broker-operator
-                    #image: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.9-17
-                    image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:e44b401b66694c878a914fb75461133b74f366e5eeb1b4228dcee17f7fdad830
+                    #image: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.9-19
+                    image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:f943c9d29dd4cf23f471b0d5718b68c7f75b31a64685f32ca75ce3bd742209e5
                     args:
                       # Explicitly set the logging level.
                       # Valid values are debug, info, and error
