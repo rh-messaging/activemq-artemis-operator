@@ -152,6 +152,15 @@ var _ = BeforeSuite(func() {
 	err = addressReconciler.SetupWithManager(k8Manager)
 	Expect(err).ToNot(HaveOccurred(), "failed to create address reconciler")
 
+	scaleDownRconciler := &ActiveMQArtemisScaledownReconciler{
+		Client: k8Manager.GetClient(),
+		Scheme: k8Manager.GetScheme(),
+		Config: k8Manager.GetConfig(),
+	}
+
+	err = scaleDownRconciler.SetupWithManager(k8Manager)
+	Expect(err).ShouldNot(HaveOccurred(), "failed to create scale down reconciler")
+
 	go func() {
 		defer GinkgoRecover()
 		err = k8Manager.Start(ctx)
@@ -166,6 +175,10 @@ var _ = AfterSuite(func() {
 	cancel()
 	if stateManager != nil {
 		stateManager.Clear()
+	}
+	// scaledown controller lifecycle seems a little loose, it does not complete on signal hander like the others
+	for _, drainController := range controllers {
+		close(*drainController.GetStopCh())
 	}
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())

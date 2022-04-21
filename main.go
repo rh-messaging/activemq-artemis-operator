@@ -224,6 +224,7 @@ func main() {
 	if err = (&controllers.ActiveMQArtemisScaledownReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
+		Config: mgr.GetConfig(),
 	}).SetupWithManager(mgr); err != nil {
 		log.Error(err, "unable to create controller", "controller", "ActiveMQArtemisScaledown")
 		os.Exit(1)

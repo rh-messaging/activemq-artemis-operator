@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -53,6 +53,7 @@ var kubeClient *kubernetes.Clientset
 type ActiveMQArtemisScaledownReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	Config *rest.Config
 }
 
 //+kubebuilder:rbac:groups=broker.amq.io,resources=activemqartemisscaledowns,verbs=get;list;watch;create;update;patch;delete
@@ -100,12 +101,7 @@ func (r *ActiveMQArtemisScaledownReconciler) Reconcile(ctx context.Context, requ
 	reqLogger.Info("====", "namespace:", namespace)
 	reqLogger.Info("====", "localOnly:", localOnly)
 
-	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
-	if err != nil {
-		reqLogger.Error(err, "Error building kubeconfig: %s", err.Error())
-	}
-
-	kubeClient, err = kubernetes.NewForConfig(cfg)
+	kubeClient, err = kubernetes.NewForConfig(r.Config)
 	if err != nil {
 		reqLogger.Error(err, "Error building kubernetes clientset: %s", err.Error())
 	}
@@ -175,14 +171,6 @@ func runDrainController(controller *draincontroller.Controller) {
 
 func ReleaseController(brokerCRName string) {
 }
-
-//// SetupWithManager sets up the controller with the Manager.
-//func (r *ActiveMQArtemisScaledownReconciler) SetupWithManager(mgr ctrl.Manager) error {
-//	return ctrl.NewControllerManagedBy(mgr).
-//		For(&brokerv2alpha1.ActiveMQArtemisScaledown{}).
-//		Owns(&corev1.Pod{}).
-//		Complete(r)
-//}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ActiveMQArtemisScaledownReconciler) SetupWithManager(mgr ctrl.Manager) error {

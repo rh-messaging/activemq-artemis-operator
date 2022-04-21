@@ -54,7 +54,7 @@ func (c *AddressObserver) Run(C chan types.NamespacedName) error {
 	for {
 		select {
 		case ready := <-C:
-			olog.Info("address_observer received C", "pod", ready)
+			olog.Info("address_observer received", "pod", ready)
 			go c.newPodReady(&ready)
 		default:
 			//log.Info("address_observer selected default, waiting a second")
