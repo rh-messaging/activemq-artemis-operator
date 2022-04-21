@@ -7,7 +7,6 @@ require (
 	github.com/RHsyseng/operator-utils v1.4.7
 	github.com/artemiscloud/activemq-artemis-management v0.0.0-20220211120143-717f9a910005
 	github.com/go-logr/logr v0.4.0
-	github.com/google/uuid v1.1.2
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.15.0
 	github.com/openshift/api v3.9.0+incompatible
