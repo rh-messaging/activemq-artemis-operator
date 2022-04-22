@@ -163,6 +163,9 @@ spec:
                         configDeleteAddresses:
                           description: What to do when an address is no longer in broker.xml.  OFF = will do nothing addresses will remain, FORCE = delete address and its queues even if messages remaining.
                           type: string
+                        configDeleteDiverts:
+                          description: What to do when a divert is no longer in broker.xml.  OFF = will do nothing and divert will remain(default), FORCE = delete divert.
+                          type: string
                         configDeleteQueues:
                           description: What to do when a queue is no longer in broker.xml.  OFF = will do nothing queues will remain, FORCE = delete queues even if messages remaining.
                           type: string
@@ -280,6 +283,10 @@ spec:
                         maxSizeBytesRejectThreshold:
                           description: used with the address full BLOCK policy, the maximum size in bytes an address can reach before messages start getting rejected. Works in combination with max-size-bytes for AMQP protocol only.  Default = -1 (no limit).
                           format: int32
+                          type: integer
+                        maxSizeMessages:
+                          description: the maximum number of messages allowed on the address (default -1).  This is used in PAGING, BLOCK and FAIL policies. It does not support notations and it is a simple number of messages allowed.
+                          format: int64
                           type: integer
                         messageCounterHistoryDayLimit:
                           description: how many days to keep message counter history for this address

@@ -829,6 +829,12 @@ func processAddressSettingsV1beta1(sb *strings.Builder, addressSettings *[]v1bet
 		if value := checkBool(s.EnableIngressTimestamp); value != nil {
 			sb.WriteString("  enable_ingress_timestamp: " + *value + "\n")
 		}
+		if value := checkInt64(s.MaxSizeMessages); value != nil {
+			sb.WriteString("  max_size_messages: " + *value + "\n")
+		}
+		if value := checkStringSpecial(s.ConfigDeleteDiverts, specials); value != nil {
+			sb.WriteString("  config_delete_diverts: " + *value + "\n")
+		}
 	}
 
 }

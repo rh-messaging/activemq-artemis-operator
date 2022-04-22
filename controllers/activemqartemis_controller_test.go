@@ -48,6 +48,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/cr2jinja2"
 )
 
 //Uncomment this and the "test" import if you want to debug this set of tests
@@ -98,6 +99,72 @@ var _ = Describe("artemis controller", func() {
 		}
 	})
 
+	Context("New address settings options", func() {
+		It("Deploy broker with new address settings", func() {
+			By("By creating a crd without address spec")
+			ctx := context.Background()
+			crd := generateArtemisSpec(namespace)
+
+			// add address settings, to an existing crd
+			ma := "merge_all"
+			dlqabc := "dlqabc"
+			maxSize := "10m"
+			maxMessages := int64(5000)
+			configDeleteDiverts := "OFF"
+
+			crd.Spec.AddressSettings = brokerv1beta1.AddressSettingsType{
+				ApplyRule: &ma,
+				AddressSetting: []brokerv1beta1.AddressSettingType{
+					{
+						Match:               "abc#",
+						DeadLetterAddress:   &dlqabc,
+						MaxSizeBytes:        &maxSize,
+						MaxSizeMessages:     &maxMessages,
+						ConfigDeleteDiverts: &configDeleteDiverts,
+					},
+				},
+			}
+			By("Deploying the CRD " + crd.ObjectMeta.Name)
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+			By("Making sure that the CRD gets deployed " + crd.ObjectMeta.Name)
+			Eventually(func() bool {
+				return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+
+			By("tracking the yaconfig init command with user_address_settings and verifying new options are in")
+			key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
+			var initArgsString string
+			Eventually(func() bool {
+				createdSs := &appsv1.StatefulSet{}
+
+				if k8sClient.Get(ctx, key, createdSs) != nil {
+					return false
+				}
+
+				initArgsString = strings.Join(createdSs.Spec.Template.Spec.InitContainers[0].Args, ",")
+				if !strings.Contains(initArgsString, "max_size_messages: 5000") {
+					return false
+				}
+
+				value := cr2jinja2.GetUniqueShellSafeSubstution(configDeleteDiverts)
+				fullString := "config_delete_diverts: " + value
+				return strings.Contains(initArgsString, fullString)
+
+			}, timeout, interval).Should(BeTrue())
+
+			// cleanup
+			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
+			By("check it has gone")
+			Eventually(func() bool {
+				return checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+
+		})
+	})
+
 	Context("Versions Test", func() {
 		latestKubeImage := "registry.redhat.io/amq7/amq-broker-rhel8:7.10-19"
 		latestInitImage := "registry.redhat.io/amq7/amq-broker-init-rhel8:7.10-7"
@@ -112,6 +179,10 @@ var _ = Describe("artemis controller", func() {
 
 			imageToUse = determineImageToUse(&crd, "Init")
 			Expect(imageToUse).To(Equal(latestInitImage), "actual", imageToUse)
+			brokerCr := generateArtemisSpec(namespace)
+			compactVersionToUse := determineCompactVersionToUse(&brokerCr)
+			yacfgProfileVersion = version.YacfgProfileVersionFromFullVersion[version.FullVersionFromCompactVersion[compactVersionToUse]]
+			Expect(yacfgProfileVersion).To(Equal("7.10.0"))
 		})
 	})
 

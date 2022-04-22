@@ -186,6 +186,10 @@ type AddressSettingType struct {
 	SlowConsumerThresholdMeasurementUnit *string `json:"slowConsumerThresholdMeasurementUnit,omitempty"`
 	// Whether or not set the timestamp of arrival on messages. default false
 	EnableIngressTimestamp *bool `json:"enableIngressTimestamp,omitempty"`
+	// What to do when a divert is no longer in broker.xml.  OFF = will do nothing and divert will remain(default), FORCE = delete divert.
+	ConfigDeleteDiverts *string `json:"configDeleteDiverts,omitempty"`
+	// the maximum number of messages allowed on the address (default -1).  This is used in PAGING, BLOCK and FAIL policies. It does not support notations and it is a simple number of messages allowed.
+	MaxSizeMessages *int64 `json:"maxSizeMessages,omitempty"`
 }
 
 type DeploymentPlanType struct {

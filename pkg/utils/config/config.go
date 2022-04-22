@@ -731,6 +731,28 @@ func IsEqualV1Beta1(currentAddressSetting []brokerv1beta1.AddressSettingType, ne
 		} else {
 			return false
 		}
+		if newSetting.ConfigDeleteDiverts == nil {
+			if curSetting.ConfigDeleteDiverts != nil {
+				return false
+			}
+		} else if curSetting.ConfigDeleteDiverts != nil {
+			if *curSetting.ConfigDeleteDiverts != *newSetting.ConfigDeleteDiverts {
+				return false
+			}
+		} else {
+			return false
+		}
+		if newSetting.MaxSizeMessages == nil {
+			if curSetting.MaxSizeMessages != nil {
+				return false
+			}
+		} else if curSetting.MaxSizeMessages != nil {
+			if *curSetting.MaxSizeMessages != *newSetting.MaxSizeMessages {
+				return false
+			}
+		} else {
+			return false
+		}
 	}
 	return true
 }
