@@ -16,11 +16,17 @@ limitations under the License.
 package common
 
 import (
+	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
+
+func TestCommon(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Test Common Suite")
+}
 
 var _ = Describe("Common Resync Test", func() {
 	Context("Default Resync Period", func() {
