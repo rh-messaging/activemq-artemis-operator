@@ -61,7 +61,10 @@ var _ = Describe("Scale down controller", func() {
 			brokerCrd.Spec.DeploymentPlan.Clustered = &clustered
 			brokerCrd.Spec.DeploymentPlan.Size = 2
 			brokerCrd.Spec.DeploymentPlan.PersistenceEnabled = true
-
+			brokerCrd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
+				InitialDelaySeconds: 1,
+				PeriodSeconds:       5,
+			}
 			Expect(k8sClient.Create(ctx, brokerCrd)).Should(Succeed())
 
 			createdBrokerCrd := &brokerv1beta1.ActiveMQArtemis{}

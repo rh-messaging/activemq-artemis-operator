@@ -26,7 +26,7 @@ func MakeContainer(hostingPodSpec *corev1.PodSpec, customResourceName string, im
 	if container == nil {
 		container = &corev1.Container{
 			Name:    name,
-			Command: []string{"/bin/sh", "-c", "export STATEFUL_SET_ORDINAL=${HOSTNAME##*-};/opt/amq/bin/launch.sh", "start"},
+			Command: []string{"/bin/sh", "-c", "export STATEFUL_SET_ORDINAL=${HOSTNAME##*-};exec /opt/amq/bin/launch.sh", "start"},
 		}
 	}
 
