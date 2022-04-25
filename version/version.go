@@ -3,7 +3,7 @@ package version
 var (
 	Version = "7.10.0"
 	// PriorVersion - prior version
-	PriorVersion = "7.9.3"
+	PriorVersion = "7.9.4"
 )
 
 const (
@@ -11,7 +11,7 @@ const (
 	LatestVersion        = "7.10.0"
 	CompactLatestVersion = "7100"
 	// LastMicroVersion product version supported
-	LastMicroVersion = "7.9.3"
+	LastMicroVersion = "7.9.4"
 	// LastMinorVersion product version supported
 	LastMinorVersion = "7.7.0"
 )
@@ -108,7 +108,7 @@ var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
 	"7.9.1":  "7.9.0",
 	"7.9.2":  "7.9.0",
 	"7.9.3":  "7.9.0",
-	"7.10.0": "7.9.0",
+	"7.10.0": "7.10.0",
 }
 
 var YacfgProfileName string = "amq_broker"
