@@ -25,6 +25,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -47,6 +48,15 @@ import (
 )
 
 var _ = Describe("security controller", func() {
+
+	BeforeEach(func() {
+		if verobse {
+			fmt.Println("Time with MicroSeconds: ", time.Now().Format("2006-01-02 15:04:05.000000"), " test:", CurrentGinkgoTestDescription())
+		}
+	})
+
+	AfterEach(func() {
+	})
 
 	Context("Reconcile Test", func() {
 		It("testing security applied after broker", Label("security-apply-restart"), func() {
@@ -951,7 +961,7 @@ var _ = Describe("security controller", func() {
 		}, timeout, interval).Should(Equal(true))
 
 		By("check it has gone")
-		Expect(k8sClient.Delete(ctx, createdCrd))
+		Expect(k8sClient.Delete(ctx, createdBrokerCrd))
 		Expect(k8sClient.Delete(ctx, createdCrd))
 		Eventually(func() bool {
 			return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)

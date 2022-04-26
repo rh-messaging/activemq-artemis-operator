@@ -79,10 +79,13 @@ var _ = Describe("artemis controller", func() {
 	BeforeEach(func() {
 
 		var err error
-		wc, err := client.NewWithWatch(restConfig, client.Options{})
+		wc, err := client.NewWithWatch(testEnv.Config, client.Options{})
 		if err != nil {
 			fmt.Printf("Err on watch client:  %v\n", err)
 			return
+		}
+		if verobse {
+			fmt.Println("Time with MicroSeconds: ", time.Now().Format("2006-01-02 15:04:05.000000"), " test:", CurrentGinkgoTestDescription())
 		}
 
 		// see what changed
