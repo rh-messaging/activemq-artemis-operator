@@ -51,11 +51,23 @@ var _ = Describe("Scale down controller", func() {
 			// 	see suite_test.go: os.Setenv("OPERATOR_WATCH_NAMESPACE", "SomeValueToCauesEqualitytoFailInIsLocalSoDrainControllerSortsCreds")
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" && os.Getenv("DEPLOY_OPERATOR") != "true" {
 
+				brokerName := randString()
 				ctx := context.Background()
 
-				brokerName := randString()
-
 				brokerCrd := generateOriginalArtemisSpec(defaultNamespace, brokerName)
+
+				clustered := true
+				brokerCrd.Spec.DeploymentPlan.Clustered = &clustered
+				brokerCrd.Spec.DeploymentPlan.Size = 2
+				brokerCrd.Spec.DeploymentPlan.PersistenceEnabled = true
+				brokerCrd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
+					InitialDelaySeconds: 1,
+					PeriodSeconds:       1,
+					TimeoutSeconds:      5,
+					SuccessThreshold:    1, // needs to be fully defined as reconcile does not detect absent default values
+					FailureThreshold:    3,
+				}
+				Expect(k8sClient.Create(ctx, brokerCrd)).Should(Succeed())
 
 				booleanTrue := true
 				brokerCrd.Spec.DeploymentPlan.Clustered = &booleanTrue
@@ -70,13 +82,14 @@ var _ = Describe("Scale down controller", func() {
 				createdBrokerCrd := &brokerv1beta1.ActiveMQArtemis{}
 				getPersistedVersionedCrd(brokerCrd.ObjectMeta.Name, defaultNamespace, createdBrokerCrd)
 
-				By("verify two started")
+				By("verying two ready")
 				Eventually(func(g Gomega) {
 
 					getPersistedVersionedCrd(brokerCrd.ObjectMeta.Name, defaultNamespace, createdBrokerCrd)
+					By("Check ready status")
 					g.Expect(len(createdBrokerCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(2))
 
-				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				}, existingClusterTimeout, interval).Should(Succeed())
 
 				By("Sending a message to 1")
 				podWithOrdinal := namer.CrToSS(brokerCrd.Name) + "-1"
@@ -123,25 +136,22 @@ var _ = Describe("Scale down controller", func() {
 				Eventually(func(g Gomega) {
 					By("Checking for output from producer")
 					g.Expect(producerCapturedOut.Len() > 0)
-				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				}, existingClusterTimeout, interval).Should(Succeed())
 
 				content := producerCapturedOut.String()
 				Expect(content).Should(ContainSubstring("Produced: 1 messages"))
 
-				By("Scaling down to 0")
+				By("Scaling down to ss-0")
 				Eventually(func(g Gomega) {
 
 					getPersistedVersionedCrd(brokerCrd.ObjectMeta.Name, defaultNamespace, createdBrokerCrd)
 					createdBrokerCrd.Spec.DeploymentPlan.Size = 1
+					// not checking return from update as it will error on repeat as there is no change
+					// which is expected
 					k8sClient.Update(ctx, createdBrokerCrd)
-					By("Scale down to 0 update complete")
-				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
-
-				By("Checking ready 1")
-				Eventually(func(g Gomega) {
-					getPersistedVersionedCrd(brokerCrd.ObjectMeta.Name, defaultNamespace, createdBrokerCrd)
+					By("checking scale down to 0 complete?")
 					g.Expect(len(createdBrokerCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
-				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				}, existingClusterTimeout, interval*2).Should(Succeed())
 
 				By("Receiving a message from 0")
 				podWithOrdinal = namer.CrToSS(brokerCrd.Name) + "-0"
@@ -179,7 +189,7 @@ var _ = Describe("Scale down controller", func() {
 				Eventually(func(g Gomega) {
 					By("Checking for output from consumer")
 					g.Expect(consumerCapturedOut.Len() > 0)
-				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				}, existingClusterTimeout, interval).Should(Succeed())
 
 				content = consumerCapturedOut.String()
 
