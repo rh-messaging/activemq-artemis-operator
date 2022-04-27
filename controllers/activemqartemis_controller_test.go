@@ -206,12 +206,13 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(Succeed())
 
 			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+			brokerKey := types.NamespacedName{Name: crd.ObjectMeta.Name, Namespace: namespace}
+
 			Eventually(func(g Gomega) {
-				key := types.NamespacedName{Name: crd.ObjectMeta.Name, Namespace: namespace}
-				g.Expect(k8sClient.Get(ctx, key, createdCrd)).Should(Succeed())
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
 			}, timeout, interval).Should(Succeed())
 
-			By("manually deleting SS")
+			By("manually deleting SS quickly")
 			ssVersion := currentSS.ResourceVersion
 			Expect(k8sClient.Delete(ctx, currentSS)).Should(Succeed())
 
@@ -219,7 +220,28 @@ var _ = Describe("artemis controller", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, key, currentSS)).Should(Succeed())
 				g.Expect(currentSS.ResourceVersion).ShouldNot(Equal(ssVersion))
+				ssVersion = currentSS.ResourceVersion
 			}, timeout, interval).Should(Succeed())
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				By("verying started")
+				Eventually(func(g Gomega) {
+
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+
+				}, timeout*5, interval).Should(Succeed())
+
+				By("manually deleting SS again once ready")
+				Expect(k8sClient.Delete(ctx, currentSS)).Should(Succeed())
+
+				By("checking new version created again")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, key, currentSS)).Should(Succeed())
+					g.Expect(currentSS.ResourceVersion).ShouldNot(Equal(ssVersion))
+				}, timeout*5, interval).Should(Succeed())
+			}
 
 			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
 		})
