@@ -79,7 +79,8 @@ func (rs *ContainerRunningState) Update() (error, int) {
 	for {
 		if err != nil && errors.IsNotFound(err) {
 			reqLogger.Error(err, "Failed to get StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
-			err = nil
+			//ss is gone, do it from top
+			nextStateID = CreatingK8sResourcesID
 			break
 		}
 
