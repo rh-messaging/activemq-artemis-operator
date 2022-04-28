@@ -2218,10 +2218,6 @@ spec:
                       periodSeconds: 10
                     securityContext:
                       allowPrivilegeEscalation: false
-                    volumeMounts:
-                    - mountPath: /tmp/k8s-webhook-server/serving-certs
-                      name: cert
-                      readOnly: true
 
                     args:
                       # Explicitly set the logging level.
@@ -2306,8 +2302,8 @@ spec:
                         #value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8:0.3-3
                         value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8@sha256:5ff28e3062d3eabb9f52d8271b837fdab06cafbd8b8f732b1bc00de49ad69aad
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_782_ppc64le
-                        #value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8:0.3-4
-                        value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8@sha256:326d8722c23aa8851cdad3fdc2d9c4823cd3f63d1e4668cf3a9a4c273a0b84e1
+                        #value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8:0.3-4.1627007049
+                        value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8@sha256:2cb14c917246ffcbd5d861ca6f3d58cb1146a4e55715ee08160e115d3dfc1c3e
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_783_ppc64le
                         #value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8:0.3-5
                         value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8@sha256:56282c6a461e945a83bffb13d3f3d8d9621800f0fc9cd755a75d21eacd8f5fbf
@@ -2350,8 +2346,8 @@ spec:
                         #value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8:0.3-3
                         value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8@sha256:5ff28e3062d3eabb9f52d8271b837fdab06cafbd8b8f732b1bc00de49ad69aad
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_782_s390x
-                        #value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8:0.3-4
-                        value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8@sha256:326d8722c23aa8851cdad3fdc2d9c4823cd3f63d1e4668cf3a9a4c273a0b84e1
+                        #value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8:0.3-4.1627007049
+                        value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8@sha256:2cb14c917246ffcbd5d861ca6f3d58cb1146a4e55715ee08160e115d3dfc1c3e
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_783_s390x
                         #value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8:0.3-5
                         value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8@sha256:56282c6a461e945a83bffb13d3f3d8d9621800f0fc9cd755a75d21eacd8f5fbf
