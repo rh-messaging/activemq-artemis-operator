@@ -18,6 +18,8 @@ package controllers
 
 import (
 	"context"
+	routev1 "github.com/openshift/api/route/v1"
+
 	//"os"
 	"path/filepath"
 	"testing"
@@ -82,6 +84,9 @@ var _ = BeforeSuite(func() {
 	cfg, err := testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
+
+	err = routev1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
 
 	err = brokerv2alpha5.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
