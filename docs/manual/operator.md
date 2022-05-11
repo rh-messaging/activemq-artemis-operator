@@ -340,6 +340,8 @@ spec:
   routingType: anycast
 ```
 
+    NOTE: The livenessqueue queue above should should only be used by the livness probe.
+
 ### The Readiness Probe
 
 As with the Liveness Probe the Readiness probe has a default probe if not configured. Unlike the readiness probe this is 
