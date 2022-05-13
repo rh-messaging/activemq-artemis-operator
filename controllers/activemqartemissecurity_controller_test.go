@@ -423,7 +423,7 @@ var _ = Describe("security controller", func() {
 					g.Expect(k8sClient.Get(ctx, key, createdBrokerCr)).Should(Succeed())
 
 					g.Expect(len(createdBrokerCr.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
-				}, timeout*5, interval).Should(Succeed())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 			}
 
 			Expect(k8sClient.Delete(ctx, createdBrokerCr)).Should(Succeed())
@@ -546,8 +546,13 @@ var _ = Describe("security controller", func() {
 				})
 				g.Expect(err).To(BeNil())
 
-				By("Checking for output pod")
-				g.Expect(capturedOut.Len() > 0)
+				By("Checking for output from pod")
+				g.Eventually(func(g Gomega) {
+					By("Checking for output from pod")
+					g.Expect(capturedOut.Len() > 0)
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("Checking pod output")
 				content := capturedOut.String()
 				g.Expect(content).Should(ContainSubstring("<match domain=\"org.apache.activemq.artemis\""))
 				g.Expect(content).Should(ContainSubstring("<access method=\"list*\" roles=\"guest\""))

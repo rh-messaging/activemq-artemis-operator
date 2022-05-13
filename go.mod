@@ -3,6 +3,7 @@ module github.com/artemiscloud/activemq-artemis-operator
 go 1.16
 
 require (
+	github.com/Azure/go-amqp v0.17.4
 	//this module is problematic
 	github.com/RHsyseng/operator-utils v1.4.7
 	github.com/artemiscloud/activemq-artemis-management v0.0.0-20220211120143-717f9a910005

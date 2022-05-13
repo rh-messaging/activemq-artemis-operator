@@ -19,11 +19,16 @@ As usual, we start with the necessary imports. We also define some utility varia
 package controllers
 
 import (
+	"container/list"
 	"context"
 	"fmt"
+
+	"net"
+	"net/url"
 	"os"
 
 	brokerv2alpha4 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha4"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
@@ -45,10 +50,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/watch"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/cr2jinja2"
+
+	"github.com/Azure/go-amqp"
 )
 
 //Uncomment this and the "test" import if you want to debug this set of tests
@@ -68,13 +76,18 @@ var _ = Describe("artemis controller", func() {
 	var wi watch.Interface
 	BeforeEach(func() {
 
-		wc, _ := client.NewWithWatch(restConfig, client.Options{})
+		var err error
+		wc, err := client.NewWithWatch(restConfig, client.Options{})
+		if err != nil {
+			fmt.Printf("Err on watch client:  %v\n", err)
+			return
+		}
 
 		// see what changed
-		var err error
 		wi, err = wc.Watch(ctx, &brokerv1beta1.ActiveMQArtemisList{}, &client.ListOptions{})
 		if err != nil {
 			fmt.Printf("Err on watch:  %v\n", err)
+			return
 		}
 		go func() {
 			for event := range wi.ResultChan() {
@@ -202,6 +215,240 @@ var _ = Describe("artemis controller", func() {
 		})
 	})
 
+	Context("ClientId autoshard Test", func() {
+
+		produceMessage := func(url string, clientId string, linkAddress string, messageId int, g Gomega) {
+
+			client, err := amqp.Dial(url, amqp.ConnContainerID(clientId), amqp.ConnSASLPlain("dummy-user", "dummy-pass"))
+
+			g.Expect(err).Should(BeNil())
+			g.Expect(client).ShouldNot(BeNil())
+			defer client.Close()
+
+			session, err := client.NewSession()
+
+			g.Expect(err).Should(BeNil())
+			g.Expect(session).ShouldNot(BeNil())
+
+			sender, err := session.NewSender(
+				amqp.LinkTargetAddress(linkAddress),
+			)
+			g.Expect(err).Should(BeNil())
+			ctx, cancel := context.WithTimeout(ctx, 4*time.Second)
+
+			defer sender.Close(ctx)
+			defer cancel()
+
+			msg := amqp.NewMessage([]byte("Hello! from:" + clientId))
+			msg.ApplicationProperties = make(map[string]interface{})
+			msg.ApplicationProperties["MessageID"] = messageId
+			msg.ApplicationProperties["ClientID"] = clientId
+
+			err = sender.Send(ctx, msg)
+			g.Expect(err).Should(BeNil())
+		}
+
+		consumeMatchingMessage := func(url string, linkAddress string, receivedTracker map[string]*list.List, g Gomega) {
+
+			client, err := amqp.Dial(url, amqp.ConnSASLPlain("dummy-user", "dummy-pass"))
+			g.Expect(err).Should(BeNil())
+			g.Expect(client).ShouldNot(BeNil())
+
+			defer client.Close()
+
+			session, err := client.NewSession()
+			g.Expect(err).Should(BeNil())
+			g.Expect(session).ShouldNot(BeNil())
+
+			receiver, err := session.NewReceiver(
+				amqp.LinkSourceAddress(linkAddress),
+				amqp.LinkSourceCapabilities("queue"),
+				amqp.LinkCredit(50),
+			)
+			g.Expect(err).Should(BeNil())
+			g.Expect(receiver).ShouldNot(BeNil())
+
+			ctx, cancel := context.WithTimeout(ctx, 600*time.Millisecond)
+			defer receiver.Close(ctx)
+			defer cancel()
+
+			// Receive messages till error or nil
+			for {
+				msg, err := receiver.Receive(ctx)
+
+				if err != nil || msg == nil {
+					break
+				}
+
+				g.Expect(err).Should(BeNil())
+				g.Expect(msg).ShouldNot(BeNil())
+
+				var senderClientId = msg.ApplicationProperties["ClientID"].(string)
+				receivedTracker[senderClientId].PushBack(msg.ApplicationProperties["MessageID"])
+
+				err = receiver.AcceptMessage(ctx, msg)
+				g.Expect(err).Should(BeNil())
+
+			}
+		}
+
+		It("deploy 2 with clientID auto sharding", func() {
+
+			isClusteredBoolean := false
+			NOT := false
+			crd := generateArtemisSpec(namespace)
+			crd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
+				InitialDelaySeconds: 1,
+				PeriodSeconds:       5,
+				TimeoutSeconds:      5,
+			}
+			crd.Spec.DeploymentPlan.LivenessProbe = &corev1.Probe{
+				InitialDelaySeconds: 1,
+				PeriodSeconds:       5,
+				TimeoutSeconds:      5,
+			}
+
+			crd.Spec.DeploymentPlan.Size = 2
+			crd.Spec.DeploymentPlan.Clustered = &isClusteredBoolean
+			crd.Spec.Acceptors = []brokerv1beta1.AcceptorType{{
+				Name:                "tcp",
+				Port:                62616,
+				Expose:              false,
+				BindToAllInterfaces: &NOT,
+			}}
+
+			linkAddress := "LB.TESTQ"
+
+			crd.Spec.BrokerProperties = []string{
+				"connectionRouters.autoShard.keyType=CLIENT_ID",
+				"connectionRouters.autoShard.localTargetFilter=NULL|${STATEFUL_SET_ORDINAL}|-${STATEFUL_SET_ORDINAL}",
+				"connectionRouters.autoShard.policyConfiguration=CONSISTENT_HASH_MODULO",
+				"connectionRouters.autoShard.policyConfiguration.properties.MODULO=2",
+				"acceptorConfigurations.tcp.params.router=autoShard",           // matching spec.acceptor
+				"addressesSettings.\"LB.#\".defaultAddressRoutingType=ANYCAST", // b/c cannot set linkTargetCapabilities from amqp client
+			}
+
+			By("Deploying the CRD " + crd.ObjectMeta.Name)
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			crdNsName := types.NamespacedName{
+				Name:      crd.Name,
+				Namespace: namespace,
+			}
+			deployedCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				By("Finding cluster host")
+				baseUrl, err := url.Parse(testEnv.Config.Host)
+				Expect(err).Should(BeNil())
+
+				ipAddressNet, err := net.LookupIP(baseUrl.Hostname())
+				Expect(err).Should(BeNil())
+				ipAddress := ipAddressNet[0].String()
+
+				By("verying started")
+				Eventually(func(g Gomega) {
+
+					g.Expect(k8sClient.Get(ctx, crdNsName, deployedCrd)).Should(Succeed())
+					g.Expect(len(deployedCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(2))
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("exposing ss-0 via NodePort")
+				ss0Service := &corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{Name: crd.Name + "-nodeport-0", Namespace: namespace},
+					Spec: corev1.ServiceSpec{
+						Selector: map[string]string{
+							"ActiveMQArtemis":                    crd.Name,
+							"statefulset.kubernetes.io/pod-name": namer.CrToSS(crd.Name) + "-0",
+						},
+						Type: "NodePort",
+						Ports: []corev1.ServicePort{
+							{
+								Port:       61617,
+								TargetPort: intstr.FromInt(62616),
+							},
+						},
+						ExternalIPs: []string{ipAddress},
+					},
+				}
+				Expect(k8sClient.Create(ctx, ss0Service)).Should(Succeed())
+
+				By("exposing ss-1 via NodePort")
+				ss1Service := &corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{Name: crd.Name + "-nodeport-1", Namespace: namespace},
+					Spec: corev1.ServiceSpec{
+						Selector: map[string]string{
+							"ActiveMQArtemis":                    crd.Name,
+							"statefulset.kubernetes.io/pod-name": namer.CrToSS(crd.Name) + "-1",
+						},
+						Type: "NodePort",
+						Ports: []corev1.ServicePort{
+							{
+								Port:       61618,
+								TargetPort: intstr.FromInt(62616),
+							},
+						},
+						ExternalIPs: []string{string(ipAddress)},
+					},
+				}
+				Expect(k8sClient.Create(ctx, ss1Service)).Should(Succeed())
+
+				urls := []string{"amqp://" + baseUrl.Hostname() + ":61617", "amqp://" + baseUrl.Hostname() + ":61618"}
+
+				By("verify partition by sending eventually... expect auto-shard error if we get the wrong broker")
+				numberOfMessagesToSendPerClientId := 5
+				sentMessageSequenceId := 0
+				urlBalancerCounter := 1 // round robin over urls if len(urls) > 0
+				clientIds := []string{"W", "ONE", "TWO", "THREE", "FOUR", "0299s-99", "D-0301-c-e-SomeHostBla"}
+				for _, id := range clientIds {
+					// send messages on new connection with each clientId
+					for i := 0; i < numberOfMessagesToSendPerClientId; i++ {
+						Eventually(func(g Gomega) {
+							urlBalancerCounter++
+							produceMessage(urls[urlBalancerCounter%len(urls)], id, linkAddress, sentMessageSequenceId+1, g)
+							sentMessageSequenceId++ // on success
+						}, timeout*4, interval).Should(Succeed())
+					}
+				}
+
+				Expect(len(clientIds) * numberOfMessagesToSendPerClientId).Should(BeEquivalentTo(sentMessageSequenceId))
+
+				By("verify partition by consuming messages from each broker")
+				receivedIdTracker := map[string]*list.List{}
+				for _, id := range clientIds {
+					receivedIdTracker[id] = list.New()
+				}
+				for _, url := range urls {
+					Eventually(func(g Gomega) {
+						consumeMatchingMessage(url, linkAddress, receivedIdTracker, g)
+					}).Should(Succeed())
+				}
+
+				for _, list := range receivedIdTracker {
+					Expect(list.Len()).Should(BeEquivalentTo(5))
+
+					By("verifying received in order per clientId, ie: producer was sharded nicely")
+					receivedIdTracker := list.Front().Value.(int64)
+					for e := list.Front(); e != nil; e = e.Next() {
+						if e.Value == receivedIdTracker {
+							receivedIdTracker++
+						}
+					}
+
+					By("verifying all in order")
+					Expect(receivedIdTracker - list.Front().Value.(int64)).Should(BeEquivalentTo(numberOfMessagesToSendPerClientId))
+				}
+
+				Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
+				Expect(k8sClient.Delete(ctx, ss0Service)).Should(Succeed())
+				Expect(k8sClient.Delete(ctx, ss1Service)).Should(Succeed())
+
+			}
+		})
+	})
+
 	Context("SS delete recreate Test", func() {
 		It("deploy, delete ss, verify", func() {
 
@@ -287,7 +534,10 @@ var _ = Describe("artemis controller", func() {
 			brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
 			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
 
-			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+			// some required services on crc get evicted which invalidates this test of taints
+			isOpenshift, err := environments.DetectOpenshift()
+			Expect(err).Should(BeNil())
+			if !isOpenshift && os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 
 				By("veryify pod started")
 				Eventually(func(g Gomega) {
@@ -386,7 +636,10 @@ var _ = Describe("artemis controller", func() {
 			brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
 			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
 
-			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+			// some required services on crc get evicted which invalidates this test of taints
+			isOpenshift, err := environments.DetectOpenshift()
+			Expect(err).Should(BeNil())
+			if !isOpenshift && os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 
 				By("veryify pod started as no taints in play")
 				Eventually(func(g Gomega) {
@@ -410,7 +663,7 @@ var _ = Describe("artemis controller", func() {
 					node.Spec.Taints = []corev1.Taint{{Key: "artemis", Value: "no", Effect: corev1.TaintEffectNoExecute}}
 					g.Expect(k8sClient.Update(ctx, &node)).Should(Succeed())
 
-				}, timeout*2, interval).Should(Succeed())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("veryify pod status now starting, evicted!")
 				Eventually(func(g Gomega) {
@@ -418,7 +671,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
 					g.Expect(len(createdCrd.Status.PodStatus.Starting)).Should(BeEquivalentTo(1))
 
-				}, timeout*4, interval).Should(Succeed())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("updating taint to match key and value")
 				Eventually(func(g Gomega) {
@@ -432,7 +685,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(len(node.Spec.Taints)).Should(BeEquivalentTo(1))
 					node.Spec.Taints = []corev1.Taint{{Key: "artemis", Value: "ok", Effect: corev1.TaintEffectNoExecute}}
 					g.Expect(k8sClient.Update(ctx, &node)).Should(Succeed())
-				}, timeout*2, interval).Should(Succeed())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("veryify ready status on CR, started again")
 				Eventually(func(g Gomega) {
@@ -440,7 +693,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
 					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
 
-				}, timeout*5, interval).Should(Succeed())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("reverting taints on node")
 				Eventually(func(g Gomega) {
@@ -454,7 +707,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(len(node.Spec.Taints)).Should(BeEquivalentTo(1))
 					node.Spec.Taints = []corev1.Taint{}
 					g.Expect(k8sClient.Update(ctx, &node)).Should(Succeed())
-				}, timeout*2, interval).Should(Succeed())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			}
 
@@ -2526,7 +2779,7 @@ var _ = Describe("artemis controller", func() {
 		It("Checking storageClassName is configured", func() {
 
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
-				By("By not pollutoing PVC that cannot be bound, seems to bork minkube")
+				By("By not requesting PVC that cannot be bound, seems to prevent minkube auto pv allocation")
 				return
 			}
 			By("By creating a new crd")

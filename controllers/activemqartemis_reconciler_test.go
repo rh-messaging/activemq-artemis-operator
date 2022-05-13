@@ -214,4 +214,19 @@ func TestGetSingleStatefulSetStatus(t *testing.T) {
 	if statusRunning.Stopped[0] != "joe" {
 		t.Errorf("not good!, expect ss name in stopped" + statusRunning.Stopped[0])
 	}
+
+	var expectedTwo int32 = int32(2)
+	ss.Spec.Replicas = &expectedTwo
+	ss.Status.Replicas = 2
+	ss.Status.ReadyReplicas = 1
+
+	statusRunning = getSingleStatefulSetStatus(ss)
+	if statusRunning.Ready[0] != "joe-0" {
+		t.Errorf("not good!, expect correct 0 ordinal ready" + statusRunning.Ready[0])
+	}
+
+	if statusRunning.Starting[0] != "joe-1" {
+		t.Errorf("not good!, expect ss name in starting" + statusRunning.Stopped[0])
+	}
+
 }

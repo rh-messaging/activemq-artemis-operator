@@ -62,9 +62,9 @@ import (
 // Define utility constants for object names and testing timeouts/durations and intervals.
 const (
 	defaultNamespace        = "default"
-	timeout                 = time.Second * 15
+	timeout                 = time.Second * 30
 	duration                = time.Second * 10
-	interval                = time.Millisecond * 250
+	interval                = time.Millisecond * 500
 	existingClusterTimeout  = time.Second * 180
 	existingClusterInterval = time.Second * 2
 	verobse                 = false
