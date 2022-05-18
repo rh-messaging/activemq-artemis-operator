@@ -1,6 +1,14 @@
 #!/bin/bash
 
 echo "Deploying cluster-wide operator, dont forget change WATCH_NAMESPACE to empty! and cluser-role-binding subjects namespace"
+
+read -p "Please confirm that you have changed WATCH_NAMESPACE and role-binding to proper values [Y/N]: "
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]
+then
+  exit 1
+fi
+
 KUBE=oc
 
 $KUBE create -f ./crds
