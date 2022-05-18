@@ -74,42 +74,52 @@ var _ = Describe("artemis controller", func() {
 		namespace = defaultNamespace
 	)
 
-	// see what has changed from the controllers perspective
-	var wi watch.Interface
+	// see what has changed from the controllers perspective, what we watch
+	toWatch := []client.ObjectList{&brokerv1beta1.ActiveMQArtemisList{}, &appsv1.StatefulSetList{}, &corev1.PodList{}}
+	wis := list.New()
 	BeforeEach(func() {
 
-		var err error
-		wc, err := client.NewWithWatch(testEnv.Config, client.Options{})
-		if err != nil {
-			fmt.Printf("Err on watch client:  %v\n", err)
-			return
-		}
 		if verobse {
 			fmt.Println("Time with MicroSeconds: ", time.Now().Format("2006-01-02 15:04:05.000000"), " test:", CurrentGinkgoTestDescription())
 		}
 
-		// see what changed
-		wi, err = wc.Watch(ctx, &brokerv1beta1.ActiveMQArtemisList{}, &client.ListOptions{})
-		if err != nil {
-			fmt.Printf("Err on watch:  %v\n", err)
-			return
-		}
-		go func() {
-			for event := range wi.ResultChan() {
-				switch co := event.Object.(type) {
-				case client.Object:
-					if verobse {
-						fmt.Printf("%v ActiveMQArtemisList CRD: ResourceVersion: %v Generation: %v, OR: %v\n", event.Type, co.GetResourceVersion(), co.GetGeneration(), co.GetOwnerReferences())
-						fmt.Printf("Object: %v\n", event.Object)
+		for _, li := range toWatch {
+
+			wc, err := client.NewWithWatch(testEnv.Config, client.Options{})
+			if err != nil {
+				fmt.Printf("Err on watch client:  %v\n", err)
+				return
+			}
+
+			// see what changed
+			wi, err := wc.Watch(ctx, li, &client.ListOptions{})
+			if err != nil {
+				fmt.Printf("Err on watch:  %v\n", err)
+			}
+			wis.PushBack(wi)
+
+			go func() {
+				for event := range wi.ResultChan() {
+					switch co := event.Object.(type) {
+					case client.Object:
+						if verobse {
+							fmt.Printf("%v : ResourceVersion: %v Generation: %v, OR: %v\n", event.Type, co.GetResourceVersion(), co.GetGeneration(), co.GetOwnerReferences())
+							fmt.Printf("%v : Object: %v\n", event.Type, event.Object)
+						}
+					default:
+						if verobse {
+							fmt.Printf("%v : type: %v\n", event.Type, co)
+							fmt.Printf("%v : Object: %v\n", event.Type, event.Object)
+						}
 					}
 				}
-			}
-		}()
+			}()
+		}
 	})
 
 	AfterEach(func() {
-		if wi != nil {
-			wi.Stop()
+		for e := wis.Front(); e != nil; e = e.Next() {
+			e.Value.(watch.Interface).Stop()
 		}
 	})
 
@@ -379,16 +389,17 @@ var _ = Describe("artemis controller", func() {
 				"addressesSettings.\"LB.#\".defaultAddressRoutingType=ANYCAST", // b/c cannot set linkTargetCapabilities from amqp client
 			}
 
-			By("Deploying the CRD " + crd.ObjectMeta.Name)
-			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
-
-			crdNsName := types.NamespacedName{
-				Name:      crd.Name,
-				Namespace: namespace,
-			}
-			deployedCrd := &brokerv1beta1.ActiveMQArtemis{}
-
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				By("Deploying the CRD " + crd.ObjectMeta.Name)
+				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+				crdNsName := types.NamespacedName{
+					Name:      crd.Name,
+					Namespace: namespace,
+				}
+
+				deployedCrd := &brokerv1beta1.ActiveMQArtemis{}
 
 				By("Finding cluster host")
 				baseUrl, err := url.Parse(testEnv.Config.Host)
@@ -495,8 +506,131 @@ var _ = Describe("artemis controller", func() {
 				Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
 				Expect(k8sClient.Delete(ctx, ss0Service)).Should(Succeed())
 				Expect(k8sClient.Delete(ctx, ss1Service)).Should(Succeed())
+			}
+
+		})
+	})
+
+	Context("Probe defaults reconcile", func() {
+		It("deploy", func() {
+			boolTrueVal := true
+			boolFalseVal := false
+
+			crd := generateArtemisSpec(namespace)
+			crd.Spec.DeploymentPlan.Size = 1
+			crd.Spec.DeploymentPlan.MessageMigration = &boolTrueVal
+
+			crd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
+				InitialDelaySeconds: 1,
+				PeriodSeconds:       1,
+				TimeoutSeconds:      5,
+				// default values are server-side applied - the ones that we set that are > 0 get tracked as owned by us
+				// omitted values have default nil,false,0
+				// SuccessThreshod defaults to 1 and is applied on write, our 0 default is ignored
+			}
+
+			By("Deploying Cr with Probe and defaults " + crd.ObjectMeta.Name)
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
+			deployedCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				By("verying started")
+				Eventually(func(g Gomega) {
+
+					g.Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
+					g.Expect(len(deployedCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+
+				}, timeout*5, interval).Should(Succeed())
+
+				key := types.NamespacedName{
+					Name:      namer.CrToSS(crd.Name),
+					Namespace: namespace,
+				}
+				currentSS := &appsv1.StatefulSet{}
+				var ssVersion string
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, key, currentSS)).Should(Succeed())
+					ssVersion = currentSS.ResourceVersion
+					g.Expect(ssVersion).ShouldNot(BeEmpty())
+
+					By("verifying default filled in and respected")
+					g.Expect(currentSS.Spec.Template.Spec.Containers[0].ReadinessProbe.SuccessThreshold).Should(BeEquivalentTo(1))
+					g.Expect(currentSS.Spec.Template.Spec.Containers[0].ReadinessProbe.FailureThreshold).Should(BeEquivalentTo(3))
+
+					By("verifying what was configured")
+					g.Expect(currentSS.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds).Should(BeEquivalentTo(1))
+				}, timeout, interval).Should(Succeed())
+
+				Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
+				crdVer := deployedCrd.ResourceVersion
+				deployedCrd.Spec.DeploymentPlan.MessageMigration = &boolFalseVal
+				By("force reconcile via CR update of Ver:" + crdVer)
+				Expect(k8sClient.Update(ctx, deployedCrd)).Should(Succeed())
+
+				By("verify no change in ssVersion but change in brokerCr")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
+					By("verify crd new revision: " + deployedCrd.ResourceVersion)
+					g.Expect(deployedCrd.ResourceVersion).ShouldNot(Equal(crdVer))
+
+					By("Verify second generation...")
+					g.Expect(deployedCrd.Generation).Should(BeEquivalentTo(2))
+
+					g.Expect(k8sClient.Get(ctx, key, currentSS)).Should(Succeed())
+					By("verify no new ss revision: " + currentSS.ResourceVersion)
+					g.Expect(currentSS.ResourceVersion).Should(Equal(ssVersion))
+					By("Verify first generation...")
+					g.Expect(currentSS.Generation).Should(BeEquivalentTo(1))
+
+				}, timeout, interval).Should(Succeed())
+
+				By("Force SS update via CR update to Probe")
+				Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
+				deployedCrd.Spec.DeploymentPlan.ReadinessProbe.InitialDelaySeconds = 2
+				Expect(k8sClient.Update(ctx, deployedCrd)).Should(Succeed())
+
+				By("verifying update to SS")
+				Eventually(func(g Gomega) {
+
+					g.Expect(k8sClient.Get(ctx, key, currentSS)).Should(Succeed())
+					By("verify no new ss revision: " + currentSS.ResourceVersion)
+					g.Expect(currentSS.ResourceVersion).ShouldNot(Equal(ssVersion))
+					By("Verify second generation...")
+					g.Expect(currentSS.Generation).Should(BeEquivalentTo(2))
+
+				}, timeout*2, interval).Should(Succeed())
+
+				By("Deleting the ready ss pod")
+				key = types.NamespacedName{Name: namer.CrToSS(crd.Name) + "-0", Namespace: namespace}
+				zeroGracePeriodSeconds := int64(0) // immediate delete
+				var podResourceVersion string
+				Eventually(func(g Gomega) {
+					pod := &corev1.Pod{}
+					g.Expect(k8sClient.Get(ctx, key, pod)).Should(Succeed())
+					podResourceVersion = pod.ResourceVersion
+					g.Expect(podResourceVersion).ShouldNot(BeEmpty())
+					g.Expect(k8sClient.Delete(ctx, pod, &client.DeleteOptions{GracePeriodSeconds: &zeroGracePeriodSeconds})).Should(Succeed())
+				}, timeout, interval).Should(Succeed())
+
+				By("Again finding pod instance with new resource version")
+				Eventually(func(g Gomega) {
+					pod := &corev1.Pod{}
+					g.Expect(k8sClient.Get(ctx, key, pod)).Should(Succeed())
+					g.Expect(pod.ResourceVersion).ShouldNot(Equal(podResourceVersion))
+				}, timeout, interval).Should(Succeed())
+
+				By("Verying new pod restarted via CR Status")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
+					g.Expect(len(deployedCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+				}, timeout*5, interval).Should(Succeed())
 
 			}
+
+			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
 		})
 	})
 
@@ -3022,6 +3156,7 @@ var _ = Describe("artemis controller", func() {
 	})
 
 	Context("With deployed controller", func() {
+
 		It("Checking storageClassName is configured", func() {
 
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
@@ -3222,7 +3357,6 @@ var _ = Describe("artemis controller", func() {
 			k8sClient.Delete(ctx, &crd)
 
 		}
-
 	})
 })
 

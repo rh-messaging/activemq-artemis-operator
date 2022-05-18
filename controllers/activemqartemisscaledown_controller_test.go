@@ -56,19 +56,6 @@ var _ = Describe("Scale down controller", func() {
 
 				brokerCrd := generateOriginalArtemisSpec(defaultNamespace, brokerName)
 
-				clustered := true
-				brokerCrd.Spec.DeploymentPlan.Clustered = &clustered
-				brokerCrd.Spec.DeploymentPlan.Size = 2
-				brokerCrd.Spec.DeploymentPlan.PersistenceEnabled = true
-				brokerCrd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
-					InitialDelaySeconds: 1,
-					PeriodSeconds:       1,
-					TimeoutSeconds:      5,
-					SuccessThreshold:    1, // needs to be fully defined as reconcile does not detect absent default values
-					FailureThreshold:    3,
-				}
-				Expect(k8sClient.Create(ctx, brokerCrd)).Should(Succeed())
-
 				booleanTrue := true
 				brokerCrd.Spec.DeploymentPlan.Clustered = &booleanTrue
 				brokerCrd.Spec.DeploymentPlan.Size = 2
