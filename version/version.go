@@ -1,5 +1,7 @@
 package version
 
+import "strings"
+
 var (
 	Version = "7.10.0"
 	// PriorVersion - prior version
@@ -14,7 +16,18 @@ const (
 	LastMicroVersion = "7.9.4"
 	// LastMinorVersion product version supported
 	LastMinorVersion = "7.7.0"
+
+	LatestKubeImage = "registry.redhat.io/amq7/amq-broker-rhel8:7.10-19"
+	LatestInitImage = "registry.redhat.io/amq7/amq-broker-init-rhel8:7.10-7"
 )
+
+func DefaultImageName(archSpecificRelatedImageEnvVarName string) string {
+	if strings.Contains(archSpecificRelatedImageEnvVarName, "_Init_") {
+		return LatestInitImage
+	} else {
+		return LatestKubeImage
+	}
+}
 
 // SupportedVersions - product versions this operator supports
 var SupportedVersions = []string{LatestVersion, LastMicroVersion, LastMinorVersion}

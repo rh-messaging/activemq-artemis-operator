@@ -2158,8 +2158,11 @@ func determineImageToUse(customResource *brokerv1beta1.ActiveMQArtemis, imageTyp
 		archSpecificRelatedImageEnvVarName = genericRelatedImageEnvVarName + "_" + osruntime.GOARCH
 	}
 	clog.V(1).Info("DetermineImageToUse GOARCH specific image env var is " + archSpecificRelatedImageEnvVarName)
-	imageName = os.Getenv(archSpecificRelatedImageEnvVarName)
+	imageName, found := os.LookupEnv(archSpecificRelatedImageEnvVarName)
 	clog.V(1).Info("DetermineImageToUse imageName is " + imageName)
+	if !found {
+		imageName = version.DefaultImageName(archSpecificRelatedImageEnvVarName)
+	}
 
 	return imageName
 }
