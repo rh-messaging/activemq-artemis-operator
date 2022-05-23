@@ -18,9 +18,10 @@ package controllers
 
 import (
 	"context"
+	"os"
+
 	routev1 "github.com/openshift/api/route/v1"
 
-	//"os"
 	"path/filepath"
 	"testing"
 
@@ -72,6 +73,10 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
 	ctx, cancel = context.WithCancel(context.TODO())
+
+	// force isLocalOnly=false check from artemis reconciler such that scale down controller will create
+	// role binding to service account for the drainer pod
+	os.Setenv("OPERATOR_WATCH_NAMESPACE", "SomeValueToCauesEqualitytoFailInIsLocalSoDrainControllerSortsCreds")
 
 	// for run in ide
 	// os.Setenv("KUBEBUILDER_ASSETS", " .. <path from makefile> /kubebuilder-envtest/k8s/1.22.1-linux-amd64")
@@ -176,6 +181,8 @@ var _ = BeforeSuite(func() {
 
 var _ = AfterSuite(func() {
 	By("tearing down the test environment")
+
+	os.Unsetenv("OPERATOR_WATCH_NAMESPACE")
 
 	cancel()
 	if stateManager != nil {

@@ -242,6 +242,207 @@ var _ = Describe("artemis controller", func() {
 		})
 	})
 
+	Context("Tolerations Existing Cluster", func() {
+		It("Toleration of artemis", func() {
+
+			By("Creating a crd with tolerations")
+			ctx := context.Background()
+			crd := generateArtemisSpec(namespace)
+			crd.Spec.DeploymentPlan.Size = 1
+			crd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
+				InitialDelaySeconds: 1,
+				PeriodSeconds:       5,
+			}
+			crd.Spec.DeploymentPlan.Tolerations = []corev1.Toleration{
+				{
+					Key:    "artemis",
+					Effect: corev1.TaintEffectPreferNoSchedule,
+				},
+			}
+
+			By("Deploying the CRD " + crd.ObjectMeta.Name)
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				By("veryify pod started")
+				Eventually(func(g Gomega) {
+
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+
+				}, timeout*5, interval).Should(Succeed())
+
+				By("veryify no taints on node")
+				Eventually(func(g Gomega) {
+
+					// find our node, take the first one...
+					nodes := &corev1.NodeList{}
+					g.Expect(k8sClient.List(ctx, nodes, &client.ListOptions{})).Should(Succeed())
+					g.Expect(len(nodes.Items) > 0).Should(BeTrue())
+
+					node := nodes.Items[0]
+					g.Expect(len(node.Spec.Taints)).Should(BeEquivalentTo(0))
+				}, timeout*2, interval).Should(Succeed())
+
+				By("veryify pod status still started")
+				Eventually(func(g Gomega) {
+
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+
+				}, timeout*2, interval).Should(Succeed())
+
+				By("applying taints to node")
+				Eventually(func(g Gomega) {
+
+					// find our node, take the first one...
+					nodes := &corev1.NodeList{}
+					g.Expect(k8sClient.List(ctx, nodes, &client.ListOptions{})).Should(Succeed())
+					g.Expect(len(nodes.Items) > 0).Should(BeTrue())
+
+					node := nodes.Items[0]
+					g.Expect(len(node.Spec.Taints)).Should(BeEquivalentTo(0))
+					node.Spec.Taints = []corev1.Taint{{Key: "artemis", Effect: corev1.TaintEffectPreferNoSchedule}}
+
+					g.Expect(k8sClient.Update(ctx, &node)).Should(Succeed())
+				}, timeout*2, interval).Should(Succeed())
+
+				By("veryify pod status still started")
+				Eventually(func(g Gomega) {
+
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+
+				}, timeout*2, interval).Should(Succeed())
+
+				By("reverting taints on node")
+				Eventually(func(g Gomega) {
+
+					// find our node, take the first one...
+					nodes := &corev1.NodeList{}
+					g.Expect(k8sClient.List(ctx, nodes, &client.ListOptions{})).Should(Succeed())
+					g.Expect(len(nodes.Items) > 0).Should(BeTrue())
+
+					node := nodes.Items[0]
+					g.Expect(len(node.Spec.Taints)).Should(BeEquivalentTo(1))
+					node.Spec.Taints = []corev1.Taint{}
+					g.Expect(k8sClient.Update(ctx, &node)).Should(Succeed())
+				}, timeout*2, interval).Should(Succeed())
+
+			}
+
+			Expect(k8sClient.Delete(ctx, createdCrd))
+
+		})
+
+		It("Toleration of artemis required add/remove verify status", func() {
+
+			By("Creating a crd with tolerations")
+			ctx := context.Background()
+			crd := generateArtemisSpec(namespace)
+			crd.Spec.DeploymentPlan.Size = 1
+			crd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
+				InitialDelaySeconds: 1,
+				PeriodSeconds:       5,
+			}
+
+			crd.Spec.DeploymentPlan.Tolerations = []corev1.Toleration{
+				{
+					Key:      "artemis",
+					Value:    "ok",
+					Operator: corev1.TolerationOpEqual,
+					Effect:   corev1.TaintEffectNoExecute,
+				},
+			}
+
+			By("Deploying the CRD " + crd.ObjectMeta.Name)
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				By("veryify pod started as no taints in play")
+				Eventually(func(g Gomega) {
+
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+
+				}, timeout*5, interval).Should(Succeed())
+
+				By("apply matching taint with wrong value, force eviction")
+				Eventually(func(g Gomega) {
+
+					// find our node, take the first one...
+					nodes := &corev1.NodeList{}
+					g.Expect(k8sClient.List(ctx, nodes, &client.ListOptions{})).Should(Succeed())
+					g.Expect(len(nodes.Items) > 0).Should(BeTrue())
+
+					node := nodes.Items[0]
+					g.Expect(len(node.Spec.Taints)).Should(BeEquivalentTo(0))
+
+					node.Spec.Taints = []corev1.Taint{{Key: "artemis", Value: "no", Effect: corev1.TaintEffectNoExecute}}
+					g.Expect(k8sClient.Update(ctx, &node)).Should(Succeed())
+
+				}, timeout*2, interval).Should(Succeed())
+
+				By("veryify pod status now starting, evicted!")
+				Eventually(func(g Gomega) {
+
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					g.Expect(len(createdCrd.Status.PodStatus.Starting)).Should(BeEquivalentTo(1))
+
+				}, timeout*4, interval).Should(Succeed())
+
+				By("updating taint to match key and value")
+				Eventually(func(g Gomega) {
+
+					// find our node, take the first one...
+					nodes := &corev1.NodeList{}
+					g.Expect(k8sClient.List(ctx, nodes, &client.ListOptions{})).Should(Succeed())
+					g.Expect(len(nodes.Items) > 0).Should(BeTrue())
+
+					node := nodes.Items[0]
+					g.Expect(len(node.Spec.Taints)).Should(BeEquivalentTo(1))
+					node.Spec.Taints = []corev1.Taint{{Key: "artemis", Value: "ok", Effect: corev1.TaintEffectNoExecute}}
+					g.Expect(k8sClient.Update(ctx, &node)).Should(Succeed())
+				}, timeout*2, interval).Should(Succeed())
+
+				By("veryify ready status on CR, started again")
+				Eventually(func(g Gomega) {
+
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+
+				}, timeout*5, interval).Should(Succeed())
+
+				By("reverting taints on node")
+				Eventually(func(g Gomega) {
+
+					// find our node, take the first one...
+					nodes := &corev1.NodeList{}
+					g.Expect(k8sClient.List(ctx, nodes, &client.ListOptions{})).Should(Succeed())
+					g.Expect(len(nodes.Items) > 0).Should(BeTrue())
+
+					node := nodes.Items[0]
+					g.Expect(len(node.Spec.Taints)).Should(BeEquivalentTo(1))
+					node.Spec.Taints = []corev1.Taint{}
+					g.Expect(k8sClient.Update(ctx, &node)).Should(Succeed())
+				}, timeout*2, interval).Should(Succeed())
+
+			}
+
+			Expect(k8sClient.Delete(ctx, createdCrd))
+
+		})
+
+	})
+
 	Context("Console secret Test", func() {
 
 		crd := generateArtemisSpec(namespace)
