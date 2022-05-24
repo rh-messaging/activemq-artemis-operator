@@ -205,18 +205,26 @@ func createQueue(instance *AddressDeployment, request ctrl.Request, client clien
 				continue
 			}
 			err = createAddressResource(a, &instance.AddressResource)
+			if err != nil {
+				reqLogger.V(1).Info("Failed to create address resource", "failed broker", a)
+				break
+			}
 		}
+	}
+
+	if err == nil {
+		reqLogger.V(1).Info("Successfully created resources on all brokers", "size", len(artemisArray))
 	}
 
 	return err
 }
 
-func createAddressResource(a *mgmt.Artemis, addressRes *brokerv1beta1.ActiveMQArtemisAddress) error {
+func createAddressResource(a *JkInfo, addressRes *brokerv1beta1.ActiveMQArtemisAddress) error {
 	//Now checking if create queue or address
 	var err error
 	if addressRes.Spec.QueueName == nil || *addressRes.Spec.QueueName == "" {
 		//create address
-		_, err = a.CreateAddress(addressRes.Spec.AddressName, *addressRes.Spec.RoutingType)
+		_, err = a.Artemis.CreateAddress(addressRes.Spec.AddressName, *addressRes.Spec.RoutingType)
 		if nil != err {
 			glog.Error(err, "Creating ActiveMQArtemisAddress error for address", addressRes.Spec.AddressName)
 			return err
@@ -224,18 +232,25 @@ func createAddressResource(a *mgmt.Artemis, addressRes *brokerv1beta1.ActiveMQAr
 			glog.Info("Created ActiveMQArtemisAddress for address " + addressRes.Spec.AddressName)
 		}
 	} else {
-		glog.Info("Queue name is not empty so create queue", "name", *addressRes.Spec.QueueName)
+		glog.Info("Queue name is not empty so create queue", "name", *addressRes.Spec.QueueName, "broker", a.IP)
 		if addressRes.Spec.QueueConfiguration == nil {
 			routingType := "MULTICAST"
 			if addressRes.Spec.RoutingType != nil {
 				routingType = *addressRes.Spec.RoutingType
 			}
-			_, err := a.CreateQueue(addressRes.Spec.AddressName, *addressRes.Spec.QueueName, routingType)
+			response, err := a.Artemis.CreateQueue(addressRes.Spec.AddressName, *addressRes.Spec.QueueName, routingType)
 			if nil != err {
-				glog.Error(err, "Creating ActiveMQArtemisAddress error for "+*addressRes.Spec.QueueName)
-				return err
+				if mgmt.GetCreationError(response) == mgmt.QUEUE_ALREADY_EXISTS {
+					//TODO: we may add an update API to management module like the queueConfig case
+					glog.V(1).Error(err, "some error occurred", "response", response, "broker", a.IP)
+					glog.V(1).Info("Queue already exists, ignore and return success", "broker", a.IP)
+					err = nil
+				} else {
+					glog.Error(err, "Creating ActiveMQArtemisAddress error for "+*addressRes.Spec.QueueName, "broker", a.IP)
+					return err
+				}
 			} else {
-				glog.Info("Created ActiveMQArtemisAddress for " + *addressRes.Spec.QueueName)
+				glog.Info("Created ActiveMQArtemisAddress for "+*addressRes.Spec.QueueName, "on broker", a.IP)
 			}
 		} else {
 			//create queue using queueconfig
@@ -245,11 +260,11 @@ func createAddressResource(a *mgmt.Artemis, addressRes *brokerv1beta1.ActiveMQAr
 				//here we return nil as no point to requeue reconcile again
 				return nil
 			}
-			respData, err := a.CreateQueueFromConfig(queueCfg, ignoreIfExists)
+			respData, err := a.Artemis.CreateQueueFromConfig(queueCfg, ignoreIfExists)
 			if nil != err {
 				if mgmt.GetCreationError(respData) == mgmt.QUEUE_ALREADY_EXISTS {
 					glog.Info("The queue already exists, updating", "queue", queueCfg)
-					respData, err := a.UpdateQueue(queueCfg)
+					respData, err := a.Artemis.UpdateQueue(queueCfg)
 					if err != nil {
 						glog.Error(err, "Failed to update queue", "details", respData)
 					}
@@ -307,7 +322,7 @@ func deleteQueue(instance *AddressDeployment, request ctrl.Request, client clien
 		for _, a := range artemisArray {
 			if instance.AddressResource.Spec.QueueName == nil || *instance.AddressResource.Spec.QueueName == "" {
 				//delete address
-				_, err = a.DeleteAddress(instance.AddressResource.Spec.AddressName)
+				_, err = a.Artemis.DeleteAddress(instance.AddressResource.Spec.AddressName)
 				if nil != err {
 					reqLogger.Error(err, "Deleting ActiveMQArtemisAddress error for address ", instance.AddressResource.Spec.AddressName)
 					break
@@ -315,12 +330,12 @@ func deleteQueue(instance *AddressDeployment, request ctrl.Request, client clien
 				reqLogger.Info("Deleted ActiveMQArtemisAddress for address " + instance.AddressResource.Spec.AddressName)
 			} else {
 				//delete queues
-				_, err = a.DeleteQueue(*instance.AddressResource.Spec.QueueName)
+				_, err = a.Artemis.DeleteQueue(*instance.AddressResource.Spec.QueueName)
 				if nil != err {
 					reqLogger.Error(err, "Deleting ActiveMQArtemisAddress error for queue "+*instance.AddressResource.Spec.QueueName)
 					break
 				} else {
-					addressRetry.addToDelete(a)
+					addressRetry.addToDelete(a.Artemis)
 				}
 			}
 		}
@@ -332,12 +347,17 @@ func deleteQueue(instance *AddressDeployment, request ctrl.Request, client clien
 	return err
 }
 
-func getPodBrokers(instance *AddressDeployment, request ctrl.Request, client client.Client, scheme *runtime.Scheme) []*mgmt.Artemis {
+type JkInfo struct {
+	Artemis *mgmt.Artemis
+	IP      string
+}
+
+func getPodBrokers(instance *AddressDeployment, request ctrl.Request, client client.Client, scheme *runtime.Scheme) []*JkInfo {
 
 	reqLogger := ctrl.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Getting Pod Brokers", "instance", instance)
 
-	var artemisArray []*mgmt.Artemis = nil
+	var artemisArray []*JkInfo = nil
 	var jolokiaSecretName string = request.Name + "-jolokia-secret"
 
 	targetCrNamespacedNames := createTargetCrNamespacedNames(request.Namespace, instance.AddressResource.Spec.ApplyToCrNames)
@@ -382,9 +402,13 @@ func getPodBrokers(instance *AddressDeployment, request ctrl.Request, client cli
 
 					jolokiaUser, jolokiaPassword, jolokiaProtocol := resolveJolokiaRequestParams(request.Namespace, &instance.AddressResource, client, scheme, jolokiaSecretName, &containers, podNamespacedName, statefulset, info.Labels)
 
-					reqLogger.Info("New Jolokia with ", "User: ", jolokiaUser, "Protocol: ", jolokiaProtocol)
+					reqLogger.Info("New Jolokia with ", "User: ", jolokiaUser, "Protocol: ", jolokiaProtocol, "broker ip", pod.Status.PodIP)
 					artemis := mgmt.GetArtemis(pod.Status.PodIP, "8161", "amq-broker", jolokiaUser, jolokiaPassword, jolokiaProtocol)
-					artemisArray = append(artemisArray, artemis)
+					jkInfo := JkInfo{
+						Artemis: artemis,
+						IP:      pod.Status.PodIP,
+					}
+					artemisArray = append(artemisArray, &jkInfo)
 				}
 			}
 		}

@@ -23,8 +23,6 @@ import (
 	"fmt"
 	"strings"
 
-	"time"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -36,15 +34,6 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	appsv1 "k8s.io/api/apps/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
-)
-
-// Define utility constants for object names and testing timeouts/durations and intervals.
-const (
-	defaultNamespace = "default"
-	timeout          = time.Second * 15
-	duration         = time.Second * 10
-	interval         = time.Millisecond * 250
-	verobse          = false
 )
 
 var _ = Describe("security controller", func() {
@@ -431,7 +420,7 @@ func DeploySecurity(secName string, targetNamespace string, customFunc func(cand
 	Eventually(func() bool {
 		return getPersistedVersionedCrd(secCrd.ObjectMeta.Name, targetNamespace, createdSecCrd)
 	}, timeout, interval).Should(BeTrue())
-	Expect(createdSecCrd.Name).Should(Equal(createdSecCrd.ObjectMeta.Name))
+	Expect(createdSecCrd.Name).Should(Equal(secCrd.ObjectMeta.Name))
 
 	return secCrd, createdSecCrd
 }

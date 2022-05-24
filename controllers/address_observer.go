@@ -119,11 +119,12 @@ func (c *AddressObserver) checkCRsForNewPod(newPod *corev1.Pod, labels map[strin
 		targetCrNamespacedNames := createTargetCrNamespacedNames(newPod.Namespace, a.Spec.ApplyToCrNames)
 		//e.g. ex-aao-ss
 		podSSName, statefulset := c.getSSNameForPod(newPod)
-		olog.Info("Got pod's ss name", "value", *podSSName)
 		if podSSName == nil {
 			olog.Info("Can't find pod's statefulset name", "pod", newPod.Name)
 			continue
 		}
+		olog.Info("Got pod's ss name", "value", *podSSName)
+
 		podCrName := namer.SSToCr(*podSSName)
 		olog.Info("got pod's CR name", "value", podCrName)
 		//if the new pod is a target for this address cr, create
@@ -157,7 +158,11 @@ func (c *AddressObserver) checkCRsForNewPod(newPod *corev1.Pod, labels map[strin
 
 			olog.Info("New Jolokia with ", "User: ", jolokiaUser, "Protocol: ", jolokiaProtocol)
 			artemis := mgmt.GetArtemis(newPod.Status.PodIP, "8161", "amq-broker", jolokiaUser, jolokiaPassword, jolokiaProtocol)
-			createAddressResource(artemis, &a)
+			jk := JkInfo{
+				Artemis: artemis,
+				IP:      newPod.Status.PodIP,
+			}
+			createAddressResource(&jk, &a)
 		}
 	}
 }

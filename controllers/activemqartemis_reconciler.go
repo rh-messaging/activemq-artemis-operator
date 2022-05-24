@@ -2378,8 +2378,8 @@ func GetPodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, nam
 	reqLogger.V(1).Info("status.Ready len is " + fmt.Sprint(len(status.Ready)))
 	if len(status.Ready) > len(lastStatus.Ready) {
 		// More pods ready, let the address controller know
-		newPodCount := len(status.Ready) - len(lastStatus.Ready)
-		for i := newPodCount - 1; i < len(status.Ready); i++ {
+		for i := len(lastStatus.Ready); i < len(status.Ready); i++ {
+			reqLogger.V(1).Info("Notifying address controller", "new ready", i)
 			channels.AddressListeningCh <- types.NamespacedName{namespacedName.Namespace, status.Ready[i]}
 		}
 	}
