@@ -233,17 +233,14 @@ func waitForOperator() error {
 	opts := &client.ListOptions{
 		Namespace: defaultNamespace,
 	}
-	Eventually(func() bool {
-		err := k8sClient.List(ctx, podList, opts)
-		if err != nil {
-			return false
-		}
-		if len(podList.Items) != 1 {
-			return false
-		}
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.List(ctx, podList, opts)).Should(Succeed())
+
+		g.Expect(len(podList.Items)).Should(BeEquivalentTo(1))
 		oprPod := podList.Items[0]
-		return oprPod.Status.ContainerStatuses[0].Ready
-	}, operatorTimeout, operatorInterval).Should(Equal(true))
+		g.Expect(len(oprPod.Status.ContainerStatuses)).Should(BeEquivalentTo(1))
+		g.Expect(oprPod.Status.ContainerStatuses[0].Ready).Should(BeTrue())
+	}, operatorTimeout, operatorInterval).Should(Succeed())
 	return nil
 }
 

@@ -110,7 +110,10 @@ test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test  ./... $(TEST_ARGS) -coverprofile cover.out
 
 test-mk: manifests generate fmt vet envtest ## Run tests.
-	USE_EXISTING_CLUSTER=true ENABLE_WEBHOOKS=false go test  ./... $(TEST_ARGS) -coverprofile cover.out
+	USE_EXISTING_CLUSTER=true ENABLE_WEBHOOKS=false go test  ./... $(TEST_ARGS)
+
+test-mk-do: manifests generate fmt vet envtest ## Run tests with operator deployed
+	DEPLOY_OPERATOR=true USE_EXISTING_CLUSTER=true ENABLE_WEBHOOKS=false go test  ./controllers/... -ginkgo.focus \"Address controller\" -ginkgo.v
 
 ##@ Build
 
@@ -128,6 +131,9 @@ docker-build-debug: test generate-deploy ## Build debug version of docker image 
 
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
+
+podman-remote-build: build generate-deploy
+	podman-remote build -t ${IMG} .
 
 ##@ Deployment
 
