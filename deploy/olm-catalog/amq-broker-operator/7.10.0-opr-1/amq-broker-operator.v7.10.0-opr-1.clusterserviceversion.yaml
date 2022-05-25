@@ -2009,6 +2009,7 @@ spec:
               resources:
                 - pods
                 - services
+                - serviceaccounts
                 - endpoints
                 - persistentvolumeclaims
                 - events
@@ -2017,6 +2018,15 @@ spec:
                 - routes
               verbs:
                 - '*'
+            - apiGroups:
+                - "rbac.authorization.k8s.io"
+              resources:
+                - roles
+                - rolebindings
+              verbs:
+                - create
+                - get
+                - delete
             - apiGroups:
                 - ""
               resources:
@@ -2074,104 +2084,6 @@ spec:
                 - deployments/finalizers
               verbs:
                 - update
-      clusterPermissions:
-        - serviceAccountName: amq-broker-operator
-          rules:
-            - apiGroups:
-              - "coordination.k8s.io"
-              resources:
-              - "leases"
-              verbs:
-              - get
-              - list
-              - create
-              - delete
-              - watch
-              - update
-              - patch
-            - apiGroups:
-              - ""
-              resources:
-              - pods
-              - services
-              - serviceaccounts
-              - endpoints
-              - persistentvolumeclaims
-              - events
-              - configmaps
-              - secrets
-              - routes
-              verbs:
-              - '*'
-            - apiGroups:
-              - "rbac.authorization.k8s.io"
-              resources:
-              - roles
-              - rolebindings
-              verbs:
-              - create
-              - get
-              - delete
-            - apiGroups:
-              - ""
-              resources:
-              - namespaces
-              verbs:
-              - get
-            - apiGroups:
-              - apps
-              resources:
-              - deployments
-              - daemonsets
-              - replicasets
-              - statefulsets
-              verbs:
-              - '*'
-            - apiGroups:
-              - monitoring.coreos.com
-              resources:
-              - servicemonitors
-              verbs:
-              - get
-              - create
-            - apiGroups:
-              - broker.amq.io
-              resources:
-              - '*'
-              - activemqartemisaddresses
-              - activemqartemisscaledowns
-              - activemqartemis
-              verbs:
-              - '*'
-            - apiGroups:
-              - route.openshift.io
-              resources:
-              - routes
-              - routes/custom-host
-              - routes/status
-              verbs:
-              - get
-              - list
-              - watch
-              - create
-              - delete
-              - update
-            - apiGroups:
-              - extensions
-              resources:
-              - ingresses
-              verbs:
-              - get
-              - list
-              - watch
-              - create
-              - delete
-            - apiGroups:
-              - apps
-              resources:
-              - deployments/finalizers
-              verbs:
-              - update
       deployments:
         - name: amq-broker-operator
           spec:
