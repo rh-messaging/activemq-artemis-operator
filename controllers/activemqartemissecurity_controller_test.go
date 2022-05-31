@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"strings"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,12 +37,6 @@ import (
 )
 
 var _ = Describe("security controller", func() {
-
-	BeforeEach(func() {
-	})
-
-	AfterEach(func() {
-	})
 
 	Context("Reconcile Test", func() {
 		It("reconcile twice with nothing changed", func() {

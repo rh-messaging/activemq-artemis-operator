@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -27,6 +26,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	nsoptions "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/namespaces"
@@ -50,37 +52,36 @@ func GetBrokerConfigHandler(brokerNamespacedName types.NamespacedName) (handler 
 	return nil
 }
 
-func UpdatePodForSecurity(securityHandlerNamespacedName types.NamespacedName, handler common.ActiveMQArtemisConfigHandler) error {
-	success := true
-	for nsn, fsm := range namespacedNameToFSM {
-		clog.V(1).Info("Checking each fsm for security update", "fsm nsn", nsn)
-		if handler.IsApplicableFor(nsn) {
-			fsm.SetPodInvalid(true)
-			clog.Info("Need update fsm for security", "fsm", nsn)
-			if err, _ := fsm.Update(); err != nil {
-				success = false
-				clog.Error(err, "error in updating security", "cr", fsm.namespacedName)
+func (r *ActiveMQArtemisReconciler) UpdatePodForSecurity(securityHandlerNamespacedName types.NamespacedName, handler common.ActiveMQArtemisConfigHandler) error {
+
+	existingCrs := &brokerv1beta1.ActiveMQArtemisList{}
+	var err error
+	opts := &client.ListOptions{}
+	if err = r.Client.List(context.TODO(), existingCrs, opts); err == nil {
+		var candidate types.NamespacedName
+		for _, artemis := range existingCrs.Items {
+			candidate.Name = artemis.Name
+			candidate.Namespace = artemis.Namespace
+			if handler.IsApplicableFor(candidate) {
+				clog.Info("force reconcile for security", "handler", securityHandlerNamespacedName, "CR", candidate)
+				r.events <- event.GenericEvent{Object: &artemis}
 			}
 		}
 	}
-	if success {
-		return nil
-	}
-	err := fmt.Errorf("error in update security, please see log for details")
 	return err
 }
 
-func RemoveBrokerConfigHandler(namespacedName types.NamespacedName) {
+func (r *ActiveMQArtemisReconciler) RemoveBrokerConfigHandler(namespacedName types.NamespacedName) {
 	clog.Info("Removing config handler", "name", namespacedName)
 	oldHandler, ok := namespaceToConfigHandler[namespacedName]
 	if ok {
 		delete(namespaceToConfigHandler, namespacedName)
 		clog.Info("Handler removed, updating fsm if exists")
-		UpdatePodForSecurity(namespacedName, oldHandler)
+		r.UpdatePodForSecurity(namespacedName, oldHandler)
 	}
 }
 
-func AddBrokerConfigHandler(namespacedName types.NamespacedName, handler common.ActiveMQArtemisConfigHandler, toReconcile bool) error {
+func (r *ActiveMQArtemisReconciler) AddBrokerConfigHandler(namespacedName types.NamespacedName, handler common.ActiveMQArtemisConfigHandler, toReconcile bool) error {
 	if _, ok := namespaceToConfigHandler[namespacedName]; ok {
 		clog.V(1).Info("There is an old config handler, it'll be replaced")
 	}
@@ -88,7 +89,7 @@ func AddBrokerConfigHandler(namespacedName types.NamespacedName, handler common.
 	clog.V(1).Info("A new config handler has been added", "handler", handler)
 	if toReconcile {
 		clog.V(1).Info("Updating broker security")
-		return UpdatePodForSecurity(namespacedName, handler)
+		return r.UpdatePodForSecurity(namespacedName, handler)
 	}
 	return nil
 }
@@ -98,6 +99,7 @@ type ActiveMQArtemisReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 	Result ctrl.Result
+	events chan event.GenericEvent
 }
 
 //run 'make manifests' after changing the following rbac markers
@@ -301,9 +303,19 @@ func NewReconcileActiveMQArtemis(c client.Client, s *runtime.Scheme) ActiveMQArt
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ActiveMQArtemisReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
+	builder := ctrl.NewControllerManagedBy(mgr).
 		For(&brokerv1beta1.ActiveMQArtemis{}).
 		Owns(&appsv1.StatefulSet{}).
-		Owns(&corev1.Pod{}).
-		Complete(r)
+		Owns(&corev1.Pod{})
+
+	var err error
+	controller, err := builder.Build(r)
+	if err == nil {
+		r.events = make(chan event.GenericEvent)
+		err = controller.Watch(
+			&source.Channel{Source: r.events},
+			&handler.EnqueueRequestForObject{},
+		)
+	}
+	return err
 }

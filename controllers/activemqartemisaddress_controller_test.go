@@ -24,9 +24,9 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -34,9 +34,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/types"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
@@ -45,25 +47,17 @@ import (
 // To run this test using the following command
 // export OPERATOR_IMAGE="<the test operator image>";export DEPLOY_OPERATOR="true";export TEST_ARGS="-ginkgo.focus \"Address controller\" -ginkgo.v"; make -e test-mk
 // if OPERATOR_IMAGE is not defined the test will use the latest dev tag
-var _ = Describe("Address controller", func() {
-
-	const (
-		namespace               = "default"
-		existingClusterTimeout  = time.Second * 180
-		existingClusterInterval = time.Second * 10
-		verobse                 = false
-	)
+var _ = Describe("Address controller", Label("do"), func() {
 
 	Context("Address test", func() {
+
 		It("Deploy CR with size 5 (pods)", func() {
 
 			ctx := context.Background()
 
-			brokerCrd := generateArtemisSpec(namespace)
+			brokerCrd := generateArtemisSpec(defaultNamespace)
 
-			brokerName := "ex-aao-broker"
-
-			brokerCrd.Name = brokerName
+			brokerName := brokerCrd.Name
 
 			brokerCrd.Spec.DeploymentPlan.Size = 5
 
@@ -71,11 +65,11 @@ var _ = Describe("Address controller", func() {
 				InitialDelaySeconds: 1,
 				PeriodSeconds:       5,
 			}
-			Expect(k8sClient.Create(ctx, &brokerCrd)).Should(Succeed())
-
-			createdBrokerCrd := &brokerv1beta1.ActiveMQArtemis{}
 
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" && os.Getenv("DEPLOY_OPERATOR") == "true" {
+
+				Expect(k8sClient.Create(ctx, &brokerCrd)).Should(Succeed())
+				createdBrokerCrd := &brokerv1beta1.ActiveMQArtemis{}
 
 				By("Waiting for all pods to be started and ready")
 				Eventually(func(g Gomega) {
@@ -89,10 +83,11 @@ var _ = Describe("Address controller", func() {
 				addressCrs := make([]*brokerv1beta1.ActiveMQArtemisAddress, 5)
 				for i := 0; i < 5; i++ {
 					ordinal := strconv.FormatInt(int64(i), 10)
-					addressCrs[i] = generateAddressSpec("ex-aaoaddress"+ordinal, namespace, "myAddress"+ordinal, "myQueue"+ordinal, true, true)
+					addressCrs[i] = generateAddressSpec("ex-aaoaddress"+ordinal, defaultNamespace, "myAddress"+ordinal, "myQueue"+ordinal, true, true)
 				}
 
-				// This may trigger another issue where some secrets are deleted during pod restart
+				// This will trigger another issue where some secrets are deleted during pod restart due to security and artemis controller thread
+				// contention. Fixing by having security controller fire a reconcile event rather than doing reconcile in line
 				propLoginModules := make([]brokerv1beta1.PropertiesLoginModuleType, 1)
 				pwd := "geezrick"
 				moduleName := "prop-module"
@@ -118,7 +113,7 @@ var _ = Describe("Address controller", func() {
 				}
 
 				By("Deploying all resources at once")
-				_, deployedSecCrd := DeploySecurity("ex-proper", namespace, func(secCrdToDeploy *brokerv1beta1.ActiveMQArtemisSecurity) {
+				_, deployedSecCrd := DeploySecurity("ex-proper", defaultNamespace, func(secCrdToDeploy *brokerv1beta1.ActiveMQArtemisSecurity) {
 					secCrdToDeploy.Spec.LoginModules.PropertiesLoginModules = propLoginModules
 					secCrdToDeploy.Spec.SecurityDomains.BrokerDomain = brokerDomain
 				})
@@ -150,10 +145,9 @@ var _ = Describe("Address controller", func() {
 					podName := namer.CrToSS(brokerCrd.Name) + "-" + podOrdinal
 
 					Eventually(func(g Gomega) {
-						fmt.Println("Checking pod " + podName)
 						execReq := restClient.
 							Post().
-							Namespace(namespace).
+							Namespace(defaultNamespace).
 							Resource("pods").
 							Name(podName).
 							SubResource("exec").
@@ -184,7 +178,6 @@ var _ = Describe("Address controller", func() {
 						By("Checking for output pod")
 						g.Expect(capturedOut.Len() > 0)
 						content := capturedOut.String()
-						fmt.Println("out: " + content)
 						g.Expect(content).Should(ContainSubstring("myQueue0"))
 						g.Expect(content).Should(ContainSubstring("myQueue1"))
 						g.Expect(content).Should(ContainSubstring("myQueue2"))
@@ -202,7 +195,125 @@ var _ = Describe("Address controller", func() {
 			}
 		})
 	})
+
+	Context("Address delete and scale down", func() {
+
+		It("Scale down, verify RemoveFromBrokerOnDelete", func() {
+
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+			crd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
+				InitialDelaySeconds: 1,
+				PeriodSeconds:       5,
+			}
+			crd.Spec.DeploymentPlan.Size = 2
+
+			By("By deploying address cr for a2 for this broker in advance")
+
+			addressName := "A2"
+			addressCrd := brokerv1beta1.ActiveMQArtemisAddress{}
+			addressCrd.SetName("address-" + randString())
+			addressCrd.SetNamespace(defaultNamespace)
+			addressCrd.Spec.AddressName = addressName // note no queue
+			routingTypeShouldBeOptional := "multicast"
+			addressCrd.Spec.RoutingType = &routingTypeShouldBeOptional
+			addressCrd.Spec.RemoveFromBrokerOnDelete = true
+
+			Expect(k8sClient.Create(ctx, &addressCrd)).Should(Succeed())
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" && os.Getenv("DEPLOY_OPERATOR") == "true" {
+
+				By("Deploying a broker pair")
+				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+				By("Checking ready on SS")
+				Eventually(func(g Gomega) {
+					key := types.NamespacedName{Name: namer.CrToSS(crd.Name), Namespace: defaultNamespace}
+					sfsFound := &appsv1.StatefulSet{}
+
+					g.Expect(k8sClient.Get(ctx, key, sfsFound)).Should(Succeed())
+					g.Expect(sfsFound.Status.ReadyReplicas).Should(BeEquivalentTo(2))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("Verfying address is present")
+				ordinals := []string{"0", "1"}
+				for _, ordinal := range ordinals {
+
+					podWithOrdinal := namer.CrToSS(crd.Name) + "-" + ordinal
+					command := []string{"amq-broker/bin/artemis", "address", "show", "--url", "tcp://" + podWithOrdinal + ":61616"}
+
+					Eventually(func(g Gomega) {
+						stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, gomega.Default)
+						g.Expect(stdOutContent).Should(ContainSubstring(addressName))
+					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				}
+
+				By("Deleting address CR")
+				Expect(k8sClient.Delete(ctx, &addressCrd)).Should(Succeed())
+
+				By("Verifying address gone from both brokers")
+				for _, ordinal := range ordinals {
+					podWithOrdinal := namer.CrToSS(crd.Name) + "-" + ordinal
+					command := []string{"amq-broker/bin/artemis", "address", "show", "--url", "tcp://" + podWithOrdinal + ":61616"}
+
+					Eventually(func(g Gomega) {
+						stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, gomega.Default)
+						g.Expect(stdOutContent).ShouldNot(ContainSubstring(addressName))
+					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				}
+			}
+
+			// cleanup
+			k8sClient.Delete(ctx, &addressCrd)
+			k8sClient.Delete(ctx, &crd)
+		})
+	})
 })
+
+func execOnPod(podWithOrdinal string, brokerName string, namespace string, command []string, g Gomega) string {
+
+	gvk := schema.GroupVersionKind{
+		Group:   "",
+		Version: "v1",
+		Kind:    "Pod",
+	}
+	restClient, err := apiutil.RESTClientForGVK(gvk, false, restConfig, serializer.NewCodecFactory(scheme.Scheme))
+	g.Expect(err).To(BeNil())
+
+	execReq := restClient.
+		Post().
+		Namespace(namespace).
+		Resource("pods").
+		Name(podWithOrdinal).
+		SubResource("exec").
+		VersionedParams(&corev1.PodExecOptions{
+			Container: brokerName + "-container",
+			Command:   command,
+			Stdin:     true,
+			Stdout:    true,
+			Stderr:    true,
+		}, runtime.NewParameterCodec(scheme.Scheme))
+
+	exec, err := remotecommand.NewSPDYExecutor(restConfig, "POST", execReq.URL())
+	g.Expect(err).To(BeNil())
+
+	var outPutbuffer bytes.Buffer
+
+	err = exec.Stream(remotecommand.StreamOptions{
+		Stdin:  os.Stdin,
+		Stdout: &outPutbuffer,
+		Stderr: os.Stderr,
+		Tty:    false,
+	})
+	g.Expect(err).To(BeNil())
+
+	g.Eventually(func(g Gomega) {
+		By("Checking for output from exec")
+		g.Expect(outPutbuffer.Len() > 0)
+	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+	return outPutbuffer.String()
+}
 
 func generateAddressSpec(name string, ns string, address string, queue string, isMulticast bool, autoDelete bool) *brokerv1beta1.ActiveMQArtemisAddress {
 

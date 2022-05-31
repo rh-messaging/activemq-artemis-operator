@@ -206,11 +206,13 @@ func main() {
 		setupAccountName(clnt, ctx, oprNameSpace, name)
 	}
 
-	if err = (&controllers.ActiveMQArtemisReconciler{
+	brokerReconciler := &controllers.ActiveMQArtemisReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 		Result: ctrl.Result{},
-	}).SetupWithManager(mgr); err != nil {
+	}
+
+	if err = brokerReconciler.SetupWithManager(mgr); err != nil {
 		log.Error(err, "unable to create controller", "controller", "ActiveMQArtemis")
 		os.Exit(1)
 	}
@@ -230,8 +232,9 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controllers.ActiveMQArtemisSecurityReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:           mgr.GetClient(),
+		Scheme:           mgr.GetScheme(),
+		BrokerReconciler: brokerReconciler,
 	}).SetupWithManager(mgr); err != nil {
 		log.Error(err, "unable to create controller", "controller", "ActiveMQArtemisSecurity")
 		os.Exit(1)

@@ -6,7 +6,7 @@ import (
 
 	"github.com/artemiscloud/activemq-artemis-operator/api/v2alpha3"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/config"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

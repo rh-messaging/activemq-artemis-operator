@@ -42,7 +42,8 @@ var elog = ctrl.Log.WithName("controller_v1alpha1activemqartemissecurity")
 // ActiveMQArtemisSecurityReconciler reconciles a ActiveMQArtemisSecurity object
 type ActiveMQArtemisSecurityReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme           *runtime.Scheme
+	BrokerReconciler *ActiveMQArtemisReconciler
 }
 
 //+kubebuilder:rbac:groups=broker.amq.io,resources=activemqartemissecurities,verbs=get;list;watch;create;update;patch;delete
@@ -68,7 +69,7 @@ func (r *ActiveMQArtemisSecurityReconciler) Reconcile(ctx context.Context, reque
 	if err := r.Client.Get(context.TODO(), request.NamespacedName, instance); err != nil {
 		if errors.IsNotFound(err) {
 			//unregister the CR
-			RemoveBrokerConfigHandler(request.NamespacedName)
+			r.BrokerReconciler.RemoveBrokerConfigHandler(request.NamespacedName)
 			// Setting err to nil to prevent requeue
 			err = nil
 			//clean the CR
@@ -106,7 +107,7 @@ func (r *ActiveMQArtemisSecurityReconciler) Reconcile(ctx context.Context, reque
 		}
 	}
 
-	if err := AddBrokerConfigHandler(request.NamespacedName, newHandler, toReconcile); err != nil {
+	if err := r.BrokerReconciler.AddBrokerConfigHandler(request.NamespacedName, newHandler, toReconcile); err != nil {
 		reqLogger.Error(err, "failed to config security cr", "request", request.NamespacedName)
 		return ctrl.Result{}, err
 	}

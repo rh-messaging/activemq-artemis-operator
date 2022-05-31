@@ -38,7 +38,7 @@ import (
 
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -61,18 +61,14 @@ var _ = Describe("artemis controller", func() {
 
 	// Define utility constants for object names and testing timeouts/durations and intervals.
 	const (
-		namespace = "default"
-		timeout   = time.Second * 15
-		duration  = time.Second * 10
-		interval  = time.Millisecond * 250
-		verobse   = false
+		namespace = defaultNamespace
 	)
 
 	// see what has changed from the controllers perspective
 	var wi watch.Interface
 	BeforeEach(func() {
 
-		wc, _ := client.NewWithWatch(testEnv.Config, client.Options{})
+		wc, _ := client.NewWithWatch(restConfig, client.Options{})
 
 		// see what changed
 		var err error
@@ -2503,6 +2499,11 @@ var _ = Describe("artemis controller", func() {
 
 	Context("With deployed controller", func() {
 		It("Checking storageClassName is configured", func() {
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+				By("By not pollutoing PVC that cannot be bound, seems to bork minkube")
+				return
+			}
 			By("By creating a new crd")
 			ctx := context.Background()
 			crd := generateArtemisSpec(namespace)

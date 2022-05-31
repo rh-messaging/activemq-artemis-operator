@@ -27,14 +27,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -62,13 +61,13 @@ import (
 
 // Define utility constants for object names and testing timeouts/durations and intervals.
 const (
-	defaultNamespace = "default"
-	timeout          = time.Second * 15
-	duration         = time.Second * 10
-	interval         = time.Millisecond * 250
-	verobse          = false
-	operatorTimeout  = time.Second * 120
-	operatorInterval = time.Second
+	defaultNamespace        = "default"
+	timeout                 = time.Second * 15
+	duration                = time.Second * 10
+	interval                = time.Millisecond * 250
+	existingClusterTimeout  = time.Second * 180
+	existingClusterInterval = time.Second * 2
+	verobse                 = false
 )
 
 var currentDir string
@@ -95,9 +94,7 @@ var oprRes = []string{
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	RunSpecsWithDefaultAndCustomReporters(t,
-		"Controller Suite",
-		[]Reporter{printer.NewlineReporter{}})
+	RunSpecs(t, "Controller Suite")
 }
 
 func setUpEnvTest() {
@@ -108,6 +105,7 @@ func setUpEnvTest() {
 		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
 	}
+	testEnv.CRDInstallOptions.CleanUpAfterUse = true
 
 	var err error
 	restConfig, err = testEnv.Start()
@@ -146,8 +144,9 @@ func setUpEnvTest() {
 	}
 
 	securityReconciler = &ActiveMQArtemisSecurityReconciler{
-		Client: k8Manager.GetClient(),
-		Scheme: k8Manager.GetScheme(),
+		Client:           k8Manager.GetClient(),
+		Scheme:           k8Manager.GetScheme(),
+		BrokerReconciler: brokerReconciler,
 	}
 
 	err = securityReconciler.SetupWithManager(k8Manager)
@@ -240,7 +239,7 @@ func waitForOperator() error {
 		oprPod := podList.Items[0]
 		g.Expect(len(oprPod.Status.ContainerStatuses)).Should(BeEquivalentTo(1))
 		g.Expect(oprPod.Status.ContainerStatuses[0].Ready).Should(BeTrue())
-	}, operatorTimeout, operatorInterval).Should(Succeed())
+	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 	return nil
 }
 
@@ -368,7 +367,7 @@ var _ = BeforeSuite(func() {
 		logf.Log.Info("#### Setting up EnvTest ####")
 		setUpEnvTest()
 	}
-}, 60)
+})
 
 var _ = AfterSuite(func() {
 	By("tearing down the test environment")
@@ -384,12 +383,13 @@ var _ = AfterSuite(func() {
 	if stateManager != nil {
 		stateManager.Clear()
 	}
-	// scaledown controller lifecycle seems a little loose, it does not complete on signal hander like the others
-	for _, drainController := range controllers {
-		close(*drainController.GetStopCh())
-	}
 
 	if os.Getenv("DEPLOY_OPERATOR") != "true" {
+		// scaledown controller lifecycle seems a little loose, it does not complete on signal hander like the others
+		for _, drainController := range controllers {
+			close(*drainController.GetStopCh())
+		}
+
 		err := testEnv.Stop()
 		Expect(err).NotTo(HaveOccurred())
 	}

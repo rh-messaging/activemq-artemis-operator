@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"

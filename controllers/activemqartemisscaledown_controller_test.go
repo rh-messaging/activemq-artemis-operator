@@ -23,9 +23,8 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -43,36 +42,32 @@ import (
 
 var _ = Describe("Scale down controller", func() {
 
-	const (
-		namespace               = "default"
-		existingClusterTimeout  = time.Second * 180
-		existingClusterInterval = time.Second * 10
-		verobse                 = false
-	)
-
 	Context("Scale down test", func() {
 		It("deploy plan 2 clustered", func() {
 
-			ctx := context.Background()
+			// note: we force a non local scaledown cr to exercise creds generation
+			// hense only valid with DEPLOY_OPERATOR = false
+			// 	see suite_test.go: os.Setenv("OPERATOR_WATCH_NAMESPACE", "SomeValueToCauesEqualitytoFailInIsLocalSoDrainControllerSortsCreds")
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" && os.Getenv("DEPLOY_OPERATOR") != "true" {
 
-			brokerName := randString()
+				ctx := context.Background()
 
-			brokerCrd := generateOriginalArtemisSpec(defaultNamespace, brokerName)
+				brokerName := randString()
 
-			clustered := true
-			brokerCrd.Spec.DeploymentPlan.Clustered = &clustered
-			brokerCrd.Spec.DeploymentPlan.Size = 2
-			brokerCrd.Spec.DeploymentPlan.PersistenceEnabled = true
-			brokerCrd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
-				InitialDelaySeconds: 1,
-				PeriodSeconds:       5,
-			}
-			Expect(k8sClient.Create(ctx, brokerCrd)).Should(Succeed())
+				brokerCrd := generateOriginalArtemisSpec(defaultNamespace, brokerName)
 
-			createdBrokerCrd := &brokerv1beta1.ActiveMQArtemis{}
-			getPersistedVersionedCrd(brokerCrd.ObjectMeta.Name, defaultNamespace, createdBrokerCrd)
+				booleanTrue := true
+				brokerCrd.Spec.DeploymentPlan.Clustered = &booleanTrue
+				brokerCrd.Spec.DeploymentPlan.Size = 2
+				brokerCrd.Spec.DeploymentPlan.PersistenceEnabled = true
+				brokerCrd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
+					InitialDelaySeconds: 1,
+					PeriodSeconds:       5,
+				}
+				Expect(k8sClient.Create(ctx, brokerCrd)).Should(Succeed())
 
-			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+				createdBrokerCrd := &brokerv1beta1.ActiveMQArtemis{}
+				getPersistedVersionedCrd(brokerCrd.ObjectMeta.Name, defaultNamespace, createdBrokerCrd)
 
 				By("verify two started")
 				Eventually(func(g Gomega) {
@@ -188,16 +183,39 @@ var _ = Describe("Scale down controller", func() {
 				content = consumerCapturedOut.String()
 
 				Expect(content).Should(ContainSubstring("JMS Message ID:"))
-			}
 
-			Expect(k8sClient.Delete(ctx, createdBrokerCrd)).Should(Succeed())
+				By("accessing drain pod")
+				drainPod := &corev1.Pod{}
+				drainPodKey := types.NamespacedName{Name: brokerName + "-ss-1", Namespace: defaultNamespace}
+				By("flipping MessageMigration to release drain pod CR, and PVC")
+				Expect(k8sClient.Get(ctx, drainPodKey, drainPod)).Should(Succeed())
+
+				Eventually(func(g Gomega) {
+
+					getPersistedVersionedCrd(brokerCrd.ObjectMeta.Name, defaultNamespace, createdBrokerCrd)
+					By("flipping message migration state (from default true) on brokerCr")
+					booleanFalse := false
+					createdBrokerCrd.Spec.DeploymentPlan.MessageMigration = &booleanFalse
+					g.Expect(k8sClient.Update(ctx, createdBrokerCrd)).Should(Succeed())
+					By("Unset message migration in broker cr")
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("verifying drain pod gone")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, drainPodKey, drainPod)).ShouldNot(Succeed())
+					By("drain pod gone")
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				Expect(k8sClient.Delete(ctx, createdBrokerCrd)).Should(Succeed())
+			}
 
 		})
 	})
 
 	It("Toleration ok, verify scaledown", func() {
 
-		if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+		if os.Getenv("USE_EXISTING_CLUSTER") == "true" && os.Getenv("DEPLOY_OPERATOR") != "true" {
 
 			By("Tainting the node with no schedule")
 			Eventually(func(g Gomega) {
@@ -215,7 +233,7 @@ var _ = Describe("Scale down controller", func() {
 
 			By("Creating a crd plan 2,clustered, with matching tolerations")
 			ctx := context.Background()
-			crd := generateArtemisSpec(namespace)
+			crd := generateArtemisSpec(defaultNamespace)
 			clustered := true
 			crd.Spec.DeploymentPlan.Clustered = &clustered
 			crd.Spec.DeploymentPlan.Size = 2
@@ -371,6 +389,30 @@ var _ = Describe("Scale down controller", func() {
 					node.Spec.Taints = []corev1.Taint{}
 					g.Expect(k8sClient.Update(ctx, &node)).Should(Succeed())
 				}, timeout*2, interval).Should(Succeed())
+
+				By("accessing drain pod")
+				drainPod := &corev1.Pod{}
+				drainPodKey := types.NamespacedName{Name: brokerKey.Name + "-ss-1", Namespace: defaultNamespace}
+				By("flipping MessageMigration to release drain pod CR, and PVC")
+				Expect(k8sClient.Get(ctx, drainPodKey, drainPod)).Should(Succeed())
+
+				Eventually(func(g Gomega) {
+
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					By("flipping message migration state (from default true) on brokerCr")
+					booleanFalse := false
+					createdCrd.Spec.DeploymentPlan.MessageMigration = &booleanFalse
+					g.Expect(k8sClient.Update(ctx, createdCrd)).Should(Succeed())
+					By("Unset message migration in broker cr")
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("verifying drain pod gone")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, drainPodKey, drainPod)).ShouldNot(Succeed())
+					By("drain pod gone")
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
 			}
 			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
 		}

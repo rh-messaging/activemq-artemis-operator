@@ -226,7 +226,7 @@ func createAddressResource(a *JkInfo, addressRes *brokerv1beta1.ActiveMQArtemisA
 		//create address
 		_, err = a.Artemis.CreateAddress(addressRes.Spec.AddressName, *addressRes.Spec.RoutingType)
 		if nil != err {
-			glog.Error(err, "Creating ActiveMQArtemisAddress error for address", addressRes.Spec.AddressName)
+			glog.Error(err, "Error creating ActiveMQArtemisAddress", "address", addressRes.Spec.AddressName)
 			return err
 		} else {
 			glog.Info("Created ActiveMQArtemisAddress for address " + addressRes.Spec.AddressName)

@@ -39,7 +39,6 @@ var slog = ctrl.Log.WithName("controller_v1beta1activemqartemisscaledown")
 var (
 	masterURL  string
 	kubeconfig string
-	namespace  string
 	localOnly  bool
 )
 
@@ -95,7 +94,7 @@ func (r *ActiveMQArtemisScaledownReconciler) Reconcile(ctx context.Context, requ
 	//masterURL = instance.Spec.MasterURL
 	//kubeconfig = instance.Spec.Kubeconfig
 	//namespace = instance.Spec.Namespace
-	namespace = request.Namespace
+	namespace := request.Namespace
 	localOnly = instance.Spec.LocalOnly
 
 	reqLogger.Info("====", "namespace:", namespace)

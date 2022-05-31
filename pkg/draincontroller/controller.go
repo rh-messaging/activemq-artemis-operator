@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 
 	//"github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v1beta1"
@@ -113,6 +114,8 @@ type Controller struct {
 	// sts --> ssNames
 	ssNamesMap map[types.NamespacedName]map[string]string
 
+	ssToCrMap map[types.NamespacedName]*v1beta1.ActiveMQArtemisScaledown
+
 	ssLabels map[string]string
 
 	stopCh chan struct{}
@@ -166,9 +169,11 @@ func NewController(
 		localOnly:          instance.Spec.LocalOnly,
 		resources:          instance.Spec.Resources,
 		ssNamesMap:         make(map[types.NamespacedName]map[string]string),
-		ssLabels:           instance.Labels,
-		stopCh:             make(chan struct{}),
-		client:             client,
+		ssToCrMap:          make(map[types.NamespacedName]*v1beta1.ActiveMQArtemisScaledown),
+
+		ssLabels: instance.Labels,
+		stopCh:   make(chan struct{}),
+		client:   client,
 	}
 
 	dlog.Info("Setting up event handlers")
@@ -211,6 +216,7 @@ func (c *Controller) AddInstance(instance *brokerv1beta1.ActiveMQArtemisScaledow
 	dlog.Info("adding a new scaledown instance", "key", namespacedName)
 	c.ssNamesMap[namespacedName] = instance.Annotations
 	dlog.Info("Added new instance", "key", namespacedName, "now values", len(c.ssNamesMap))
+	c.ssToCrMap[namespacedName] = instance
 }
 
 //for debug only
@@ -831,14 +837,11 @@ func (c *Controller) newPod(sts *appsv1.StatefulSet, ordinal int) (*corev1.Pod, 
 	pod.Annotations[AnnotationStatefulSet] = sts.Name
 
 	// TODO: cannot set blockOwnerDeletion if an ownerReference refers to a resource you can't set finalizers on: User "system:serviceaccount:kube-system:statefulset-drain-controller" cannot update statefulsets/finalizers.apps
-	//if pod.OwnerReferences == nil {
-	//	pod.OwnerReferences = []metav1.OwnerReference{}
-	//}
-	//pod.OwnerReferences = append(pod.OwnerReferences, *metav1.NewControllerRef(sts, schema.GroupVersionKind{
-	//	Group:   appsv1beta1.SchemeGroupVersion.Group,
-	//	Version: appsv1beta1.SchemeGroupVersion.Version,
-	//	Kind:    "StatefulSet",
-	//}))
+	if pod.OwnerReferences == nil {
+		pod.OwnerReferences = []metav1.OwnerReference{}
+	}
+	ownerCr := c.ssToCrMap[ssNamesKey]
+	pod.OwnerReferences = append(pod.OwnerReferences, *metav1.NewControllerRef(ownerCr, ownerCr.GroupVersionKind()))
 
 	pod.Spec.RestartPolicy = corev1.RestartPolicyOnFailure
 	pod.Spec.Containers[0].Resources = c.resources

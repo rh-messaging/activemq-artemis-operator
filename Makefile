@@ -109,11 +109,11 @@ vet: ## Run go vet against code.
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test  ./... $(TEST_ARGS) -coverprofile cover.out
 
-test-mk: manifests generate fmt vet envtest ## Run tests.
+test-mk: manifests generate fmt vet envtest ## Run tests against minikube with local operator.
 	USE_EXISTING_CLUSTER=true ENABLE_WEBHOOKS=false go test  ./... $(TEST_ARGS)
 
-test-mk-do: manifests generate fmt vet envtest ## Run tests with operator deployed
-	DEPLOY_OPERATOR=true USE_EXISTING_CLUSTER=true ENABLE_WEBHOOKS=false go test  ./controllers/... -ginkgo.focus \"Address controller\" -ginkgo.v
+test-mk-do: manifests generate fmt vet envtest ## Run tests against minikube with deployed operator(do)
+	DEPLOY_OPERATOR=true USE_EXISTING_CLUSTER=true ENABLE_WEBHOOKS=false go test  ./controllers/... -ginkgo.v -ginkgo.label-filter="do"
 
 ##@ Build
 

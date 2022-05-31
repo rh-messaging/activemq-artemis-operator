@@ -54,7 +54,7 @@ func TestHexShaHashOfMap(t *testing.T) {
 
 func TestMapComparatorForStatefulSet(t *testing.T) {
 
-	brokerCr := generateArtemisSpec(namespace)
+	brokerCr := generateArtemisSpec(defaultNamespace)
 	namespacedName := types.NamespacedName{
 		Name:      brokerCr.Name,
 		Namespace: brokerCr.Namespace,
