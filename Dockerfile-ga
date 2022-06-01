@@ -17,13 +17,12 @@ RUN go build -v -o bin/${BROKER_NAME}-operator ${REMOTE_SOURCE_DIR}/app/main.go
 FROM registry.redhat.io/ubi8:8.6-754 AS base-env
 
 ENV BROKER_NAME=amq-broker
-ENV BROKER_VERSION="7.10.0.CR4"
 ENV OPERATOR=/home/${BROKER_NAME}-operator/bin/${BROKER_NAME}-operator
 ENV USER_UID=1000
 ENV USER_NAME=${BROKER_NAME}-operator
 ENV CGO_ENABLED=0
 ENV JBOSS_IMAGE_NAME="amq7/amq-broker-rhel8-operator"
-ENV JBOSS_IMAGE_VERSION="7.10.0-opr-1"
+ENV JBOSS_IMAGE_VERSION="7.10.0.OPR.1.CR4"
 
 WORKDIR /
 RUN mkdir -p /home/${BROKER_NAME}-operator/bin
