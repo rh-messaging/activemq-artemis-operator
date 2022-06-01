@@ -14,8 +14,8 @@ metadata:
     categories: "Streaming & Messaging"
     certified: "false"
     description: AMQ Broker Operator for RHEL 8 (Multiarch) provides the ability to deploy and manage stateful AMQ Broker clusters
-    #containerImage: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator:7.10-7
-    containerImage: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator@sha256:4e232555148e48bf3d8473b0287e684f42867e0298575c7c716dff33e8aa73b5
+    #containerImage: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator:7.10-8
+    containerImage: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator@sha256:abc6f5b602fb8af847bbd4dc980fede3dc8cba541f59e94819469ecda4f43560
     createdAt: 2021-06-18T00:02:04Z
     capabilities: Seamless Upgrades
     repository: https://github.com/rh-messaging/activemq-artemis-operator
@@ -2113,8 +2113,8 @@ spec:
                   runAsNonRoot: true
                 containers:
                   - name: amq-broker-operator
-                    #image: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator:7.10-7
-                    image: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator@sha256:4e232555148e48bf3d8473b0287e684f42867e0298575c7c716dff33e8aa73b5
+                    #image: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator:7.10-8
+                    image: registry-proxy.engineering.redhat.com/rh-osbs/amq7-amq-broker-rhel8-operator@sha256:abc6f5b602fb8af847bbd4dc980fede3dc8cba541f59e94819469ecda4f43560
                     livenessProbe:
                       httpGet:
                         path: /healthz
