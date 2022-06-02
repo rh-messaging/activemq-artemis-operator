@@ -97,7 +97,8 @@ var _ = Describe("artemis controller", func() {
 
 	Context("New address settings options", func() {
 		It("Deploy broker with new address settings", func() {
-			By("By creating a crd without address spec")
+
+			By("By creating a crd with address settings in spec")
 			ctx := context.Background()
 			crd := generateArtemisSpec(namespace)
 
@@ -106,6 +107,7 @@ var _ = Describe("artemis controller", func() {
 			dlqabc := "dlqabc"
 			maxSize := "10m"
 			maxMessages := int64(5000)
+			redistributionDelay := int32(5000)
 			configDeleteDiverts := "OFF"
 
 			crd.Spec.AddressSettings = brokerv1beta1.AddressSettingsType{
@@ -117,9 +119,20 @@ var _ = Describe("artemis controller", func() {
 						MaxSizeBytes:        &maxSize,
 						MaxSizeMessages:     &maxMessages,
 						ConfigDeleteDiverts: &configDeleteDiverts,
+						RedistributionDelay: &redistributionDelay,
+					},
+					{
+						Match:               "#",
+						DeadLetterAddress:   &dlqabc,
+						MaxSizeBytes:        &maxSize,
+						MaxSizeMessages:     &maxMessages,
+						ConfigDeleteDiverts: &configDeleteDiverts,
+						RedistributionDelay: &redistributionDelay,
 					},
 				},
 			}
+			crd.Spec.DeploymentPlan.Size = 1
+
 			By("Deploying the CRD " + crd.ObjectMeta.Name)
 			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
 
@@ -150,6 +163,18 @@ var _ = Describe("artemis controller", func() {
 				return strings.Contains(initArgsString, fullString)
 
 			}, timeout, interval).Should(BeTrue())
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				By("verying started")
+				brokerKey := types.NamespacedName{Name: createdCrd.Name, Namespace: createdCrd.Namespace}
+				Eventually(func(g Gomega) {
+
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
 
 			// cleanup
 			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
