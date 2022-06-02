@@ -484,7 +484,7 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(k8sClient.Get(ctx, key, currentSS)).Should(Succeed())
 				g.Expect(currentSS.ResourceVersion).ShouldNot(Equal(ssVersion))
 				ssVersion = currentSS.ResourceVersion
-			}, timeout, interval).Should(Succeed())
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 
@@ -494,7 +494,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
 					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
 
-				}, timeout*5, interval).Should(Succeed())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("manually deleting SS again once ready")
 				Expect(k8sClient.Delete(ctx, currentSS)).Should(Succeed())
@@ -503,10 +503,50 @@ var _ = Describe("artemis controller", func() {
 				Eventually(func(g Gomega) {
 					g.Expect(k8sClient.Get(ctx, key, currentSS)).Should(Succeed())
 					g.Expect(currentSS.ResourceVersion).ShouldNot(Equal(ssVersion))
-				}, timeout*5, interval).Should(Succeed())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 			}
 
 			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
+		})
+	})
+
+	Context("PVC gc test", func() {
+		It("deploy, verify, undeploy, verify", func() {
+
+			crd := generateArtemisSpec(namespace)
+			crd.Spec.DeploymentPlan.Size = 1
+			crd.Spec.DeploymentPlan.PersistenceEnabled = true
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				By("Deploying the CRD " + crd.ObjectMeta.Name)
+				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+				createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+				brokerKey := types.NamespacedName{Name: crd.ObjectMeta.Name, Namespace: namespace}
+
+				By("verifing started")
+				Eventually(func(g Gomega) {
+
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("finding PVC")
+				pvcKey := types.NamespacedName{Namespace: namespace, Name: crd.Name + "-" + namer.CrToSS(crd.Name) + "-0"}
+				pvc := &corev1.PersistentVolumeClaim{}
+				Expect(k8sClient.Get(ctx, pvcKey, pvc)).Should(Succeed())
+				Expect(len(pvc.OwnerReferences)).Should(BeEquivalentTo(1))
+
+				By("undeploying CR")
+				Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
+
+				By("now not finding PVC b/c  it has been gc'ed")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, pvcKey, &corev1.PersistentVolumeClaim{})).ShouldNot(Succeed())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
 		})
 	})
 

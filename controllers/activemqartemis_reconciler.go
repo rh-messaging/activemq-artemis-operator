@@ -1463,7 +1463,6 @@ func getDeployedResources(instance *brokerv1beta1.ActiveMQArtemis, client rtclie
 	var err error
 	if isOpenshift, _ := environments.DetectOpenshift(); isOpenshift {
 		resourceMap, err = reader.ListAll(
-			&corev1.PersistentVolumeClaimList{},
 			&corev1.ServiceList{},
 			&appsv1.StatefulSetList{},
 			&routev1.RouteList{},
@@ -1472,7 +1471,6 @@ func getDeployedResources(instance *brokerv1beta1.ActiveMQArtemis, client rtclie
 		)
 	} else {
 		resourceMap, err = reader.ListAll(
-			&corev1.PersistentVolumeClaimList{},
 			&corev1.ServiceList{},
 			&appsv1.StatefulSetList{},
 			&netv1.IngressList{},
@@ -2319,6 +2317,15 @@ func NewPersistentVolumeClaimArrayForCR(fsm *ActiveMQArtemisFSM, arrayLength int
 
 	for i := 0; i < arrayLength; i++ {
 		pvc = persistentvolumeclaims.NewPersistentVolumeClaimWithCapacityAndStorageClassName(namespacedName, capacity, fsm.namers.LabelBuilder.Labels(), storageClassName)
+
+		// poplulate owner reference as the cr such that our claims get gc when cr is undeployed
+		gvk := fsm.customResource.GroupVersionKind()
+		pvc.OwnerReferences = []metav1.OwnerReference{{
+			APIVersion: gvk.GroupVersion().String(),
+			Kind:       gvk.Kind,
+			Name:       fsm.customResource.GetName(),
+			UID:        fsm.customResource.GetUID()}}
+
 		pvcArray = append(pvcArray, *pvc)
 	}
 
