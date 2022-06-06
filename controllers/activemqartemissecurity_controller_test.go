@@ -19,22 +19,31 @@ As usual, we start with the necessary imports. We also define some utility varia
 package controllers
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/remotecommand"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 var _ = Describe("security controller", func() {
@@ -421,6 +430,136 @@ var _ = Describe("security controller", func() {
 			Expect(k8sClient.Delete(ctx, createdSecCrd)).Should(Succeed())
 
 		})
+
+		It("Reconcile security with management role access", func() {
+
+			if os.Getenv("USE_EXISTING_CLUSTER") != "true" {
+				return
+			}
+
+			By("Deploying broker")
+			brokerCrd := generateOriginalArtemisSpec(defaultNamespace, randString())
+			brokerCrd.Spec.DeploymentPlan.Size = 1
+			Expect(k8sClient.Create(ctx, brokerCrd)).Should(Succeed())
+
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+			By("Checking the pod is up and running")
+			Eventually(func(g Gomega) {
+				brokerKey := types.NamespacedName{Name: brokerCrd.Name, Namespace: brokerCrd.Namespace}
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+				g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("Deploying security with management role access")
+			mgmtDomain := "org.apache.activemq.artemis"
+			method1 := "list*"
+			method2 := "sendMessage*"
+			method3 := "browse*"
+			accessList := []brokerv1beta1.DefaultAccessType{
+				{
+					Method: &method1,
+					Roles:  []string{"guest"},
+				},
+				{
+					Method: &method2,
+					Roles:  []string{"guest"},
+				},
+				{
+					Method: &method3,
+					Roles:  []string{"guest"},
+				},
+			}
+			roleAccess := []brokerv1beta1.RoleAccessType{
+				{
+					Domain:     &mgmtDomain,
+					AccessList: accessList,
+				},
+			}
+
+			allowedDomain := "org.apache.activemq.artemis.allowed"
+			allowedList := []brokerv1beta1.AllowedListEntryType{
+				{
+					Domain: &allowedDomain,
+				},
+			}
+
+			_, createdSecCrd := DeploySecurity("", defaultNamespace, func(secCrdToDeploy *brokerv1beta1.ActiveMQArtemisSecurity) {
+
+				secCrdToDeploy.Spec.SecuritySettings.Management = brokerv1beta1.ManagementSecuritySettingsType{
+					Authorisation: brokerv1beta1.AuthorisationConfigType{
+						AllowedList: allowedList,
+						RoleAccess:  roleAccess,
+					},
+				}
+			})
+
+			By("Checking the pod get started")
+			brokerKey := types.NamespacedName{Name: brokerCrd.Name, Namespace: brokerCrd.Namespace}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+				g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("Checking the management.xml has the correct role-access element")
+			gvk := schema.GroupVersionKind{
+				Group:   "",
+				Version: "v1",
+				Kind:    "Pod",
+			}
+			restClient, err := apiutil.RESTClientForGVK(gvk, false, restConfig, serializer.NewCodecFactory(scheme.Scheme))
+			Expect(err).To(BeNil())
+
+			podOrdinal := strconv.FormatInt(int64(0), 10)
+			podName := namer.CrToSS(brokerCrd.Name) + "-" + podOrdinal
+
+			brokerName := brokerCrd.Name
+			Eventually(func(g Gomega) {
+				execReq := restClient.
+					Post().
+					Namespace(defaultNamespace).
+					Resource("pods").
+					Name(podName).
+					SubResource("exec").
+					VersionedParams(&corev1.PodExecOptions{
+						Container: brokerName + "-container",
+						Command:   []string{"cat", "amq-broker/etc/management.xml"},
+						Stdin:     true,
+						Stdout:    true,
+						Stderr:    true,
+					}, runtime.NewParameterCodec(scheme.Scheme))
+
+				exec, err := remotecommand.NewSPDYExecutor(restConfig, "POST", execReq.URL())
+
+				if err != nil {
+					fmt.Printf("error while creating remote command executor: %v", err)
+				}
+				Expect(err).To(BeNil())
+				var capturedOut bytes.Buffer
+
+				err = exec.Stream(remotecommand.StreamOptions{
+					Stdin:  os.Stdin,
+					Stdout: &capturedOut,
+					Stderr: os.Stderr,
+					Tty:    false,
+				})
+				g.Expect(err).To(BeNil())
+
+				By("Checking for output pod")
+				g.Expect(capturedOut.Len() > 0)
+				content := capturedOut.String()
+				g.Expect(content).Should(ContainSubstring("<match domain=\"org.apache.activemq.artemis\""))
+				g.Expect(content).Should(ContainSubstring("<access method=\"list*\" roles=\"guest\""))
+				g.Expect(content).Should(ContainSubstring("<access method=\"sendMessage*\" roles=\"guest\""))
+				g.Expect(content).Should(ContainSubstring("<access method=\"browse*\" roles=\"guest\""))
+				g.Expect(content).Should(ContainSubstring("<entry domain=\"org.apache.activemq.artemis.allowed\""))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, createdSecCrd)).Should(Succeed())
+		})
+
 	})
 })
 
