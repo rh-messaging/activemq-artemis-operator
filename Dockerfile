@@ -35,7 +35,8 @@ ENV USER_NAME=${BROKER_NAME}-operator
 ENV CGO_ENABLED=0
 ENV GOPATH=/tmp/go
 ENV JBOSS_IMAGE_NAME="amq7/amq-broker-rhel8-operator"
-ENV JBOSS_IMAGE_VERSION="7.10"
+# the value must be in form *.OPR.*.*
+ENV JBOSS_IMAGE_VERSION="7.10.0.OPR.1.CR5"
 
 WORKDIR /
 
