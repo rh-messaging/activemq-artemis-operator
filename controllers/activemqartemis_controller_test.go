@@ -2821,6 +2821,163 @@ var _ = Describe("artemis controller", func() {
 			Eventually(checkCrdDeleted(crd.Name, namespace, &crd), timeout, interval).Should(BeTrue())
 		})
 	})
+
+	It("populateValidatedUser", func() {
+
+		ctx := context.Background()
+		crd := generateArtemisSpec(namespace)
+		crd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
+			InitialDelaySeconds: 1,
+			PeriodSeconds:       5,
+		}
+		crd.Spec.DeploymentPlan.Size = 1
+		crd.Spec.DeploymentPlan.RequireLogin = true
+		crd.Spec.BrokerProperties = []string{
+			"securityEnabled=true",
+			"rejectEmptyValidatedUser=true",
+			"populateValidatedUser=true",
+		}
+
+		propLoginModules := make([]brokerv1beta1.PropertiesLoginModuleType, 1)
+		pwd := "activemq"
+		user := "Jay"
+		moduleName := "prop-module"
+		flag := "sufficient"
+		propLoginModules[0] = brokerv1beta1.PropertiesLoginModuleType{
+			Name: moduleName,
+			Users: []brokerv1beta1.UserType{
+				{Name: user,
+					Password: &pwd,
+					Roles:    []string{"jay-role"}},
+			},
+		}
+
+		brokerDomainName := "activemq"
+		loginModules := make([]brokerv1beta1.LoginModuleReferenceType, 1)
+		loginModules[0] = brokerv1beta1.LoginModuleReferenceType{
+			Name: &moduleName,
+			Flag: &flag,
+		}
+		brokerDomain := brokerv1beta1.BrokerDomainType{
+			Name:         &brokerDomainName,
+			LoginModules: loginModules,
+		}
+
+		if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+			By("Deploying security spec")
+			_, deployedSecCrd := DeploySecurity("for-jay", namespace, func(secCrdToDeploy *brokerv1beta1.ActiveMQArtemisSecurity) {
+				secCrdToDeploy.Spec.LoginModules.PropertiesLoginModules = propLoginModules
+				secCrdToDeploy.Spec.SecurityDomains.BrokerDomain = brokerDomain
+				secCrdToDeploy.Spec.SecuritySettings.Broker =
+					[]brokerv1beta1.BrokerSecuritySettingType{
+						{Match: "#",
+							Permissions: []brokerv1beta1.PermissionType{
+								{OperationType: "send", Roles: []string{"jay-role"}},
+								{OperationType: "browse", Roles: []string{"jay-role"}},
+							},
+						},
+					}
+			})
+
+			By("Deploying a broker")
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			By("Checking ready on SS")
+			Eventually(func(g Gomega) {
+				key := types.NamespacedName{Name: namer.CrToSS(crd.Name), Namespace: defaultNamespace}
+				sfsFound := &appsv1.StatefulSet{}
+
+				g.Expect(k8sClient.Get(ctx, key, sfsFound)).Should(Succeed())
+				g.Expect(sfsFound.Status.ReadyReplicas).Should(BeEquivalentTo(1))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("Sending 1")
+
+			podWithOrdinal := namer.CrToSS(crd.Name) + "-0"
+			command := []string{"amq-broker/bin/artemis", "producer", "--user", user, "--password", pwd, "--url", "tcp://" + podWithOrdinal + ":61616", "--message-count", "1", "--destination", "queue://DLQ", "--verbose"}
+
+			Eventually(func(g Gomega) {
+				stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+				g.Expect(stdOutContent).Should(ContainSubstring("Produced: 1 messages"))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("Consuming 1")
+
+			command = []string{"amq-broker/bin/artemis", "browser", "--user", user, "--password", pwd, "--url", "tcp://" + podWithOrdinal + ":61616", "--destination", "queue://DLQ", "--verbose"}
+
+			Eventually(func(g Gomega) {
+				stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+
+				Expect(stdOutContent).Should(ContainSubstring("messageID="))
+				Expect(stdOutContent).Should(ContainSubstring("_AMQ_VALIDATED_USER=" + user))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			// cleanup
+			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, deployedSecCrd)).Should(Succeed())
+
+		}
+
+	})
+
+	It("populateValidatedUser as auto generated guest", func() {
+
+		ctx := context.Background()
+		crd := generateArtemisSpec(defaultNamespace)
+		crd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
+			InitialDelaySeconds: 1,
+			PeriodSeconds:       5,
+		}
+		crd.Spec.DeploymentPlan.Size = 1
+		crd.Spec.BrokerProperties = []string{
+			"securityEnabled=true",
+			"rejectEmptyValidatedUser=true",
+			"populateValidatedUser=true",
+		}
+
+		if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+			By("Deploying a broker")
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			By("Checking ready on SS")
+			Eventually(func(g Gomega) {
+				key := types.NamespacedName{Name: namer.CrToSS(crd.Name), Namespace: defaultNamespace}
+				sfsFound := &appsv1.StatefulSet{}
+
+				g.Expect(k8sClient.Get(ctx, key, sfsFound)).Should(Succeed())
+				g.Expect(sfsFound.Status.ReadyReplicas).Should(BeEquivalentTo(1))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("Sending 1")
+
+			podWithOrdinal := namer.CrToSS(crd.Name) + "-0"
+			command := []string{"amq-broker/bin/artemis", "producer", "--user", "Jay", "--password", "activemq", "--url", "tcp://" + podWithOrdinal + ":61616", "--message-count", "1", "--destination", "queue://DLQ", "--verbose"}
+
+			Eventually(func(g Gomega) {
+				stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+				g.Expect(stdOutContent).Should(ContainSubstring("Produced: 1 messages"))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("Consuming 1")
+
+			command = []string{"amq-broker/bin/artemis", "browser", "--user", "Jay", "--password", "activemq", "--url", "tcp://" + podWithOrdinal + ":61616", "--destination", "queue://DLQ", "--verbose"}
+
+			Eventually(func(g Gomega) {
+				stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+
+				// ...ActiveMQMessage[ID:3a356c2a-e7e1-11ec-ae1c-5ec4168c91b2]:PERSISTENT/ClientMessageImpl[messageID=19, durable=true, address=DLQ,userID=3a356c2a-e7e1-11ec-ae1c-5ec4168c91b2,properties=TypedProperties[__AMQ_CID=3a2f9fc7-e7e1-11ec-ae1c-5ec4168c91b2,_AMQ_ROUTING_TYPE=1,_AMQ_VALIDATED_USER=73ykuMrb,count=0,ThreadSent=Producer ActiveMQQueue[DLQ], thread=0]]
+				Expect(stdOutContent).Should(ContainSubstring("messageID="))
+				Expect(stdOutContent).Should(ContainSubstring("_AMQ_VALIDATED_USER="))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			// cleanup
+			k8sClient.Delete(ctx, &crd)
+
+		}
+
+	})
 })
 
 func generateArtemisSpec(namespace string) brokerv1beta1.ActiveMQArtemis {
