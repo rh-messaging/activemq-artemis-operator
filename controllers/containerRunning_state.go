@@ -105,6 +105,7 @@ func (rs *ContainerRunningState) Update() (error, int) {
 				reqLogger.Error(err, "Failed to update StatefulSet.", "Deployment.Namespace", newss.Namespace, "Deployment.Name", newss.Name)
 			}
 		*/
+		rs.parentFSM.r.Result = reconcile.Result{Requeue: true}
 		nextStateID = ScalingID
 	}
 

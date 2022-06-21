@@ -3108,3 +3108,26 @@ func checkSecretHasCorrectKeyValue(secName string, ns types.NamespacedName, key 
 		return strings.Contains(string(data), expectedValue)
 	}, timeout, interval).Should(BeTrue())
 }
+
+func DeployCustomBroker(crName string, targetNamespace string, customFunc func(candidate *brokerv1beta1.ActiveMQArtemis)) (*brokerv1beta1.ActiveMQArtemis, *brokerv1beta1.ActiveMQArtemis) {
+	ctx := context.Background()
+	brokerCrd := generateArtemisSpec(targetNamespace)
+	if crName != "" {
+		brokerCrd.Name = crName
+	}
+
+	brokerCrd.Spec.DeploymentPlan.Size = 1
+
+	customFunc(&brokerCrd)
+
+	Expect(k8sClient.Create(ctx, &brokerCrd)).Should(Succeed())
+
+	createdBrokerCrd := brokerv1beta1.ActiveMQArtemis{}
+
+	Eventually(func() bool {
+		return getPersistedVersionedCrd(brokerCrd.Name, targetNamespace, &createdBrokerCrd)
+	}, timeout, interval).Should(BeTrue())
+	Expect(createdBrokerCrd.Name).Should(Equal(createdBrokerCrd.ObjectMeta.Name))
+
+	return &brokerCrd, &createdBrokerCrd
+}

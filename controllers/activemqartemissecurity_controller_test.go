@@ -49,6 +49,299 @@ import (
 var _ = Describe("security controller", func() {
 
 	Context("Reconcile Test", func() {
+		It("testing security applied after broker", Label("security-apply-restart"), func() {
+			By("deploying the broker cr")
+			boolFalse := false
+			boolTrue := true
+			crd, createdCrd := DeployCustomBroker("", defaultNamespace, func(brokerCrdToDeploy *brokerv1beta1.ActiveMQArtemis) {
+
+				brokerCrdToDeploy.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+					{
+						Name:       "all",
+						Expose:     true,
+						Port:       61616,
+						Protocols:  "all",
+						SSLEnabled: false,
+					},
+				}
+				brokerCrdToDeploy.Spec.AdminUser = "admin"
+				brokerCrdToDeploy.Spec.AdminPassword = "admin"
+				brokerCrdToDeploy.Spec.Console.Expose = true
+				brokerCrdToDeploy.Spec.DeploymentPlan.Clustered = &boolFalse
+				brokerCrdToDeploy.Spec.DeploymentPlan.JolokiaAgentEnabled = true
+				brokerCrdToDeploy.Spec.DeploymentPlan.MessageMigration = &boolTrue
+				brokerCrdToDeploy.Spec.DeploymentPlan.PersistenceEnabled = true
+				brokerCrdToDeploy.Spec.DeploymentPlan.RequireLogin = true
+				brokerCrdToDeploy.Spec.DeploymentPlan.Size = 1
+			})
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+				By("make sure the broker is up and running")
+				Eventually(func(g Gomega) {
+					key := types.NamespacedName{Name: namer.CrToSS(crd.Name), Namespace: defaultNamespace}
+					sfsFound := &appsv1.StatefulSet{}
+
+					g.Expect(k8sClient.Get(ctx, key, sfsFound)).Should(Succeed())
+					g.Expect(sfsFound.Status.ReadyReplicas).Should(BeEquivalentTo(1))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("Checking no security gets applied to broker at the moment" + createdCrd.Name)
+				podWithOrdinal := namer.CrToSS(crd.Name) + "-0"
+				command := []string{"ls", "amq-broker/etc"}
+
+				Eventually(func(g Gomega) {
+					stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+					g.Expect(stdOutContent).ShouldNot(ContainSubstring("keycloak"))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
+
+			By("deploying the security cr")
+			secCrd, createdSecCrd := DeploySecurity("ex-keycloak", defaultNamespace, func(secCrdToDeploy *brokerv1beta1.ActiveMQArtemisSecurity) {
+
+				brokerModuleName := "keycloak-broker"
+				consoleModuleName := "keycloak-console"
+				directAccess := "directAccess"
+				realm := "artemis-keycloak-demo"
+				brokerResource := "artemis-broker"
+				brokerAuthUrl := "http://10.111.246.36:8080/auth"
+				principalAttribute := "preferred_username"
+				external := "external"
+				token := "9699685c-8a30-45cf-bf19-0d38bbac5fdc"
+				bearerToken := "bearerToken"
+				consoleResource := "artemis-console"
+				consoleAuthUrl := "http://keycloak.3387.com/auth"
+				var confidentialPort int32 = 0
+
+				brokerDomainName := "activemq"
+				consoleDomainName := "console"
+				requiredFlag := "required"
+				mgmtDomain := "org.apache.activemq.artemis"
+				listMethod := "list*"
+				sendMethod := "sendMessage*"
+				browseMethod := "browse*"
+
+				secCrdToDeploy.Spec.LoginModules = brokerv1beta1.LoginModulesType{
+					KeycloakLoginModules: []brokerv1beta1.KeycloakLoginModuleType{
+						{
+							Name:       brokerModuleName,
+							ModuleType: &directAccess,
+							Configuration: brokerv1beta1.KeycloakModuleConfigurationType{
+								Realm:                   &realm,
+								Resource:                &brokerResource,
+								AuthServerUrl:           &brokerAuthUrl,
+								UseResourceRoleMappings: &boolTrue,
+								PrincipalAttribute:      &principalAttribute,
+								SslRequired:             &external,
+								Credentials: []brokerv1beta1.KeyValueType{
+									{
+										Key:   "secret",
+										Value: &token,
+									},
+								},
+							},
+						},
+						{
+							Name:       consoleModuleName,
+							ModuleType: &bearerToken,
+							Configuration: brokerv1beta1.KeycloakModuleConfigurationType{
+								Realm:                   &realm,
+								Resource:                &consoleResource,
+								AuthServerUrl:           &consoleAuthUrl,
+								PrincipalAttribute:      &principalAttribute,
+								UseResourceRoleMappings: &boolTrue,
+								SslRequired:             &external,
+								ConfidentialPort:        &confidentialPort,
+							},
+						},
+					},
+				}
+				secCrdToDeploy.Spec.SecurityDomains = brokerv1beta1.SecurityDomainsType{
+					BrokerDomain: brokerv1beta1.BrokerDomainType{
+						Name: &brokerDomainName,
+						LoginModules: []brokerv1beta1.LoginModuleReferenceType{
+							{
+								Name: &brokerModuleName,
+								Flag: &requiredFlag,
+							},
+						},
+					},
+					ConsoleDomain: brokerv1beta1.BrokerDomainType{
+						Name: &consoleDomainName,
+						LoginModules: []brokerv1beta1.LoginModuleReferenceType{
+							{
+								Name: &consoleModuleName,
+								Flag: &requiredFlag,
+							},
+						},
+					},
+				}
+				secCrdToDeploy.Spec.SecuritySettings = brokerv1beta1.SecuritySettingsType{
+					Broker: []brokerv1beta1.BrokerSecuritySettingType{
+						{
+							Match: "Info",
+							Permissions: []brokerv1beta1.PermissionType{
+								{
+									OperationType: "createDurableQueue",
+									Roles: []string{
+										"amq",
+									},
+								},
+								{
+									OperationType: "deleteDurableQueue",
+									Roles: []string{
+										"amq",
+									},
+								},
+								{
+									OperationType: "createNonDurableQueue",
+									Roles: []string{
+										"amq",
+									},
+								},
+								{
+									OperationType: "deleteNonDurableQueue",
+									Roles: []string{
+										"amq",
+									},
+								},
+								{
+									OperationType: "send",
+									Roles: []string{
+										"amq",
+									},
+								},
+								{
+									OperationType: "consume",
+									Roles: []string{
+										"amq",
+									},
+								},
+							},
+						},
+						{
+							Match: "activemq.management.#",
+							Permissions: []brokerv1beta1.PermissionType{
+								{
+									OperationType: "createNonDurableQueue",
+									Roles: []string{
+										"amq",
+									},
+								},
+								{
+									OperationType: "createAddress",
+									Roles: []string{
+										"amq",
+									},
+								},
+								{
+									OperationType: "consume",
+									Roles: []string{
+										"amq",
+									},
+								},
+								{
+									OperationType: "manage",
+									Roles: []string{
+										"amq",
+									},
+								},
+								{
+									OperationType: "send",
+									Roles: []string{
+										"amq",
+									},
+								},
+							},
+						},
+					},
+					Management: brokerv1beta1.ManagementSecuritySettingsType{
+						HawtioRoles: []string{
+							"guest",
+						},
+						Authorisation: brokerv1beta1.AuthorisationConfigType{
+							RoleAccess: []brokerv1beta1.RoleAccessType{
+								{
+									Domain: &mgmtDomain,
+									AccessList: []brokerv1beta1.DefaultAccessType{
+										{
+											Method: &listMethod,
+											Roles: []string{
+												"guest",
+											},
+										},
+										{
+											Method: &sendMethod,
+											Roles: []string{
+												"guest",
+											},
+										},
+										{
+											Method: &browseMethod,
+											Roles: []string{
+												"guest",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			})
+			By("checking security is applied")
+			requestedSs := &appsv1.StatefulSet{}
+
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: defaultNamespace}
+				err := k8sClient.Get(ctx, key, requestedSs)
+				if err != nil {
+					return false
+				}
+
+				initContainer := requestedSs.Spec.Template.Spec.InitContainers[0]
+				secApplied := false
+				for _, arg := range initContainer.Args {
+					if strings.Contains(arg, "mkdir -p /init_cfg_root/security/security") {
+						secApplied = true
+						break
+					}
+				}
+				return secApplied
+			}, timeout, interval).Should(BeTrue())
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+				By("Checking ready on SS")
+				Eventually(func(g Gomega) {
+					key := types.NamespacedName{Name: namer.CrToSS(crd.Name), Namespace: defaultNamespace}
+					sfsFound := &appsv1.StatefulSet{}
+
+					g.Expect(k8sClient.Get(ctx, key, sfsFound)).Should(Succeed())
+					g.Expect(sfsFound.Status.ReadyReplicas).Should(BeEquivalentTo(1))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("Checking security gets applied to broker " + createdCrd.Name)
+				podWithOrdinal := namer.CrToSS(crd.Name) + "-0"
+				command := []string{"ls", "amq-broker/etc"}
+
+				Eventually(func(g Gomega) {
+					stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+					g.Expect(stdOutContent).Should(ContainSubstring("keycloak"))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
+
+			By("checking resources get removed")
+			Expect(k8sClient.Delete(ctx, crd)).Should(Succeed())
+			Eventually(func() bool {
+				return checkCrdDeleted(crd.Name, defaultNamespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(k8sClient.Delete(ctx, createdSecCrd)).Should(Succeed())
+			Eventually(func() bool {
+				return checkCrdDeleted(secCrd.ObjectMeta.Name, defaultNamespace, createdSecCrd)
+			}, timeout, interval).Should(BeTrue())
+
+		})
+
 		It("reconcile twice with nothing changed", func() {
 
 			By("Creating security cr")

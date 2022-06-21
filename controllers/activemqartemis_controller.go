@@ -246,7 +246,9 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 		lsrcrs.StoreLastSuccessfulReconciledCR(customResource, customResource.Name,
 			customResource.Namespace, "broker", crstr, fsmstr, customResource.ResourceVersion,
 			amqbfsm.namers.LabelBuilder.Labels(), r.Client, r.Scheme)
-		return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
+		if !amqbfsm.r.Result.Requeue {
+			return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
+		}
 	}
 
 	return r.Result, err
