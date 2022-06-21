@@ -51,7 +51,7 @@ IMG ?= $(OPERATOR_IMAGE_REPO):$(OPERATOR_VERSION)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.22
 
-TEST_ARGS = ""
+TEST_ARGS ?= ""
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
