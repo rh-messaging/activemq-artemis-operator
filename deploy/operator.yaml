@@ -81,8 +81,8 @@ spec:
           #value: registry.redhat.io/amq7/amq-broker-init-rhel8:0.4-19
           value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:2e0a45d85546e748da98554b776613fc3b840be14b59a66caa69022602dd78ab
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_794
-          #value: registry.redhat.io/amq7/amq-broker-init-rhel8:0.4-22
-          value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:502d1748d3aca4aaaecd0c7a67c565ff839f6dc9a5f13123e081f4fdd37c1900
+          #value: registry.redhat.io/amq7/amq-broker-init-rhel8:0.4-24
+          value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:ba21779c29b431a22c824e91820705c9501fb0b7d6f7e1ae22fcd3becc8c8a2f
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781
           #value: registry.redhat.io/amq7/amq-broker-rhel8:7.8-3
           value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:0d857b95084e39c011651be89482d4dcc77c2d1c3ac3c6a819f3c9d5a57a425f
@@ -105,8 +105,8 @@ spec:
           #value: registry.redhat.io/amq7/amq-broker-rhel8:7.9-17.1647451418
           value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:979b59325aa0f34eb05625201beba53fccbb83bd5eb80a89dcb5261ae358138f
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_794
-          #value: registry.redhat.io/amq7/amq-broker-rhel8:7.9-20
-          value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:35064369bd17fa1abf56aba61e57e6a97acd17f479a813901595bd519980ecde
+          #value: registry.redhat.io/amq7/amq-broker-rhel8:7.9-21
+          value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:ae79b5dab78c4f48993fd8999b09bdcaa918b8e30a9f750bf24d411710f71928
 
         # PPC64LE
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_781_ppc64le
@@ -131,8 +131,8 @@ spec:
           #value: registry.redhat.io/amq7/amq-broker-79-init-openjdk-11-rhel8:0.4-4
           value: registry.redhat.io/amq7/amq-broker-79-init-openjdk-11-rhel8@sha256:c3ac4602b48867f3d4f7cc0efd5c9f133098e409626cfb402f80386ff460dbf4
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_794_ppc64le
-          #value: registry.redhat.io/amq7/amq-broker-79-init-openjdk-11-rhel8:0.4-11
-          value: registry.redhat.io/amq7/amq-broker-79-init-openjdk-11-rhel8@sha256:0e9f5efb663710f56a6197c439e8d99b46d0d1977577d7378aca1c179372a268
+          #value: registry.redhat.io/amq7/amq-broker-79-init-openjdk-11-rhel8:0.4-12
+          value: registry.redhat.io/amq7/amq-broker-79-init-openjdk-11-rhel8@sha256:aa7af7e038a12b5202108b362c8af243954603e84034a16c0192684c86d5d28b
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781_ppc64le
           #value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.8-8
           value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8@sha256:f2651cb097eb631fc6af90e4a8404d36516aa2205c546125bf0c37739ab525fa
@@ -155,8 +155,8 @@ spec:
           #value: registry.redhat.io/amq7/amq-broker-79-openshift-openjdk-11-rhel8:7.9-2.1647451568
           value: registry.redhat.io/amq7/amq-broker-79-openshift-openjdk-11-rhel8@sha256:967d840b831b310abd3a468a8652d1fa48b2ce28b342bfab53999245deb004f1
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_794_ppc64le
-          #value: registry.redhat.io/amq7/amq-broker-79-openshift-openjdk-11-rhel8:7.9-4
-          value: registry.redhat.io/amq7/amq-broker-79-openshift-openjdk-11-rhel8@sha256:79db0c22cdc71c0b2b37999ebaf6ba8adcf2a91942e0b8f1af1aa121424dc070
+          #value: registry.redhat.io/amq7/amq-broker-79-openshift-openjdk-11-rhel8:7.9-5
+          value: registry.redhat.io/amq7/amq-broker-79-openshift-openjdk-11-rhel8@sha256:7abfdcfd7b2d3d12b9234f7b057bd199bceefa47bdf02f62236f82a13fdbf5b7
 
         # S390X
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_781_s390x
@@ -181,8 +181,8 @@ spec:
           #value: registry.redhat.io/amq7/amq-broker-79-init-openjdk-11-rhel8:0.4-4
           value: registry.redhat.io/amq7/amq-broker-79-init-openjdk-11-rhel8@sha256:d4a9176f49ffd9db6051fbda15d47a1aa32c282fb5010d0caf5b9243e80bf055
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_794_s390x
-          #value: registry.redhat.io/amq7/amq-broker-79-init-openjdk-11-rhel8:0.4-11
-          value: registry.redhat.io/amq7/amq-broker-79-init-openjdk-11-rhel8@sha256:0e9f5efb663710f56a6197c439e8d99b46d0d1977577d7378aca1c179372a268
+          #value: registry.redhat.io/amq7/amq-broker-79-init-openjdk-11-rhel8:0.4-12
+          value: registry.redhat.io/amq7/amq-broker-79-init-openjdk-11-rhel8@sha256:aa7af7e038a12b5202108b362c8af243954603e84034a16c0192684c86d5d28b
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781_s390x
           #value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8:7.8-8
           value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8@sha256:f2651cb097eb631fc6af90e4a8404d36516aa2205c546125bf0c37739ab525fa
@@ -205,11 +205,11 @@ spec:
           #value: registry.redhat.io/amq7/amq-broker-79-openshift-openjdk-11-rhel8:7.9-2.1647451568
           value: registry.redhat.io/amq7/amq-broker-79-openshift-openjdk-11-rhel8@sha256:967d840b831b310abd3a468a8652d1fa48b2ce28b342bfab53999245deb004f1
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_794_s390x
-          #value: registry.redhat.io/amq7/amq-broker-79-openshift-openjdk-11-rhel8:7.9-4
-          value: registry.redhat.io/amq7/amq-broker-79-openshift-openjdk-11-rhel8@sha256:79db0c22cdc71c0b2b37999ebaf6ba8adcf2a91942e0b8f1af1aa121424dc070
+          #value: registry.redhat.io/amq7/amq-broker-79-openshift-openjdk-11-rhel8:7.9-5
+          value: registry.redhat.io/amq7/amq-broker-79-openshift-openjdk-11-rhel8@sha256:7abfdcfd7b2d3d12b9234f7b057bd199bceefa47bdf02f62236f82a13fdbf5b7
 
-        #image: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.9-21
-        image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:43ca56a0587677746561f94fe944b64396d188ad7975b1bd27c457d54de6f3d2
+        #image: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.9-22
+        image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:3323ce52c915c7a99428cae268c2c0e41be1012d80b73221853f3a893b9f56e1
 
         # If floating tags are configured above you may want to set this to true.
         #imagePullPolicy: Always
