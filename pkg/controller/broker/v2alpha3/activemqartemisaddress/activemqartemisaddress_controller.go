@@ -269,7 +269,7 @@ func createAddressResource(a *mgmt.Artemis, addressRes *brokerv2alpha3.ActiveMQA
 		//create address
 		_, err = a.CreateAddress(addressRes.Spec.AddressName, *addressRes.Spec.RoutingType)
 		if nil != err {
-			log.Error(err, "Creating ActiveMQArtemisAddress error for address", addressRes.Spec.AddressName)
+			log.Error(err, "Creating ActiveMQArtemisAddress error", "address", addressRes.Spec.AddressName)
 			return err
 		} else {
 			log.Info("Created ActiveMQArtemisAddress for address " + addressRes.Spec.AddressName)
