@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"strconv"
+	"time"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/fsm"
 	appsv1 "k8s.io/api/apps/v1"
@@ -85,7 +86,7 @@ func (rs *ContainerRunningState) Update() (error, int) {
 		}
 
 		if *currentStatefulSet.Spec.Replicas != currentStatefulSet.Status.ReadyReplicas {
-			rs.parentFSM.r.Result = reconcile.Result{Requeue: true}
+			rs.parentFSM.r.Result = reconcile.Result{Requeue: true, RequeueAfter: time.Second * 5}
 			reqLogger.Info("ContainerRunningState requesting reconcile requeue for immediate reissue due to continued scaling")
 			nextStateID = ScalingID
 			break
