@@ -43,6 +43,7 @@ var OperandVersionFromOperatorVersion map[string]string = map[string]string{
 	"7.9.1":  "7.9.1",
 	"7.9.2":  "7.9.2",
 	"7.9.3":  "7.9.3",
+	"7.9.4":  "7.9.4",
 	"7.10.0": "7.10.0",
 }
 var FullVersionFromMinorVersion map[string]string = map[string]string{
@@ -55,6 +56,7 @@ var FullVersionFromMinorVersion map[string]string = map[string]string{
 	"91":  "7.9.1",
 	"92":  "7.9.2",
 	"93":  "7.9.3",
+	"94":  "7.9.4",
 	"100": "7.10.0",
 }
 
@@ -68,6 +70,7 @@ var CompactFullVersionFromMinorVersion map[string]string = map[string]string{
 	"91":  "791",
 	"92":  "792",
 	"93":  "793",
+	"94":  "794",
 	"100": "7100",
 }
 
@@ -81,6 +84,7 @@ var CompactVersionFromVersion map[string]string = map[string]string{
 	"7.9.1":  "791",
 	"7.9.2":  "792",
 	"7.9.3":  "793",
+	"7.9.4":  "794",
 	"7.10.0": "7100",
 }
 
@@ -94,6 +98,7 @@ var FullVersionFromCompactVersion map[string]string = map[string]string{
 	"791":  "7.9.1",
 	"792":  "7.9.2",
 	"793":  "7.9.3",
+	"794":  "7.9.4",
 	"7100": "7.10.0",
 }
 
@@ -107,6 +112,7 @@ var MinorVersionFromFullVersion map[string]string = map[string]string{
 	"7.9.1":  "91",
 	"7.9.2":  "92",
 	"7.9.3":  "93",
+	"7.9.4":  "94",
 	"7.10.0": "100",
 }
 
@@ -121,6 +127,7 @@ var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
 	"7.9.1":  "7.9.0",
 	"7.9.2":  "7.9.0",
 	"7.9.3":  "7.9.0",
+	"7.9.4":  "7.9.0",
 	"7.10.0": "7.10.0",
 }
 
