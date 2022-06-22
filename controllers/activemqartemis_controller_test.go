@@ -201,7 +201,7 @@ var _ = Describe("artemis controller", func() {
 
 	Context("Versions Test", func() {
 
-		It("default image to use latest", func() {
+		It("default image to use latest", Label("default-versions-test"), func() {
 			crd := generateArtemisSpec(namespace)
 			imageToUse := determineImageToUse(&crd, "Kubernetes")
 			Expect(imageToUse).To(Equal(version.LatestKubeImage), "actual", imageToUse)
@@ -212,6 +212,52 @@ var _ = Describe("artemis controller", func() {
 			compactVersionToUse := determineCompactVersionToUse(&brokerCr)
 			yacfgProfileVersion = version.YacfgProfileVersionFromFullVersion[version.FullVersionFromCompactVersion[compactVersionToUse]]
 			Expect(yacfgProfileVersion).To(Equal("7.10.0"))
+		})
+
+		It("testing broker image resolve", Label("amq-versions-test"), func() {
+			manager := "../deploy/operator.yaml"
+			robj, _, err := loadYamlResource(manager)
+			Expect(err).To(Succeed())
+			oprObj := robj.(*appsv1.Deployment)
+
+			envs := oprObj.Spec.Template.Spec.Containers[0].Env
+			for _, entry := range envs {
+				os.Setenv(entry.Name, entry.Value)
+			}
+			defer func() {
+				for _, entry := range envs {
+					os.Unsetenv(entry.Name)
+				}
+			}()
+
+			latestBrokerImageEnvKey := "RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_" + version.CompactLatestVersion
+			latestBrokerInitImageEnvKey := "RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_" + version.CompactLatestVersion
+
+			latestBrokerImage := os.Getenv(latestBrokerImageEnvKey)
+			latestInitImage := os.Getenv(latestBrokerInitImageEnvKey)
+
+			By("checking default images are always the latest defined in env")
+			brokerCrd := generateArtemisSpec(defaultNamespace)
+
+			imageToUse := determineImageToUse(&brokerCrd, "Kubernetes")
+			initImageToUse := determineImageToUse(&brokerCrd, "Init")
+			Expect(imageToUse).To(Equal(latestBrokerImage))
+			Expect(initImageToUse).To(Equal(latestInitImage))
+
+			brokerCrd.Spec.Version = "7.9.4"
+			brokerCrd.Spec.Upgrades.Enabled = true
+
+			brokerImageEnvKey := "RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_" + version.CompactVersionFromVersion["7.9.4"]
+			initImageEnvKey := "RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_" + version.CompactVersionFromVersion["7.9.4"]
+
+			expectedImage := os.Getenv(brokerImageEnvKey)
+			expectedInitImage := os.Getenv(initImageEnvKey)
+
+			imageToUse = determineImageToUse(&brokerCrd, "Kubernetes")
+			initImageToUse = determineImageToUse(&brokerCrd, "Init")
+
+			Expect(imageToUse).To(Equal(expectedImage))
+			Expect(initImageToUse).To(Equal(expectedInitImage))
 		})
 	})
 
