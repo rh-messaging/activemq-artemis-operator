@@ -19,6 +19,32 @@ jobs:
       - name: Checkout the repo
         uses: actions/checkout@v2
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 18.x
+
+      - name: Checkout artemiscloud.github.io
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ github.repository_owner }}/artemiscloud.github.io
+          path: artemiscloud.github.io
+          token: ${{ secrets.BOT_TOKEN }}
+
+      - name: Build the docs
+        run: >
+          rm -rf artemiscloud.github.io/content/en/docs &&
+          cp -r docs artemiscloud.github.io/content/en &&
+          cd artemiscloud.github.io &&
+          npm install && npm run build
+
+      - name: Push the docs
+        run: >
+          cd artemiscloud.github.io &&
+          git config user.name 'ArtemisCloud Bot' &&
+          git config user.email 'artemiscloudbot@users.noreply.github.com' &&
+          git add --all && git commit --all --allow-empty --message 'Update docs to ${{ github.ref_name }}' && git push
+
       - name: Build the image
         run: docker build --tag $IMAGE_NAME:latest .
 
