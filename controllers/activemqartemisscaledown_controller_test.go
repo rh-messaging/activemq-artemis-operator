@@ -69,7 +69,7 @@ var _ = Describe("Scale down controller", func() {
 				createdBrokerCrd := &brokerv1beta1.ActiveMQArtemis{}
 				getPersistedVersionedCrd(brokerCrd.ObjectMeta.Name, defaultNamespace, createdBrokerCrd)
 
-				By("verying two ready")
+				By("verifying two ready")
 				Eventually(func(g Gomega) {
 
 					getPersistedVersionedCrd(brokerCrd.ObjectMeta.Name, defaultNamespace, createdBrokerCrd)

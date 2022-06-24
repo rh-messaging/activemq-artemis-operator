@@ -900,17 +900,15 @@ var _ = Describe("security controller", func() {
 
 		// after stable status, determine version
 		createdSs := &appsv1.StatefulSet{}
+		ssKey := types.NamespacedName{Name: namer.CrToSS(createdBrokerCrd.Name), Namespace: defaultNamespace}
 
 		By("Making sure that the ss gets deployed " + createdBrokerCrd.ObjectMeta.Name)
-		Eventually(func() bool {
-			key := types.NamespacedName{Name: namer.CrToSS(createdBrokerCrd.Name), Namespace: defaultNamespace}
-
-			err := k8sClient.Get(ctx, key, createdSs)
-
-			return err == nil
-		}, timeout, interval).Should(Equal(true))
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, ssKey, createdSs)).Should(Succeed())
+		}, timeout, interval).Should(Succeed())
 
 		versionSsDeployed := createdSs.ObjectMeta.ResourceVersion
+		By("tracking cc resource version: " + versionSsDeployed)
 
 		By("Creating security cr")
 		crd := generateSecuritySpec("", defaultNamespace)
@@ -957,15 +955,13 @@ var _ = Describe("security controller", func() {
 		Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
 
 		// make sure broker gets new SS for createdBrokerCrd
-		Eventually(func() bool {
-			key := types.NamespacedName{Name: namer.CrToSS(createdBrokerCrd.Name), Namespace: defaultNamespace}
+		Eventually(func(g Gomega) {
 
-			if err := k8sClient.Get(ctx, key, createdSs); err == nil {
-				return versionSsDeployed != createdSs.GetResourceVersion()
-			} else {
-				return false
-			}
-		}, timeout, interval).Should(Equal(true))
+			g.Expect(k8sClient.Get(ctx, ssKey, createdSs)).Should(Succeed())
+			By("Verifying != ss set resoruce version, deployed: " + versionSsDeployed + ", current: " + createdSs.GetResourceVersion())
+			g.Expect(versionSsDeployed).ShouldNot(Equal(createdSs.GetResourceVersion()))
+
+		}, timeout, interval).Should(Succeed())
 
 		By("check it has gone")
 		Expect(k8sClient.Delete(ctx, createdBrokerCrd))
