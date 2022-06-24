@@ -1,3 +1,18 @@
+---
+title: "Bundle"
+description: "Bundle ArtemisCloud.io"
+lead: "Bundle ArtemisCloud.io"
+date: 2020-10-06T08:49:31+00:00
+lastmod: 2020-10-06T08:49:31+00:00
+draft: false
+images: []
+menu:
+  docs:
+    parent: "help"
+weight: 630
+toc: true
+---
+
 # Bunding A Bundle and Deploy it into the Operator Lifecycle Manager(OLM)
 
 ## About the Operator Lifecycle Manager (OLM)
@@ -129,6 +144,3 @@ NAME                                                              READY   STATUS
 activemq-artemis-controller-manager-84d58db649-tkt89              1/1     Running     0          117s
 artemis-index-frpn4                                               1/1     Running     0          3m35s
 ```
-
-
-

@@ -1,4 +1,19 @@
-# Overview
+---
+title: "Quick Start"
+description: "One page summary of how to start a new ArtemisCloud project."
+lead: "One page summary of how to start a new ArtemisCloud project."
+date: 2020-11-16T13:59:39+01:00
+lastmod: 2020-11-16T13:59:39+01:00
+draft: false
+images: []
+menu:
+  docs:
+    parent: "getting-started"
+weight: 110
+toc: true
+---
+
+## Overview
 
 At the moment these instructions have been tested against Kubernetes 1.20,
 other kubernetes or OpenShift environments may require minor adjustment.
@@ -7,8 +22,6 @@ One important note about operators in general is that to get the operator
 installed requires cluster-admin level privileges. Once installed, a regular
 user should be able to install ActiveMQ Artemis via the provided custom
 resource.
-
-# Quick Start
 
 ## General environment requirements
 
