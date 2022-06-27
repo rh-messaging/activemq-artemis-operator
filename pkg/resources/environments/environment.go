@@ -172,12 +172,12 @@ func AddEnvVarForPersistent(customResourceName string) []corev1.EnvVar {
 	return envVarArray
 }
 
-func AddEnvVarForCluster() []corev1.EnvVar {
+func AddEnvVarForCluster(isClustered bool) []corev1.EnvVar {
 
 	envVarArray := []corev1.EnvVar{
 		{
 			"AMQ_CLUSTERED",
-			"true", //GetPropertyForCR("AMQ_CLUSTERED", cr, "true"),
+			strconv.FormatBool(isClustered),
 			nil,
 		},
 	}

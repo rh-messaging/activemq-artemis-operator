@@ -297,10 +297,6 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessDeploymentPlan(customRes
 	// Ensure the StatefulSet size is the same as the spec
 	currentStatefulSet.Spec.Replicas = &deploymentPlan.Size
 
-	initImageSyncCausedUpdateOn(customResource, currentStatefulSet)
-
-	imageSyncCausedUpdateOn(customResource, currentStatefulSet)
-
 	aioSyncCausedUpdateOn(deploymentPlan, currentStatefulSet)
 
 	persistentSyncCausedUpdateOn(namer, deploymentPlan, currentStatefulSet)
@@ -309,12 +305,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessDeploymentPlan(customRes
 		environments.Update(currentStatefulSet.Spec.Template.Spec.Containers, updatedEnvVar)
 	}
 
-	if clusterSyncCausedUpdateOn(deploymentPlan, currentStatefulSet) {
-		clog.Info("Clustered is false")
-	}
-
 	clog.Info("Now sync Message migration", "for cr", customResource.Name)
-
 	syncMessageMigration(customResource, namer, client, scheme)
 
 }
@@ -1224,84 +1215,6 @@ func persistentSyncCausedUpdateOn(namer Namers, deploymentPlan *brokerv1beta1.De
 	return statefulSetUpdated
 }
 
-func imageSyncCausedUpdateOn(customResource *brokerv1beta1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
-
-	// Log where we are and what we're doing
-	reqLogger := ctrl.Log.WithName(customResource.Name)
-	reqLogger.V(1).Info("imageSyncCausedUpdateOn")
-
-	imageName := ""
-	if "placeholder" == customResource.Spec.DeploymentPlan.Image ||
-		0 == len(customResource.Spec.DeploymentPlan.Image) {
-		reqLogger.Info("Determining the updated kubernetes image to use due to placeholder setting")
-		imageName = determineImageToUse(customResource, "Kubernetes")
-	} else {
-		reqLogger.Info("Using the user provided kubernetes image " + customResource.Spec.DeploymentPlan.Image)
-		imageName = customResource.Spec.DeploymentPlan.Image
-	}
-	if strings.Compare(currentStatefulSet.Spec.Template.Spec.Containers[0].Image, imageName) != 0 {
-		containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
-		for i := 0; i < containerArrayLen; i++ {
-			currentStatefulSet.Spec.Template.Spec.Containers[i].Image = imageName
-		}
-		return true
-	}
-
-	return false
-}
-
-// TODO: Eliminate duplication between this and the original imageSyncCausedUpdateOn
-func initImageSyncCausedUpdateOn(customResource *brokerv1beta1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
-
-	reqLogger := clog.WithName(customResource.Name)
-
-	initImageName := ""
-	if "placeholder" == customResource.Spec.DeploymentPlan.InitImage ||
-		0 == len(customResource.Spec.DeploymentPlan.InitImage) {
-		initImageName = determineImageToUse(customResource, "Init")
-	} else {
-		reqLogger.Info("Using the user provided init image " + customResource.Spec.DeploymentPlan.InitImage)
-		initImageName = customResource.Spec.DeploymentPlan.InitImage
-	}
-	if strings.Compare(currentStatefulSet.Spec.Template.Spec.InitContainers[0].Image, initImageName) != 0 {
-		containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.InitContainers)
-		for i := 0; i < containerArrayLen; i++ {
-			currentStatefulSet.Spec.Template.Spec.InitContainers[i].Image = initImageName
-		}
-		return true
-	}
-
-	return false
-}
-
-func clusterSyncCausedUpdateOn(deploymentPlan *brokerv1beta1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
-
-	isClustered := true
-	if deploymentPlan.Clustered != nil {
-		isClustered = *deploymentPlan.Clustered
-	}
-
-	//we are only interested in non-cluster case
-	//as elsewhere in the code it's been treated as clustered.
-	if !isClustered {
-
-		brokerContainers := []*corev1.Container{
-			&currentStatefulSet.Spec.Template.Spec.InitContainers[0],
-			&currentStatefulSet.Spec.Template.Spec.Containers[0],
-		}
-
-		for _, container := range brokerContainers {
-			for j, envVar := range container.Env {
-				if "AMQ_CLUSTERED" == envVar.Name {
-					container.Env[j].Value = "false"
-					clog.Info("Setting clustered env to false", "envs", container.Env)
-				}
-			}
-		}
-	}
-	return !isClustered
-}
-
 func (reconciler *ActiveMQArtemisReconcilerImpl) CurrentDeployedResources(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) {
 	reqLogger := clog.WithValues("ActiveMQArtemis Name", customResource.Name)
 	reqLogger.Info("currentDeployedResources")
@@ -1595,7 +1508,6 @@ func MakeContainerPorts(cr *brokerv1beta1.ActiveMQArtemis) []corev1.ContainerPor
 func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customResource *v1beta1.ActiveMQArtemis, namer Namers, current *corev1.PodTemplateSpec) *corev1.PodTemplateSpec {
 
 	reqLogger := ctrl.Log.WithName(customResource.Name)
-	//	reqLogger.V(1).Info("NewPodTemplateSpecForCR", "Version", customResource.ObjectMeta.ResourceVersion, "Generation", customResource.ObjectMeta.Generation)
 
 	namespacedName := types.NamespacedName{
 		Name:      customResource.Name,
@@ -2442,8 +2354,7 @@ func MakeEnvVarArrayForCR(customResource *v1beta1.ActiveMQArtemis, namer Namers)
 		envVar = append(envVar, envVarArrayForPresistent...)
 	}
 
-	// TODO: Optimize for the single broker configuration
-	envVarArrayForCluster := environments.AddEnvVarForCluster()
+	envVarArrayForCluster := environments.AddEnvVarForCluster(isClustered(customResource))
 	envVar = append(envVar, envVarArrayForCluster...)
 
 	envVarArrayForJolokia := environments.AddEnvVarForJolokia(jolokiaAgentEnabled)
