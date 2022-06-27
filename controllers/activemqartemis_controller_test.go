@@ -1256,28 +1256,29 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(Equal(true))
 
 			By("Making sure the pd affinity are correct")
-			Expect(createdSs.Spec.Template.Spec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution[0].LabelSelector.MatchLabels["key"] == "value").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution[0].LabelSelector.MatchLabels["key"]).Should(Equal("value"))
 
 			By("Updating the CR")
-			Eventually(func() bool { return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd) }, timeout, interval).Should(BeTrue())
-			original := createdCrd
-
-			labelSelector = metav1.LabelSelector{}
-			labelSelector.MatchLabels = make(map[string]string)
-			labelSelector.MatchLabels["key"] = "differentvalue"
-
-			podAffinityTerm = corev1.PodAffinityTerm{}
-			podAffinityTerm.LabelSelector = &labelSelector
-			podAntiAffinity = corev1.PodAntiAffinity{
-				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
-					podAffinityTerm,
-				},
-			}
-			original.Spec.DeploymentPlan.Affinity.PodAntiAffinity = &podAntiAffinity
-			By("Redeploying the CRD")
-			Expect(k8sClient.Update(ctx, original)).Should(Succeed())
-
 			Eventually(func(g Gomega) {
+
+				g.Expect(getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd)).Should(BeTrue())
+				original := createdCrd
+
+				labelSelector = metav1.LabelSelector{}
+				labelSelector.MatchLabels = make(map[string]string)
+				labelSelector.MatchLabels["key"] = "differentvalue"
+
+				podAffinityTerm = corev1.PodAffinityTerm{}
+				podAffinityTerm.LabelSelector = &labelSelector
+				podAntiAffinity = corev1.PodAntiAffinity{
+					RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+						podAffinityTerm,
+					},
+				}
+				original.Spec.DeploymentPlan.Affinity.PodAntiAffinity = &podAntiAffinity
+				By("Redeploying the CRD")
+				k8sClient.Update(ctx, original)
+
 				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
 
 				g.Expect(k8sClient.Get(ctx, key, createdSs)).Should(Succeed())
@@ -1287,7 +1288,7 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(len(createdSs.Spec.Template.Spec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution)).Should(Equal(1))
 
 				By("Making sure the pd affinity are correct")
-				g.Expect(createdSs.Spec.Template.Spec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution[0].LabelSelector.MatchLabels["key"] == "value").Should(BeTrue())
+				g.Expect(createdSs.Spec.Template.Spec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution[0].LabelSelector.MatchLabels["key"]).Should(Equal("differentvalue"))
 
 			}, timeout, interval).Should(Succeed())
 
@@ -1344,29 +1345,29 @@ var _ = Describe("artemis controller", func() {
 			By("Making sure the node affinity are correct")
 			Expect(createdSs.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0].Key).Should(Equal("foo"))
 
-			By("Updating the CR")
-			Eventually(func() bool { return getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd) }, timeout, interval).Should(BeTrue())
-			original := createdCrd
-
-			nodeSelectorRequirement = corev1.NodeSelectorRequirement{
-				Key:    "bar",
-				Values: make([]string, 2),
-			}
-			nodeSelectorRequirements = [1]corev1.NodeSelectorRequirement{nodeSelectorRequirement}
-			nodeSelectorRequirements[0] = nodeSelectorRequirement
-			nodeSelectorTerm = corev1.NodeSelectorTerm{MatchExpressions: nodeSelectorRequirements[:]}
-			nodeSelectorTerms = [1]corev1.NodeSelectorTerm{nodeSelectorTerm}
-			nodeSelector = corev1.NodeSelector{
-				NodeSelectorTerms: nodeSelectorTerms[:],
-			}
-			nodeAffinity = corev1.NodeAffinity{
-				RequiredDuringSchedulingIgnoredDuringExecution: &nodeSelector,
-			}
-			original.Spec.DeploymentPlan.Affinity.NodeAffinity = &nodeAffinity
-			By("Redeploying the CRD")
-			Expect(k8sClient.Update(ctx, original)).Should(Succeed())
-
 			Eventually(func(g Gomega) {
+				By("Updating the CR")
+				g.Expect(getPersistedVersionedCrd(crd.ObjectMeta.Name, namespace, createdCrd)).Should(BeTrue())
+				original := createdCrd
+
+				nodeSelectorRequirement = corev1.NodeSelectorRequirement{
+					Key:    "bar",
+					Values: make([]string, 2),
+				}
+				nodeSelectorRequirements = [1]corev1.NodeSelectorRequirement{nodeSelectorRequirement}
+				nodeSelectorRequirements[0] = nodeSelectorRequirement
+				nodeSelectorTerm = corev1.NodeSelectorTerm{MatchExpressions: nodeSelectorRequirements[:]}
+				nodeSelectorTerms = [1]corev1.NodeSelectorTerm{nodeSelectorTerm}
+				nodeSelector = corev1.NodeSelector{
+					NodeSelectorTerms: nodeSelectorTerms[:],
+				}
+				nodeAffinity = corev1.NodeAffinity{
+					RequiredDuringSchedulingIgnoredDuringExecution: &nodeSelector,
+				}
+				original.Spec.DeploymentPlan.Affinity.NodeAffinity = &nodeAffinity
+				By("Redeploying the CRD")
+				k8sClient.Update(ctx, original)
+
 				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
 
 				g.Expect(k8sClient.Get(ctx, key, createdSs)).Should(Succeed())
