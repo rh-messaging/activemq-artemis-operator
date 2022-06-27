@@ -168,11 +168,11 @@ func MakeVolumeForCfg(name string) corev1.Volume {
 	return volume
 }
 
-func MakeVolumeMountForCfg(name string, path string) corev1.VolumeMount {
-	return MakeVolumeMountForCfg2(name, path, false)
+func MakeRwVolumeMountForCfg(name string, path string) corev1.VolumeMount {
+	return MakeVolumeMountForCfg(name, path, false)
 }
 
-func MakeVolumeMountForCfg2(name string, path string, readOnly bool) corev1.VolumeMount {
+func MakeVolumeMountForCfg(name string, path string, readOnly bool) corev1.VolumeMount {
 
 	volumeMount := corev1.VolumeMount{
 		Name:      name,

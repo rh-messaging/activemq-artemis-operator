@@ -1254,12 +1254,10 @@ func imageSyncCausedUpdateOn(customResource *brokerv1beta1.ActiveMQArtemis, curr
 func initImageSyncCausedUpdateOn(customResource *brokerv1beta1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
 
 	reqLogger := clog.WithName(customResource.Name)
-	//	reqLogger.V(1).Info("initImageSyncCausedUpdateOn")
 
 	initImageName := ""
 	if "placeholder" == customResource.Spec.DeploymentPlan.InitImage ||
 		0 == len(customResource.Spec.DeploymentPlan.InitImage) {
-		reqLogger.Info("Determining the updated init image to use due to placeholder setting")
 		initImageName = determineImageToUse(customResource, "Init")
 	} else {
 		reqLogger.Info("Using the user provided init image " + customResource.Spec.DeploymentPlan.InitImage)
@@ -1642,7 +1640,6 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 		reqLogger.V(1).Info("Adding new ports to main", "len", len(containerPorts))
 		container.Ports = containerPorts
 	}
-	//	reqLogger.V(1).Info("now ports added to container", "new len", len(container.Ports))
 
 	reqLogger.Info("Checking out extraMounts", "extra config", customResource.Spec.DeploymentPlan.ExtraMounts)
 	brokerPropertiesConfigMapName := reconciler.addConfigMapForBrokerProperties(customResource)
@@ -1657,8 +1654,6 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	if len(extraVolumeMounts) > 0 {
 		container.VolumeMounts = append(container.VolumeMounts, extraVolumeMounts...)
 	}
-
-	//reqLogger.V(1).Info("Adding new mounts to container", "len", len(container.VolumeMounts))
 
 	container.LivenessProbe = configureLivenessProbe(container, customResource.Spec.DeploymentPlan.LivenessProbe)
 	container.ReadinessProbe = configureReadinessProbe(container, customResource.Spec.DeploymentPlan.ReadinessProbe)
@@ -1707,7 +1702,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	volumeForCfg := volumes.MakeVolumeForCfg(cfgVolumeName)
 	podSpec.Volumes = append(podSpec.Volumes, volumeForCfg)
 
-	volumeMountForCfg := volumes.MakeVolumeMountForCfg(cfgVolumeName, brokerConfigRoot)
+	volumeMountForCfg := volumes.MakeRwVolumeMountForCfg(cfgVolumeName, brokerConfigRoot)
 	podSpec.Containers[0].VolumeMounts = append(podSpec.Containers[0].VolumeMounts, volumeMountForCfg)
 
 	clog.Info("Creating init container for broker configuration")
@@ -1817,10 +1812,10 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 
 	//setup volumeMounts from scratch
 	podSpec.InitContainers[0].VolumeMounts = []corev1.VolumeMount{}
-	volumeMountForCfgRoot := volumes.MakeVolumeMountForCfg(cfgVolumeName, brokerConfigRoot)
+	volumeMountForCfgRoot := volumes.MakeRwVolumeMountForCfg(cfgVolumeName, brokerConfigRoot)
 	podSpec.InitContainers[0].VolumeMounts = append(podSpec.InitContainers[0].VolumeMounts, volumeMountForCfgRoot)
 
-	volumeMountForCfg = volumes.MakeVolumeMountForCfg("tool-dir", initCfgRootDir)
+	volumeMountForCfg = volumes.MakeRwVolumeMountForCfg("tool-dir", initCfgRootDir)
 	podSpec.InitContainers[0].VolumeMounts = append(podSpec.InitContainers[0].VolumeMounts, volumeMountForCfg)
 
 	//add empty-dir volume
@@ -2137,9 +2132,8 @@ func determineImageToUse(customResource *brokerv1beta1.ActiveMQArtemis, imageTyp
 	if "s390x" == osruntime.GOARCH || "ppc64le" == osruntime.GOARCH {
 		archSpecificRelatedImageEnvVarName = genericRelatedImageEnvVarName + "_" + osruntime.GOARCH
 	}
-	clog.V(1).Info("DetermineImageToUse GOARCH specific image env var is " + archSpecificRelatedImageEnvVarName)
 	imageName, found := os.LookupEnv(archSpecificRelatedImageEnvVarName)
-	clog.V(1).Info("DetermineImageToUse imageName is " + imageName)
+	clog.V(1).Info("DetermineImageToUse", "env", archSpecificRelatedImageEnvVarName, "imageName", imageName)
 	if !found {
 		imageName = version.DefaultImageName(archSpecificRelatedImageEnvVarName)
 	}
@@ -2233,7 +2227,7 @@ func createExtraConfigmapsAndSecrets(brokerContainer *corev1.Container, configMa
 			clog.Info("Resolved configMap path", "path", cfgmapPath)
 			//now we have a config map. First create a volume
 			cfgmapVol := volumes.MakeVolumeForConfigMap(cfgmap)
-			cfgmapVolumeMount := volumes.MakeVolumeMountForCfg2(cfgmapVol.Name, cfgmapPath, true)
+			cfgmapVolumeMount := volumes.MakeVolumeMountForCfg(cfgmapVol.Name, cfgmapPath, true)
 			extraVolumes = append(extraVolumes, cfgmapVol)
 			extraVolumeMounts = append(extraVolumeMounts, cfgmapVolumeMount)
 		}
@@ -2248,7 +2242,7 @@ func createExtraConfigmapsAndSecrets(brokerContainer *corev1.Container, configMa
 			secretPath := secretPathBase + secret
 			//now we have a secret. First create a volume
 			secretVol := volumes.MakeVolumeForSecret(secret)
-			secretVolumeMount := volumes.MakeVolumeMountForCfg2(secretVol.Name, secretPath, true)
+			secretVolumeMount := volumes.MakeVolumeMountForCfg(secretVol.Name, secretPath, true)
 			extraVolumes = append(extraVolumes, secretVol)
 			extraVolumeMounts = append(extraVolumeMounts, secretVolumeMount)
 		}
