@@ -24,7 +24,6 @@ import (
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/channels"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/config"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/cr2jinja2"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	"github.com/artemiscloud/activemq-artemis-operator/version"
@@ -35,7 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
@@ -51,7 +50,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 
 	"strconv"
@@ -111,7 +109,6 @@ type ActiveMQArtemisIReconciler interface {
 	ProcessAcceptorsAndConnectors(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32
 	ProcessConsole(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet)
 	ProcessResources(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint8
-	ProcessAddressSettings(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) bool
 }
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) Process(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme) bool {
@@ -253,8 +250,9 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessCredentials(customResour
 
 		adminUser.Value = environments.Defaults.AMQ_USER
 		adminUser.AutoGen = true
+		// do once
 		break
-	} // do once
+	}
 	envVars[envVarName1] = adminUser
 
 	envVarName2 := "AMQ_PASSWORD"
@@ -289,7 +287,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessCredentials(customResour
 	return reconciler.sourceEnvVarFromSecret2(customResource, namer, currentStatefulSet, &envVars, secretName, client, scheme)
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessDeploymentPlan(customResource *v1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessDeploymentPlan(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) {
 
 	deploymentPlan := &customResource.Spec.DeploymentPlan
 
@@ -308,84 +306,6 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessDeploymentPlan(customRes
 	clog.Info("Now sync Message migration", "for cr", customResource.Name)
 	syncMessageMigration(customResource, namer, client, scheme)
 
-}
-
-func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAddressSettings(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) bool {
-
-	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
-	log.Info("Process addresssettings")
-
-	if len(customResource.Spec.AddressSettings.AddressSetting) == 0 {
-		return false
-	}
-
-	//we need to compare old with new and update if they are different.
-	return compareAddressSettings(&prevCustomResource.Spec.AddressSettings, &customResource.Spec.AddressSettings)
-}
-
-func checkHasChanged(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
-	return checkLivenessProbeChanged(customResource, prevCustomResource) ||
-		checkReadinessProbeChanged(customResource, prevCustomResource) ||
-		checkTolerationsChanged(customResource, prevCustomResource) ||
-		checkLabelsChanged(customResource, prevCustomResource) ||
-		checkNodeSelectorsChanged(customResource, prevCustomResource) ||
-		checkAffinityChanged(customResource, prevCustomResource)
-}
-func checkLivenessProbeChanged(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
-	return !reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.LivenessProbe, customResource.Spec.DeploymentPlan.LivenessProbe)
-}
-
-func checkReadinessProbeChanged(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
-	return !reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.ReadinessProbe, customResource.Spec.DeploymentPlan.ReadinessProbe)
-}
-
-func checkTolerationsChanged(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
-	if prevCustomResource.Spec.DeploymentPlan.Tolerations == nil && customResource.Spec.DeploymentPlan.Tolerations == nil {
-		return false
-	}
-	return !reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.Tolerations, customResource.Spec.DeploymentPlan.Tolerations)
-}
-
-func checkLabelsChanged(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
-	if len(prevCustomResource.Spec.DeploymentPlan.Labels) != len(customResource.Spec.DeploymentPlan.Labels) {
-		return true
-	}
-	return !reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.Labels, customResource.Spec.DeploymentPlan.Labels)
-}
-
-func checkNodeSelectorsChanged(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
-	if len(prevCustomResource.Spec.DeploymentPlan.NodeSelector) != len(customResource.Spec.DeploymentPlan.NodeSelector) {
-		return true
-	}
-	return !reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.NodeSelector, customResource.Spec.DeploymentPlan.NodeSelector)
-}
-
-func checkAffinityChanged(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
-	return !reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.Affinity.PodAffinity, customResource.Spec.DeploymentPlan.Affinity.PodAffinity) ||
-		!reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.Affinity.PodAntiAffinity, customResource.Spec.DeploymentPlan.Affinity.PodAntiAffinity) ||
-		!reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.Affinity.NodeAffinity, customResource.Spec.DeploymentPlan.Affinity.NodeAffinity)
-}
-
-//returns true if currentAddressSettings need update
-func compareAddressSettings(currentAddressSettings *brokerv1beta1.AddressSettingsType, newAddressSettings *brokerv1beta1.AddressSettingsType) bool {
-
-	if (*currentAddressSettings).ApplyRule == nil {
-		if (*newAddressSettings).ApplyRule != nil {
-			return true
-		}
-	} else {
-		if (*newAddressSettings).ApplyRule != nil {
-			if *(*currentAddressSettings).ApplyRule != *(*newAddressSettings).ApplyRule {
-				return true
-			}
-		} else {
-			return true
-		}
-	}
-	if len((*currentAddressSettings).AddressSetting) != len((*newAddressSettings).AddressSetting) || !config.IsEqualV1Beta1((*currentAddressSettings).AddressSetting, (*newAddressSettings).AddressSetting) {
-		return true
-	}
-	return false
 }
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAcceptorsAndConnectors(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
@@ -451,7 +371,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessConsole(customResource *
 	return retVal
 }
 
-func syncMessageMigration(customResource *v1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme) {
+func syncMessageMigration(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme) {
 
 	var err error = nil
 	var retrieveError error = nil
@@ -788,7 +708,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureAcceptorsExposure(cust
 	return causedUpdate, err
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) ExposureDefinitionForCR(namespacedName types.NamespacedName, labels map[string]string, targetServiceName string, targetPortName string, passthroughTLS bool) client.Object {
+func (reconciler *ActiveMQArtemisReconcilerImpl) ExposureDefinitionForCR(namespacedName types.NamespacedName, labels map[string]string, targetServiceName string, targetPortName string, passthroughTLS bool) rtclient.Object {
 
 	if isOpenshift, err := environments.DetectOpenshift(); isOpenshift && err == nil {
 		clog.Info("creating route for " + targetPortName)
@@ -1397,7 +1317,7 @@ func getDeployedResources(instance *brokerv1beta1.ActiveMQArtemis, client rtclie
 	return resourceMap, nil
 }
 
-func MakeVolumes(customResource *v1beta1.ActiveMQArtemis, namer Namers) []corev1.Volume {
+func MakeVolumes(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers) []corev1.Volume {
 
 	volumeDefinitions := []corev1.Volume{}
 	if customResource.Spec.DeploymentPlan.PersistenceEnabled {
@@ -1443,7 +1363,7 @@ func MakeVolumes(customResource *v1beta1.ActiveMQArtemis, namer Namers) []corev1
 	return volumeDefinitions
 }
 
-func MakeVolumeMounts(customResource *v1beta1.ActiveMQArtemis, namer Namers) []corev1.VolumeMount {
+func MakeVolumeMounts(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers) []corev1.VolumeMount {
 
 	volumeMounts := []corev1.VolumeMount{}
 	if customResource.Spec.DeploymentPlan.PersistenceEnabled {
@@ -1505,7 +1425,7 @@ func MakeContainerPorts(cr *brokerv1beta1.ActiveMQArtemis) []corev1.ContainerPor
 	return containerPorts
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customResource *v1beta1.ActiveMQArtemis, namer Namers, current *corev1.PodTemplateSpec) *corev1.PodTemplateSpec {
+func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, current *corev1.PodTemplateSpec) *corev1.PodTemplateSpec {
 
 	reqLogger := ctrl.Log.WithName(customResource.Name)
 
@@ -1647,18 +1567,12 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 		var configYaml strings.Builder
 		var configSpecials map[string]string = make(map[string]string)
 
-		var hasAddressSettings bool = len(addressSettings) > 0
+		brokerYaml, specials := cr2jinja2.MakeBrokerCfgOverrides(customResource, nil, nil)
 
-		if hasAddressSettings {
-			reqLogger.Info("We have custom address-settings")
+		configYaml.WriteString(brokerYaml)
 
-			brokerYaml, specials := cr2jinja2.MakeBrokerCfgOverrides(customResource, nil, nil)
-
-			configYaml.WriteString(brokerYaml)
-
-			for k, v := range specials {
-				configSpecials[k] = v
-			}
+		for k, v := range specials {
+			configSpecials[k] = v
 		}
 
 		byteArray, err := json.Marshal(configSpecials)
@@ -1903,7 +1817,7 @@ func configureReadinessProbe(container *corev1.Container, probe *corev1.Probe) *
 	return readinessProbe
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) addConfigMapForBrokerProperties(customResource *v1beta1.ActiveMQArtemis) string {
+func (reconciler *ActiveMQArtemisReconcilerImpl) addConfigMapForBrokerProperties(customResource *brokerv1beta1.ActiveMQArtemis) string {
 
 	// fetch and do idempotent transform based on CR
 	configMapName := types.NamespacedName{
@@ -2163,7 +2077,7 @@ func createExtraConfigmapsAndSecrets(brokerContainer *corev1.Container, configMa
 	return extraVolumes, extraVolumeMounts
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) NewStatefulSetForCR(customResource *v1beta1.ActiveMQArtemis, namer Namers, currentStateFullSet *appsv1.StatefulSet) *appsv1.StatefulSet {
+func (reconciler *ActiveMQArtemisReconcilerImpl) NewStatefulSetForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, currentStateFullSet *appsv1.StatefulSet) *appsv1.StatefulSet {
 
 	namespacedName := types.NamespacedName{
 		Name:      customResource.Name,
@@ -2308,7 +2222,7 @@ func getSingleStatefulSetStatus(ss *appsv1.StatefulSet) olm.DeploymentStatus {
 	}
 }
 
-func MakeEnvVarArrayForCR(customResource *v1beta1.ActiveMQArtemis, namer Namers) []corev1.EnvVar {
+func MakeEnvVarArrayForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers) []corev1.EnvVar {
 
 	reqLogger := clog.WithName(customResource.Name)
 	reqLogger.V(1).Info("Adding Env variable ")
