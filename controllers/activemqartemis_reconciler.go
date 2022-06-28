@@ -59,20 +59,6 @@ import (
 )
 
 const (
-	statefulSetNotUpdated            = 0
-	statefulSetSizeUpdated           = 1 << 0
-	statefulSetClusterConfigUpdated  = 1 << 1
-	statefulSetImageUpdated          = 1 << 2
-	statefulSetPersistentUpdated     = 1 << 3
-	statefulSetAioUpdated            = 1 << 4
-	statefulSetCommonConfigUpdated   = 1 << 5
-	statefulSetRequireLoginUpdated   = 1 << 6
-	statefulSetEnvVarInSecretUpdated = 1 << 7
-	statefulSetAcceptorsUpdated      = 1 << 8
-	statefulSetConnectorsUpdated     = 1 << 9
-	statefulSetConsoleUpdated        = 1 << 10
-	statefulSetInitImageUpdated      = 1 << 11
-
 	livenessProbeGraceTime = 30
 	TCPLivenessPort        = 8161
 )
@@ -217,7 +203,7 @@ func isClustered(customResource *brokerv1beta1.ActiveMQArtemis) bool {
 	return true
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessCredentials(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
+func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessCredentials(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) {
 
 	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
 	log.V(1).Info("ProcessCredentials")
@@ -284,7 +270,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessCredentials(customResour
 		AutoGen: true,
 	}
 
-	return reconciler.sourceEnvVarFromSecret2(customResource, namer, currentStatefulSet, &envVars, secretName, client, scheme)
+	reconciler.sourceEnvVarFromSecret(customResource, namer, currentStatefulSet, &envVars, secretName, client, scheme)
 }
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessDeploymentPlan(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) {
@@ -308,9 +294,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessDeploymentPlan(customRes
 
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAcceptorsAndConnectors(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
-
-	var retVal uint32 = statefulSetNotUpdated
+func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAcceptorsAndConnectors(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) {
 
 	acceptorEntry := generateAcceptorsString(customResource, namer, client)
 	connectorEntry := generateConnectorsString(customResource, namer, client)
@@ -331,25 +315,21 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAcceptorsAndConnectors(c
 	}
 
 	secretName := namer.SecretsNettyNameBuilder.Name()
-	retVal = reconciler.sourceEnvVarFromSecret2(customResource, namer, currentStatefulSet, &envVars, secretName, client, scheme)
-
-	return retVal
+	reconciler.sourceEnvVarFromSecret(customResource, namer, currentStatefulSet, &envVars, secretName, client, scheme)
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessConsole(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
-
-	var retVal uint32 = statefulSetNotUpdated
+func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessConsole(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) {
 
 	reconciler.configureConsoleExposure(customResource, namer, client, scheme)
 	if !customResource.Spec.Console.SSLEnabled {
-		return retVal
+		return
 	}
 
 	isOpenshift, _ := environments.DetectOpenshift()
 	if !isOpenshift && customResource.Spec.Console.Expose {
 		//if it is kubernetes the tls termination at ingress point
 		//so the console shouldn't be secured.
-		return retVal
+		return
 	}
 
 	sslFlags := ""
@@ -366,9 +346,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessConsole(customResource *
 		Internal: true,
 	}
 
-	retVal = reconciler.sourceEnvVarFromSecret2(customResource, namer, currentStatefulSet, &envVars, secretName, client, scheme)
-
-	return retVal
+	reconciler.sourceEnvVarFromSecret(customResource, namer, currentStatefulSet, &envVars, secretName, client, scheme)
 }
 
 func syncMessageMigration(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme) {
@@ -450,11 +428,9 @@ func isLocalOnly() bool {
 	return false
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret2(fcustomResource *brokerv1beta1.ActiveMQArtemis, namer Namers, currentStatefulSet *appsv1.StatefulSet, envVars *map[string]ValueInfo, secretName string, client rtclient.Client, scheme *runtime.Scheme) uint32 {
+func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(fcustomResource *brokerv1beta1.ActiveMQArtemis, namer Namers, currentStatefulSet *appsv1.StatefulSet, envVars *map[string]ValueInfo, secretName string, client rtclient.Client, scheme *runtime.Scheme) {
 
 	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
-
-	var retVal uint32 = statefulSetNotUpdated
 
 	namespacedName := types.NamespacedName{
 		Name:      secretName,
@@ -546,7 +522,6 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret2(fcustom
 		sortEnvVars(container.Env)
 	}
 
-	return retVal
 }
 
 func generateAcceptorsString(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client) string {
