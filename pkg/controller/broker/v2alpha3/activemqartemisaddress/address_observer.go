@@ -205,7 +205,7 @@ func (c *AddressObserver) getAddressInstances(newPod *corev1.Pod) (*v2alpha3.Act
 
 	brokerClient, err2 := clientv2alpha3.NewForConfig(cfg)
 	if err2 != nil {
-		log.Error(err2, "Error building brokerclient: %s", err2.Error())
+		log.Error(err2, "Error building brokerclient")
 		return nil, err2
 	}
 

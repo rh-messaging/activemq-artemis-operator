@@ -65,12 +65,12 @@ func setupAddressObserver(mgr manager.Manager, c chan types.NamespacedName) {
 	log.Info("Setting up address observer")
 	cfg, err := clientcmd.BuildConfigFromFlags("", "")
 	if err != nil {
-		log.Error(err, "Error building kubeconfig: %s", err.Error())
+		log.Error(err, "Error building kubeconfig")
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		log.Error(err, "Error building kubernetes clientset: %s", err.Error())
+		log.Error(err, "Error building kubernetes clientset")
 	}
 
 	namespace, err := k8sutil.GetWatchNamespace()
@@ -83,7 +83,7 @@ func setupAddressObserver(mgr manager.Manager, c chan types.NamespacedName) {
 	observer := NewAddressObserver(kubeClient, namespace, mgr.GetClient(), mgr.GetScheme())
 
 	if err = observer.Run(channels.AddressListeningCh); err != nil {
-		log.Error(err, "Error running controller: %s", err.Error())
+		log.Error(err, "Error running controller")
 	}
 
 	log.Info("Finish setup address observer")
@@ -330,7 +330,7 @@ func deleteQueue(instance *AddressDeployment, request reconcile.Request, client 
 				//delete address
 				_, err = a.DeleteAddress(instance.AddressResource.Spec.AddressName)
 				if nil != err {
-					reqLogger.Error(err, "Deleting ActiveMQArtemisAddress error for address ", instance.AddressResource.Spec.AddressName)
+					reqLogger.Error(err, "Deleting ActiveMQArtemisAddress error for address", "name", instance.AddressResource.Spec.AddressName)
 					break
 				}
 				reqLogger.Info("Deleted ActiveMQArtemisAddress for address " + instance.AddressResource.Spec.AddressName)
