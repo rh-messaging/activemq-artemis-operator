@@ -48,6 +48,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
+var boolFalse = false
+var boolTrue = true
+
 var _ = Describe("security controller", func() {
 
 	BeforeEach(func() {
@@ -62,8 +65,6 @@ var _ = Describe("security controller", func() {
 	Context("Reconcile Test", func() {
 		It("testing security applied after broker", Label("security-apply-restart"), func() {
 			By("deploying the broker cr")
-			boolFalse := false
-			boolTrue := true
 			crd, createdCrd := DeployCustomBroker("", defaultNamespace, func(brokerCrdToDeploy *brokerv1beta1.ActiveMQArtemis) {
 
 				brokerCrdToDeploy.Spec.Acceptors = []brokerv1beta1.AcceptorType{
@@ -981,6 +982,7 @@ func DeploySecurity(secName string, targetNamespace string, customFunc func(cand
 	brokerDomainName := "activemq"
 	loginModuleName := "module1"
 	loginModuleFlag := "sufficient"
+	okDefaultPwd := "ok"
 
 	loginModuleList := make([]brokerv1beta1.PropertiesLoginModuleType, 1)
 	propLoginModule := brokerv1beta1.PropertiesLoginModuleType{
@@ -988,7 +990,7 @@ func DeploySecurity(secName string, targetNamespace string, customFunc func(cand
 		Users: []brokerv1beta1.UserType{
 			{
 				Name:     "user1",
-				Password: nil,
+				Password: &okDefaultPwd,
 				Roles: []string{
 					"admin", "amq",
 				},

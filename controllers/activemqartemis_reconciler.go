@@ -123,8 +123,6 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) Process(customResource *brokerv
 	// track updates in trigger env var that has a total checksum
 	trackSecretCheckSumInEnvVar(reconciler.requestedResources, currentStatefulSet.Spec.Template.Spec.Containers)
 
-	log.Info("Reconciler Append SS... complete", "SS:", currentStatefulSet)
-
 	reconciler.trackDesired(currentStatefulSet)
 
 	// this should apply any deltas/updates
@@ -1135,18 +1133,9 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) CurrentDeployedResources(custom
 	}
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme) uint8 {
+func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme) error {
 
 	reqLogger := clog.WithValues("ActiveMQArtemis Name", customResource.Name)
-
-	var err error = nil
-	var createError error = nil
-	var hasUpdates bool
-	var stepsComplete uint8 = 0
-
-	added := false
-	updated := false
-	removed := false
 
 	for index := range reconciler.requestedResources {
 		reconciler.requestedResources[index].SetNamespace(customResource.Namespace)
@@ -1165,11 +1154,9 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(customResource
 		ss1 := deployed.(*appsv1.StatefulSet)
 		ss2 := requested.(*appsv1.StatefulSet)
 		isEqual := equality.Semantic.DeepEqual(ss1.Spec, ss2.Spec)
-		reqLogger.V(1).Info("Compare SS.Spec", "depoyed", ss1.Spec, "requested", ss2.Spec)
 
 		if !isEqual {
 			reqLogger.V(1).Info("Unequal", "depoyed", ss1.Spec, "requested", ss2.Spec)
-
 		}
 		return isEqual
 	})
@@ -1180,68 +1167,49 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(customResource
 
 		for index := range delta.Added {
 			resourceToAdd := delta.Added[index]
-			added, stepsComplete = reconciler.createResource(customResource, client, scheme, resourceToAdd, resourceType, added, reqLogger, err, createError, stepsComplete)
+			reconciler.createResource(customResource, client, scheme, resourceToAdd, resourceType, reqLogger)
 		}
-
 		for index := range delta.Updated {
 			resourceToUpdate := delta.Updated[index]
-			updated, stepsComplete = reconciler.updateResource(customResource, client, scheme, resourceToUpdate, resourceType, updated, reqLogger, err, createError, stepsComplete)
+			reconciler.updateResource(customResource, client, scheme, resourceToUpdate, resourceType, reqLogger)
 		}
-
 		for index := range delta.Removed {
 			resourceToRemove := delta.Removed[index]
-			removed, stepsComplete = reconciler.deleteResource(customResource, client, scheme, resourceToRemove, resourceType, removed, reqLogger, err, createError, stepsComplete)
+			reconciler.deleteResource(customResource, client, scheme, resourceToRemove, resourceType, reqLogger)
 		}
-
-		hasUpdates = hasUpdates || added || updated || removed
 	}
 
 	//empty the collected objects
 	reconciler.requestedResources = nil
 
-	return stepsComplete
+	return nil
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) createResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, kind reflect.Type, added bool, reqLogger logr.Logger, err error, createError error, stepsComplete uint8) (bool, uint8) {
-
+func (reconciler *ActiveMQArtemisReconcilerImpl) createResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, kind reflect.Type, reqLogger logr.Logger) error {
 	reqLogger.V(1).Info("Adding delta resources, i.e. creating ", "name ", requested.GetName(), "of kind ", kind)
-	err = reconciler.createRequestedResource(customResource, client, scheme, requested, reqLogger, createError, kind)
-	if nil == err {
-		added = true
-	}
-	return added, stepsComplete
+	return reconciler.createRequestedResource(customResource, client, scheme, requested, reqLogger, kind)
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) updateResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, kind reflect.Type, updated bool, reqLogger logr.Logger, err error, updateError error, stepsComplete uint8) (bool, uint8) {
-
+func (reconciler *ActiveMQArtemisReconcilerImpl) updateResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, kind reflect.Type, reqLogger logr.Logger) error {
 	reqLogger.V(1).Info("Updating delta resources, i.e. updating ", "name ", requested.GetName(), "of kind ", kind)
-	err = reconciler.updateRequestedResource(customResource, client, scheme, requested, reqLogger, updateError, kind)
-	if nil == err {
-		updated = true
-	}
-	return updated, stepsComplete
+	return reconciler.updateRequestedResource(customResource, client, scheme, requested, reqLogger, kind)
+
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) deleteResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, kind reflect.Type, deleted bool, reqLogger logr.Logger, err error, deleteError error, stepsComplete uint8) (bool, uint8) {
-
+func (reconciler *ActiveMQArtemisReconcilerImpl) deleteResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, kind reflect.Type, reqLogger logr.Logger) error {
 	reqLogger.V(1).Info("Deleting delta resources, i.e. removing ", "name ", requested.GetName(), "of kind ", kind)
-	err = reconciler.deleteRequestedResource(customResource, client, scheme, requested, reqLogger, deleteError, kind)
-	if nil == err {
-		deleted = true
-	}
-	return deleted, stepsComplete
+	return reconciler.deleteRequestedResource(customResource, client, scheme, requested, reqLogger, kind)
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) createRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, reqLogger logr.Logger, createError error, kind reflect.Type) error {
+func (reconciler *ActiveMQArtemisReconcilerImpl) createRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, reqLogger logr.Logger, kind reflect.Type) error {
+	reqLogger.Info("Createing ", "kind ", kind, "named ", requested.GetName())
 
-	if createError = resources.Create(customResource, client, scheme, requested); createError == nil {
-		reqLogger.Info("Created ", "kind ", kind, "named ", requested.GetName())
-	}
-	return createError
+	return resources.Create(customResource, client, scheme, requested)
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) updateRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, reqLogger logr.Logger, updateError error, kind reflect.Type) error {
+func (reconciler *ActiveMQArtemisReconcilerImpl) updateRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, reqLogger logr.Logger, kind reflect.Type) error {
 
+	var updateError error
 	if updateError = resources.Update(client, requested); updateError == nil {
 		reqLogger.Info("updated", "kind ", kind, "named ", requested.GetName())
 	} else {
@@ -1250,9 +1218,10 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) updateRequestedResource(customR
 	return updateError
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) deleteRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, reqLogger logr.Logger, deleteError error, kind reflect.Type) error {
+func (reconciler *ActiveMQArtemisReconcilerImpl) deleteRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, reqLogger logr.Logger, kind reflect.Type) error {
 
-	if deleteError = resources.Delete(client, requested); deleteError == nil {
+	var deleteError error
+	if deleteError := resources.Delete(client, requested); deleteError == nil {
 		reqLogger.Info("deleted", "kind", kind, " named ", requested.GetName())
 	} else {
 		reqLogger.Error(deleteError, "delete Failed", "kind", kind, " named ", requested.GetName())

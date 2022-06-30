@@ -3417,6 +3417,153 @@ var _ = Describe("artemis controller", func() {
 			return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
 		}, timeout, interval).Should(BeTrue())
 	})
+
+	It("deploy security cr while broker is not yet ready", func() {
+
+		By("Creating broker with custom probe that relies on security")
+		ctx := context.Background()
+		crd := generateArtemisSpec(defaultNamespace)
+
+		crd.Spec.AdminUser = "admin"
+		crd.Spec.AdminPassword = "secret"
+		crd.Spec.DeploymentPlan.LivenessProbe = &corev1.Probe{
+			Handler: corev1.Handler{
+				Exec: &corev1.ExecAction{
+					Command: []string{
+						"/home/jboss/amq-broker/bin/artemis",
+						"check",
+						"queue",
+						"--name",
+						"readinessqueue",
+						"--produce",
+						"1",
+						"--consume",
+						"1",
+						"--silent",
+						"--user",
+						"user1",
+						"--password",
+						"ok",
+					},
+				},
+			},
+			InitialDelaySeconds: 5,
+			TimeoutSeconds:      5,
+			PeriodSeconds:       5,
+		}
+		crd.Spec.DeploymentPlan.Size = 1
+		crd.Spec.DeploymentPlan.Clustered = &boolFalse
+		crd.Spec.DeploymentPlan.RequireLogin = boolTrue
+		crd.Spec.DeploymentPlan.JolokiaAgentEnabled = false
+		crd.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+			{
+				Name:      "internal",
+				Protocols: "core,openwire",
+				Port:      61616,
+			},
+		}
+
+		By("Deploying the CRD " + crd.ObjectMeta.Name)
+		Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+		createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+		createdSs := &appsv1.StatefulSet{}
+
+		By("Making sure that the CRD gets deployed " + crd.ObjectMeta.Name)
+		Eventually(func() bool {
+			return getPersistedVersionedCrd(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
+		}, timeout, interval).Should(BeTrue())
+		Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
+
+		ssKey := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: defaultNamespace}
+		By("Checking that Stateful Set is Created " + ssKey.Name)
+
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, ssKey, createdSs)).Should(Succeed())
+			By("Checking ss resource version" + createdSs.ResourceVersion)
+			g.Expect(createdSs.ResourceVersion).ShouldNot(BeNil())
+		}, timeout, interval).Should(Succeed())
+
+		brokerKey := types.NamespacedName{Name: createdCrd.Name, Namespace: createdCrd.Namespace}
+		if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+			By("verifying not yet ready status - probe failed")
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+				By("verify starting status" + fmt.Sprintf("%v", createdCrd.Status.PodStatus))
+				g.Expect(len(createdCrd.Status.PodStatus.Starting)).Should(BeEquivalentTo(1))
+
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+		}
+
+		By("Deploying security")
+		secCrd, createdSecCrd := DeploySecurity("", defaultNamespace,
+			func(secCrdToDeploy *brokerv1beta1.ActiveMQArtemisSecurity) {
+			})
+
+		By("Checking that Stateful Set is updated with sec commands, " + ssKey.Name)
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, ssKey, createdSs)).Should(Succeed())
+
+			initContainer := createdSs.Spec.Template.Spec.InitContainers[0]
+			securityFound := false
+			By("Checking init container args on ss revision: " + createdSs.ResourceVersion)
+			for _, argStr := range initContainer.Args {
+				if strings.Contains(argStr, "/opt/amq-broker/script/cfg/config-security.sh") {
+					securityFound = true
+					break
+				}
+			}
+			g.Expect(securityFound).Should(BeTrue())
+		}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+		if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+			// looks like we must force a rollback of the old ss rollout as it won't complete
+			// due to the failure of the readiness probe
+			// https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#forced-rollback
+
+			Eventually(func(g Gomega) {
+				By("deleting existing pod that is stuck on rollout..")
+				pod := &corev1.Pod{}
+				key := types.NamespacedName{Name: namer.CrToSS(crd.Name) + "-0", Namespace: namespace}
+				zeroGracePeriodSeconds := int64(0) // immediate delete
+				g.Expect(k8sClient.Get(ctx, key, pod)).Should(Succeed())
+				g.Expect(pod.Status.Phase).Should(Equal(corev1.PodRunning))
+				foundReadyFalse := false
+				for _, pc := range pod.Status.Conditions {
+					if pc.Type == corev1.ContainersReady && pc.Status == corev1.ConditionFalse {
+						foundReadyFalse = true
+					}
+				}
+				g.Expect(foundReadyFalse).Should(BeTrue())
+				By("Deleting pod: " + key.Name)
+				g.Expect(k8sClient.Delete(ctx, pod, &client.DeleteOptions{GracePeriodSeconds: &zeroGracePeriodSeconds})).Should(Succeed())
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("verifying ready with new SS rollout")
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+				By("verify ready status" + fmt.Sprintf("%v", createdCrd.Status.PodStatus))
+				g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+		}
+
+		By("check it has gone")
+		Expect(k8sClient.Delete(ctx, createdCrd)).To(Succeed())
+		Eventually(func() bool {
+			return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
+		}, timeout, interval).Should(BeTrue())
+
+		Expect(k8sClient.Delete(ctx, createdSecCrd)).To(Succeed())
+		Eventually(func() bool {
+			return checkCrdDeleted(secCrd.Name, defaultNamespace, createdSecCrd)
+		}, timeout, interval).Should(BeTrue())
+	})
+
 })
 
 func generateArtemisSpec(namespace string) brokerv1beta1.ActiveMQArtemis {

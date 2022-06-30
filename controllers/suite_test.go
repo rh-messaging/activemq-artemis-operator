@@ -357,6 +357,9 @@ func setUpK8sClient() {
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+	if verobse {
+		GinkgoWriter.TeeTo(os.Stderr)
+	}
 	ctx, cancel = context.WithCancel(context.TODO())
 	// force isLocalOnly=false check from artemis reconciler such that scale down controller will create
 	// role binding to service account for the drainer pod
