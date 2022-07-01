@@ -58,12 +58,12 @@ func (r *ActiveMQArtemisReconciler) UpdatePodForSecurity(securityHandlerNamespac
 	opts := &client.ListOptions{}
 	if err = r.Client.List(context.TODO(), existingCrs, opts); err == nil {
 		var candidate types.NamespacedName
-		for _, artemis := range existingCrs.Items {
+		for index, artemis := range existingCrs.Items {
 			candidate.Name = artemis.Name
 			candidate.Namespace = artemis.Namespace
 			if handler.IsApplicableFor(candidate) {
 				clog.Info("force reconcile for security", "handler", securityHandlerNamespacedName, "CR", candidate)
-				r.events <- event.GenericEvent{Object: &artemis}
+				r.events <- event.GenericEvent{Object: &existingCrs.Items[index]}
 			}
 		}
 	}
@@ -75,7 +75,7 @@ func (r *ActiveMQArtemisReconciler) RemoveBrokerConfigHandler(namespacedName typ
 	oldHandler, ok := namespaceToConfigHandler[namespacedName]
 	if ok {
 		delete(namespaceToConfigHandler, namespacedName)
-		clog.Info("Handler removed, updating fsm if exists")
+		clog.Info("Handler removed", "name", namespacedName)
 		r.UpdatePodForSecurity(namespacedName, oldHandler)
 	}
 }
@@ -126,8 +126,7 @@ type ActiveMQArtemisReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.10.0/pkg/reconcile
 func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	reqLogger := ctrl.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling ActiveMQArtemis")
+	reqLogger := ctrl.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name, "Reconciling", "ActiveMQArtemis")
 
 	var err error = nil
 
