@@ -3357,6 +3357,66 @@ var _ = Describe("artemis controller", func() {
 
 		}
 	})
+
+	It("managementRBACEnabled is false", func() {
+
+		ctx := context.Background()
+		crd := generateArtemisSpec(defaultNamespace)
+		crd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
+			InitialDelaySeconds: 1,
+			PeriodSeconds:       5,
+		}
+		crd.Spec.DeploymentPlan.Size = 1
+		crd.Spec.DeploymentPlan.ManagementRBACEnabled = false
+
+		By("Deploying the CRD " + crd.ObjectMeta.Name)
+		Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+		createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+		createdSs := &appsv1.StatefulSet{}
+
+		By("Making sure that the CRD gets deployed " + crd.ObjectMeta.Name)
+		Eventually(func() bool {
+			return getPersistedVersionedCrd(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
+		}, timeout, interval).Should(BeTrue())
+		Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
+
+		ssKey := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: defaultNamespace}
+		By("Checking that Stateful Set is Created " + ssKey.Name)
+
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, ssKey, createdSs)).Should(Succeed())
+			By("Checking ss resource version" + createdSs.ResourceVersion)
+			g.Expect(createdSs.ResourceVersion).ShouldNot(BeNil())
+		}, timeout, interval).Should(Succeed())
+
+		By("By checking the container stateful set for AMQ_ENABLE_MANAGEMENT_RBAC")
+		Eventually(func() (bool, error) {
+			err := k8sClient.Get(ctx, ssKey, createdSs)
+			if err != nil {
+				return false, err
+			}
+
+			found := false
+			for _, container := range createdSs.Spec.Template.Spec.InitContainers {
+				for _, env := range container.Env {
+					if env.Name == "AMQ_ENABLE_MANAGEMENT_RBAC" {
+						if strings.Contains(env.Value, "false") {
+							found = true
+						}
+					}
+				}
+			}
+
+			return found, err
+		}, duration, interval).Should(Equal(true))
+
+		By("By checking it has gone")
+		Expect(k8sClient.Delete(ctx, createdCrd)).To(Succeed())
+		Eventually(func() bool {
+			return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
+		}, timeout, interval).Should(BeTrue())
+	})
 })
 
 func generateArtemisSpec(namespace string) brokerv1beta1.ActiveMQArtemis {
