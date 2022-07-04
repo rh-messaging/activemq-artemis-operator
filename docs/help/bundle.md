@@ -45,7 +45,7 @@ The result image tag takes the form like
 ```$xslt
 ${IMAGE_TAG_BASE}-bundle:v0.0.1
 ```
-Note: the version v0.0.1 is defined by VERSION variable in the [Makefile](../Makefile)
+Note: the version v0.0.1 is defined by VERSION variable in the Makefile
 
 To push the built bundle image
 

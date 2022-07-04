@@ -32,7 +32,7 @@ You can install a [Minikube](https://minikube.sigs.k8s.io/docs/) or a [CodeReady
 
 To launch the operator you will need to clone the [activemq-artemis-operator](https://github.com/artemiscloud/activemq-artemis-operator) and checkout the main branch.
 
-Follow the [building](building.md) instructions, tag, and push it into your project
+Follow the [building]({{< ref "../help/building.md" >}}) instructions, tag, and push it into your project
 namespace.
 
 ## Deploying the operator
@@ -64,7 +64,7 @@ activemq-artemis-controller-manager-5ff459cd95-kn22m   1/1     Running   0      
 
 ## Deploying the broker
 
-Now that the operator is running and listening for changes related to our crd we can deploy [one of our basic broker custom resource examples](../examples/artemis-basic-deployment.yaml)
+Now that the operator is running and listening for changes related to our crd we can deploy [one of our basic broker custom resource examples](https://github.com/artemiscloud/activemq-artemis-operator/blob/main/examples/artemis-basic-deployment.yaml)
 which looks like
 
 ```$xslt
@@ -132,7 +132,7 @@ You can scale down the deployment in similar manner by reducing the size and app
 ### Clustering
 
 By default if broker pods are scaled to more than one then the broker pods form a broker
-[cluster](https://activemq.apache.org/components/artemis/documentation/2.19.0/clusters.html), meaning connect to each other and redistribute messages using default 'ON_DEMAND' policy. 
+[cluster](https://activemq.apache.org/components/artemis/documentation/latest/clusters.html), meaning connect to each other and redistribute messages using default 'ON_DEMAND' policy. 
 
 ## Undeploying the broker
 

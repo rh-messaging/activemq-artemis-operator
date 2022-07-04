@@ -86,4 +86,4 @@ or use the make target **docker-push**
 make OPERATOR_IMAGE_REPO=<your repo> OPERATOR_VERSION=<tag> docker-push
 ```
 
-Now follow the [quickstart](quickstart.md) to deploy the operator.
+Now follow the [quickstart]({{< ref "../getting-started/quick-start.md" >}}) to deploy the operator.
