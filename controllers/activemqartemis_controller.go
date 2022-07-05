@@ -33,7 +33,6 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
-	nsoptions "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/namespaces"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 )
@@ -96,9 +95,8 @@ func (r *ActiveMQArtemisReconciler) AddBrokerConfigHandler(namespacedName types.
 // ActiveMQArtemisReconciler reconciles a ActiveMQArtemis object
 type ActiveMQArtemisReconciler struct {
 	client.Client
-	Scheme       *runtime.Scheme
-	WatchOptions nsoptions.WatchOptions
-	events       chan event.GenericEvent
+	Scheme *runtime.Scheme
+	events chan event.GenericEvent
 }
 
 //run 'make manifests' after changing the following rbac markers
@@ -130,31 +128,24 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 
 	var err error = nil
 
-	if r.WatchOptions.Match(request.Namespace) {
+	customResource := &brokerv1beta1.ActiveMQArtemis{}
 
-		// we are responsible
+	// Fetch the ActiveMQArtemis instance
+	// When first creating this will have err == nil
+	// When deleting after creation this will have err NotFound
+	// When deleting before creation reconcile won't be called
+	if err = r.Get(context.TODO(), request.NamespacedName, customResource); err == nil {
 
-		customResource := &brokerv1beta1.ActiveMQArtemis{}
+		namer := MakeNamers(customResource)
+		reconciler := ActiveMQArtemisReconcilerImpl{}
 
-		// Fetch the ActiveMQArtemis instance
-		// When first creating this will have err == nil
-		// When deleting after creation this will have err NotFound
-		// When deleting before creation reconcile won't be called
-		if err = r.Get(context.TODO(), request.NamespacedName, customResource); err == nil {
+		reconciler.Process(customResource, *namer, r.Client, r.Scheme)
 
-			namer := MakeNamers(customResource)
-			reconciler := ActiveMQArtemisReconcilerImpl{}
+		UpdatePodStatus(customResource, r.Client, request.NamespacedName)
 
-			reconciler.Process(customResource, *namer, r.Client, r.Scheme)
-
-			UpdatePodStatus(customResource, r.Client, request.NamespacedName)
-
-		} else if errors.IsNotFound(err) {
-			reqLogger.Info("ActiveMQArtemis Controller Reconcile encountered a IsNotFound, for request NamespacedName " + request.NamespacedName.String())
-			err = nil
-		}
-	} else {
-		reqLogger.Info("Request not in watch list, ignore", "request", request)
+	} else if errors.IsNotFound(err) {
+		reqLogger.Info("ActiveMQArtemis Controller Reconcile encountered a IsNotFound, for request NamespacedName " + request.NamespacedName.String())
+		err = nil
 	}
 
 	if err == nil {

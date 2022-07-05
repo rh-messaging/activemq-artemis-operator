@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/json"
 	"os"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -101,4 +102,22 @@ func GetManager() manager.Manager {
 func NewTrue() *bool {
 	b := true
 	return &b
+}
+
+// Given the operator's namespace and a string representation of
+// it's WATCH_NAMESPACE value, this method returns whether
+// the operator is watching its own(single) namespace, or watching multiple
+// namespaces, or all namespace
+// For watching single: it returns (true, nil)
+// For watching multiple: it returns (false, [n]string) where n > 0
+// For watching all: it returns (false, nil)
+func ResolveWatchNamespaceForManager(oprNamespace string, watchNamespace string) (bool, []string) {
+
+	if oprNamespace == watchNamespace {
+		return true, nil
+	}
+	if watchNamespace == "*" || watchNamespace == "" {
+		return false, nil
+	}
+	return false, strings.Split(watchNamespace, ",")
 }

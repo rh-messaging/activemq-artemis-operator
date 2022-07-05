@@ -45,8 +45,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	nsoptions "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/namespaces"
-
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/sdkk8sutil"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	routev1 "github.com/openshift/api/route/v1"
@@ -122,38 +120,25 @@ func main() {
 	}
 
 	printVersion()
-	oprNameSpace, err := sdkk8sutil.GetOperatorNamespace()
+	oprNamespace, err := sdkk8sutil.GetOperatorNamespace()
 	if err != nil {
 		log.Error(err, "failed to get operator namespace")
 		os.Exit(1)
 	}
-	log.Info("Got operator namespace", "operator ns", oprNameSpace)
+	log.Info("Got operator namespace", "operator ns", oprNamespace)
 
-	watchNameSpace, _ := sdkk8sutil.GetWatchNamespace()
-	watchAllNamespaces := false
-	if watchNameSpace == "*" || watchNameSpace == "" {
-		log.Info("Setting up to watch all namespaces")
-		watchAllNamespaces = true
-		watchNameSpace = ""
-	}
-	//we may get rid of nsoptions as new runtime
-	//lib offers the capability
-	nsoptions := nsoptions.WatchOptions{}
-	nsoptions.SetWatchAll(watchAllNamespaces)
+	watchNamespace, _ := sdkk8sutil.GetWatchNamespace()
 
 	// Expose the operator's namespace and watchNamespace
-	if err := os.Setenv("OPERATOR_NAMESPACE", oprNameSpace); err != nil {
+	if err := os.Setenv("OPERATOR_NAMESPACE", oprNamespace); err != nil {
 		log.Error(err, "failed to set operator's namespace to env")
 	}
-	if err := os.Setenv("OPERATOR_WATCH_NAMESPACE", watchNameSpace); err != nil {
+	if err := os.Setenv("OPERATOR_WATCH_NAMESPACE", watchNamespace); err != nil {
 		log.Error(err, "failed to set operator's watch namespace to env")
 	}
 
-	ctx := context.TODO()
-
 	mgrOptions := ctrl.Options{
 		Scheme:             scheme,
-		Namespace:          watchNameSpace,
 		MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
 		//webhook port
 		Port:                   9443,
@@ -162,18 +147,18 @@ func main() {
 		LeaderElectionID:       "d864aab0.amq.io",
 	}
 
-	if !watchAllNamespaces && strings.Contains(watchNameSpace, ",") {
-		watchList := strings.Split(watchNameSpace, ",")
-		nsoptions.SetWatchList(watchList)
-		log.Info("Watching multiple namespaces", "value", watchList)
-		//watch all namespace but filter out those not in the list
-		watchNameSpace = ""
-
-		mgrOptions.Namespace = ""
-		mgrOptions.NewCache = cache.MultiNamespacedCacheBuilder(watchList)
+	isLocal, watchList := common.ResolveWatchNamespaceForManager(oprNamespace, watchNamespace)
+	if isLocal {
+		log.Info("setting up operator to watch local namespace")
+		mgrOptions.Namespace = oprNamespace
 	} else {
-		log.Info("Watching namespace", "namespace", watchNameSpace)
-		nsoptions.SetWatchNamespace(watchNameSpace)
+		mgrOptions.Namespace = ""
+		if watchList != nil {
+			log.Info("setting up operator to watch multiple namespaces", "namespace(s)", watchList)
+			mgrOptions.NewCache = cache.MultiNamespacedCacheBuilder(watchList)
+		} else {
+			log.Info("setting up operator to watch all namespaces")
+		}
 	}
 
 	mgr, err := ctrl.NewManager(cfg, mgrOptions)
@@ -204,13 +189,12 @@ func main() {
 		log.Error(err, "can't create client from config")
 		os.Exit(1)
 	} else {
-		setupAccountName(clnt, ctx, oprNameSpace, name)
+		setupAccountName(clnt, context.TODO(), oprNamespace, name)
 	}
 
 	brokerReconciler := &controllers.ActiveMQArtemisReconciler{
-		Client:       mgr.GetClient(),
-		Scheme:       mgr.GetScheme(),
-		WatchOptions: nsoptions,
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
 	}
 	if err = brokerReconciler.SetupWithManager(mgr); err != nil {
 		log.Error(err, "unable to create controller", "controller", "ActiveMQArtemis")
@@ -218,9 +202,8 @@ func main() {
 	}
 
 	if err = (&controllers.ActiveMQArtemisAddressReconciler{
-		Client:       mgr.GetClient(),
-		Scheme:       mgr.GetScheme(),
-		WatchOptions: nsoptions,
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		log.Error(err, "unable to create controller", "controller", "ActiveMQArtemisAddress")
 		os.Exit(1)

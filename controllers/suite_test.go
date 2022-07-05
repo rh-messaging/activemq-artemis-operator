@@ -31,12 +31,12 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	brokerv1alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v1alpha1"
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
@@ -47,7 +47,6 @@ import (
 
 	//+kubebuilder:scaffold:imports
 
-	nsoptions "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/namespaces"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -69,30 +68,34 @@ const (
 	existingClusterTimeout  = time.Second * 180
 	existingClusterInterval = time.Second * 2
 	verobse                 = false
+	namespace1              = "namespace1"
+	namespace2              = "namespace2"
+	namespace3              = "namespace3"
 )
 
-var currentDir string
-var k8sClient client.Client
-var restConfig *rest.Config
-var testEnv *envtest.Environment
-var ctx context.Context
-var cancel context.CancelFunc
-var stateManager *common.StateManager
-var autodetect *common.AutoDetector
-var k8Manager manager.Manager
+var (
+	currentDir   string
+	k8sClient    client.Client
+	restConfig   *rest.Config
+	testEnv      *envtest.Environment
+	ctx          context.Context
+	cancel       context.CancelFunc
+	stateManager *common.StateManager
 
-var brokerReconciler *ActiveMQArtemisReconciler
-var securityReconciler *ActiveMQArtemisSecurityReconciler
+	brokerReconciler   *ActiveMQArtemisReconciler
+	securityReconciler *ActiveMQArtemisSecurityReconciler
 
-var oprRes = []string{
-	"../deploy/service_account.yaml",
-	"../deploy/role.yaml",
-	"../deploy/role_binding.yaml",
-	"../deploy/election_role.yaml",
-	"../deploy/election_role_binding.yaml",
-	"../deploy/operator_config.yaml",
-	"../deploy/operator.yaml",
-}
+	oprRes = []string{
+		"../deploy/service_account.yaml",
+		"../deploy/role.yaml",
+		"../deploy/role_binding.yaml",
+		"../deploy/election_role.yaml",
+		"../deploy/election_role_binding.yaml",
+		"../deploy/operator_config.yaml",
+		"../deploy/operator.yaml",
+	}
+	managerChannel = make(chan struct{}, 1)
+)
 
 func TestAPIs(t *testing.T) {
 
@@ -118,10 +121,37 @@ func setUpEnvTest() {
 
 	setUpK8sClient()
 
-	// start our controler
-	k8Manager, err = ctrl.NewManager(restConfig, ctrl.Options{
+	createControllerManager(false, defaultNamespace)
+}
+
+func createControllerManager(disableMetrics bool, watchNamespace string) {
+	ctx, cancel = context.WithCancel(context.TODO())
+
+	mgrOptions := ctrl.Options{
 		Scheme: scheme.Scheme,
-	})
+	}
+
+	isLocal, watchList := common.ResolveWatchNamespaceForManager(defaultNamespace, watchNamespace)
+	if isLocal {
+		logf.Log.Info("setting up operator to watch local namespace")
+		mgrOptions.Namespace = defaultNamespace
+	} else {
+		mgrOptions.Namespace = ""
+		if watchList != nil {
+			logf.Log.Info("setting up operator to watch multiple namespaces", "namespace(s)", watchList)
+			mgrOptions.NewCache = cache.MultiNamespacedCacheBuilder(watchList)
+		} else {
+			logf.Log.Info("setting up operator to watch all namespaces")
+		}
+	}
+
+	if disableMetrics {
+		// if we can shutdown metrics port, we don't need disable it.
+		mgrOptions.MetricsBindAddress = "0"
+	}
+
+	// start our controler
+	k8Manager, err := ctrl.NewManager(restConfig, mgrOptions)
 	Expect(err).ToNot(HaveOccurred())
 
 	stateManager = common.GetStateManager()
@@ -134,13 +164,9 @@ func setUpEnvTest() {
 		autodetect.DetectOpenshift()
 	}
 
-	nsoptions := nsoptions.WatchOptions{}
-	nsoptions.SetWatchList([]string{"default"})
-
 	brokerReconciler = &ActiveMQArtemisReconciler{
-		Client:       k8Manager.GetClient(),
-		Scheme:       k8Manager.GetScheme(),
-		WatchOptions: nsoptions,
+		Client: k8Manager.GetClient(),
+		Scheme: k8Manager.GetScheme(),
 	}
 
 	if err = brokerReconciler.SetupWithManager(k8Manager); err != nil {
@@ -157,19 +183,17 @@ func setUpEnvTest() {
 	Expect(err).ToNot(HaveOccurred(), "failed to create security controller")
 
 	addressReconciler := &ActiveMQArtemisAddressReconciler{
-		Client:       k8Manager.GetClient(),
-		Scheme:       k8Manager.GetScheme(),
-		WatchOptions: nsoptions,
+		Client: k8Manager.GetClient(),
+		Scheme: k8Manager.GetScheme(),
 	}
 
 	err = addressReconciler.SetupWithManager(k8Manager)
 	Expect(err).ToNot(HaveOccurred(), "failed to create address reconciler")
 
 	scaleDownRconciler := &ActiveMQArtemisScaledownReconciler{
-		Client:       k8Manager.GetClient(),
-		Scheme:       k8Manager.GetScheme(),
-		Config:       k8Manager.GetConfig(),
-		WatchOptions: nsoptions,
+		Client: k8Manager.GetClient(),
+		Scheme: k8Manager.GetScheme(),
+		Config: k8Manager.GetConfig(),
 	}
 
 	err = scaleDownRconciler.SetupWithManager(k8Manager)
@@ -178,8 +202,14 @@ func setUpEnvTest() {
 	go func() {
 		defer GinkgoRecover()
 		err = k8Manager.Start(ctx)
+		managerChannel <- struct{}{}
 		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
 	}()
+}
+
+func shutdownControllerManager() {
+	cancel()
+	<-managerChannel
 }
 
 func setUpRealOperator() {
@@ -360,7 +390,6 @@ var _ = BeforeSuite(func() {
 	if verobse {
 		GinkgoWriter.TeeTo(os.Stderr)
 	}
-	ctx, cancel = context.WithCancel(context.TODO())
 	// force isLocalOnly=false check from artemis reconciler such that scale down controller will create
 	// role binding to service account for the drainer pod
 	os.Setenv("OPERATOR_WATCH_NAMESPACE", "SomeValueToCauesEqualitytoFailInIsLocalSoDrainControllerSortsCreds")
@@ -388,7 +417,8 @@ var _ = AfterSuite(func() {
 		Expect(err).NotTo(HaveOccurred())
 	}
 
-	cancel()
+	shutdownControllerManager()
+
 	if stateManager != nil {
 		stateManager.Clear()
 	}

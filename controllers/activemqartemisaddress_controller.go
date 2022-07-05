@@ -25,7 +25,6 @@ import (
 	mgmt "github.com/artemiscloud/activemq-artemis-management"
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
-	nsoptions "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/namespaces"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/channels"
@@ -60,7 +59,6 @@ var namespacedNameToAddressName = make(map[types.NamespacedName]AddressDeploymen
 type ActiveMQArtemisAddressReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
-	nsoptions.WatchOptions
 }
 
 //+kubebuilder:rbac:groups=broker.amq.io,resources=activemqartemisaddresses,verbs=get;list;watch;create;update;patch;delete
@@ -79,14 +77,6 @@ type ActiveMQArtemisAddressReconciler struct {
 func (r *ActiveMQArtemisAddressReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	reqLogger := log.FromContext(ctx).WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name, "Reconciling", "ActiveMQArtemisAddress")
 
-	//remove nsoptions package once migration to new sdk ready
-	//as we use the built-in api in main.go to watch
-	//multiple namespaces
-	if !r.WatchOptions.Match(request.Namespace) {
-		reqLogger.Info("Request not in watch list, ignore", "request", request)
-		return ctrl.Result{}, nil
-	}
-
 	addressInstance, lookupSucceeded := namespacedNameToAddressName[request.NamespacedName]
 	// Fetch the ActiveMQArtemisAddress instance
 	instance := &brokerv1beta1.ActiveMQArtemisAddress{}
@@ -99,7 +89,7 @@ func (r *ActiveMQArtemisAddressReconciler) Reconcile(ctx context.Context, reques
 					err = deleteQueue(&addressInstance, request, r.Client, r.Scheme)
 					return ctrl.Result{}, err
 				} else {
-					glog.Info("Not to delete address", "address", addressInstance)
+					reqLogger.Info("Not to delete address", "address", addressInstance)
 				}
 				delete(namespacedNameToAddressName, request.NamespacedName)
 				lsrcrs.DeleteLastSuccessfulReconciledCR(request.NamespacedName, "address", getAddressLabels(&addressInstance.AddressResource), r.Client)
@@ -109,7 +99,7 @@ func (r *ActiveMQArtemisAddressReconciler) Reconcile(ctx context.Context, reques
 			// Return and don't requeue
 			return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
 		}
-		glog.Error(err, "Requeue the request for error")
+		reqLogger.Error(err, "Requeue the request for error")
 		return ctrl.Result{}, err
 	}
 
@@ -118,7 +108,7 @@ func (r *ActiveMQArtemisAddressReconciler) Reconcile(ctx context.Context, reques
 		if existingCr := lsrcrs.RetrieveLastSuccessfulReconciledCR(request.NamespacedName, "address", r.Client, getAddressLabels(instance)); existingCr != nil {
 			//compare resource version
 			if existingCr.Checksum == instance.ResourceVersion {
-				glog.V(1).Info("The incoming address CR is identical to stored CR, don't do reconcile")
+				reqLogger.V(1).Info("The incoming address CR is identical to stored CR, don't do reconcile")
 				return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
 			}
 		}
@@ -133,11 +123,11 @@ func (r *ActiveMQArtemisAddressReconciler) Reconcile(ctx context.Context, reques
 		namespacedNameToAddressName[request.NamespacedName] = addressDeployment
 		crstr, merr := common.ToJson(instance)
 		if merr != nil {
-			glog.Error(merr, "failed to marshal cr")
+			reqLogger.Error(merr, "failed to marshal cr")
 		}
 		lsrcrs.StoreLastSuccessfulReconciledCR(instance, instance.Name, instance.Namespace, "address", crstr, "", instance.ResourceVersion, getAddressLabels(instance), r.Client, r.Scheme)
 	} else {
-		glog.Error(err, "failed to create address resource, request will be requeued")
+		reqLogger.Error(err, "failed to create address resource, request will be requeued")
 	}
 	if err != nil {
 		return ctrl.Result{}, err

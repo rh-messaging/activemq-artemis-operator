@@ -23,7 +23,6 @@ import (
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/draincontroller"
-	nsoptions "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/namespaces"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -52,7 +51,6 @@ type ActiveMQArtemisScaledownReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 	Config *rest.Config
-	nsoptions.WatchOptions
 }
 
 //+kubebuilder:rbac:groups=broker.amq.io,resources=activemqartemisscaledowns,verbs=get;list;watch;create;update;patch;delete
@@ -70,11 +68,6 @@ type ActiveMQArtemisScaledownReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.10.0/pkg/reconcile
 func (r *ActiveMQArtemisScaledownReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	reqLogger := ctrl.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name, "Reconciling", "ActiveMQArtemisScaledown")
-
-	if !r.WatchOptions.Match(request.Namespace) {
-		reqLogger.Info("Request not in watch list, ignore", "request", request)
-		return ctrl.Result{}, nil
-	}
 
 	// Fetch the ActiveMQArtemisScaledown instance
 	instance := &brokerv1beta1.ActiveMQArtemisScaledown{}
