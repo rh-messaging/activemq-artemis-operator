@@ -317,7 +317,7 @@ func deleteQueue(instance *AddressDeployment, request ctrl.Request, client clien
 				//delete address
 				_, err = a.Artemis.DeleteAddress(instance.AddressResource.Spec.AddressName)
 				if nil != err {
-					reqLogger.Error(err, "Deleting ActiveMQArtemisAddress error for address ", instance.AddressResource.Spec.AddressName)
+					reqLogger.Error(err, "Deleting ActiveMQArtemisAddress error", "address", instance.AddressResource.Spec.AddressName)
 					break
 				}
 				reqLogger.Info("Deleted ActiveMQArtemisAddress for address " + instance.AddressResource.Spec.AddressName)

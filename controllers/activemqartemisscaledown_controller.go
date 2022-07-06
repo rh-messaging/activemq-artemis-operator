@@ -35,11 +35,6 @@ import (
 
 var slog = ctrl.Log.WithName("controller_v1beta1activemqartemisscaledown")
 
-var (
-	namespace string
-	localOnly bool
-)
-
 var StopCh chan struct{}
 
 var controllers map[string]*draincontroller.Controller = make(map[string]*draincontroller.Controller)
@@ -82,32 +77,25 @@ func (r *ActiveMQArtemisScaledownReconciler) Reconcile(ctx context.Context, requ
 		// Error reading the object - requeue the request.
 		return ctrl.Result{}, err
 	}
-	//the drain controller code
-	//masterURL = instance.Spec.MasterURL
-	//kubeconfig = instance.Spec.Kubeconfig
-	//namespace = instance.Spec.Namespace
-	namespace := request.Namespace
-	localOnly = instance.Spec.LocalOnly
 
-	reqLogger.Info("====", "namespace:", namespace)
-	reqLogger.Info("====", "localOnly:", localOnly)
+	reqLogger.Info("scaling down", "localOnly:", instance.Spec.LocalOnly)
 
 	kubeClient, err = kubernetes.NewForConfig(r.Config)
 	if err != nil {
-		reqLogger.Error(err, "Error building kubernetes clientset: %s", err.Error())
+		reqLogger.Error(err, "Error building kubernetes clientset")
 	}
 
-	kubeInformerFactory, drainControllerInstance, isNewController := r.getDrainController(localOnly, namespace, kubeClient, instance)
+	kubeInformerFactory, drainControllerInstance, isNewController := r.getDrainController(instance.Spec.LocalOnly, request.Namespace, kubeClient, instance)
 
 	if isNewController {
-		reqLogger.Info("==== Starting async factory...")
+		reqLogger.Info("Starting async factory...")
 		go kubeInformerFactory.Start(*drainControllerInstance.GetStopCh())
 
-		reqLogger.Info("==== Running drain controller async so multiple controllers can run...")
+		reqLogger.Info("Running drain controller async so multiple controllers can run...")
 		go runDrainController(drainControllerInstance)
 	}
 
-	reqLogger.Info("==== OK, return result")
+	reqLogger.Info("OK, return result")
 	return ctrl.Result{}, nil
 }
 
@@ -119,10 +107,10 @@ func (r *ActiveMQArtemisScaledownReconciler) getDrainController(localOnly bool, 
 		if namespace == "" {
 			bytes, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
 			if err != nil {
-				slog.Error(err, "Using --localOnly without --namespace, but unable to determine namespace: %s", err.Error())
+				slog.Error(err, "Using --localOnly without --namespace, but unable to determine namespace")
 			}
 			namespace = string(bytes)
-			slog.Info("==== reading ns from file", "namespace", namespace)
+			slog.Info("reading ns from file", "namespace", namespace)
 		}
 		controllerKey = namespace
 	}
@@ -134,17 +122,16 @@ func (r *ActiveMQArtemisScaledownReconciler) getDrainController(localOnly bool, 
 
 	if localOnly {
 		// localOnly means there is only one target namespace and it is the same as operator's
-		slog.Info("==== getting localOnly informer factory", "namespace", controllerKey)
-		slog.Info("==== creating namespace wide factory")
+		slog.Info("getting localOnly informer factory", "namespace", controllerKey)
 		slog.Info("Configured to only operate on StatefulSets in namespace " + namespace)
 		kubeInformerFactory = kubeinformers.NewFilteredSharedInformerFactory(kubeClient, time.Second*30, namespace, nil)
 	} else {
-		slog.Info("==== getting global informer factory")
+		slog.Info("getting global informer factory")
 		slog.Info("Creating informer factory to operate on StatefulSets across all namespaces")
 		kubeInformerFactory = kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
 	}
 
-	slog.Info("==== new drain controller...", "labels", instance.Labels)
+	slog.Info("new drain controller...", "labels", instance.Labels)
 	controllerInstance = draincontroller.NewController(controllerKey, kubeClient, kubeInformerFactory, namespace, r.Client, instance)
 	controllers[controllerKey] = controllerInstance
 
@@ -156,7 +143,7 @@ func (r *ActiveMQArtemisScaledownReconciler) getDrainController(localOnly bool, 
 
 func runDrainController(controller *draincontroller.Controller) {
 	if err := controller.Run(1); err != nil {
-		slog.Error(err, "Error running controller: %s", err.Error())
+		slog.Error(err, "Error running controller")
 	}
 }
 

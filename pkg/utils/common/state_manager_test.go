@@ -29,11 +29,11 @@ func TestStateManager(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	fmt.Println("=======Before state manager Suite========")
+	fmt.Println("Before state manager Suite")
 })
 
 var _ = AfterSuite(func() {
-	fmt.Println("=======After state manager Suite========")
+	fmt.Println("After state manager Suite")
 })
 
 var _ = Describe("state manager test", func() {
