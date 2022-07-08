@@ -34,16 +34,14 @@ RUN chown -R `id -u`:0 /home/${BROKER_NAME}-operator/bin && chmod -R 755 /home/$
 USER ${USER_UID}
 ENTRYPOINT ["/home/${BROKER_NAME}-operator/bin/entrypoint"]
 
-LABEL \
-      com.redhat.component="amq-broker-rhel8-operator-container"  \
-      description="Red Hat AMQ Broker 7.10 Operator"  \
-      io.k8s.description="An associated operator that handles broker installation, updates and scaling."  \
-      io.k8s.display-name="Red Hat AMQ Broker 7.10 Operator"  \
-      io.openshift.expose-services=""  \
-      io.openshift.s2i.scripts-url="image:///usr/local/s2i"  \
-      io.openshift.tags="messaging,amq,integration,operator,golang"  \
-      maintainer="Roddie Kieley <rkieley@redhat.com>"  \
-      name="amq7/amq-broker-rhel8-operator" \
-      summary="Red Hat AMQ Broker 7.10 Operator"  \
-      version="7.10"
-
+LABEL com.redhat.component="amq-broker-rhel8-operator-container"
+LABEL description="Red Hat AMQ Broker 7.10 Operator"
+LABEL io.k8s.description="An associated operator that handles broker installation, updates and scaling."
+LABEL io.k8s.display-name="Red Hat AMQ Broker 7.10 Operator"
+LABEL io.openshift.expose-services=""
+LABEL io.openshift.s2i.scripts-url="image:///usr/local/s2i"
+LABEL io.openshift.tags="messaging,amq,integration,operator,golang"
+LABEL maintainer="Roddie Kieley <rkieley@redhat.com>"
+LABEL name="amq7/amq-broker-rhel8-operator"
+LABEL summary="Red Hat AMQ Broker 7.10 Operator"
+LABEL version="7.10"

@@ -50,16 +50,15 @@ RUN chown -R `id -u`:0 /home/${BROKER_NAME}-operator/bin && chmod -R 755 /home/$
 USER ${USER_UID}
 ENTRYPOINT ["/home/${BROKER_NAME}-operator/bin/entrypoint_debug"]
 
-LABEL \
-      com.redhat.component="amq-broker-rhel8-operator-container"  \
-      com.redhat.delivery.appregistry="false" \
-      description="ActiveMQ Artemis Broker Operator"  \
-      io.k8s.description="An associated operator that handles broker installation, updates and scaling."  \
-      io.k8s.display-name="ActiveMQ Artemis Broker Operator"  \
-      io.openshift.expose-services=""  \
-      io.openshift.s2i.scripts-url="image:///usr/local/s2i"  \
-      io.openshift.tags="messaging,amq,integration,operator,golang"  \
-      maintainer="Roddie Kieley <rkieley@redhat.com>"  \
-      name="amq7/amq-broker-rhel8-operator" \
-      summary="ActiveMQ Artemis Broker Operator"  \
-      version="0.20"
+LABEL com.redhat.component="amq-broker-rhel8-operator-container"
+LABEL com.redhat.delivery.appregistry="false"
+LABEL description="ActiveMQ Artemis Broker Operator"  \
+LABEL io.k8s.description="An associated operator that handles broker installation, updates and scaling."
+LABEL io.k8s.display-name="ActiveMQ Artemis Broker Operator"
+LABEL io.openshift.expose-services=""
+LABEL io.openshift.s2i.scripts-url="image:///usr/local/s2i"
+LABEL io.openshift.tags="messaging,amq,integration,operator,golang"
+LABEL maintainer="Roddie Kieley <rkieley@redhat.com>"
+LABEL name="amq7/amq-broker-rhel8-operator"
+LABEL summary="ActiveMQ Artemis Broker Operator"
+LABEL version="0.20"
