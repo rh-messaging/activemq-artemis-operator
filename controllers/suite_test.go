@@ -74,12 +74,17 @@ const (
 )
 
 var (
-	currentDir   string
-	k8sClient    client.Client
-	restConfig   *rest.Config
-	testEnv      *envtest.Environment
-	ctx          context.Context
-	cancel       context.CancelFunc
+	currentDir string
+	k8sClient  client.Client
+	restConfig *rest.Config
+	testEnv    *envtest.Environment
+	ctx        context.Context
+	cancel     context.CancelFunc
+
+	// the manager may be stopped/restarted via tests
+	managerCtx    context.Context
+	managerCancel context.CancelFunc
+
 	stateManager *common.StateManager
 
 	brokerReconciler   *ActiveMQArtemisReconciler
@@ -121,11 +126,14 @@ func setUpEnvTest() {
 
 	setUpK8sClient()
 
+	stateManager = common.GetStateManager()
+
 	createControllerManager(false, defaultNamespace)
 }
 
 func createControllerManager(disableMetrics bool, watchNamespace string) {
-	ctx, cancel = context.WithCancel(context.TODO())
+
+	managerCtx, managerCancel = context.WithCancel(ctx)
 
 	mgrOptions := ctrl.Options{
 		Scheme: scheme.Scheme,
@@ -153,8 +161,6 @@ func createControllerManager(disableMetrics bool, watchNamespace string) {
 	// start our controler
 	k8Manager, err := ctrl.NewManager(restConfig, mgrOptions)
 	Expect(err).ToNot(HaveOccurred())
-
-	stateManager = common.GetStateManager()
 
 	// Create and start a new auto detect process for this operator
 	autodetect, err := common.NewAutoDetect(k8Manager)
@@ -201,14 +207,15 @@ func createControllerManager(disableMetrics bool, watchNamespace string) {
 
 	go func() {
 		defer GinkgoRecover()
-		err = k8Manager.Start(ctx)
+		err = k8Manager.Start(managerCtx)
 		managerChannel <- struct{}{}
 		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
 	}()
 }
 
 func shutdownControllerManager() {
-	cancel()
+	managerCancel()
+	// wait for start routine to exit
 	<-managerChannel
 }
 
@@ -390,6 +397,9 @@ var _ = BeforeSuite(func() {
 	if verobse {
 		GinkgoWriter.TeeTo(os.Stderr)
 	}
+
+	ctx, cancel = context.WithCancel(context.TODO())
+
 	// force isLocalOnly=false check from artemis reconciler such that scale down controller will create
 	// role binding to service account for the drainer pod
 	os.Setenv("OPERATOR_WATCH_NAMESPACE", "SomeValueToCauesEqualitytoFailInIsLocalSoDrainControllerSortsCreds")
@@ -415,15 +425,14 @@ var _ = AfterSuite(func() {
 	if os.Getenv("DEPLOY_OPERATOR") == "true" {
 		err := uninstallOperator()
 		Expect(err).NotTo(HaveOccurred())
-	}
+	} else {
 
-	shutdownControllerManager()
+		shutdownControllerManager()
 
-	if stateManager != nil {
-		stateManager.Clear()
-	}
+		if stateManager != nil {
+			stateManager.Clear()
+		}
 
-	if os.Getenv("DEPLOY_OPERATOR") != "true" {
 		// scaledown controller lifecycle seems a little loose, it does not complete on signal hander like the others
 		for _, drainController := range controllers {
 			close(*drainController.GetStopCh())
@@ -432,4 +441,5 @@ var _ = AfterSuite(func() {
 		err := testEnv.Stop()
 		Expect(err).NotTo(HaveOccurred())
 	}
+
 })

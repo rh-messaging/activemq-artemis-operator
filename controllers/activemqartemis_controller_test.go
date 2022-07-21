@@ -1523,7 +1523,7 @@ var _ = Describe("artemis controller", func() {
 
 			// would like more status updates on createdCrd
 
-			By("By checking absence of stateful set")
+			By("By checking absence of stateful set with no matching controller")
 			key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: nonDefaultNamespace}
 			createdSs := &appsv1.StatefulSet{}
 			Expect(k8sClient.Get(ctx, key, createdSs)).ShouldNot(Succeed())
@@ -1533,17 +1533,13 @@ var _ = Describe("artemis controller", func() {
 			shutdownControllerManager()
 			createControllerManager(true, nonDefaultNamespace)
 
-			By("Checking stopped status of CR because we expect it to fail to deploy")
-			Eventually(func() (int, error) {
-				key := types.NamespacedName{Name: crd.ObjectMeta.Name, Namespace: nonDefaultNamespace}
-				err := k8sClient.Get(ctx, key, createdCrd)
+			key = types.NamespacedName{Name: createdCrd.Name, Namespace: nonDefaultNamespace}
 
-				if err != nil {
-					return -1, err
-				}
-
-				return len(createdCrd.Status.PodStatus.Stopped), nil
-			}, timeout, interval).Should(Equal(1))
+			Eventually(func(g Gomega) {
+				By("Checking stopped status of CR, deployed with replica count 0")
+				g.Expect(k8sClient.Get(ctx, key, createdCrd)).Should(Succeed())
+				g.Expect(len(createdCrd.Status.PodStatus.Stopped)).Should(BeEquivalentTo(1))
+			}, timeout, interval).Should(Succeed())
 
 			By("deleting crd")
 			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
