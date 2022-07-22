@@ -1,4 +1,4 @@
-FROM openshift/golang-builder:1.16 AS build-env
+FROM openshift/golang-builder:1.17 AS build-env
 
 # cachito
 COPY $REMOTE_SOURCE $REMOTE_SOURCE_DIR

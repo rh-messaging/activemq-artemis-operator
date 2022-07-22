@@ -1694,7 +1694,7 @@ var _ = Describe("artemis controller", func() {
 
 			By("Making sure the Liveness probe is correct")
 			Expect(len(createdSs.Spec.Template.Spec.Containers) == 1).Should(BeTrue())
-			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.Handler.TCPSocket.Port.String() == "8161").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.ProbeHandler.TCPSocket.Port.String() == "8161").Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds == 5).Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds == 6).Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds == 7).Should(BeTrue())
@@ -1730,8 +1730,8 @@ var _ = Describe("artemis controller", func() {
 				return createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds == 15
 			}, timeout, interval).Should(Equal(true))
 
-			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.Handler.Exec != nil).Should(BeTrue())
-			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.Handler.Exec.Command[0] == "/broker/bin/artemis check node").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.ProbeHandler.Exec != nil).Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.ProbeHandler.Exec.Command[0] == "/broker/bin/artemis check node").Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds == 15).Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds == 16).Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds == 17).Should(BeTrue())
@@ -1785,7 +1785,7 @@ var _ = Describe("artemis controller", func() {
 
 			By("Making sure the Liveness probe is correct")
 			Expect(len(createdSs.Spec.Template.Spec.Containers) == 1).Should(BeTrue())
-			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.Handler.Exec.Command[0] == "/broker/bin/artemis check node").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.ProbeHandler.Exec.Command[0] == "/broker/bin/artemis check node").Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds == 5).Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds == 6).Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds == 7).Should(BeTrue())
@@ -1827,7 +1827,7 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(Equal(true))
 
 			Expect(len(createdSs.Spec.Template.Spec.Containers) == 1).Should(BeTrue())
-			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.Handler.TCPSocket.Port.String() == "8161").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.ProbeHandler.TCPSocket.Port.String() == "8161").Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds).Should(BeEquivalentTo(5))
 
 			Expect(k8sClient.Delete(ctx, createdCrd))
@@ -1878,9 +1878,9 @@ var _ = Describe("artemis controller", func() {
 
 			By("Making sure the Readiness probe is correct")
 			Expect(len(createdSs.Spec.Template.Spec.Containers) == 1).Should(BeTrue())
-			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.Handler.Exec.Command[0] == "/bin/bash").Should(BeTrue())
-			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.Handler.Exec.Command[1] == "-c").Should(BeTrue())
-			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.Handler.Exec.Command[2] == "/opt/amq/bin/readinessProbe.sh").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.ProbeHandler.Exec.Command[0] == "/bin/bash").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.ProbeHandler.Exec.Command[1] == "-c").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.ProbeHandler.Exec.Command[2] == "/opt/amq/bin/readinessProbe.sh").Should(BeTrue())
 			Expect(k8sClient.Delete(ctx, createdCrd))
 
 			By("check it has gone")
@@ -1926,7 +1926,7 @@ var _ = Describe("artemis controller", func() {
 
 			By("Making sure the Readiness probe is correct")
 			Expect(len(createdSs.Spec.Template.Spec.Containers) == 1).Should(BeTrue())
-			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.Handler.Exec.Command[0] == "/broker/bin/artemis check node").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.ProbeHandler.Exec.Command[0] == "/broker/bin/artemis check node").Should(BeTrue())
 			Expect(k8sClient.Delete(ctx, createdCrd))
 
 			By("check it has gone")
@@ -1964,9 +1964,9 @@ var _ = Describe("artemis controller", func() {
 
 			By("Making sure the Readiness probe is correct")
 			Expect(len(createdSs.Spec.Template.Spec.Containers) == 1).Should(BeTrue())
-			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.Handler.Exec.Command[0] == "/bin/bash").Should(BeTrue())
-			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.Handler.Exec.Command[1] == "-c").Should(BeTrue())
-			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.Handler.Exec.Command[2] == "/opt/amq/bin/readinessProbe.sh").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.ProbeHandler.Exec.Command[0] == "/bin/bash").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.ProbeHandler.Exec.Command[1] == "-c").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.ProbeHandler.Exec.Command[2] == "/opt/amq/bin/readinessProbe.sh").Should(BeTrue())
 			Expect(k8sClient.Delete(ctx, createdCrd))
 
 			By("check it has gone")
@@ -3359,7 +3359,7 @@ var _ = Describe("artemis controller", func() {
 		crd.Spec.AdminUser = "admin"
 		crd.Spec.AdminPassword = "secret"
 		crd.Spec.DeploymentPlan.LivenessProbe = &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				Exec: &corev1.ExecAction{
 					Command: []string{
 						"/home/jboss/amq-broker/bin/artemis",

@@ -1689,7 +1689,7 @@ func configureLivenessProbe(container *corev1.Container, probeFromCR *corev1.Pro
 		// not complete in this case!
 		if probeFromCR.Exec == nil && probeFromCR.HTTPGet == nil && probeFromCR.TCPSocket == nil {
 			clog.V(1).Info("Adding default TCP check")
-			livenessProbe.Handler = corev1.Handler{
+			livenessProbe.ProbeHandler = corev1.ProbeHandler{
 				TCPSocket: &corev1.TCPSocketAction{
 					Port: intstr.FromInt(TCPLivenessPort),
 				},
@@ -1703,7 +1703,7 @@ func configureLivenessProbe(container *corev1.Container, probeFromCR *corev1.Pro
 
 		livenessProbe.InitialDelaySeconds = livenessProbeGraceTime
 		livenessProbe.TimeoutSeconds = 5
-		livenessProbe.Handler = corev1.Handler{
+		livenessProbe.ProbeHandler = corev1.ProbeHandler{
 			TCPSocket: &corev1.TCPSocketAction{
 				Port: intstr.FromInt(TCPLivenessPort),
 			},
@@ -1731,7 +1731,7 @@ func configureReadinessProbe(container *corev1.Container, probe *corev1.Probe) *
 		if probe.Exec == nil && probe.HTTPGet == nil && probe.TCPSocket == nil {
 			//add the default readiness check if none
 			clog.V(1).Info("Using user provided readiness Probe")
-			readinessProbe.Handler = corev1.Handler{
+			readinessProbe.ProbeHandler = corev1.ProbeHandler{
 				Exec: &corev1.ExecAction{
 					Command: []string{
 						"/bin/bash",
@@ -1741,13 +1741,13 @@ func configureReadinessProbe(container *corev1.Container, probe *corev1.Probe) *
 				},
 			}
 		} else {
-			readinessProbe.Handler = probe.Handler
+			readinessProbe.ProbeHandler = probe.ProbeHandler
 		}
 	} else {
 		clog.V(1).Info("Creating Default readiness Probe")
 		readinessProbe.InitialDelaySeconds = livenessProbeGraceTime
 		readinessProbe.TimeoutSeconds = 5
-		readinessProbe.Handler = corev1.Handler{
+		readinessProbe.ProbeHandler = corev1.ProbeHandler{
 			Exec: &corev1.ExecAction{
 				Command: []string{
 					"/bin/bash",
