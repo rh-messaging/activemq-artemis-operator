@@ -2586,35 +2586,37 @@ var _ = Describe("artemis controller", func() {
 			Expect(k8sClient.Create(ctx, &addressCrd)).Should(Succeed())
 
 			By("Checking stopped status of CR")
-			Eventually(func() (int, error) {
+			Eventually(func(g Gomega) {
 				key := types.NamespacedName{Name: crd.ObjectMeta.Name, Namespace: defaultNamespace}
-				err := k8sClient.Get(ctx, key, createdCrd)
+				g.Expect(k8sClient.Get(ctx, key, createdCrd)).Should(Succeed())
 
-				if err != nil {
-					return -1, err
-				}
-
-				return len(createdCrd.Status.PodStatus.Stopped), nil
-			}, timeout, interval).Should(Equal(1))
-
-			By("adding an address via update")
-			createdAddressCr := &brokerv1beta1.ActiveMQArtemisAddress{}
-			Eventually(func() error {
-
-				key := types.NamespacedName{Name: addressCrd.ObjectMeta.Name, Namespace: defaultNamespace}
-				err := k8sClient.Get(ctx, key, createdAddressCr)
-
-				if err == nil {
-					// ensure a1 applies to this cr
-					createdAddressCr.Spec.ApplyToCrNames = append(createdAddressCr.Spec.ApplyToCrNames, createdCrd.Name)
-
-					err = k8sClient.Update(ctx, createdAddressCr)
-				}
-
-				return err
+				g.Expect(len(createdCrd.Status.PodStatus.Stopped)).Should(Equal(1))
 			}, timeout, interval).Should(Succeed())
 
-			// cr gets rconciled, but nothing done yet till pods created
+			By("adding an address via update")
+			var updatedVersion = "bla"
+			key := types.NamespacedName{Name: addressCrd.ObjectMeta.Name, Namespace: defaultNamespace}
+			createdAddressCr := &brokerv1beta1.ActiveMQArtemisAddress{}
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, key, createdAddressCr)).Should(Succeed())
+
+				// ensure a1 applies to this cr
+				createdAddressCr.Spec.ApplyToCrNames = append(createdAddressCr.Spec.ApplyToCrNames, createdCrd.Name)
+				updatedVersion = createdAddressCr.ResourceVersion
+				g.Expect(k8sClient.Update(ctx, createdAddressCr)).Should(Succeed())
+
+			}, timeout, interval).Should(Succeed())
+
+			// cr gets rconciled, but nothing done yet till pods create
+
+			Eventually(func(g Gomega) {
+				By("verify update of resource version: " + updatedVersion)
+				g.Expect(k8sClient.Get(ctx, key, createdAddressCr)).Should(Succeed())
+
+				g.Expect(createdAddressCr.ResourceVersion).ShouldNot(Equal(updatedVersion))
+
+			}, timeout, interval).Should(Succeed())
 
 			// cleanup
 			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
