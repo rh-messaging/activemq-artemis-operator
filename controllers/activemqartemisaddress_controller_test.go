@@ -445,6 +445,97 @@ var _ = Describe("Address controller", Label("do"), func() {
 			// cleanup
 			k8sClient.Delete(ctx, &crd)
 		})
+
+		It("address creation with multiple ApplyToCrNames", func() {
+
+			ctx := context.Background()
+			crd0 := generateArtemisSpec(defaultNamespace)
+			crd0.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
+				InitialDelaySeconds: 5,
+				PeriodSeconds:       10,
+			}
+			crd0.Spec.DeploymentPlan.Size = 1
+			crd0.Spec.DeploymentPlan.JolokiaAgentEnabled = true
+
+			crd1 := generateArtemisSpec(defaultNamespace)
+			crd1.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
+				InitialDelaySeconds: 5,
+				PeriodSeconds:       10,
+			}
+			crd1.Spec.DeploymentPlan.Size = 1
+			crd1.Spec.DeploymentPlan.JolokiaAgentEnabled = true
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" && os.Getenv("DEPLOY_OPERATOR") == "true" {
+
+				By("Deploying a broker 0")
+				Expect(k8sClient.Create(ctx, &crd0)).Should(Succeed())
+
+				By("Deploying a broker 1")
+				Expect(k8sClient.Create(ctx, &crd1)).Should(Succeed())
+
+				By("Checking ready on SS 0")
+				Eventually(func(g Gomega) {
+					key := types.NamespacedName{Name: namer.CrToSS(crd0.Name), Namespace: defaultNamespace}
+					sfsFound := &appsv1.StatefulSet{}
+
+					g.Expect(k8sClient.Get(ctx, key, sfsFound)).Should(Succeed())
+					g.Expect(sfsFound.Status.ReadyReplicas).Should(BeEquivalentTo(1))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("Checking ready on SS 1")
+				Eventually(func(g Gomega) {
+					key := types.NamespacedName{Name: namer.CrToSS(crd1.Name), Namespace: defaultNamespace}
+					sfsFound := &appsv1.StatefulSet{}
+
+					g.Expect(k8sClient.Get(ctx, key, sfsFound)).Should(Succeed())
+					g.Expect(sfsFound.Status.ReadyReplicas).Should(BeEquivalentTo(1))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("By deploying address cr after ready")
+
+				addressName := "A4"
+				addressCrd := brokerv1beta1.ActiveMQArtemisAddress{}
+				addressCrd.SetName("address-" + randString())
+				addressCrd.SetNamespace(defaultNamespace)
+				addressCrd.Spec.AddressName = addressName
+				addressCrd.Spec.QueueName = &addressName
+				routingTypeShouldBeOptional := "anycast"
+				addressCrd.Spec.RoutingType = &routingTypeShouldBeOptional
+				addressCrd.Spec.ApplyToCrNames = []string{crd0.Name, crd1.Name}
+
+				Expect(k8sClient.Create(ctx, &addressCrd)).Should(Succeed())
+
+				By("Verfying address is present")
+				ordinals := []string{"0"}
+				for _, ordinal := range ordinals {
+
+					podWithOrdinal := namer.CrToSS(crd0.Name) + "-" + ordinal
+					command := []string{"amq-broker/bin/artemis", "address", "show", "--url", "tcp://" + podWithOrdinal + ":61616"}
+
+					Eventually(func(g Gomega) {
+						stdOutContent := execOnPod(podWithOrdinal, crd0.Name, defaultNamespace, command, gomega.Default)
+						g.Expect(stdOutContent).Should(ContainSubstring(addressName))
+					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				}
+
+				for _, ordinal := range ordinals {
+
+					podWithOrdinal := namer.CrToSS(crd1.Name) + "-" + ordinal
+					command := []string{"amq-broker/bin/artemis", "address", "show", "--url", "tcp://" + podWithOrdinal + ":61616"}
+
+					Eventually(func(g Gomega) {
+						stdOutContent := execOnPod(podWithOrdinal, crd1.Name, defaultNamespace, command, gomega.Default)
+						g.Expect(stdOutContent).Should(ContainSubstring(addressName))
+					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				}
+
+				k8sClient.Delete(ctx, &addressCrd)
+			}
+
+			// cleanup
+			k8sClient.Delete(ctx, &crd0)
+			k8sClient.Delete(ctx, &crd1)
+		})
 	})
 })
 
