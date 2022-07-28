@@ -604,7 +604,6 @@ func (c *Controller) cleanUpDrainPodIfNeeded(sts *appsv1.StatefulSet, pod *corev
 			c.recorder.Event(sts, corev1.EventTypeNormal, DrainSuccess, fmt.Sprintf(MessageDrainPodFinished, podName, sts.Name))
 		}
 
-		// The owner reference to the ArtemisCr provides a catch all in case of failure to delete
 		for _, pvcTemplate := range sts.Spec.VolumeClaimTemplates {
 			pvcName := getPVCName(sts, pvcTemplate.Name, int32(ordinal))
 			dlog.Info("Deleting PVC " + pvcName)
@@ -617,6 +616,9 @@ func (c *Controller) cleanUpDrainPodIfNeeded(sts *appsv1.StatefulSet, pod *corev
 			}
 		}
 
+		// TODO what if the user scales up the statefulset and the statefulset controller creates the new pod after we delete the pod but before we delete the PVC
+		// TODO what if we crash after we delete the PVC, but before we delete the pod?
+		//
 		dlog.Info("Deleting drain pod " + podName)
 		err := c.kubeclientset.CoreV1().Pods(sts.Namespace).Delete(context.TODO(), podName, metav1.DeleteOptions{})
 		if err != nil {

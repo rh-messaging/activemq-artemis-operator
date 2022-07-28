@@ -688,7 +688,7 @@ var _ = Describe("artemis controller", func() {
 		})
 	})
 
-	Context("PVC gc test", func() {
+	Context("PVC no gc test", func() {
 		It("deploy, verify, undeploy, verify", func() {
 
 			crd := generateArtemisSpec(defaultNamespace)
@@ -715,14 +715,15 @@ var _ = Describe("artemis controller", func() {
 				pvcKey := types.NamespacedName{Namespace: defaultNamespace, Name: crd.Name + "-" + namer.CrToSS(crd.Name) + "-0"}
 				pvc := &corev1.PersistentVolumeClaim{}
 				Expect(k8sClient.Get(ctx, pvcKey, pvc)).Should(Succeed())
-				Expect(len(pvc.OwnerReferences)).Should(BeEquivalentTo(1))
+				// at some stage, there should/could be an owner or SS controller does this gc management
+				Expect(len(pvc.OwnerReferences)).Should(BeEquivalentTo(0))
 
 				By("undeploying CR")
 				Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
 
-				By("now not finding PVC b/c  it has been gc'ed")
 				Eventually(func(g Gomega) {
-					g.Expect(k8sClient.Get(ctx, pvcKey, &corev1.PersistentVolumeClaim{})).ShouldNot(Succeed())
+					By("again finding PVC b/c it has been gc'ed - " + pvcKey.Name)
+					g.Expect(k8sClient.Get(ctx, pvcKey, &corev1.PersistentVolumeClaim{})).Should(Succeed())
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 			}
 		})

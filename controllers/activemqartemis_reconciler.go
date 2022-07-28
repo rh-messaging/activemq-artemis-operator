@@ -2060,15 +2060,6 @@ func NewPersistentVolumeClaimArrayForCR(customResource *brokerv1beta1.ActiveMQAr
 
 	for i := 0; i < arrayLength; i++ {
 		pvc = persistentvolumeclaims.NewPersistentVolumeClaimWithCapacityAndStorageClassName(namespacedName, capacity, namer.LabelBuilder.Labels(), storageClassName)
-
-		// poplulate owner reference as the cr such that our claims get gc when cr is undeployed
-		gvk := customResource.GroupVersionKind()
-		pvc.OwnerReferences = []metav1.OwnerReference{{
-			APIVersion: gvk.GroupVersion().String(),
-			Kind:       gvk.Kind,
-			Name:       customResource.GetName(),
-			UID:        customResource.GetUID()}}
-
 		pvcArray = append(pvcArray, *pvc)
 	}
 
