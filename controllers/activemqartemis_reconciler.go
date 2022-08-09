@@ -1694,6 +1694,11 @@ func configureLivenessProbe(container *corev1.Container, probeFromCR *corev1.Pro
 					Port: intstr.FromInt(TCPLivenessPort),
 				},
 			}
+		} else if probeFromCR.TCPSocket != nil {
+			clog.V(1).Info("Using user specified TCPSocket")
+			livenessProbe.ProbeHandler = corev1.ProbeHandler{
+				TCPSocket: probeFromCR.TCPSocket,
+			}
 		} else {
 			clog.V(1).Info("Using user provided Liveness Probe Exec " + probeFromCR.Exec.String())
 			livenessProbe.Exec = probeFromCR.Exec

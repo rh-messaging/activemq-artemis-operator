@@ -1837,6 +1837,55 @@ var _ = Describe("artemis controller", func() {
 				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
 			}, timeout, interval).Should(BeTrue())
 		})
+
+		It("Override Liveness Probe Default TCPSocket", func() {
+			By("By creating a crd with Liveness Probe")
+			ctx := context.Background()
+			crd, createdCrd := DeployCustomBroker("", defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				tcpSocketAction := corev1.TCPSocketAction{
+					Port: intstr.FromInt(8161),
+				}
+				livenessProbe := corev1.Probe{}
+				livenessProbe.FailureThreshold = 3
+				livenessProbe.InitialDelaySeconds = 60
+				livenessProbe.PeriodSeconds = 10
+				livenessProbe.SuccessThreshold = 1
+				livenessProbe.TCPSocket = &tcpSocketAction
+				livenessProbe.TimeoutSeconds = 5
+
+				candidate.Spec.DeploymentPlan.LivenessProbe = &livenessProbe
+			})
+
+			createdSs := &appsv1.StatefulSet{}
+
+			By("Checking that Stateful Set is Created with the Liveness Probe")
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: defaultNamespace}
+
+				err := k8sClient.Get(ctx, key, createdSs)
+
+				if err != nil {
+					return false
+				}
+				return createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.TCPSocket != nil
+			}, timeout, interval).Should(Equal(true))
+
+			By("Making sure the Liveness probe is correct")
+			Expect(len(createdSs.Spec.Template.Spec.Containers) == 1).Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.ProbeHandler.TCPSocket.Port.String() == "8161").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds).Should(BeEquivalentTo(5))
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.FailureThreshold).Should(BeEquivalentTo(3))
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds).Should(BeEquivalentTo(60))
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds).Should(BeEquivalentTo(10))
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.SuccessThreshold).Should(BeEquivalentTo(1))
+
+			Expect(k8sClient.Delete(ctx, createdCrd))
+
+			By("check it has gone")
+			Eventually(func() bool {
+				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+		})
 	})
 
 	Context("Readiness Probe Tests", func() {
