@@ -3,22 +3,22 @@ package version
 import "strings"
 
 var (
-	Version = "7.10.0"
+	Version = "7.10.1"
 	// PriorVersion - prior version
 	PriorVersion = "7.9.4"
 )
 
 const (
 	// LatestVersion product version supported
-	LatestVersion        = "7.10.0"
-	CompactLatestVersion = "7100"
+	LatestVersion        = "7.10.1"
+	CompactLatestVersion = "7101"
 	// LastMicroVersion product version supported
 	LastMicroVersion = "7.9.4"
 	// LastMinorVersion product version supported
 	LastMinorVersion = "7.7.0"
 
-	LatestKubeImage = "registry.redhat.io/amq7/amq-broker-rhel8:7.10-19"
-	LatestInitImage = "registry.redhat.io/amq7/amq-broker-init-rhel8:7.10-7"
+	LatestKubeImage = "registry.redhat.io/amq7/amq-broker-rhel8:7.10.1.OPR.1.ER1"
+	LatestInitImage = "registry.redhat.io/amq7/amq-broker-init-rhel8:7.10.1.OPR.1.ER1"
 )
 
 func DefaultImageName(archSpecificRelatedImageEnvVarName string) string {
@@ -45,6 +45,7 @@ var OperandVersionFromOperatorVersion map[string]string = map[string]string{
 	"7.9.3":  "7.9.3",
 	"7.9.4":  "7.9.4",
 	"7.10.0": "7.10.0",
+	"7.10.1": "7.10.1",
 }
 var FullVersionFromMinorVersion map[string]string = map[string]string{
 	"70":  "7.7.0",
@@ -58,6 +59,7 @@ var FullVersionFromMinorVersion map[string]string = map[string]string{
 	"93":  "7.9.3",
 	"94":  "7.9.4",
 	"100": "7.10.0",
+	"101": "7.10.1",
 }
 
 var CompactFullVersionFromMinorVersion map[string]string = map[string]string{
@@ -72,6 +74,7 @@ var CompactFullVersionFromMinorVersion map[string]string = map[string]string{
 	"93":  "793",
 	"94":  "794",
 	"100": "7100",
+	"101": "7101",
 }
 
 var CompactVersionFromVersion map[string]string = map[string]string{
@@ -86,6 +89,7 @@ var CompactVersionFromVersion map[string]string = map[string]string{
 	"7.9.3":  "793",
 	"7.9.4":  "794",
 	"7.10.0": "7100",
+	"7.10.1": "7101",
 }
 
 var FullVersionFromCompactVersion map[string]string = map[string]string{
@@ -100,6 +104,7 @@ var FullVersionFromCompactVersion map[string]string = map[string]string{
 	"793":  "7.9.3",
 	"794":  "7.9.4",
 	"7100": "7.10.0",
+	"7101": "7.10.1",
 }
 
 var MinorVersionFromFullVersion map[string]string = map[string]string{
@@ -114,6 +119,7 @@ var MinorVersionFromFullVersion map[string]string = map[string]string{
 	"7.9.3":  "93",
 	"7.9.4":  "94",
 	"7.10.0": "100",
+	"7.10.1": "101",
 }
 
 //The yacfg profile to use for a given full version of broker
@@ -129,6 +135,7 @@ var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
 	"7.9.3":  "7.9.0",
 	"7.9.4":  "7.9.0",
 	"7.10.0": "7.10.0",
+	"7.10.1": "7.10.1",
 }
 
 var YacfgProfileName string = "amq_broker"

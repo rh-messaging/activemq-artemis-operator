@@ -3,11 +3,11 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 7.10.0
+VERSION ?= 7.10.1
 
 KUBE_CLI=kubectl
 
-OPERATOR_VERSION := 7.10-15
+OPERATOR_VERSION := 7.10.1.OPR.1.ER1
 OPERATOR_ACCOUNT_NAME := amq-broker-operator
 OPERATOR_CLUSTER_ROLE_NAME := operator
 OPERATOR_IMAGE_REPO := registry.redhat.io/amq7/amq-broker-rhel8-operator
