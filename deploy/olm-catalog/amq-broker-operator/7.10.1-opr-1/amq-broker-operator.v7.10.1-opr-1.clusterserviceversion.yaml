@@ -2393,7 +2393,7 @@ spec:
                         value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:3c00b524722b500ff0922fe7a8722868557512183a8f69248f37a68c45c6a770
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7101_ppc64le
                         #value: registry.redhat.io/amq7/amq-broker-rhel8:7.10-32
-                        value: registry.redhat.io/amq7/amq-broker-rhel:7.10.1.OPR.1.ER1
+                        value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:217035536ca488e0bf864bff0449048b1c9b937730978f3b00a991c61c32bc76
 
                       # S390X
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_781_s390x
