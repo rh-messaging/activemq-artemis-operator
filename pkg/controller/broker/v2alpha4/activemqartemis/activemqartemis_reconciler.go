@@ -1698,10 +1698,12 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 
 		var hasAddressSettings bool = len(addressSettings) > 0
 
+		compactVersionToUse := determineCompactVersionToUse(customResource)
+
 		if hasAddressSettings {
 			reqLogger.Info("We have custom address-settings")
 
-			brokerYaml, specials := cr2jinja2.MakeBrokerCfgOverrides(customResource, nil, nil)
+			brokerYaml, specials := cr2jinja2.MakeBrokerCfgOverrides(customResource, nil, nil, compactVersionToUse)
 
 			configYaml.WriteString(brokerYaml)
 
@@ -1719,7 +1721,6 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 		envVarTuneFilePath := "TUNE_PATH"
 		outputDir := "/yacfg_etc"
 
-		compactVersionToUse := determineCompactVersionToUse(customResource)
 		yacfgProfileVersion = version.YacfgProfileVersionFromFullVersion[version.FullVersionFromCompactVersion[compactVersionToUse]]
 		yacfgProfileName := version.YacfgProfileName
 
@@ -1730,6 +1731,11 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 		configCmd := "/opt/amq/bin/launch.sh"
 
 		var initArgs []string = []string{"-c", initCmd + " && " + configCmd + " && " + initHelperScript}
+
+		if cr2jinja2.IsOldBrokerVersion(compactVersionToUse) {
+			log.Info("Install init for old broker", "version", compactVersionToUse)
+			initArgs = []string{"-c", initCmd}
+		}
 
 		initContainer.Args = initArgs
 
@@ -1753,6 +1759,10 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 			Value: *envVarApplyRuleValue,
 		}
 		environments.Create(Spec.InitContainers, &applyRule)
+		if cr2jinja2.IsOldBrokerVersion(compactVersionToUse) {
+			log.Info("Install APPLY_RULE for old broker", "version", compactVersionToUse, "rule", envVarApplyRule)
+			environments.Create(Spec.Containers, &applyRule)
+		}
 
 		mergeBrokerAs := corev1.EnvVar{
 			Name:  "MERGE_BROKER_AS",
@@ -1766,6 +1776,10 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 			Value: outputDir,
 		}
 		environments.Create(Spec.InitContainers, &tuneFile)
+		if cr2jinja2.IsOldBrokerVersion(compactVersionToUse) {
+			log.Info("Install TUNE_PATH for old broker", "version", compactVersionToUse, "path", envVarApplyRule)
+			environments.Create(Spec.Containers, &tuneFile)
+		}
 
 		//now make volumes mount available to init image
 		log.Info("making volume mounts")
@@ -1776,6 +1790,11 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 
 		volumeMountForCfg := volumes.MakeVolumeMountForCfg("tool-dir", outputDir)
 		Spec.InitContainers[0].VolumeMounts = append(Spec.InitContainers[0].VolumeMounts, volumeMountForCfg)
+		if cr2jinja2.IsOldBrokerVersion(compactVersionToUse) {
+			log.Info("Install volumn mount for old brokers", "version", compactVersionToUse, "path", outputDir)
+			volumeMountForCfg770 := volumes.MakeVolumeMountForCfg("tool-dir", outputDir)
+			Spec.Containers[0].VolumeMounts = append(Spec.Containers[0].VolumeMounts, volumeMountForCfg770)
+		}
 
 		//add empty-dir volume
 		volumeForCfg := volumes.MakeVolumeForCfg("tool-dir")
@@ -1785,10 +1804,16 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 	} else {
 		log.Info("No addressetings")
 
+		compactVersionToUse := determineCompactVersionToUse(customResource)
+
 		configCmd := "/opt/amq/bin/launch.sh"
 
-		var initArgs []string
-		initArgs = []string{"-c", configCmd + " && " + initHelperScript}
+		initArgs := []string{"-c", configCmd + " && " + initHelperScript}
+		if cr2jinja2.IsOldBrokerVersion(compactVersionToUse) {
+			log.Info("install init container for old broker with no address settings", "version", compactVersionToUse)
+			initArgs = []string{"-c", "echo"}
+		}
+
 		initContainer.Args = initArgs
 
 		Spec.InitContainers = []corev1.Container{
