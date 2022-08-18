@@ -197,7 +197,7 @@ spec:
             path: version
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:Version'
-              - 'urn:alm:descriptor:com.tectonic.ui:password'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
           - description: The custom node affinity
             displayName: Node Affinity
             path: deploymentPlan.affinity.nodeAffinity
