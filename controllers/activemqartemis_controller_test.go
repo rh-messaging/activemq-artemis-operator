@@ -27,6 +27,7 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	brokerv2alpha4 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha4"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
@@ -725,6 +726,71 @@ var _ = Describe("artemis controller", func() {
 					By("again finding PVC b/c it has been gc'ed - " + pvcKey.Name)
 					g.Expect(k8sClient.Get(ctx, pvcKey, &corev1.PersistentVolumeClaim{})).Should(Succeed())
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
+		})
+	})
+
+	Context("PVC upgrade owner reference test", Label("pvc-owner-reference-upgrade"), func() {
+		It("faking a broker deployment with owned pvc", func() {
+			crd := generateArtemisSpec(defaultNamespace)
+			crd.Spec.DeploymentPlan.Size = 1
+			crd.Spec.DeploymentPlan.PersistenceEnabled = true
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				By("Deploying the CRD " + crd.ObjectMeta.Name)
+				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+				createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+				brokerKey := types.NamespacedName{Name: crd.ObjectMeta.Name, Namespace: defaultNamespace}
+
+				By("verifing started")
+				Eventually(func(g Gomega) {
+
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("finding PVC")
+				pvcKey := types.NamespacedName{Namespace: defaultNamespace, Name: crd.Name + "-" + namer.CrToSS(crd.Name) + "-0"}
+				pvc := &corev1.PersistentVolumeClaim{}
+				Expect(k8sClient.Get(ctx, pvcKey, pvc)).Should(Succeed())
+				Expect(len(pvc.OwnerReferences)).Should(BeEquivalentTo(0))
+
+				// added back owner reference
+				pvc.OwnerReferences = []metav1.OwnerReference{{
+					APIVersion: v1beta1.GroupVersion.String(),
+					Kind:       "ActiveMQArtemis",
+					Name:       createdCrd.Name,
+					UID:        createdCrd.GetUID()}}
+				Expect(k8sClient.Update(ctx, pvc)).Should(Succeed())
+
+				Expect(k8sClient.Get(ctx, pvcKey, pvc)).Should(Succeed())
+				Expect(len(pvc.OwnerReferences)).To(BeEquivalentTo(1))
+
+				shutdownControllerManager()
+
+				Expect(k8sClient.Get(ctx, pvcKey, pvc)).Should(Succeed())
+				Expect(len(pvc.OwnerReferences)).To(BeEquivalentTo(1))
+
+				createControllerManager(true, defaultNamespace)
+
+				// Expect the owner reference gets removed
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, pvcKey, pvc)).Should(Succeed())
+					g.Expect(len(pvc.OwnerReferences)).Should(BeEquivalentTo(0))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("undeploying CR")
+				Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
+
+				Eventually(func(g Gomega) {
+					By("again finding PVC should succeed - " + pvcKey.Name)
+					g.Expect(k8sClient.Get(ctx, pvcKey, &corev1.PersistentVolumeClaim{})).Should(Succeed())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			} else {
+				fmt.Println("The test is skipped because it requires existing cluster")
 			}
 		})
 	})

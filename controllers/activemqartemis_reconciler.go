@@ -1113,6 +1113,9 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) CurrentDeployedResources(custom
 	reqLogger.Info("currentDeployedResources")
 
 	var err error
+	if customResource.Spec.DeploymentPlan.PersistenceEnabled {
+		checkExistingPersistentVolumes(customResource, client)
+	}
 	reconciler.deployed, err = getDeployedResources(customResource, client)
 	if err != nil {
 		reqLogger.Error(err, "error getting deployed resources")
@@ -1227,6 +1230,43 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) deleteRequestedResource(customR
 		reqLogger.Error(deleteError, "delete Failed", "kind", kind, " named ", requested.GetName())
 	}
 	return deleteError
+}
+
+func checkExistingPersistentVolumes(instance *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) {
+	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
+
+	var i int32
+	for i = 0; i < instance.Spec.DeploymentPlan.Size; i++ {
+		ordinalString := strconv.Itoa(int(i))
+		pvcKey := types.NamespacedName{Namespace: instance.Namespace, Name: instance.Name + "-" + namer.CrToSS(instance.Name) + "-" + ordinalString}
+		pvc := &corev1.PersistentVolumeClaim{}
+		err := client.Get(context.TODO(), pvcKey, pvc)
+
+		if err == nil {
+			if len(pvc.OwnerReferences) > 0 {
+				found := false
+				newOwnerReferences := make([]metav1.OwnerReference, 0)
+				for _, oref := range pvc.OwnerReferences {
+					if oref.UID == instance.UID {
+						found = true
+					} else {
+						newOwnerReferences = append(newOwnerReferences, oref)
+					}
+				}
+				if found {
+					log.Info("removing owner ref from pvc to avoid potential data loss")
+					pvc.OwnerReferences = newOwnerReferences
+					if er := client.Update(context.TODO(), pvc); er != nil {
+						log.Error(er, "failed to remove ownerReference from pvc", "pvc", *pvc)
+					}
+				}
+			}
+		} else {
+			if !errors.IsNotFound(err) {
+				log.Error(err, "got error in getting pvc")
+			}
+		}
+	}
 }
 
 func getDeployedResources(instance *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) (map[reflect.Type][]rtclient.Object, error) {
