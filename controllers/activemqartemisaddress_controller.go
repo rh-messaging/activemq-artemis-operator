@@ -20,7 +20,6 @@ import (
 	"context"
 	"reflect"
 	"strconv"
-	"strings"
 
 	"github.com/RHsyseng/operator-utils/pkg/resource/read"
 	mgmt "github.com/artemiscloud/activemq-artemis-management"
@@ -433,7 +432,7 @@ func GetDeployedStatefuleSetNames(client client.Client, targetCrNames []types.Na
 			match = false
 			// track if a match
 			for _, filter := range targetCrNames {
-				if filter.Namespace == ssObject.GetNamespace() && strings.HasPrefix(ssObject.GetName(), filter.Name) {
+				if filter.Namespace == ssObject.GetNamespace() && filter.Name == namer.SSToCr(ssObject.GetName()) {
 					match = true
 					break
 				}
