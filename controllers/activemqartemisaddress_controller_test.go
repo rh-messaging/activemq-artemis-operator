@@ -269,6 +269,104 @@ var _ = Describe("Address controller", Label("do"), func() {
 		})
 	})
 
+	Context("Address creation test", Label("address-creation-test"), func() {
+
+		It("create a queue with non-existing address, no auto-create", func() {
+
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+			crd.Spec.DeploymentPlan.Size = 1
+			applyRule := "merge_all"
+			dla := "DLA"
+			dla1 := "DLQ.XxxxxxXXxxXdata"
+			dlqPrefix := "DLQ"
+			maxConsumers := int32(10)
+			maxAttempts := int32(10)
+			crd.Spec.AddressSettings.ApplyRule = &applyRule
+			crd.Spec.AddressSettings.AddressSetting = []brokerv1beta1.AddressSettingType{
+				{
+					Match:                         "#",
+					EnableMetrics:                 &boolTrue,
+					AutoCreateExpiryResources:     &boolFalse,
+					DeadLetterAddress:             &dla,
+					AutoCreateQueues:              &boolFalse,
+					AutoCreateDeadLetterResources: &boolTrue,
+					AutoCreateAddresses:           &boolFalse,
+					DeadLetterQueuePrefix:         &dlqPrefix,
+					DefaultMaxConsumers:           &maxConsumers,
+					MaxDeliveryAttempts:           &maxAttempts,
+				},
+				{
+					Match:                         "XxxxxxXXxxXdata#",
+					AutoCreateDeadLetterResources: &boolTrue,
+					DeadLetterAddress:             &dla1,
+					DefaultMaxConsumers:           &maxConsumers,
+				},
+			}
+
+			addressName := "myAddress0"
+			queueName := "myQueue0"
+			routingType := "anycast"
+			addressCrd := brokerv1beta1.ActiveMQArtemisAddress{}
+			addressCrd.SetName("address-" + randString())
+			addressCrd.SetNamespace(defaultNamespace)
+			addressCrd.Spec.AddressName = addressName
+			addressCrd.Spec.QueueName = &queueName
+			addressCrd.Spec.RoutingType = &routingType
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" && os.Getenv("DEPLOY_OPERATOR") == "true" {
+
+				By("Deploying a broker without auto-create")
+				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+				By("Checking ready on SS")
+				Eventually(func(g Gomega) {
+					key := types.NamespacedName{Name: namer.CrToSS(crd.Name), Namespace: defaultNamespace}
+					sfsFound := &appsv1.StatefulSet{}
+
+					g.Expect(k8sClient.Get(ctx, key, sfsFound)).Should(Succeed())
+					g.Expect(sfsFound.Status.ReadyReplicas).Should(BeEquivalentTo(1))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("Verfying address is not present")
+
+				podWithOrdinal := namer.CrToSS(crd.Name) + "-0"
+				command := []string{"amq-broker/bin/artemis", "address", "show", "--url", "tcp://" + podWithOrdinal + ":61616"}
+
+				Eventually(func(g Gomega) {
+					stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, gomega.Default)
+					g.Expect(stdOutContent).ShouldNot(ContainSubstring(addressName))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("Deploying address CR")
+				Expect(k8sClient.Create(ctx, &addressCrd)).Should(Succeed())
+
+				By("Verifying queue is created")
+				podWithOrdinal = namer.CrToSS(crd.Name) + "-0"
+				command = []string{"amq-broker/bin/artemis", "address", "show", "--url", "tcp://" + podWithOrdinal + ":61616"}
+
+				Eventually(func(g Gomega) {
+					stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, gomega.Default)
+					g.Expect(stdOutContent).Should(ContainSubstring(addressName))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				command = []string{"amq-broker/bin/artemis", "queue", "stat", "--url", "tcp://" + podWithOrdinal + ":61616"}
+
+				Eventually(func(g Gomega) {
+					stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, gomega.Default)
+					g.Expect(stdOutContent).Should(ContainSubstring(queueName))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				// cleanup
+				Expect(k8sClient.Delete(ctx, &addressCrd)).Should(Succeed())
+				Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
+			} else {
+				fmt.Println("Test skipped as it requires existing cluster with operator installed")
+			}
+
+		})
+	})
+
 	Context("Address CR with console agent", func() {
 
 		It("address creation via agent", func() {

@@ -6,7 +6,7 @@ require (
 	github.com/Azure/go-amqp v0.17.4
 	//this module is problematic
 	github.com/RHsyseng/operator-utils v1.4.10
-	github.com/artemiscloud/activemq-artemis-management v0.0.0-20220211120143-717f9a910005
+	github.com/artemiscloud/activemq-artemis-management v0.0.0-20220825032301-069e75da0afb
 	github.com/go-logr/logr v1.2.0
 	github.com/onsi/ginkgo/v2 v2.1.4
 	github.com/onsi/gomega v1.19.0

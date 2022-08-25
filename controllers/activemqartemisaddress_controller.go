@@ -214,18 +214,29 @@ func createQueue(instance *AddressDeployment, request ctrl.Request, client clien
 
 func createAddressResource(a *JkInfo, addressRes *brokerv1beta1.ActiveMQArtemisAddress) error {
 	//Now checking if create queue or address
-	var err error
 	if addressRes.Spec.QueueName == nil || *addressRes.Spec.QueueName == "" {
 		//create address
-		_, err = a.Artemis.CreateAddress(addressRes.Spec.AddressName, *addressRes.Spec.RoutingType)
+		response, err := a.Artemis.CreateAddress(addressRes.Spec.AddressName, *addressRes.Spec.RoutingType)
 		if nil != err {
-			glog.Error(err, "Error creating ActiveMQArtemisAddress", "address", addressRes.Spec.AddressName)
-			return err
+			if mgmt.GetCreationError(response) == mgmt.ADDRESS_ALREADY_EXISTS {
+				glog.Info("Address already exists, no retry", "address", addressRes.Spec.AddressName)
+				return nil
+			} else {
+				glog.Error(err, "Error creating ActiveMQArtemisAddress", "address", addressRes.Spec.AddressName)
+				return err
+			}
 		} else {
 			glog.Info("Created ActiveMQArtemisAddress for address " + addressRes.Spec.AddressName)
 		}
 	} else {
 		glog.Info("Queue name is not empty so create queue", "name", *addressRes.Spec.QueueName, "broker", a.IP)
+		//first make sure address exists
+		response, err := a.Artemis.CreateAddress(addressRes.Spec.AddressName, *addressRes.Spec.RoutingType)
+		if nil != err && mgmt.GetCreationError(response) != mgmt.ADDRESS_ALREADY_EXISTS {
+			glog.Error(err, "Error creating ActiveMQArtemisAddress", "address", addressRes.Spec.AddressName)
+			return err
+		}
+
 		if addressRes.Spec.QueueConfiguration == nil {
 			routingType := "MULTICAST"
 			if addressRes.Spec.RoutingType != nil {
