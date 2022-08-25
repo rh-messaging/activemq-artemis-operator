@@ -135,7 +135,7 @@ var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
 	"7.9.3":  "7.9.0",
 	"7.9.4":  "7.9.0",
 	"7.10.0": "7.10.0",
-	"7.10.1": "7.10.1",
+	"7.10.1": "7.10.0",
 }
 
 var YacfgProfileName string = "amq_broker"
