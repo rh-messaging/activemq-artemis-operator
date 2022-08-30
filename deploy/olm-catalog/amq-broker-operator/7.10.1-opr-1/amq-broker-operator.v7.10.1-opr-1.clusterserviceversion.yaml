@@ -10,7 +10,7 @@ metadata:
     operatorframework.io/arch.s390x: supported
     operatorframework.io/arch.ppc64le: supported
   annotations:
-    operators.openshift.io/valid-subscription: '["OpenShift Container Platform", "OpenShift Platform Plus", "Red Hat Runtimes", "Red Hat Integration", "Red Hat Process Automation", "Red Hat AMQ", "Red Hat Application Foundations"]'
+    operators.openshift.io/valid-subscription: '["Red Hat Runtimes", "Red Hat Integration", "Red Hat Process Automation", "Red Hat AMQ"]'
     categories: "Streaming & Messaging"
     certified: "false"
     description: AMQ Broker Operator for RHEL 8 (Multiarch) provides the ability to deploy and manage stateful AMQ Broker clusters
