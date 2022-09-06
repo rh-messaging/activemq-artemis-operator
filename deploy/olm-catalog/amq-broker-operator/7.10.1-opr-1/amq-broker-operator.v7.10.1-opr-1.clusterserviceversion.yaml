@@ -21,6 +21,7 @@ metadata:
     repository: https://github.com/rh-messaging/activemq-artemis-operator
     support: Red Hat
     tectonic-visibility: ocs
+    olm.skipRange: '<7.10.1-opr-1'
     alm-examples: >-
       [{
           "apiVersion": "broker.amq.io/v1beta1",
