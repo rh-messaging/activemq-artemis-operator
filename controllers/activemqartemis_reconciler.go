@@ -304,12 +304,12 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAcceptorsAndConnectors(c
 
 	envVars["AMQ_ACCEPTORS"] = ValueInfo{
 		Value:   acceptorEntry,
-		AutoGen: true,
+		AutoGen: false,
 	}
 
 	envVars["AMQ_CONNECTORS"] = ValueInfo{
 		Value:   connectorEntry,
-		AutoGen: true,
+		AutoGen: false,
 	}
 
 	secretName := namer.SecretsNettyNameBuilder.Name()

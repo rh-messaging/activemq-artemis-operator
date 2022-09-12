@@ -3121,7 +3121,7 @@ var _ = Describe("artemis controller", func() {
 			By("check it has gone")
 			Eventually(checkCrdDeleted(cr.Name, defaultNamespace, &cr), timeout, interval).Should(BeTrue())
 		})
-		It("Testing acceptor trustStoreType being set", func() {
+		It("Testing acceptor trustStoreType being set and unset", func() {
 			By("By creating a new custom resource instance")
 			ctx := context.Background()
 			cr := generateArtemisSpec(defaultNamespace)
@@ -3140,6 +3140,8 @@ var _ = Describe("artemis controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, &cr)).Should(Succeed())
 
+			ssResourceVersionWithSslEnabled := ""
+
 			ssNamespacedName := types.NamespacedName{Name: namer.CrToSS(cr.Name), Namespace: defaultNamespace}
 			Eventually(func(g Gomega) {
 				currentStatefulSet, err := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, nil, k8sClient)
@@ -3148,6 +3150,8 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(len).Should(Equal(1))
 
 				initContainer := currentStatefulSet.Spec.Template.Spec.InitContainers[0]
+
+				found := false
 				//check AMQ_ACCEPTORS value
 				for _, envVar := range initContainer.Env {
 					if envVar.Name == "AMQ_ACCEPTORS" {
@@ -3161,6 +3165,57 @@ var _ = Describe("artemis controller", func() {
 						//we need to locate our target acceptor and do the check
 						//we use the port as a clue
 						checkSecretHasCorrectKeyValue(g, secretName, namespaceName, envVar.ValueFrom.SecretKeyRef.Key, "trustStoreType=JCEKS")
+						found = true
+					}
+				}
+				g.Expect(found).Should(BeTrue())
+				ssResourceVersionWithSslEnabled = currentStatefulSet.ResourceVersion
+
+			}, timeout, interval).Should(Succeed())
+
+			By("test Updating the CR back to sslEnabled=false")
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+			Eventually(func(g Gomega) {
+
+				g.Expect(getPersistedVersionedCrd(cr.ObjectMeta.Name, defaultNamespace, createdCrd)).Should(BeTrue())
+
+				createdCrd.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+					{
+						Name:           "new-acceptor",
+						Port:           61666,
+						SSLEnabled:     false,
+						TrustStoreType: trustStoreType,
+					},
+				}
+
+				By("Redeploying the CRD")
+				g.Expect(k8sClient.Update(ctx, createdCrd)).Should(Succeed())
+
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				currentStatefulSet, err := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, nil, k8sClient)
+				g.Expect(err).To(BeNil())
+				len := len(currentStatefulSet.Spec.Template.Spec.InitContainers)
+				g.Expect(len).Should(Equal(1))
+
+				g.Expect(currentStatefulSet.ResourceVersion).ShouldNot(Equal(ssResourceVersionWithSslEnabled))
+
+				initContainer := currentStatefulSet.Spec.Template.Spec.InitContainers[0]
+				//check AMQ_ACCEPTORS value
+				for _, envVar := range initContainer.Env {
+					if envVar.Name == "AMQ_ACCEPTORS" {
+						secretName := envVar.ValueFrom.SecretKeyRef.Name
+						namespaceName := types.NamespacedName{
+							Name:      secretName,
+							Namespace: defaultNamespace,
+						}
+
+						secret, err := secrets.RetriveSecret(namespaceName, secretName, make(map[string]string), k8sClient)
+						g.Expect(err).Should(BeNil())
+
+						data := secret.Data[envVar.ValueFrom.SecretKeyRef.Key]
+						g.Expect(string(data)).ShouldNot(ContainSubstring("trustStoreType=JCEKS"))
 					}
 				}
 			}, timeout, interval).Should(Succeed())
