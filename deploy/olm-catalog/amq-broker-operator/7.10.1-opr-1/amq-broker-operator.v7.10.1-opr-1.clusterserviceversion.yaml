@@ -14,8 +14,8 @@ metadata:
     categories: "Streaming & Messaging"
     certified: "false"
     description: AMQ Broker Operator for RHEL 8 (Multiarch) provides the ability to deploy and manage stateful AMQ Broker clusters
-    #containerImage: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.10-22
-    containerImage: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:76e218d8347d7d17f1b8875aa919426ca1deafaa5812ae71cda98b535d8d95c1
+    #containerImage: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.10-23
+    containerImage: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:54e40be6caebb6bcb1638570952c3aee5de2d10291d687f1393bc6dc4f02ffbc
     createdAt: 2021-06-18T00:02:04Z
     capabilities: Seamless Upgrades
     repository: https://github.com/rh-messaging/activemq-artemis-operator
@@ -2220,8 +2220,8 @@ spec:
                   runAsNonRoot: true
                 containers:
                   - name: amq-broker-operator
-                    #image: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.10-22
-                    image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:76e218d8347d7d17f1b8875aa919426ca1deafaa5812ae71cda98b535d8d95c1
+                    #image: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.10-23
+                    image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:54e40be6caebb6bcb1638570952c3aee5de2d10291d687f1393bc6dc4f02ffbc
                     livenessProbe:
                       httpGet:
                         path: /healthz
