@@ -1,34 +1,40 @@
 package pods
 
-var labelsFor7_9 map[string]string = map[string]string{
+var labelsForRh map[string]string = map[string]string{
 	"com.company":   "Red_Hat",
 	"rht.prod_name": "Red_Hat_Integration",
-	"rht.prod_ver":  "2022.Q1",
 	"rht.comp":      "Broker_AMQ",
-	"rht.comp_ver":  "7.9.2",
 	"rht.subcomp":   "broker-amq",
 	"rht.subcomp_t": "application",
 }
 
-var labelsFor7_10 map[string]string = map[string]string{
-	"com.company":   "Red_Hat",
-	"rht.prod_name": "Red_Hat_Integration",
-	"rht.prod_ver":  "2022.Q2",
-	"rht.comp":      "Broker_AMQ",
-	"rht.comp_ver":  "7.10.0",
-	"rht.subcomp":   "broker-amq",
-	"rht.subcomp_t": "application",
-}
+// going back in time, coalesce on this value
+const DEFAULT_PROD_VER = "2021.Q4"
 
-var labelsFromVersion map[string]map[string]string = map[string]map[string]string{
-	"7.9.2":  labelsFor7_9,
-	"7.10.1": labelsFor7_10,
+var productVerFromImageVer map[string]string = map[string]string{
+	"7.9.1":  "2021.Q4",
+	"7.9.2":  "2022.Q1",
+	"7.9.3":  "2022.Q1",
+	"7.9.4":  "2022.Q2",
+	"7.10.0": "2022.Q2",
+	"7.10.1": "2022.Q3",
 }
 
 // the labels returned will be added to broker pod
 func GetAdditionalLabels(fullBrokerVersion string) map[string]string {
-	if labels, ok := labelsFromVersion[fullBrokerVersion]; ok {
-		return labels
+	labels := make(map[string]string)
+	for k, v := range labelsForRh {
+		labels[k] = v
 	}
-	return nil
+	// track image version to ensure labels don't change for a given image
+	labels["rht.comp_ver"] = fullBrokerVersion
+
+	// prod_ver needs to mapped and remembered as this is date driven
+	var prodVer, found = productVerFromImageVer[fullBrokerVersion]
+	if !found {
+		prodVer = DEFAULT_PROD_VER
+	}
+	labels["rht.prod_ver"] = prodVer
+
+	return labels
 }
