@@ -43,7 +43,6 @@ func MakeStatefulSet2(currentStateFulSet *appsv1.StatefulSet, ssName string, svc
 
 	currentStateFulSet.Spec.Template = *pods.MakePodTemplateSpec(&currentStateFulSet.Spec.Template, namespacedName, labels)
 
-	//	log.Info("created statefulset", "spec", currentStateFulSet.Spec)
 	return currentStateFulSet
 }
 

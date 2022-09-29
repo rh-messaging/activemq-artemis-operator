@@ -1425,7 +1425,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	if customResource.Spec.DeploymentPlan.Labels != nil {
 		for key, value := range customResource.Spec.DeploymentPlan.Labels {
 			labels[key] = value
-			reqLogger.V(1).Info("Adding Label", "key", key, "value", value)
+			reqLogger.V(1).Info("Adding CR Label", "key", key, "value", value)
 		}
 	}
 
@@ -1957,9 +1957,11 @@ func determineImageToUse(customResource *brokerv1beta1.ActiveMQArtemis, imageTyp
 }
 
 func getPodLabels(namer Namers, customResource *brokerv1beta1.ActiveMQArtemis) map[string]string {
-	labels := namer.LabelBuilder.Labels()
-	for k, v := range labels {
-		labels[k] = v
+	// custom labels provided in CR applied only to the pod template spec
+	// note: work with a clone of the default labels to not modify defaults
+	labels := make(map[string]string)
+	for key, value := range namer.LabelBuilder.Labels() {
+		labels[key] = value
 	}
 
 	compactVersion := determineCompactVersionToUse(customResource)
