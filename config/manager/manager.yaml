@@ -47,6 +47,7 @@ spec:
         # If running entrypoint_debug then use '-- --zap-level debug'
         - --zap-log-level=info
         - --zap-encoder=console
+        - --zap-time-encoding=iso8601
         - --leader-elect
         env:
         - name: OPERATOR_NAME
