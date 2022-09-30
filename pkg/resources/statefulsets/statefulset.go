@@ -28,19 +28,19 @@ func MakeStatefulSet2(currentStateFulSet *appsv1.StatefulSet, ssName string, svc
 				Namespace: namespacedName.Namespace,
 			},
 			Spec: appsv1.StatefulSetSpec{
-				Template: *pods.MakePodTemplateSpec(nil, namespacedName, labels),
+				// these fields are immutable
+				ServiceName: svcHeadlessName,
+				Selector: &metav1.LabelSelector{
+					MatchLabels: labels,
+				},
 			},
 		}
 	}
+	// these fields we reconcile
 	currentStateFulSet.ObjectMeta.Labels = labels
 	currentStateFulSet.ObjectMeta.Annotations = annotations
 
 	currentStateFulSet.Spec.Replicas = &replicas
-	currentStateFulSet.Spec.ServiceName = svcHeadlessName
-	currentStateFulSet.Spec.Selector = &metav1.LabelSelector{
-		MatchLabels: labels,
-	}
-
 	currentStateFulSet.Spec.Template = *pods.MakePodTemplateSpec(&currentStateFulSet.Spec.Template, namespacedName, labels)
 
 	return currentStateFulSet
