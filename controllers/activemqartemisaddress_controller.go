@@ -314,29 +314,37 @@ func (ar *AddressRetry) safeDelete() {
 func deleteQueue(instance *AddressDeployment, request ctrl.Request, client client.Client, scheme *runtime.Scheme) error {
 
 	reqLogger := ctrl.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Deleting ActiveMQArtemisAddress")
+
+	addressName := instance.AddressResource.Spec.AddressName
+
+	queueName := ""
+	if instance.AddressResource.Spec.QueueName != nil {
+		queueName = *instance.AddressResource.Spec.QueueName
+	}
+
+	reqLogger.Info("Deleting ActiveMQArtemisAddress for queue " + addressName + "/" + queueName)
 
 	var err error = nil
 	artemisArray := getPodBrokers(instance, request, client, scheme)
 	if nil != artemisArray {
 		addressRetry := &AddressRetry{
-			address: instance.AddressResource.Spec.AddressName,
+			address: addressName,
 			artemis: make([]*mgmt.Artemis, 0),
 		}
 		for _, a := range artemisArray {
-			if instance.AddressResource.Spec.QueueName == nil || *instance.AddressResource.Spec.QueueName == "" {
+			if queueName == "" {
 				//delete address
-				_, err = a.Artemis.DeleteAddress(instance.AddressResource.Spec.AddressName)
+				_, err = a.Artemis.DeleteAddress(addressName)
 				if nil != err {
-					reqLogger.Error(err, "Deleting ActiveMQArtemisAddress error", "address", instance.AddressResource.Spec.AddressName)
+					reqLogger.Error(err, "Deleting ActiveMQArtemisAddress error", "address", addressName)
 					break
 				}
-				reqLogger.Info("Deleted ActiveMQArtemisAddress for address " + instance.AddressResource.Spec.AddressName)
+				reqLogger.Info("Deleted ActiveMQArtemisAddress for address " + addressName)
 			} else {
 				//delete queues
-				_, err = a.Artemis.DeleteQueue(*instance.AddressResource.Spec.QueueName)
+				_, err = a.Artemis.DeleteQueue(queueName)
 				if nil != err {
-					reqLogger.Error(err, "Deleting ActiveMQArtemisAddress error for queue "+*instance.AddressResource.Spec.QueueName)
+					reqLogger.Error(err, "Deleting ActiveMQArtemisAddress error for queue "+queueName)
 					break
 				} else {
 					addressRetry.addToDelete(a.Artemis)
@@ -345,7 +353,7 @@ func deleteQueue(instance *AddressDeployment, request ctrl.Request, client clien
 		}
 		// we delete address after all queues are deleted
 		addressRetry.safeDelete()
-		reqLogger.Info("Deleted ActiveMQArtemisAddress for queue " + *instance.AddressResource.Spec.QueueName)
+		reqLogger.Info("Deleted ActiveMQArtemisAddress for queue " + addressName + "/" + queueName)
 	}
 
 	return err
