@@ -49,7 +49,7 @@ var _ = Describe("Scale down controller", func() {
 			// note: we force a non local scaledown cr to exercise creds generation
 			// hense only valid with DEPLOY_OPERATOR = false
 			// 	see suite_test.go: os.Setenv("OPERATOR_WATCH_NAMESPACE", "SomeValueToCauesEqualitytoFailInIsLocalSoDrainControllerSortsCreds")
-			if os.Getenv("USE_EXISTING_CLUSTER") == "true" && os.Getenv("DEPLOY_OPERATOR") != "true" {
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 
 				brokerName := randString()
 				ctx := context.Background()
@@ -217,7 +217,7 @@ var _ = Describe("Scale down controller", func() {
 		isOpenshift, err := environments.DetectOpenshift()
 		Expect(err).Should(BeNil())
 
-		if !isOpenshift && os.Getenv("USE_EXISTING_CLUSTER") == "true" && os.Getenv("DEPLOY_OPERATOR") != "true" {
+		if !isOpenshift && os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 
 			By("Tainting the node with no schedule")
 			Eventually(func(g Gomega) {

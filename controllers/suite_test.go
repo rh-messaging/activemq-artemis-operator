@@ -18,7 +18,10 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
+	"net/http"
+	"net/url"
 	"os"
 	"time"
 
@@ -27,8 +30,12 @@ import (
 	"path/filepath"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/api/errors"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -62,6 +69,7 @@ import (
 // Define utility constants for object names and testing timeouts/durations and intervals.
 const (
 	defaultNamespace        = "default"
+	otherNamespace          = "other"
 	timeout                 = time.Second * 30
 	duration                = time.Second * 10
 	interval                = time.Millisecond * 500
@@ -126,9 +134,109 @@ func setUpEnvTest() {
 
 	setUpK8sClient()
 
+	setUpTestProxy()
+
 	stateManager = common.GetStateManager()
 
 	createControllerManager(false, defaultNamespace)
+}
+
+//Set up test-proxy for external http requests
+func setUpTestProxy() {
+
+	var err error
+	var testProxyPort int32 = 3128
+	var testProxyNodePort int32 = 30128
+	var testProxyDeploymentReplicas int32 = 1
+	testProxyLabels := map[string]string{"app": "test-proxy"}
+
+	testProxyDeployment := appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-proxy",
+			Namespace: defaultNamespace,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: testProxyLabels,
+			},
+			Replicas: &testProxyDeploymentReplicas,
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: testProxyLabels,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "ningx",
+							Image: "ubuntu/squid:edge",
+							Ports: []corev1.ContainerPort{
+								{
+									ContainerPort: testProxyPort,
+									Protocol:      "TCP",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err = k8sClient.Create(ctx, &testProxyDeployment)
+	Expect(err != nil || errors.IsConflict(err))
+
+	testProxyService := corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-proxy",
+			Namespace: defaultNamespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Type:     corev1.ServiceTypeNodePort,
+			Selector: testProxyLabels,
+			Ports: []corev1.ServicePort{
+				{
+					Port:       testProxyPort,
+					TargetPort: intstr.IntOrString{IntVal: testProxyPort},
+					NodePort:   testProxyNodePort,
+				},
+			},
+		},
+	}
+
+	err = k8sClient.Create(ctx, &testProxyService)
+	Expect(err != nil || errors.IsConflict(err))
+
+	clusterUrl, err := url.Parse(testEnv.Config.Host)
+	Expect(err).NotTo(HaveOccurred())
+
+	proxyUrl, err := url.Parse(fmt.Sprintf("http://%s:%d", clusterUrl.Hostname(), testProxyNodePort))
+	Expect(err).NotTo(HaveOccurred())
+
+	http.DefaultTransport = &http.Transport{Proxy: http.ProxyURL(proxyUrl)}
+}
+
+func cleanUpTestProxy() {
+	var err error
+
+	testProxyDeployment := appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-proxy",
+			Namespace: defaultNamespace,
+		},
+	}
+
+	err = k8sClient.Delete(ctx, &testProxyDeployment)
+	Expect(err != nil || errors.IsNotFound(err))
+
+	testProxyService := corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-proxy",
+			Namespace: defaultNamespace,
+		},
+	}
+
+	err = k8sClient.Delete(ctx, &testProxyService)
+	Expect(err != nil || errors.IsNotFound(err))
 }
 
 func createControllerManager(disableMetrics bool, watchNamespace string) {
@@ -417,8 +525,22 @@ var _ = BeforeSuite(func() {
 	}
 })
 
+func cleanUpPVC() {
+	pvcs := &corev1.PersistentVolumeClaimList{}
+	opts := []client.ListOption{}
+	k8sClient.List(context.TODO(), pvcs, opts...)
+	for _, pvc := range pvcs.Items {
+		logf.Log.Info("Deleting/GC PVC: " + pvc.Name)
+		k8sClient.Delete(context.TODO(), &pvc, &client.DeleteOptions{})
+	}
+}
+
 var _ = AfterSuite(func() {
 	By("tearing down the test environment")
+	if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+		cleanUpPVC()
+		cleanUpTestProxy()
+	}
 
 	os.Unsetenv("OPERATOR_WATCH_NAMESPACE")
 
