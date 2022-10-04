@@ -138,7 +138,7 @@ func setUpEnvTest() {
 
 	stateManager = common.GetStateManager()
 
-	createControllerManager(false, defaultNamespace)
+	createControllerManager(false, "")
 }
 
 //Set up test-proxy for external http requests

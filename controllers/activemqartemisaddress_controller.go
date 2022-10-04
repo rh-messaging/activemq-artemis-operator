@@ -585,7 +585,7 @@ func GetStatefulSetNameForPod(client client.Client, pod *types.NamespacedName) (
 		glog.Info("checking address cr in stock", "cr", crName)
 		if crName.Namespace != pod.Namespace {
 			glog.Info("this cr doesn't match pod's namespace", "cr's ns", crName.Namespace)
-			return "", -1, nil
+			continue
 		}
 		if len(addressDeployment.SsTargetNameBuilders) == 0 {
 			glog.Info("this cr doesn't have target specified, it will be applied to all")
@@ -593,7 +593,7 @@ func GetStatefulSetNameForPod(client client.Client, pod *types.NamespacedName) (
 			ssInfos := GetDeployedStatefuleSetNames(client, nil)
 			if len(ssInfos) == 0 {
 				glog.Info("No statefulset found")
-				return "", -1, nil
+				continue
 			}
 			for _, info := range ssInfos {
 				glog.Info("checking if this ss belong", "ss", info.NamespacedName.Name)
@@ -603,7 +603,7 @@ func GetStatefulSetNameForPod(client client.Client, pod *types.NamespacedName) (
 				}
 			}
 			glog.Info("no match at all")
-			return "", -1, nil
+			continue
 		}
 		//iterate and check the ss name
 		glog.Info("Now processing cr with applyToCrNames")
