@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"reflect"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -26,10 +27,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
@@ -143,6 +146,8 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 
 		UpdatePodStatus(customResource, r.Client, request.NamespacedName)
 
+		err = UpdateCRStatus(customResource, r.Client, request.NamespacedName)
+
 	} else if errors.IsNotFound(err) {
 		reqLogger.Info("ActiveMQArtemis Controller Reconcile encountered a IsNotFound, for request NamespacedName " + request.NamespacedName.String())
 		err = nil
@@ -231,4 +236,31 @@ func (r *ActiveMQArtemisReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		)
 	}
 	return err
+}
+
+func UpdateCRStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namespacedName types.NamespacedName) error {
+
+	common.SetReadyCondition(&cr.Status.Conditions)
+
+	current := &brokerv1beta1.ActiveMQArtemis{}
+
+	err := client.Get(context.TODO(), namespacedName, current)
+	if err != nil {
+		clog.Error(err, "unable to retrieve current resource", "ActiveMQArtemis", namespacedName)
+		return err
+	}
+
+	if reflect.DeepEqual(current.Status.PodStatus, cr.Status.PodStatus) {
+		return nil
+	}
+	if len(current.Status.Conditions) != len(cr.Status.Conditions) {
+		return resources.UpdateStatus(client, cr)
+	}
+	for _, c := range current.Status.Conditions {
+		if !common.IsConditionPresentAndEqual(cr.Status.Conditions, c) {
+			return resources.UpdateStatus(client, cr)
+		}
+	}
+
+	return nil
 }

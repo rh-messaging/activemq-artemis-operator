@@ -30,6 +30,7 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -2072,11 +2073,11 @@ func NewPersistentVolumeClaimArrayForCR(customResource *brokerv1beta1.ActiveMQAr
 		Namespace: customResource.Namespace,
 	}
 
-	if "" != customResource.Spec.DeploymentPlan.Storage.Size {
+	if customResource.Spec.DeploymentPlan.Storage.Size != "" {
 		capacity = customResource.Spec.DeploymentPlan.Storage.Size
 	}
 
-	if "" != customResource.Spec.DeploymentPlan.Storage.StorageClassName {
+	if customResource.Spec.DeploymentPlan.Storage.StorageClassName != "" {
 		storageClassName = customResource.Spec.DeploymentPlan.Storage.StorageClassName
 	}
 
@@ -2100,13 +2101,24 @@ func UpdatePodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, 
 	reqLogger.V(1).Info("Stopped Count......................", "info:", len(podStatus.Stopped))
 	reqLogger.V(1).Info("Starting Count.....................", "info:", len(podStatus.Starting))
 
+	deploymentCondition := metav1.Condition{
+		Type:               brokerv1beta1.DeployedConditionType,
+		LastTransitionTime: metav1.Now(),
+	}
+	if len(podStatus.Ready) == int(cr.Spec.DeploymentPlan.Size) {
+		deploymentCondition.Reason = brokerv1beta1.DeployedConditionReadyReason
+		deploymentCondition.Status = metav1.ConditionTrue
+	} else {
+		deploymentCondition.Reason = brokerv1beta1.DeployedConditionNotReadyReason
+		deploymentCondition.Message = fmt.Sprintf("%d/%d pods ready", len(podStatus.Ready), cr.Spec.DeploymentPlan.Size)
+		deploymentCondition.Status = metav1.ConditionFalse
+	}
+	meta.SetStatusCondition(&cr.Status.Conditions, deploymentCondition)
+
 	var err error
 	if !reflect.DeepEqual(podStatus, cr.Status.PodStatus) {
 		cr.Status.PodStatus = podStatus
-		if err = resources.UpdateStatus(client, cr); err == nil {
-			reqLogger.Info("Pods status updated")
-		}
-
+		reqLogger.Info("Pods status updated")
 	} else {
 		// could leave this to kube, it will do a []byte comparison
 		reqLogger.Info("Pods status unchanged")
@@ -2122,10 +2134,9 @@ func GetPodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, nam
 	var status olm.DeploymentStatus
 	var lastStatus olm.DeploymentStatus
 
-	if lastStatus, lastStatusExist := lastStatusMap[namespacedName]; !lastStatusExist {
+	if _, lastStatusExist := lastStatusMap[namespacedName]; !lastStatusExist {
 		ctrl.Log.Info("Creating lastStatus for new CR", "name", namespacedName)
-		lastStatus = olm.DeploymentStatus{}
-		lastStatusMap[namespacedName] = lastStatus
+		lastStatusMap[namespacedName] = olm.DeploymentStatus{}
 	}
 
 	ssNamespacedName := types.NamespacedName{Name: namer.CrToSS(namespacedName.Name), Namespace: namespacedName.Namespace}
@@ -2142,7 +2153,7 @@ func GetPodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, nam
 		// More pods ready, let the address controller know
 		for i := len(lastStatus.Ready); i < len(status.Ready); i++ {
 			reqLogger.V(1).Info("Notifying address controller", "new ready", i)
-			channels.AddressListeningCh <- types.NamespacedName{namespacedName.Namespace, status.Ready[i]}
+			channels.AddressListeningCh <- types.NamespacedName{Namespace: namespacedName.Namespace, Name: status.Ready[i]}
 		}
 	}
 	lastStatusMap[namespacedName] = status
