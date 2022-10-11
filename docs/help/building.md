@@ -26,9 +26,9 @@ You can install a [Minikube](https://minikube.sigs.k8s.io/docs/) or a [CodeReady
 
 Current version being used is v20.10. Checkout [this page](https://docs.docker.com/get-docker/) for help on installing docker on your specific operating system.
 
-### Go v1.16
+### Go v1.17
 
-Install Go version v1.16 following [this guide](https://go.dev/doc/install).
+Install Go version v1.17 following [this guide](https://go.dev/doc/install).
 
 ### operator-sdk v1.15.0
 
