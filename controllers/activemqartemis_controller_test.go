@@ -2164,6 +2164,88 @@ var _ = Describe("artemis controller", func() {
 		})
 	})
 
+	Context("Validation", func() {
+		It("Test labels", func() {
+			ctx := context.Background()
+			var err error
+			var deployedCrdKey types.NamespacedName
+			var deployedCrd brokerv1beta1.ActiveMQArtemis
+			var deployedStatefulSet *appsv1.StatefulSet
+			var deployedResources map[reflect.Type][]client.Object
+			statefulSetType := reflect.TypeOf(appsv1.StatefulSet{})
+
+			By("By creating invalid crd")
+			invalidCrd := generateArtemisSpec(defaultNamespace)
+			invalidCrd.Spec.DeploymentPlan.Labels = map[string]string{"application": "test"}
+			Expect(k8sClient.Create(ctx, &invalidCrd)).Should(Succeed())
+
+			By("By creating valid crd")
+			validCrd := generateArtemisSpec(defaultNamespace)
+			validCrd.Spec.DeploymentPlan.Labels = map[string]string{"test": "test"}
+			Expect(k8sClient.Create(ctx, &validCrd)).Should(Succeed())
+
+			By("Checking valid CR")
+			deployedCrdKey = types.NamespacedName{Name: validCrd.ObjectMeta.Name, Namespace: defaultNamespace}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, deployedCrdKey, &deployedCrd)).Should(Succeed())
+				g.Expect(deployedCrd.Name).Should(Equal(validCrd.ObjectMeta.Name))
+				g.Expect(len(deployedCrd.Status.PodStatus.Stopped)).Should(Equal(1))
+				g.Expect(deployedCrd.Status.PodStatus.Stopped[0]).Should(Equal(namer.CrToSS(validCrd.Name)))
+			}, timeout, interval).Should(Succeed())
+
+			By("Checking deployed resources of valid CR")
+			deployedResources, err = getDeployedResources(&validCrd, k8sClient)
+			Expect(err).Should(Succeed())
+			Expect(deployedResources).ShouldNot(BeEmpty())
+
+			By("Checking template labels of valid CR")
+			deployedStatefulSet = deployedResources[statefulSetType][0].(*appsv1.StatefulSet)
+			Expect(deployedStatefulSet.Spec.Template.Labels["test"]).Should(Equal("test"))
+
+			By("Checking invalid CR")
+			deployedCrdKey = types.NamespacedName{Name: invalidCrd.ObjectMeta.Name, Namespace: defaultNamespace}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, deployedCrdKey, &deployedCrd)).Should(Succeed())
+				g.Expect(deployedCrd.Name).Should(Equal(invalidCrd.ObjectMeta.Name))
+			}, timeout, interval).Should(Succeed())
+
+			deployedResources, err = getDeployedResources(&invalidCrd, k8sClient)
+			Expect(err).Should(Succeed())
+			Expect(deployedResources).Should(BeEmpty())
+
+			By("By updating invalid crd")
+			invalidCrd.Spec.DeploymentPlan.Labels = map[string]string{"test": "test"}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, deployedCrdKey, &deployedCrd)).Should(Succeed())
+				g.Expect(deployedCrd.Name).Should(Equal(invalidCrd.ObjectMeta.Name))
+				deployedCrd.Spec.DeploymentPlan.Labels = map[string]string{"test": "test"}
+				Expect(k8sClient.Update(ctx, &deployedCrd)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			By("Checking updated invalid CR")
+			deployedCrdKey = types.NamespacedName{Name: invalidCrd.ObjectMeta.Name, Namespace: defaultNamespace}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, deployedCrdKey, &deployedCrd)).Should(Succeed())
+				g.Expect(deployedCrd.Name).Should(Equal(invalidCrd.ObjectMeta.Name))
+				g.Expect(len(deployedCrd.Status.PodStatus.Stopped)).Should(Equal(1))
+				g.Expect(deployedCrd.Status.PodStatus.Stopped[0]).Should(Equal(namer.CrToSS(invalidCrd.Name)))
+			}, timeout, interval).Should(Succeed())
+
+			By("Checking deployed resources of updated invalid CR")
+			deployedResources, err = getDeployedResources(&validCrd, k8sClient)
+			Expect(err).Should(Succeed())
+			Expect(deployedResources).ShouldNot(BeEmpty())
+
+			By("Checking template labels of updated invalid CR")
+			deployedStatefulSet = deployedResources[statefulSetType][0].(*appsv1.StatefulSet)
+			Expect(deployedStatefulSet.Spec.Template.Labels["test"]).Should(Equal("test"))
+
+			By("Deleting crds")
+			Expect(k8sClient.Delete(ctx, &validCrd)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, &invalidCrd)).Should(Succeed())
+		})
+	})
+
 	Context("Env var updates TRIGGERED_ROLL_COUNT checksum", func() {
 		It("Expect TRIGGERED_ROLL_COUNT count non 0", func() {
 			By("By creating a new crd")

@@ -222,7 +222,7 @@ type DeploymentPlanType struct {
 	// Whether or not to install the artemis metrics plugin
 	EnableMetricsPlugin *bool               `json:"enableMetricsPlugin,omitempty"`
 	Tolerations         []corev1.Toleration `json:"tolerations,omitempty"`
-	//custom labels provided in the cr
+	// Assign labels to a broker pod, the keys `ActiveMQArtemis` and `application` are not allowed
 	Labels map[string]string `json:"labels,omitempty"`
 	//custom node selector
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`

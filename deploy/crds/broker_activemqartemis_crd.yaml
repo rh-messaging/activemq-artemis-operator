@@ -928,7 +928,7 @@ spec:
                   labels:
                     additionalProperties:
                       type: string
-                    description: custom labels provided in the cr
+                    description: Assign labels to a broker pod, the keys `ActiveMQArtemis` and `application` are not allowed
                     type: object
                   livenessProbe:
                     description: Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.
