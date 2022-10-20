@@ -278,8 +278,8 @@ spec:
 
         - name: ENABLE_WEBHOOKS
           value: "false"
-        #image: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.10.2.OPR.1.ER1
-        image: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.10.2.OPR.1.ER1
+        #image: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.10-28
+        image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:8c05dc21ba43b0db3882f6c5747db71554415eb0354bd384d89ca2a436183aae
         #imagePullPolicy: Always
 
         name: manager
