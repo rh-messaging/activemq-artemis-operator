@@ -3699,6 +3699,54 @@ var _ = Describe("artemis controller", func() {
 		}
 	})
 
+	It("credential secret manually created", func() {
+
+		ctx := context.Background()
+		crd := generateArtemisSpec(defaultNamespace)
+
+		credentialsSecret := corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Secret",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Labels:    crd.Labels,
+				Name:      crd.Name + "-credentials-secret",
+				Namespace: crd.Namespace,
+			},
+			StringData: map[string]string{
+				"AMQ_USER":             "admin",
+				"AMQ_PASSWORD":         "admin",
+				"AMQ_CLUSTER_USER":     "admin",
+				"AMQ_CLUSTER_PASSWORD": "admin",
+			},
+		}
+
+		By("Deploying credentialsSecret")
+		Expect(k8sClient.Create(ctx, &credentialsSecret)).Should(Succeed())
+
+		StartCapturingLog()
+		defer StopCapturingLog()
+
+		By("Deploying a broker")
+		Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+		createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+		key := types.NamespacedName{Name: crd.Name, Namespace: defaultNamespace}
+
+		Eventually(func(g Gomega) {
+			By("Checking stopped status of CR, deployed with replica count 0")
+			g.Expect(k8sClient.Get(ctx, key, createdCrd)).Should(Succeed())
+			g.Expect(len(createdCrd.Status.PodStatus.Stopped)).Should(BeEquivalentTo(1))
+		}, timeout, interval).Should(Succeed())
+
+		Expect(MatchCapturedLog("Failed to create new \\*v1.Secret")).Should(BeFalse())
+
+		// cleanup
+		k8sClient.Delete(ctx, &crd)
+		k8sClient.Delete(ctx, &credentialsSecret)
+	})
+
 	It("deploy security cr while broker is not yet ready", func() {
 
 		By("Creating broker with custom probe that relies on security")
