@@ -73,8 +73,8 @@ spec:
           #value: registry.redhat.io/amq7/amq-broker-init-rhel7:0.2-22.1655309890
           value: registry.redhat.io/amq7/amq-broker-init-rhel7@sha256:f859e478570e55727a76dff5ab9034aba67e6e5e7cf0d20effe294d1f0144c95
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_787
-          #value: registry.redhat.io/amq7/amq-broker-init-rhel7:7.8-2
-          value: registry.redhat.io/amq7/amq-broker-init-rhel7@sha256:97ec38d5aae578f79514206d9d36b13090977b4cb752b6d711ca16575f8a55f1
+          #value: registry.redhat.io/amq7/amq-broker-init-rhel7:7.8-2.1665063907
+          value: registry.redhat.io/amq7/amq-broker-init-rhel7@sha256:6749486b236accebd4969d1f89729bd8c416c6354a515ffaeb06b169150174ba
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_770
           #value: registry.redhat.io/amq7/amq-broker:7.7
           value: registry.redhat.io/amq7/amq-broker@sha256:6cdd36d43872146e852daadae6882370f657a60a3b1e88318767fa9641f5e882
@@ -100,11 +100,11 @@ spec:
           #value: registry.redhat.io/amq7/amq-broker:7.8-31.1655306070
           value: registry.redhat.io/amq7/amq-broker@sha256:d17ec493a603ae8675c01263dca566f0fd3a82b10edbdf6b681fdb90b2abb01c
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_787
-          #value: registry.redhat.io/amq7/amq-broker:7.8-34
-          value: registry.redhat.io/amq7/amq-broker@sha256:ea9339c3a83eb12e7de85a6111acc7f8ba61fa9c4c03620150633c6227a33b0b
+          #value: registry.redhat.io/amq7/amq-broker:7.8-34.1665062443
+          value: registry.redhat.io/amq7/amq-broker@sha256:9e81a30b2d9894ade1952e28a954513066c939aaf4d936e7a9a368c7c82364fc
 
-        #image: registry.redhat.io/amq7/amq-broker-rhel7-operator:7.8-24
-        image: registry.redhat.io/amq7/amq-broker-rhel7-operator@sha256:16211ccd1f79fb0423b1a580243999f13bb858acd9d25654eb548c44f6f03972
+        #image: registry.redhat.io/amq7/amq-broker-rhel7-operator:7.8-24.1665061698
+        image: registry.redhat.io/amq7/amq-broker-rhel7-operator@sha256:7968e6c70e24b327b5601da34be4a45387ea263919853879ccf7f39eb781a3f4
 
         # If floating tags are configured above you may want to set this to true.
         #imagePullPolicy: Always
