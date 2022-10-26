@@ -159,28 +159,6 @@ func IsEqualV1Beta1(currentAddressSetting []brokerv1beta1.AddressSettingType, ne
 		} else {
 			return false
 		}
-		if newSetting.RedeliveryDelayMultiplier == nil {
-			if curSetting.RedeliveryDelayMultiplier != nil {
-				return false
-			}
-		} else if curSetting.RedeliveryDelayMultiplier != nil {
-			if *curSetting.RedeliveryDelayMultiplier != *newSetting.RedeliveryDelayMultiplier {
-				return false
-			}
-		} else {
-			return false
-		}
-		if newSetting.RedeliveryCollisionAvoidanceFactor == nil {
-			if curSetting.RedeliveryCollisionAvoidanceFactor != nil {
-				return false
-			}
-		} else if curSetting.RedeliveryCollisionAvoidanceFactor != nil {
-			if *curSetting.RedeliveryCollisionAvoidanceFactor != *newSetting.RedeliveryCollisionAvoidanceFactor {
-				return false
-			}
-		} else {
-			return false
-		}
 		if newSetting.MaxRedeliveryDelay == nil {
 			if curSetting.MaxRedeliveryDelay != nil {
 				return false

@@ -121,21 +121,6 @@ func checkFloat32(prop *float32) *string {
 	return &tmp
 }
 
-func checkFloat32AsString(propstr *string) *string {
-	var prop *float32 = nil
-	var value float64
-	var err error
-	if nil != propstr {
-		if value, err = strconv.ParseFloat(*propstr, 32); err != nil {
-			cr2jinja2Log.Error(err, "failed to convert to float32 from string", "value", propstr)
-		} else {
-			tmpval := float32(value)
-			prop = &tmpval
-		}
-	}
-	return checkFloat32(prop)
-}
-
 /* return a yaml string and a map of special values that need to pass to yacfg */
 func MakeBrokerCfgOverrides(customResource interface{}, envVar *string, output *string) (string, map[string]string) {
 
@@ -273,7 +258,7 @@ func processAddressSettings(sb *strings.Builder, addressSettings *[]v2alpha3.Add
 		if value := checkInt32(s.RedeliveryDelayMultiplier); value != nil {
 			sb.WriteString("  redelivery_delay_multiplier: " + *value + "\n")
 		}
-		if value := checkFloat32AsString(s.RedeliveryCollisionAvoidanceFactor); value != nil {
+		if value := checkFloat32(s.RedeliveryCollisionAvoidanceFactor); value != nil {
 			sb.WriteString("  redelivery_collision_avoidance_factor: " + *value + "\n")
 		}
 		if value := checkInt32(s.MaxRedeliveryDelay); value != nil {
@@ -467,10 +452,10 @@ func processAddressSettingsV2alpha5(sb *strings.Builder, addressSettings *[]v2al
 		if value := checkInt32(s.RedeliveryDelay); value != nil {
 			sb.WriteString("  redelivery_delay: " + *value + "\n")
 		}
-		if value := checkFloat32AsString(s.RedeliveryDelayMultiplier); value != nil {
+		if value := checkFloat32(s.RedeliveryDelayMultiplier); value != nil {
 			sb.WriteString("  redelivery_delay_multiplier: " + *value + "\n")
 		}
-		if value := checkFloat32AsString(s.RedeliveryCollisionAvoidanceFactor); value != nil {
+		if value := checkFloat32(s.RedeliveryCollisionAvoidanceFactor); value != nil {
 			sb.WriteString("  redelivery_collision_avoidance_factor: " + *value + "\n")
 		}
 		if value := checkInt32(s.MaxRedeliveryDelay); value != nil {
@@ -672,12 +657,6 @@ func processAddressSettingsV1beta1(sb *strings.Builder, addressSettings *[]v1bet
 		}
 		if value := checkInt32(s.RedeliveryDelay); value != nil {
 			sb.WriteString("  redelivery_delay: " + *value + "\n")
-		}
-		if value := checkFloat32AsString(s.RedeliveryDelayMultiplier); value != nil {
-			sb.WriteString("  redelivery_delay_multiplier: " + *value + "\n")
-		}
-		if value := checkFloat32AsString(s.RedeliveryCollisionAvoidanceFactor); value != nil {
-			sb.WriteString("  redelivery_collision_avoidance_factor: " + *value + "\n")
 		}
 		if value := checkInt32(s.MaxRedeliveryDelay); value != nil {
 			sb.WriteString("  max_redelivery_delay: " + *value + "\n")
