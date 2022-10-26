@@ -89,12 +89,14 @@ help: ## Display this help.
 manifests: controller-gen kustomize
 ifeq ($(ENABLE_WEBHOOKS),true)
 ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+## v2alpha3, v2alpha4 and v2alpha3 requires allowDangerousTypes=true because they use float32 type
 	cd config/manager && $(KUSTOMIZE) edit add resource webhook_secret.yaml 
-	$(CONTROLLER_GEN) rbac:roleName=$(OPERATOR_CLUSTER_ROLE_NAME) crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) rbac:roleName=$(OPERATOR_CLUSTER_ROLE_NAME) crd:allowDangerousTypes=true webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 else
 ## Generate ClusterRole and CustomResourceDefinition objects.
+## v2alpha3, v2alpha4 and v2alpha3 requires allowDangerousTypes=true because they use float32 type
 	cd config/manager && $(KUSTOMIZE) edit remove resource webhook_secret.yaml 
-	$(CONTROLLER_GEN) rbac:roleName=$(OPERATOR_CLUSTER_ROLE_NAME) crd paths="./..." output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) rbac:roleName=$(OPERATOR_CLUSTER_ROLE_NAME) crd:allowDangerousTypes=true paths="./..." output:crd:artifacts:config=config/crd/bases
 endif
 
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.

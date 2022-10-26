@@ -60,9 +60,9 @@ type AddressSettingType struct {
 	MaxExpiryDelay                *int32  `json:"maxExpiryDelay,omitempty"`
 	RedeliveryDelay               *int32  `json:"redeliveryDelay,omitempty"`
 	RedeliveryDelayMultiplier     *int32  `json:"redeliveryDelayMultiplier,omitempty"`
-	// currentl controller-gen doesn't support float type
-	// RedeliveryCollisionAvoidanceFactor *float32 `json:"redeliveryCollisionAvoidanceFactor,omitempty"`
-	RedeliveryCollisionAvoidanceFactor *string `json:"redeliveryCollisionAvoidanceFactor,omitempty"`
+	//
+	RedeliveryCollisionAvoidanceFactor *float32 `json:"redeliveryCollisionAvoidanceFactor,omitempty"` // controller-gen requires crd:allowDangerousTypes=true to allow support float types
+	//
 	MaxRedeliveryDelay                 *int32  `json:"maxRedeliveryDelay,omitempty"`
 	MaxDeliveryAttempts                *int32  `json:"maxDeliveryAttempts,omitempty"`
 	MaxSizeBytes                       *string `json:"maxSizeBytes,omitempty"`

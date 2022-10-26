@@ -29,6 +29,7 @@ import (
 
 	"github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	brokerv2alpha4 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha4"
+	"github.com/artemiscloud/activemq-artemis-operator/api/v2alpha5"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/pods"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
@@ -222,6 +223,101 @@ var _ = Describe("artemis controller", func() {
 			compactVersionToUse := determineCompactVersionToUse(&brokerCr)
 			yacfgProfileVersion = version.YacfgProfileVersionFromFullVersion[version.FullVersionFromCompactVersion[compactVersionToUse]]
 			Expect(yacfgProfileVersion).To(Equal("7.10.0"))
+		})
+	})
+
+	Context("CrVersionConversionTest", func() {
+		It("can reconcile different version", func() {
+
+			var float32Var = float32(2.3)
+			var ma = "all"
+			toCreate := v2alpha5.ActiveMQArtemis{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ActiveMQArtemis",
+					APIVersion: v2alpha5.GroupVersion.Identifier(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      randString(),
+					Namespace: defaultNamespace,
+				},
+				Spec: v2alpha5.ActiveMQArtemisSpec{
+					AddressSettings: v2alpha5.AddressSettingsType{
+						ApplyRule: &ma,
+						AddressSetting: []v2alpha5.AddressSettingType{
+							{
+								Match:                              "#",
+								RedeliveryDelayMultiplier:          &float32Var,
+								RedeliveryCollisionAvoidanceFactor: &float32Var,
+							},
+						},
+					},
+				},
+			}
+
+			By("deploying v2lpha5 with float32, ignored")
+			Expect(k8sClient.Create(context.TODO(), &toCreate)).Should(Succeed())
+
+			key := types.NamespacedName{Name: namer.CrToSS(toCreate.Name), Namespace: defaultNamespace}
+			createdSs := &appsv1.StatefulSet{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, key, createdSs)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			By("checking status - using original version - exercise in marshalling")
+			key = types.NamespacedName{Name: toCreate.Name, Namespace: toCreate.Namespace}
+			createdCrdv2alpha5 := &v2alpha5.ActiveMQArtemis{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, key, createdCrdv2alpha5)).Should(Succeed())
+				g.Expect(len(createdCrdv2alpha5.Status.PodStatus.Stopped)).Should(BeEquivalentTo(1))
+			}, timeout, interval).Should(Succeed())
+
+			By("checking status - using served version - with conditions")
+			key = types.NamespacedName{Name: toCreate.Name, Namespace: toCreate.Namespace}
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, key, createdCrd)).Should(Succeed())
+				g.Expect(len(createdCrd.Status.PodStatus.Stopped)).Should(BeEquivalentTo(1))
+			}, timeout, interval).Should(Succeed())
+
+			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
+		})
+
+		It("can reconcile latest version with config in brokerProperties", func() {
+
+			toCreate := brokerv1beta1.ActiveMQArtemis{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ActiveMQArtemis",
+					APIVersion: brokerv1beta1.GroupVersion.Identifier(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      randString(),
+					Namespace: defaultNamespace,
+				},
+				Spec: brokerv1beta1.ActiveMQArtemisSpec{
+					BrokerProperties: []string{
+						"addressesSettings.#.redeliveryDelayMultiplier=2.3",
+						"addressesSettings.#.redeliveryCollisionAvoidanceFactor=1.2",
+					},
+				},
+			}
+
+			Expect(k8sClient.Create(context.TODO(), &toCreate)).Should(Succeed())
+
+			key := types.NamespacedName{Name: namer.CrToSS(toCreate.Name), Namespace: defaultNamespace}
+			createdSs := &appsv1.StatefulSet{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, key, createdSs)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			key = types.NamespacedName{Name: toCreate.Name, Namespace: toCreate.Namespace}
+			createdCrd := &v1beta1.ActiveMQArtemis{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, key, createdCrd)).Should(Succeed())
+				g.Expect(len(createdCrd.Status.PodStatus.Stopped)).Should(BeEquivalentTo(1))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
+
 		})
 
 		It("testing broker image resolve", Label("amq-versions-test"), func() {

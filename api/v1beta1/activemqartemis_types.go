@@ -80,10 +80,15 @@ type AddressSettingType struct {
 	MaxExpiryDelay *int32 `json:"maxExpiryDelay,omitempty"`
 	// the time (in ms) to wait before redelivering a cancelled message.
 	RedeliveryDelay *int32 `json:"redeliveryDelay,omitempty"`
+
+	// dropping these two fields due to historicatl incorrect conversion from *float32 to *string
+	// without conversion support. Existing CR's with these set cannot be reconciled
+	//
 	// multiplier to apply to the redelivery-delay
-	RedeliveryDelayMultiplier *string `json:"redeliveryDelayMultiplier,omitempty"`
+	//RedeliveryDelayMultiplier *string
 	// factor by which to modify the redelivery delay slightly to avoid collisions
-	RedeliveryCollisionAvoidanceFactor *string `json:"redeliveryCollisionAvoidanceFactor,omitempty"`
+	//RedeliveryCollisionAvoidanceFactor *string
+
 	// Maximum value for the redelivery-delay
 	MaxRedeliveryDelay *int32 `json:"maxRedeliveryDelay,omitempty"`
 	// how many times to attempt to deliver a message before sending to dead letter address

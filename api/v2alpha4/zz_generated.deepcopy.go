@@ -229,7 +229,7 @@ func (in *AddressSettingType) DeepCopyInto(out *AddressSettingType) {
 	}
 	if in.RedeliveryCollisionAvoidanceFactor != nil {
 		in, out := &in.RedeliveryCollisionAvoidanceFactor, &out.RedeliveryCollisionAvoidanceFactor
-		*out = new(string)
+		*out = new(float32)
 		**out = **in
 	}
 	if in.MaxRedeliveryDelay != nil {
