@@ -120,6 +120,483 @@ var _ = Describe("artemis controller", func() {
 		}
 	})
 
+	Context("broker resource tracking", Label("broker-resource-tracking-context"), func() {
+		It("default user credential secret", func() {
+			By("deploy a broker")
+			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, nil)
+
+			By("checking the default credential secret created")
+			credSecretKey := types.NamespacedName{
+				Name:      brokerCr.Name + "-credentials-secret",
+				Namespace: defaultNamespace,
+			}
+			credSecret := &corev1.Secret{}
+			createdSs := &appsv1.StatefulSet{}
+			ssKey := types.NamespacedName{Name: namer.CrToSS(brokerCr.Name), Namespace: defaultNamespace}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, credSecretKey, credSecret)).Should(Succeed())
+				g.Expect(len(credSecret.Data)).To(Equal(4))
+				g.Expect(len(credSecret.OwnerReferences) > 0).Should(BeTrue())
+				ownerFound := false
+				for _, oref := range credSecret.OwnerReferences {
+					if oref.Kind == artemisGvk.Kind && oref.Name == brokerCr.Name {
+						ownerFound = true
+						break
+					}
+				}
+				g.Expect(ownerFound).To(BeTrue())
+
+				g.Expect(k8sClient.Get(ctx, ssKey, createdSs)).Should(Succeed())
+
+				initContainer := createdSs.Spec.Template.Spec.InitContainers[0]
+				userFound := false
+				passwordFound := false
+				clusterUserFound := false
+				clusterPasswordFound := false
+				for _, envVar := range initContainer.Env {
+					if envVar.Name == "AMQ_USER" {
+						userFound = true
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Name).To(Equal(brokerCr.Name+"-credentials-secret"), envVar)
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Key).To(Equal("AMQ_USER"), envVar)
+					}
+					if envVar.Name == "AMQ_PASSWORD" {
+						passwordFound = true
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Name).To(Equal(brokerCr.Name+"-credentials-secret"), envVar)
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Key).To(Equal("AMQ_PASSWORD"), envVar)
+					}
+					if envVar.Name == "AMQ_CLUSTER_USER" {
+						clusterUserFound = true
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Name).To(Equal(brokerCr.Name+"-credentials-secret"), envVar)
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Key).To(Equal("AMQ_CLUSTER_USER"), envVar)
+					}
+					if envVar.Name == "AMQ_CLUSTER_PASSWORD" {
+						clusterPasswordFound = true
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Name).To(Equal(brokerCr.Name+"-credentials-secret"), envVar)
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Key).To(Equal("AMQ_CLUSTER_PASSWORD"), envVar)
+					}
+				}
+				g.Expect(userFound).To(BeTrue())
+				g.Expect(passwordFound).To(BeTrue())
+				g.Expect(clusterUserFound).To(BeTrue())
+				g.Expect(clusterPasswordFound).To(BeTrue())
+
+			}, timeout, interval).Should(Succeed())
+
+			// cleanup
+			Expect(k8sClient.Delete(ctx, brokerCr)).Should(Succeed())
+			By("check it has gone")
+			Eventually(func() bool {
+				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
+			}, timeout, interval).Should(BeTrue())
+		})
+
+		It("default user credential secret with values in CR", func() {
+			By("deploy a broker with adminUser and adminPassword specified")
+			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				candidate.Spec.AdminUser = "adminuser"
+				candidate.Spec.AdminPassword = "adminpassword"
+			})
+
+			By("checking the default credential secret created")
+			credSecretKey := types.NamespacedName{
+				Name:      brokerCr.Name + "-credentials-secret",
+				Namespace: defaultNamespace,
+			}
+			credSecret := &corev1.Secret{}
+			createdSs := &appsv1.StatefulSet{}
+			ssKey := types.NamespacedName{Name: namer.CrToSS(brokerCr.Name), Namespace: defaultNamespace}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, credSecretKey, credSecret)).Should(Succeed())
+				g.Expect(len(credSecret.Data)).To(Equal(4))
+				g.Expect(string(credSecret.Data["AMQ_USER"])).To(Equal("adminuser"))
+				g.Expect(string(credSecret.Data["AMQ_PASSWORD"])).To(Equal("adminpassword"))
+				g.Expect(len(credSecret.OwnerReferences) > 0).Should(BeTrue())
+				ownerFound := false
+				for _, oref := range credSecret.OwnerReferences {
+					if oref.Kind == artemisGvk.Kind && oref.Name == brokerCr.Name {
+						ownerFound = true
+						break
+					}
+				}
+				g.Expect(ownerFound).To(BeTrue())
+
+				g.Expect(k8sClient.Get(ctx, ssKey, createdSs)).Should(Succeed())
+
+				initContainer := createdSs.Spec.Template.Spec.InitContainers[0]
+				userFound := false
+				passwordFound := false
+				clusterUserFound := false
+				clusterPasswordFound := false
+				for _, envVar := range initContainer.Env {
+					if envVar.Name == "AMQ_USER" {
+						userFound = true
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Name).To(Equal(brokerCr.Name+"-credentials-secret"), envVar)
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Key).To(Equal("AMQ_USER"), envVar)
+					}
+					if envVar.Name == "AMQ_PASSWORD" {
+						passwordFound = true
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Name).To(Equal(brokerCr.Name+"-credentials-secret"), envVar)
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Key).To(Equal("AMQ_PASSWORD"), envVar)
+					}
+					if envVar.Name == "AMQ_CLUSTER_USER" {
+						clusterUserFound = true
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Name).To(Equal(brokerCr.Name+"-credentials-secret"), envVar)
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Key).To(Equal("AMQ_CLUSTER_USER"), envVar)
+					}
+					if envVar.Name == "AMQ_CLUSTER_PASSWORD" {
+						clusterPasswordFound = true
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Name).To(Equal(brokerCr.Name+"-credentials-secret"), envVar)
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Key).To(Equal("AMQ_CLUSTER_PASSWORD"), envVar)
+					}
+				}
+				g.Expect(userFound).To(BeTrue())
+				g.Expect(passwordFound).To(BeTrue())
+				g.Expect(clusterUserFound).To(BeTrue())
+				g.Expect(clusterPasswordFound).To(BeTrue())
+
+			}, timeout, interval).Should(Succeed())
+
+			// cleanup
+			Expect(k8sClient.Delete(ctx, brokerCr)).Should(Succeed())
+			By("check it has gone")
+			Eventually(func() bool {
+				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
+			}, timeout, interval).Should(BeTrue())
+		})
+
+		It("user credential secret", func() {
+			brokerCrName := "broker-user-cred"
+			userSecretName := brokerCrName + "-credentials-secret"
+			secretData := make(map[string]string)
+			secretData["AMQ_USER"] = "myuser"
+			secretData["AMQ_PASSWORD"] = "mypassword"
+			secretData["AMQ_CLUSTER_USER"] = "myclusteruser"
+			secretData["AMQ_CLUSTER_PASSWORD"] = "myclusterpassword"
+
+			By("deploy a user credential secret")
+			secret, createdSecret := DeploySecret(defaultNamespace, func(candidate *corev1.Secret) {
+				candidate.Name = userSecretName
+				candidate.StringData = secretData
+			})
+
+			By("deploy a broker")
+			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				candidate.Name = brokerCrName
+			})
+
+			By("retrieve the secret and statefulset to check user secret takes effect")
+			createdSs := &appsv1.StatefulSet{}
+			ssKey := types.NamespacedName{Name: namer.CrToSS(brokerCr.Name), Namespace: defaultNamespace}
+			secretKey := types.NamespacedName{Name: secret.Name, Namespace: defaultNamespace}
+			secretAfterRecon := &corev1.Secret{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, secretKey, secretAfterRecon)).Should(Succeed())
+				g.Expect(string(secretAfterRecon.Data["AMQ_USER"])).To(Equal("myuser"))
+				g.Expect(string(secretAfterRecon.Data["AMQ_PASSWORD"])).To(Equal("mypassword"))
+				g.Expect(string(secretAfterRecon.Data["AMQ_CLUSTER_USER"])).To(Equal("myclusteruser"))
+				g.Expect(string(secretAfterRecon.Data["AMQ_CLUSTER_PASSWORD"])).To(Equal("myclusterpassword"))
+
+				if len(secretAfterRecon.OwnerReferences) > 0 {
+					for _, oref := range secretAfterRecon.OwnerReferences {
+						g.Expect(oref.Kind).NotTo(Equal(artemisGvk.Kind))
+					}
+				}
+
+				g.Expect(k8sClient.Get(ctx, ssKey, createdSs)).Should(Succeed())
+				initContainer := createdSs.Spec.Template.Spec.InitContainers[0]
+				userFound := false
+				passwordFound := false
+				clusterUserFound := false
+				clusterPasswordFound := false
+				for _, envVar := range initContainer.Env {
+					if envVar.Name == "AMQ_USER" {
+						userFound = true
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Name).To(Equal(secret.Name))
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Key).To(Equal("AMQ_USER"))
+					} else if envVar.Name == "AMQ_PASSWORD" {
+						passwordFound = true
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Name).To(Equal(secret.Name))
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Key).To(Equal("AMQ_PASSWORD"))
+					} else if envVar.Name == "AMQ_CLUSTER_USER" {
+						clusterUserFound = true
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Name).To(Equal(secret.Name))
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Key).To(Equal("AMQ_CLUSTER_USER"))
+					} else if envVar.Name == "AMQ_CLUSTER_PASSWORD" {
+						clusterPasswordFound = true
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Name).To(Equal(secret.Name))
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Key).To(Equal("AMQ_CLUSTER_PASSWORD"))
+					}
+				}
+				g.Expect(userFound).To(BeTrue())
+				g.Expect(passwordFound).To(BeTrue())
+				g.Expect(clusterUserFound).To(BeTrue())
+				g.Expect(clusterPasswordFound).To(BeTrue())
+
+			}, timeout, interval).Should(Succeed())
+
+			By("start to capture test log")
+			StartCapturingLog()
+			defer StopCapturingLog()
+
+			By("update the broker to trigger reconcile")
+			brokerKey := types.NamespacedName{
+				Name:      brokerCr.Name,
+				Namespace: defaultNamespace,
+			}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdBrokerCr)).Should(Succeed())
+				createdBrokerCr.Spec.Env = append(createdBrokerCr.Spec.Env, corev1.EnvVar{Name: "NEW_VAR", Value: "NEW_VALUE"})
+				Expect(k8sClient.Update(ctx, createdBrokerCr)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			newCreatedBrokerCr := brokerv1beta1.ActiveMQArtemis{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, &newCreatedBrokerCr)).Should(Succeed())
+				g.Expect(len(newCreatedBrokerCr.Spec.Env)).To(Equal(1))
+				g.Expect(newCreatedBrokerCr.Spec.Env[0].Name).To(Equal("NEW_VAR"))
+				g.Expect(newCreatedBrokerCr.Spec.Env[0].Value).To(Equal("NEW_VALUE"))
+			}, timeout, interval).Should(Succeed())
+
+			newSS := &appsv1.StatefulSet{}
+			secretAfterRecon = &corev1.Secret{}
+
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, secretKey, secretAfterRecon)).Should(Succeed())
+				g.Expect(string(secretAfterRecon.Data["AMQ_USER"])).To(Equal("myuser"))
+				g.Expect(string(secretAfterRecon.Data["AMQ_PASSWORD"])).To(Equal("mypassword"))
+				g.Expect(string(secretAfterRecon.Data["AMQ_CLUSTER_USER"])).To(Equal("myclusteruser"))
+				g.Expect(string(secretAfterRecon.Data["AMQ_CLUSTER_PASSWORD"])).To(Equal("myclusterpassword"))
+
+				if len(secretAfterRecon.OwnerReferences) > 0 {
+					for _, oref := range secretAfterRecon.OwnerReferences {
+						g.Expect(oref.Kind).NotTo(Equal(artemisGvk.Kind))
+					}
+				}
+
+				g.Expect(k8sClient.Get(ctx, ssKey, newSS)).Should(Succeed())
+				initContainer := newSS.Spec.Template.Spec.InitContainers[0]
+				userFound := false
+				passwordFound := false
+				clusterUserFound := false
+				clusterPasswordFound := false
+				for _, envVar := range initContainer.Env {
+					if envVar.Name == "AMQ_USER" {
+						userFound = true
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Name).To(Equal(secret.Name))
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Key).To(Equal("AMQ_USER"))
+					} else if envVar.Name == "AMQ_PASSWORD" {
+						passwordFound = true
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Name).To(Equal(secret.Name))
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Key).To(Equal("AMQ_PASSWORD"))
+					} else if envVar.Name == "AMQ_CLUSTER_USER" {
+						clusterUserFound = true
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Name).To(Equal(secret.Name))
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Key).To(Equal("AMQ_CLUSTER_USER"))
+					} else if envVar.Name == "AMQ_CLUSTER_PASSWORD" {
+						clusterPasswordFound = true
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Name).To(Equal(secret.Name))
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Key).To(Equal("AMQ_CLUSTER_PASSWORD"))
+					}
+				}
+				g.Expect(userFound).To(BeTrue())
+				g.Expect(passwordFound).To(BeTrue())
+				g.Expect(clusterUserFound).To(BeTrue())
+				g.Expect(clusterPasswordFound).To(BeTrue())
+
+				container := newSS.Spec.Template.Spec.Containers[0]
+				newVarFound := false
+				for _, envVar := range container.Env {
+					if envVar.Name == "NEW_VAR" {
+						newVarFound = true
+						g.Expect(envVar.Value).To(Equal("NEW_VALUE"))
+					}
+				}
+				g.Expect(newVarFound).To(BeTrue())
+			}, timeout, interval).Should(Succeed())
+
+			hasMatch, matchErr := MatchCapturedLog("Failed to create new \\*v1\\.Secret")
+			Expect(matchErr).To(BeNil())
+			Expect(hasMatch).To(BeFalse())
+
+			hasMatch, matchErr = MatchCapturedLog("ERROR")
+			Expect(matchErr).To(BeNil())
+			Expect(hasMatch).To(BeFalse())
+
+			// cleanup
+			Expect(k8sClient.Delete(ctx, brokerCr)).Should(Succeed())
+			By("check it has gone")
+			Eventually(func() bool {
+				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
+			}, timeout, interval).Should(BeTrue())
+			Expect(k8sClient.Delete(ctx, secret)).Should(Succeed())
+			Eventually(func() bool {
+				return checkCrdDeleted(secret.Name, defaultNamespace, createdSecret)
+			}, timeout, interval).Should(BeTrue())
+		})
+
+		It("user credential secret with CR values provided", func() {
+			brokerCrName := "broker-user-cred"
+			userSecretName := brokerCrName + "-credentials-secret"
+			secretData := make(map[string]string)
+			secretData["AMQ_USER"] = "myuser"
+			secretData["AMQ_PASSWORD"] = "mypassword"
+			secretData["AMQ_CLUSTER_USER"] = "myclusteruser"
+			secretData["AMQ_CLUSTER_PASSWORD"] = "myclusterpassword"
+
+			By("deploy a user credential secret")
+			secret, createdSecret := DeploySecret(defaultNamespace, func(candidate *corev1.Secret) {
+				candidate.Name = userSecretName
+				candidate.StringData = secretData
+			})
+
+			By("deploy a broker with admin user and password")
+			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				candidate.Name = brokerCrName
+				candidate.Spec.AdminUser = "adminuser"
+				candidate.Spec.AdminPassword = "adminpassword"
+			})
+
+			By("retrieve the secret and statefulset to check user secret takes effect but not the CR ones")
+			createdSs := &appsv1.StatefulSet{}
+			ssKey := types.NamespacedName{Name: namer.CrToSS(brokerCr.Name), Namespace: defaultNamespace}
+			secretKey := types.NamespacedName{Name: secret.Name, Namespace: defaultNamespace}
+			secretAfterRecon := &corev1.Secret{}
+			Eventually(func(g Gomega) {
+				// The user secret's values are not updated from those in CR
+				g.Expect(k8sClient.Get(ctx, secretKey, secretAfterRecon)).Should(Succeed())
+				g.Expect(string(secretAfterRecon.Data["AMQ_USER"])).To(Equal("myuser"))
+				g.Expect(string(secretAfterRecon.Data["AMQ_PASSWORD"])).To(Equal("mypassword"))
+				g.Expect(string(secretAfterRecon.Data["AMQ_CLUSTER_USER"])).To(Equal("myclusteruser"))
+				g.Expect(string(secretAfterRecon.Data["AMQ_CLUSTER_PASSWORD"])).To(Equal("myclusterpassword"))
+
+				if len(secretAfterRecon.OwnerReferences) > 0 {
+					for _, oref := range secretAfterRecon.OwnerReferences {
+						g.Expect(oref.Kind).NotTo(Equal(artemisGvk.Kind))
+					}
+				}
+
+				g.Expect(k8sClient.Get(ctx, ssKey, createdSs)).Should(Succeed())
+				initContainer := createdSs.Spec.Template.Spec.InitContainers[0]
+				userFound := false
+				passwordFound := false
+				clusterUserFound := false
+				clusterPasswordFound := false
+				for _, envVar := range initContainer.Env {
+					if envVar.Name == "AMQ_USER" {
+						userFound = true
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Name).To(Equal(secret.Name))
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Key).To(Equal("AMQ_USER"))
+					} else if envVar.Name == "AMQ_PASSWORD" {
+						passwordFound = true
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Name).To(Equal(secret.Name))
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Key).To(Equal("AMQ_PASSWORD"))
+					} else if envVar.Name == "AMQ_CLUSTER_USER" {
+						clusterUserFound = true
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Name).To(Equal(secret.Name))
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Key).To(Equal("AMQ_CLUSTER_USER"))
+					} else if envVar.Name == "AMQ_CLUSTER_PASSWORD" {
+						clusterPasswordFound = true
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Name).To(Equal(secret.Name))
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Key).To(Equal("AMQ_CLUSTER_PASSWORD"))
+					}
+				}
+				g.Expect(userFound).To(BeTrue())
+				g.Expect(passwordFound).To(BeTrue())
+				g.Expect(clusterUserFound).To(BeTrue())
+				g.Expect(clusterPasswordFound).To(BeTrue())
+
+			}, timeout, interval).Should(Succeed())
+
+			By("update the broker to trigger reconcile")
+			brokerKey := types.NamespacedName{
+				Name:      brokerCr.Name,
+				Namespace: defaultNamespace,
+			}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdBrokerCr)).Should(Succeed())
+				createdBrokerCr.Spec.Env = append(createdBrokerCr.Spec.Env, corev1.EnvVar{Name: "NEW_VAR", Value: "NEW_VALUE"})
+				Expect(k8sClient.Update(ctx, createdBrokerCr)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			newCreatedBrokerCr := brokerv1beta1.ActiveMQArtemis{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, &newCreatedBrokerCr)).Should(Succeed())
+				g.Expect(len(newCreatedBrokerCr.Spec.Env)).To(Equal(1))
+				g.Expect(newCreatedBrokerCr.Spec.Env[0].Name).To(Equal("NEW_VAR"))
+				g.Expect(newCreatedBrokerCr.Spec.Env[0].Value).To(Equal("NEW_VALUE"))
+			}, timeout, interval).Should(Succeed())
+
+			newSS := &appsv1.StatefulSet{}
+			secretAfterRecon = &corev1.Secret{}
+
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, secretKey, secretAfterRecon)).Should(Succeed())
+				g.Expect(string(secretAfterRecon.Data["AMQ_USER"])).To(Equal("myuser"))
+				g.Expect(string(secretAfterRecon.Data["AMQ_PASSWORD"])).To(Equal("mypassword"))
+				g.Expect(string(secretAfterRecon.Data["AMQ_CLUSTER_USER"])).To(Equal("myclusteruser"))
+				g.Expect(string(secretAfterRecon.Data["AMQ_CLUSTER_PASSWORD"])).To(Equal("myclusterpassword"))
+
+				if len(secretAfterRecon.OwnerReferences) > 0 {
+					for _, oref := range secretAfterRecon.OwnerReferences {
+						g.Expect(oref.Kind).NotTo(Equal(artemisGvk.Kind))
+					}
+				}
+
+				g.Expect(k8sClient.Get(ctx, ssKey, newSS)).Should(Succeed())
+				initContainer := newSS.Spec.Template.Spec.InitContainers[0]
+				userFound := false
+				passwordFound := false
+				clusterUserFound := false
+				clusterPasswordFound := false
+				for _, envVar := range initContainer.Env {
+					if envVar.Name == "AMQ_USER" {
+						userFound = true
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Name).To(Equal(secret.Name))
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Key).To(Equal("AMQ_USER"))
+					} else if envVar.Name == "AMQ_PASSWORD" {
+						passwordFound = true
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Name).To(Equal(secret.Name))
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Key).To(Equal("AMQ_PASSWORD"))
+					} else if envVar.Name == "AMQ_CLUSTER_USER" {
+						clusterUserFound = true
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Name).To(Equal(secret.Name))
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Key).To(Equal("AMQ_CLUSTER_USER"))
+					} else if envVar.Name == "AMQ_CLUSTER_PASSWORD" {
+						clusterPasswordFound = true
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Name).To(Equal(secret.Name))
+						g.Expect(envVar.ValueFrom.SecretKeyRef.Key).To(Equal("AMQ_CLUSTER_PASSWORD"))
+					}
+				}
+				g.Expect(userFound).To(BeTrue())
+				g.Expect(passwordFound).To(BeTrue())
+				g.Expect(clusterUserFound).To(BeTrue())
+				g.Expect(clusterPasswordFound).To(BeTrue())
+
+				container := newSS.Spec.Template.Spec.Containers[0]
+				newVarFound := false
+				for _, envVar := range container.Env {
+					if envVar.Name == "NEW_VAR" {
+						newVarFound = true
+						g.Expect(envVar.Value).To(Equal("NEW_VALUE"))
+					}
+				}
+				g.Expect(newVarFound).To(BeTrue())
+			}, timeout, interval).Should(Succeed())
+
+			// cleanup
+			Expect(k8sClient.Delete(ctx, brokerCr)).Should(Succeed())
+			By("check it has gone")
+			Eventually(func() bool {
+				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
+			}, timeout, interval).Should(BeTrue())
+			Expect(k8sClient.Delete(ctx, secret)).Should(Succeed())
+			Eventually(func() bool {
+				return checkCrdDeleted(secret.Name, defaultNamespace, createdSecret)
+			}, timeout, interval).Should(BeTrue())
+		})
+	})
+
 	Context("New address settings options", func() {
 		It("Deploy broker with new address settings", func() {
 
@@ -4072,4 +4549,36 @@ func DeployCustomBroker(crName string, targetNamespace string, customFunc func(c
 	Expect(createdBrokerCrd.Namespace).Should(Equal(targetNamespace))
 
 	return &brokerCrd, &createdBrokerCrd
+}
+
+func DeploySecret(targetNamespace string, customFunc func(candidate *corev1.Secret)) (*corev1.Secret, *corev1.Secret) {
+	ctx := context.Background()
+
+	secretName := nameFromTest()
+	secretDefinition := corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: targetNamespace,
+		},
+	}
+
+	if customFunc != nil {
+		customFunc(&secretDefinition)
+	}
+
+	Expect(k8sClient.Create(ctx, &secretDefinition)).Should(Succeed())
+
+	createdSecret := corev1.Secret{}
+
+	Eventually(func() bool {
+		return getPersistedVersionedCrd(secretDefinition.Name, targetNamespace, &createdSecret)
+	}, timeout, interval).Should(BeTrue())
+	Expect(createdSecret.Name).Should(Equal(secretDefinition.ObjectMeta.Name))
+	Expect(createdSecret.Namespace).Should(Equal(targetNamespace))
+
+	return &secretDefinition, &createdSecret
 }
