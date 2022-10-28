@@ -749,7 +749,7 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(Succeed())
 
 			key = types.NamespacedName{Name: toCreate.Name, Namespace: toCreate.Namespace}
-			createdCrd := &v1beta1.ActiveMQArtemis{}
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, key, createdCrd)).Should(Succeed())
 				g.Expect(len(createdCrd.Status.PodStatus.Stopped)).Should(BeEquivalentTo(1))

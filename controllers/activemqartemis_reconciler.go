@@ -165,12 +165,24 @@ func trackSecretCheckSumInEnvVar(requestedResources []rtclient.Object, container
 }
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) cloneOfDeployed(kind reflect.Type, name string) rtclient.Object {
+	obj := reconciler.getFromDeployed(kind, name)
+	if obj != nil {
+		return obj.DeepCopyObject().(rtclient.Object)
+	}
+	return nil
+}
+
+func (reconciler *ActiveMQArtemisReconcilerImpl) getFromDeployed(kind reflect.Type, name string) rtclient.Object {
 	for _, obj := range reconciler.deployed[kind] {
 		if obj.GetName() == name {
-			return obj.DeepCopyObject().(rtclient.Object)
+			return obj
 		}
 	}
 	return nil
+}
+
+func (reconciler *ActiveMQArtemisReconcilerImpl) addToDeployed(kind reflect.Type, obj rtclient.Object) {
+	reconciler.deployed[kind] = append(reconciler.deployed[kind], obj)
 }
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, log logr.Logger) (*appsv1.StatefulSet, error) {
@@ -788,15 +800,9 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureConsoleExposure(custom
 
 		serviceDefinition := svc.NewServiceDefinitionForCR(client, namespacedName, targetPortName, portNumber, serviceRoutelabels, namer.LabelBuilder.Labels())
 
-		serviceNamespacedName := types.NamespacedName{
-			Name:      serviceDefinition.Name,
-			Namespace: customResource.Namespace,
-		}
 		if console.Expose {
+			reconciler.checkExistingService(customResource, serviceDefinition, client)
 			reconciler.trackDesired(serviceDefinition)
-			//causedUpdate, err = resources.Enable(customResource, client, scheme, serviceNamespacedName, serviceDefinition)
-		} else {
-			causedUpdate, err = resources.Disable(customResource, client, scheme, serviceNamespacedName, serviceDefinition)
 		}
 		var err error = nil
 		isOpenshift := false
@@ -1232,7 +1238,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) deleteResource(customResource *
 }
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) createRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, reqLogger logr.Logger, kind reflect.Type) error {
-	reqLogger.Info("Createing ", "kind ", kind, "named ", requested.GetName())
+	reqLogger.Info("Creating ", "kind ", kind, "named ", requested.GetName())
 
 	return resources.Create(customResource, client, scheme, requested)
 }
@@ -1257,6 +1263,43 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) deleteRequestedResource(customR
 		reqLogger.Error(deleteError, "delete Failed", "kind", kind, " named ", requested.GetName())
 	}
 	return deleteError
+}
+
+func (reconciler *ActiveMQArtemisReconcilerImpl) checkExistingService(cr *brokerv1beta1.ActiveMQArtemis, candidate *corev1.Service, client rtclient.Client) {
+	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
+
+	serviceType := reflect.TypeOf(corev1.Service{})
+	obj := reconciler.getFromDeployed(serviceType, candidate.Name)
+	if obj != nil {
+		// happy path we already own this
+		return
+	}
+	if obj == nil {
+		// check for existing match and track
+		key := types.NamespacedName{Name: candidate.Name, Namespace: candidate.Namespace}
+		existingService := &corev1.Service{}
+		err := client.Get(context.TODO(), key, existingService)
+		if err == nil {
+			if len(existingService.OwnerReferences) == 0 {
+				gvk := cr.GroupVersionKind()
+				existingService.OwnerReferences = []metav1.OwnerReference{{
+					APIVersion: gvk.GroupVersion().String(),
+					Kind:       gvk.Kind,
+					Name:       cr.GetName(),
+					UID:        cr.GetUID()}}
+
+				// we need to have 'candidate' match for update
+				candidate.ResourceVersion = existingService.ResourceVersion
+				candidate.UID = existingService.UID
+				candidate.OwnerReferences = existingService.OwnerReferences
+				reconciler.addToDeployed(serviceType, existingService)
+				log.Info("found matching service without owner reference, reclaiming", "Name", key)
+
+			} else {
+				log.Info("found matching service with unexpected owner reference, it may need manual removal", "Name", key)
+			}
+		}
+	}
 }
 
 func checkExistingPersistentVolumes(instance *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) {
