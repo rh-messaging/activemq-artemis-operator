@@ -123,7 +123,7 @@ var _ = Describe("artemis controller", func() {
 	Context("broker resource tracking", Label("broker-resource-tracking-context"), func() {
 		It("default user credential secret", func() {
 			By("deploy a broker")
-			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, nil)
+			brokerCr, createdBrokerCr := DeployCustomBroker("", defaultNamespace, nil)
 
 			By("checking the default credential secret created")
 			credSecretKey := types.NamespacedName{
@@ -192,7 +192,7 @@ var _ = Describe("artemis controller", func() {
 
 		It("default user credential secret with values in CR", func() {
 			By("deploy a broker with adminUser and adminPassword specified")
-			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+			brokerCr, createdBrokerCr := DeployCustomBroker("", defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
 				candidate.Spec.AdminUser = "adminuser"
 				candidate.Spec.AdminPassword = "adminpassword"
 			})
@@ -280,7 +280,7 @@ var _ = Describe("artemis controller", func() {
 			})
 
 			By("deploy a broker")
-			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+			brokerCr, createdBrokerCr := DeployCustomBroker("", defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
 				candidate.Name = brokerCrName
 			})
 
@@ -337,25 +337,6 @@ var _ = Describe("artemis controller", func() {
 			By("start to capture test log")
 			StartCapturingLog()
 			defer StopCapturingLog()
-
-			By("update the broker to trigger reconcile")
-			brokerKey := types.NamespacedName{
-				Name:      brokerCr.Name,
-				Namespace: defaultNamespace,
-			}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, brokerKey, createdBrokerCr)).Should(Succeed())
-				createdBrokerCr.Spec.Env = append(createdBrokerCr.Spec.Env, corev1.EnvVar{Name: "NEW_VAR", Value: "NEW_VALUE"})
-				Expect(k8sClient.Update(ctx, createdBrokerCr)).Should(Succeed())
-			}, timeout, interval).Should(Succeed())
-
-			newCreatedBrokerCr := brokerv1beta1.ActiveMQArtemis{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, brokerKey, &newCreatedBrokerCr)).Should(Succeed())
-				g.Expect(len(newCreatedBrokerCr.Spec.Env)).To(Equal(1))
-				g.Expect(newCreatedBrokerCr.Spec.Env[0].Name).To(Equal("NEW_VAR"))
-				g.Expect(newCreatedBrokerCr.Spec.Env[0].Value).To(Equal("NEW_VALUE"))
-			}, timeout, interval).Should(Succeed())
 
 			newSS := &appsv1.StatefulSet{}
 			secretAfterRecon = &corev1.Secret{}
@@ -450,7 +431,7 @@ var _ = Describe("artemis controller", func() {
 			})
 
 			By("deploy a broker with admin user and password")
-			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+			brokerCr, createdBrokerCr := DeployCustomBroker("", defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
 				candidate.Name = brokerCrName
 				candidate.Spec.AdminUser = "adminuser"
 				candidate.Spec.AdminPassword = "adminpassword"
@@ -505,25 +486,6 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(clusterUserFound).To(BeTrue())
 				g.Expect(clusterPasswordFound).To(BeTrue())
 
-			}, timeout, interval).Should(Succeed())
-
-			By("update the broker to trigger reconcile")
-			brokerKey := types.NamespacedName{
-				Name:      brokerCr.Name,
-				Namespace: defaultNamespace,
-			}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, brokerKey, createdBrokerCr)).Should(Succeed())
-				createdBrokerCr.Spec.Env = append(createdBrokerCr.Spec.Env, corev1.EnvVar{Name: "NEW_VAR", Value: "NEW_VALUE"})
-				Expect(k8sClient.Update(ctx, createdBrokerCr)).Should(Succeed())
-			}, timeout, interval).Should(Succeed())
-
-			newCreatedBrokerCr := brokerv1beta1.ActiveMQArtemis{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, brokerKey, &newCreatedBrokerCr)).Should(Succeed())
-				g.Expect(len(newCreatedBrokerCr.Spec.Env)).To(Equal(1))
-				g.Expect(newCreatedBrokerCr.Spec.Env[0].Name).To(Equal("NEW_VAR"))
-				g.Expect(newCreatedBrokerCr.Spec.Env[0].Value).To(Equal("NEW_VALUE"))
 			}, timeout, interval).Should(Succeed())
 
 			newSS := &appsv1.StatefulSet{}
@@ -4554,7 +4516,7 @@ func DeployCustomBroker(crName string, targetNamespace string, customFunc func(c
 func DeploySecret(targetNamespace string, customFunc func(candidate *corev1.Secret)) (*corev1.Secret, *corev1.Secret) {
 	ctx := context.Background()
 
-	secretName := nameFromTest()
+	secretName := randString()
 	secretDefinition := corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
