@@ -107,6 +107,7 @@ spec:
     - activemqartemis
     - operator
   version: 7.10.2-opr-1
+  replaces: amq-broker-operator.v7.10.1-opr-1
   maturity: beta
   maintainers:
     - name: Red Hat
