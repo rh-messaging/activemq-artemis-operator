@@ -932,18 +932,6 @@ spec:
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:redeliveryDelay'
               - 'urn:alm:descriptor:com.tectonic.ui:number'
-          - description: multiplier to apply to the redelivery-delay
-            displayName: RedeliveryDelayMultiplier
-            path: addressSettings.addressSetting[0].redeliveryDelayMultiplier
-            x-descriptors:
-              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:redeliveryDelayMultiplier'
-              - 'urn:alm:descriptor:com.tectonic.ui:number'
-          - description: factor by which to modify the redelivery delay slightly to avoid collisions
-            displayName: RedeliveryCollisionAvoidanceFactor
-            path: addressSettings.addressSetting[0].redeliveryCollisionAvoidanceFactor
-            x-descriptors:
-              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:redeliveryCollisionAvoidanceFactor'
-              - 'urn:alm:descriptor:com.tectonic.ui:number'
           - description: Maximum value for the redelivery-delay
             displayName: MaxRedeliveryDelay
             path: addressSettings.addressSetting[0].maxRedeliveryDelay
