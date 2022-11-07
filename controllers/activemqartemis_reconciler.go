@@ -704,6 +704,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureAcceptorsExposure(cust
 		for _, acceptor := range customResource.Spec.Acceptors {
 			serviceDefinition := svc.NewServiceDefinitionForCR(client, namespacedName, acceptor.Name+"-"+ordinalString, acceptor.Port, serviceRoutelabels, namer.LabelBuilder.Labels())
 
+			reconciler.checkExistingService(customResource, serviceDefinition, client)
 			reconciler.trackDesired(serviceDefinition)
 
 			if acceptor.Expose {
@@ -757,6 +758,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureConnectorsExposure(cus
 
 		for _, connector := range customResource.Spec.Connectors {
 			serviceDefinition := svc.NewServiceDefinitionForCR(client, namespacedName, connector.Name+"-"+ordinalString, connector.Port, serviceRoutelabels, namer.LabelBuilder.Labels())
+			reconciler.checkExistingService(customResource, serviceDefinition, client)
 			reconciler.trackDesired(serviceDefinition)
 
 			if connector.Expose {

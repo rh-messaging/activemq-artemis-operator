@@ -3548,6 +3548,120 @@ var _ = Describe("artemis controller", func() {
 		})
 	})
 
+	Context("acceptor/connector update no owner ref", func() {
+		// an eariler operator would not set an owner ref on services and we can clash
+		// on create when trying to create a service with the same name..
+		// verify that we find and fix the owner ref before reconcile
+
+		It("with existing acceptor service", func() {
+			By("by creating a new crd")
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+
+			crd.Spec.DeploymentPlan = brokerv1beta1.DeploymentPlanType{
+				Size: 1,
+			}
+			acceptorName := "existing"
+			crd.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+				{
+					Name: acceptorName,
+					Port: 61665,
+				},
+			}
+
+			By("deploying an existing acceptor service w/o owner ref")
+
+			var dudPort = int32(23)
+			serviceKey := types.NamespacedName{Name: crd.Name + "-" + acceptorName + "-0-svc", Namespace: defaultNamespace}
+			existingServiceWithOutOwnerRef := corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{Name: serviceKey.Name, Namespace: serviceKey.Namespace},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{{Port: dudPort}},
+				},
+			}
+
+			Expect(k8sClient.Create(ctx, &existingServiceWithOutOwnerRef)).Should(Succeed())
+			retrievedService := corev1.Service{}
+			By("ensure it is present before the artemis cr")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, serviceKey, &retrievedService)).Should(Succeed())
+				g.Expect(retrievedService.ResourceVersion).Should(Not(BeEmpty()))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			By("verify service still exists and is updated")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, serviceKey, &retrievedService)).Should(Succeed())
+				g.Expect(len(retrievedService.GetOwnerReferences())).Should(BeEquivalentTo(1))
+				g.Expect(retrievedService.Spec.Ports[0].Port).Should(Not(BeEquivalentTo(dudPort)))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+				By("verify service gets owned and deleted")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, serviceKey, &retrievedService)).Should(Not(Succeed()))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
+		})
+
+		It("with existing connector service", func() {
+			By("by creating a new crd")
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+
+			crd.Spec.DeploymentPlan = brokerv1beta1.DeploymentPlanType{
+				Size: 1,
+			}
+			connectorName := "existing-connector"
+			crd.Spec.Connectors = []brokerv1beta1.ConnectorType{
+				{
+					Name: connectorName,
+					Port: 62665,
+				},
+			}
+
+			By("deploying an existing connector service w/o owner ref")
+
+			var dudPort = int32(24)
+			serviceKey := types.NamespacedName{Name: crd.Name + "-" + connectorName + "-0-svc", Namespace: defaultNamespace}
+			existingServiceWithOutOwnerRef := corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{Name: serviceKey.Name, Namespace: serviceKey.Namespace},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{{Port: dudPort}},
+				},
+			}
+
+			Expect(k8sClient.Create(ctx, &existingServiceWithOutOwnerRef)).Should(Succeed())
+			retrievedService := corev1.Service{}
+			By("ensure it is present before the artemis cr")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, serviceKey, &retrievedService)).Should(Succeed())
+				g.Expect(retrievedService.ResourceVersion).Should(Not(BeEmpty()))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			By("verify service still exists and is updated")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, serviceKey, &retrievedService)).Should(Succeed())
+				g.Expect(len(retrievedService.GetOwnerReferences())).Should(BeEquivalentTo(1))
+				g.Expect(retrievedService.Spec.Ports[0].Port).Should(Not(BeEquivalentTo(dudPort)))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+				By("verify service gets owned and deleted")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, serviceKey, &retrievedService)).Should(Not(Succeed()))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
+		})
+	})
+
 	Context("With deployed controller", func() {
 		It("Testing acceptor bindToAllInterfaces default", func() {
 			By("By creating a new crd")
