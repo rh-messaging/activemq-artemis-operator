@@ -338,6 +338,24 @@ var _ = Describe("artemis controller", func() {
 			StartCapturingLog()
 			defer StopCapturingLog()
 
+			By("update the broker to trigger reconcile")
+			brokerKey := types.NamespacedName{
+				Name:      brokerCr.Name,
+				Namespace: defaultNamespace,
+			}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdBrokerCr)).Should(Succeed())
+				// Spec.Env not available
+				createdBrokerCr.Spec.BrokerProperties = []string{"globalMaxSize=512m"}
+				g.Expect(k8sClient.Update(ctx, createdBrokerCr)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			newCreatedBrokerCr := brokerv1beta1.ActiveMQArtemis{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, &newCreatedBrokerCr)).Should(Succeed())
+				g.Expect(len(newCreatedBrokerCr.Spec.BrokerProperties)).To(Equal(1))
+			}, timeout, interval).Should(Succeed())
+
 			newSS := &appsv1.StatefulSet{}
 			secretAfterRecon = &corev1.Secret{}
 
@@ -384,15 +402,20 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(clusterUserFound).To(BeTrue())
 				g.Expect(clusterPasswordFound).To(BeTrue())
 
-				container := newSS.Spec.Template.Spec.Containers[0]
-				newVarFound := false
-				for _, envVar := range container.Env {
-					if envVar.Name == "NEW_VAR" {
-						newVarFound = true
-						g.Expect(envVar.Value).To(Equal("NEW_VALUE"))
+				/*
+					Env not available, using brokerProperties to trigger
+					reconcile
+
+					container := newSS.Spec.Template.Spec.Containers[0]
+					newVarFound := false
+					for _, envVar := range container.Env {
+						if envVar.Name == "NEW_VAR" {
+							newVarFound = true
+							g.Expect(envVar.Value).To(Equal("NEW_VALUE"))
+						}
 					}
-				}
-				g.Expect(newVarFound).To(BeTrue())
+					g.Expect(newVarFound).To(BeTrue())
+				*/
 			}, timeout, interval).Should(Succeed())
 
 			hasMatch, matchErr := MatchCapturedLog("Failed to create new \\*v1\\.Secret")
@@ -488,6 +511,24 @@ var _ = Describe("artemis controller", func() {
 
 			}, timeout, interval).Should(Succeed())
 
+			By("update the broker to trigger reconcile")
+			brokerKey := types.NamespacedName{
+				Name:      brokerCr.Name,
+				Namespace: defaultNamespace,
+			}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdBrokerCr)).Should(Succeed())
+				// Spec.Env not available
+				createdBrokerCr.Spec.BrokerProperties = []string{"globalMaxSize=512m"}
+				g.Expect(k8sClient.Update(ctx, createdBrokerCr)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			newCreatedBrokerCr := brokerv1beta1.ActiveMQArtemis{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, &newCreatedBrokerCr)).Should(Succeed())
+				g.Expect(len(newCreatedBrokerCr.Spec.BrokerProperties)).To(Equal(1))
+			}, timeout, interval).Should(Succeed())
+
 			newSS := &appsv1.StatefulSet{}
 			secretAfterRecon = &corev1.Secret{}
 
@@ -535,15 +576,20 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(clusterUserFound).To(BeTrue())
 				g.Expect(clusterPasswordFound).To(BeTrue())
 
-				container := newSS.Spec.Template.Spec.Containers[0]
-				newVarFound := false
-				for _, envVar := range container.Env {
-					if envVar.Name == "NEW_VAR" {
-						newVarFound = true
-						g.Expect(envVar.Value).To(Equal("NEW_VALUE"))
+				/*
+					Env not available, using brokerProperties to trigger
+					reconcile
+
+					container := newSS.Spec.Template.Spec.Containers[0]
+					newVarFound := false
+					for _, envVar := range container.Env {
+						if envVar.Name == "NEW_VAR" {
+							newVarFound = true
+							g.Expect(envVar.Value).To(Equal("NEW_VALUE"))
+						}
 					}
-				}
-				g.Expect(newVarFound).To(BeTrue())
+					g.Expect(newVarFound).To(BeTrue())
+				*/
 			}, timeout, interval).Should(Succeed())
 
 			// cleanup
