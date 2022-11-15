@@ -74,7 +74,7 @@ var initHelperScript = "/opt/amq-broker/script/default.sh"
 var brokerConfigRoot = "/amq/init/config"
 var configCmd = "/opt/amq/bin/launch.sh"
 
-//default ApplyRule for address-settings
+// default ApplyRule for address-settings
 var defApplyRule string = "merge_all"
 var yacfgProfileVersion = version.YacfgProfileVersionFromFullVersion[version.LatestVersion]
 
@@ -476,18 +476,22 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customRe
 	desired := false
 	if err := resources.Retrieve(namespacedName, client, secretDefinition); err != nil {
 		if errors.IsNotFound(err) {
-			log.V(1).Info("Did not find secret " + secretName)
+			log.V(1).Info("Did not find secret", "key", namespacedName)
 		} else {
 			log.Error(err, "Error while retrieving secret", "key", namespacedName)
 		}
+		// we need to create and track
 		desired = true
 	} else {
-
-		// update
-		for k := range *envVars {
-			elem, ok := secretDefinition.Data[k]
-			if 0 != strings.Compare(string(elem), (*envVars)[k].Value) || !ok {
-				log.V(1).Info("key value not equals or does not exist", "key", k, "exists", ok)
+		log.V(1).Info("updating from " + secretName)
+		for k, envVar := range *envVars {
+			if envVar.Internal {
+				// goes in internal secret
+				continue
+			}
+			elem, exists := secretDefinition.Data[k]
+			if 0 != strings.Compare(string(elem), (*envVars)[k].Value) || !exists {
+				log.V(1).Info("key value not equals or does not exist", "key", k, "exists", exists)
 				if !(*envVars)[k].AutoGen || string(elem) == "" {
 					secretDefinition.Data[k] = []byte((*envVars)[k].Value)
 				}
@@ -511,7 +515,20 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customRe
 	internalSecretName := secretName + "-internal"
 	if len(internalStringDataMap) > 0 {
 
-		internalSecretDefinition := secrets.NewSecret(namespacedName, internalSecretName, internalStringDataMap, namer.LabelBuilder.Labels())
+		var internalSecretDefinition *corev1.Secret
+		obj := reconciler.cloneOfDeployed(reflect.TypeOf(corev1.Secret{}), internalSecretName)
+		if obj != nil {
+			log.V(1).Info("updating from " + internalSecretName)
+			internalSecretDefinition = obj.(*corev1.Secret)
+		} else {
+			internalSecretDefinition = secrets.NewSecret(namespacedName, internalSecretName, internalStringDataMap, namer.LabelBuilder.Labels())
+			reconciler.adoptExistingSecretWithNoOwnerRefForUpdate(customResource, internalSecretDefinition, client)
+		}
+
+		// apply our desired data
+		internalSecretDefinition.ObjectMeta.Labels = namer.LabelBuilder.Labels()
+		internalSecretDefinition.StringData = internalStringDataMap
+
 		reconciler.trackDesired(internalSecretDefinition)
 	}
 
@@ -1267,6 +1284,36 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) deleteRequestedResource(customR
 	return deleteError
 }
 
+// older version of the operator would drop the owner reference, we need to adopt such secrets and update them
+func (reconciler *ActiveMQArtemisReconcilerImpl) adoptExistingSecretWithNoOwnerRefForUpdate(cr *brokerv1beta1.ActiveMQArtemis, candidate *corev1.Secret, client rtclient.Client) {
+	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
+
+	key := types.NamespacedName{Name: candidate.Name, Namespace: candidate.Namespace}
+	existingSecret := &corev1.Secret{}
+	err := client.Get(context.TODO(), key, existingSecret)
+	if err == nil {
+		if len(existingSecret.OwnerReferences) == 0 {
+			reconciler.updateOwnerReferencesAndMatchVersion(cr, existingSecret, candidate)
+			reconciler.addToDeployed(reflect.TypeOf(corev1.Secret{}), existingSecret)
+			log.Info("found matching secret without owner reference, reclaiming", "Name", key)
+		}
+	}
+}
+
+func (reconciler *ActiveMQArtemisReconcilerImpl) updateOwnerReferencesAndMatchVersion(cr *brokerv1beta1.ActiveMQArtemis, existing rtclient.Object, candidate rtclient.Object) {
+	gvk := cr.GroupVersionKind()
+	existing.SetOwnerReferences([]metav1.OwnerReference{{
+		APIVersion: gvk.GroupVersion().String(),
+		Kind:       gvk.Kind,
+		Name:       cr.GetName(),
+		UID:        cr.GetUID()}})
+
+	candidate.SetOwnerReferences(existing.GetOwnerReferences())
+	// we need to have 'candidate' match for update
+	candidate.SetResourceVersion(existing.GetResourceVersion())
+	candidate.SetUID(existing.GetUID())
+}
+
 func (reconciler *ActiveMQArtemisReconcilerImpl) checkExistingService(cr *brokerv1beta1.ActiveMQArtemis, candidate *corev1.Service, client rtclient.Client) {
 	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
 
@@ -1283,20 +1330,9 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) checkExistingService(cr *broker
 		err := client.Get(context.TODO(), key, existingService)
 		if err == nil {
 			if len(existingService.OwnerReferences) == 0 {
-				gvk := cr.GroupVersionKind()
-				existingService.OwnerReferences = []metav1.OwnerReference{{
-					APIVersion: gvk.GroupVersion().String(),
-					Kind:       gvk.Kind,
-					Name:       cr.GetName(),
-					UID:        cr.GetUID()}}
-
-				// we need to have 'candidate' match for update
-				candidate.ResourceVersion = existingService.ResourceVersion
-				candidate.UID = existingService.UID
-				candidate.OwnerReferences = existingService.OwnerReferences
+				reconciler.updateOwnerReferencesAndMatchVersion(cr, existingService, candidate)
 				reconciler.addToDeployed(serviceType, existingService)
 				log.Info("found matching service without owner reference, reclaiming", "Name", key)
-
 			} else {
 				log.Info("found matching service with unexpected owner reference, it may need manual removal", "Name", key)
 			}

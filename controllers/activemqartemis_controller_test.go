@@ -30,6 +30,7 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	brokerv2alpha4 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha4"
 	"github.com/artemiscloud/activemq-artemis-operator/api/v2alpha5"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/pods"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
@@ -50,8 +51,14 @@ import (
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/artemiscloud/activemq-artemis-operator/version"
+	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/client-go/kubernetes/scheme"
+
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/watch"
@@ -97,17 +104,8 @@ var _ = Describe("artemis controller", func() {
 
 			go func() {
 				for event := range wi.ResultChan() {
-					switch co := event.Object.(type) {
-					case client.Object:
-						if verobse {
-							fmt.Printf("%v : ResourceVersion: %v Generation: %v, OR: %v\n", event.Type, co.GetResourceVersion(), co.GetGeneration(), co.GetOwnerReferences())
-							fmt.Printf("%v : Object: %v\n", event.Type, event.Object)
-						}
-					default:
-						if verobse {
-							fmt.Printf("%v : type: %v\n", event.Type, co)
-							fmt.Printf("%v : Object: %v\n", event.Type, event.Object)
-						}
+					if verobse {
+						fmt.Printf("%v : Object: %v\n", event.Type, event.Object)
 					}
 				}
 			}()
@@ -1584,13 +1582,14 @@ var _ = Describe("artemis controller", func() {
 
 	Context("Console secret Test", func() {
 
-		crd := generateArtemisSpec(defaultNamespace)
-		crd.Spec.Console.Expose = true
-		crd.Spec.Console.SSLEnabled = true
-
-		reconcilerImpl := &ActiveMQArtemisReconcilerImpl{}
-
 		It("deploy broker with ssl enabled console", func() {
+
+			crd := generateArtemisSpec(defaultNamespace)
+			crd.Spec.Console.Expose = true
+			crd.Spec.Console.SSLEnabled = true
+
+			reconcilerImpl := &ActiveMQArtemisReconcilerImpl{}
+
 			os.Setenv("OPERATOR_OPENSHIFT", "true")
 			defer os.Unsetenv("OPERATOR_OPENSHIFT")
 
@@ -1646,6 +1645,179 @@ var _ = Describe("artemis controller", func() {
 			}
 			Expect(foundSecretRef).To(BeTrue())
 			Expect(foundSecretKey).To(BeTrue())
+		})
+
+		It("reconcile verify internal secret owner ref", func() {
+			By("stop existing manager as we wish to populate etcd and reconcile directly")
+			shutdownControllerManager()
+			defer createControllerManagerForSuite()
+
+			os.Setenv("OPERATOR_OPENSHIFT", "true")
+			defer os.Unsetenv("OPERATOR_OPENSHIFT")
+
+			crd := generateArtemisSpec(defaultNamespace)
+			crd.Spec.Console.Expose = true
+			crd.Spec.Console.SSLEnabled = true
+
+			By("real owner ref requirements, it must exist else we get GC")
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+			crdKey := types.NamespacedName{Namespace: crd.Namespace, Name: crd.Name}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, crdKey, createdCrd)).Should(Succeed())
+				g.Expect(createdCrd.ResourceVersion).ShouldNot(BeEmpty())
+			}, timeout, interval).Should(Succeed())
+
+			reconcilerImpl := &ActiveMQArtemisReconcilerImpl{}
+			namer := MakeNamers(&crd)
+			defaultConsoleSecretName := crd.Name + "-console-secret"
+			internalSecretName := defaultConsoleSecretName + "-internal"
+			consoleSecretKey := types.NamespacedName{Namespace: crd.Namespace, Name: defaultConsoleSecretName}
+			internalConsoleSecretKey := types.NamespacedName{Namespace: crd.Namespace, Name: internalSecretName}
+
+			currentSS := &appsv1.StatefulSet{}
+			currentSS.Name = namer.SsNameBuilder.Name()
+			currentSS.Namespace = defaultNamespace
+
+			By("reconciling expecting generation of secret and secret -internal")
+			reconcilerImpl.ProcessConsole(createdCrd, *namer, k8sClient, k8sClient.Scheme(), currentSS)
+			By("creating internal secret via process resources")
+			reconcilerImpl.ProcessResources(createdCrd, k8sClient, k8sClient.Scheme())
+
+			By("finding internal secret with owner ref")
+			createdInternalSecret := &corev1.Secret{}
+			createdDefaultSecret := &corev1.Secret{}
+			var resourceVer string
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, internalConsoleSecretKey, createdInternalSecret)).Should(Succeed())
+				g.Expect(len(createdInternalSecret.OwnerReferences)).Should(BeEquivalentTo(1))
+				g.Expect(createdInternalSecret.ResourceVersion).ShouldNot(BeNil())
+				resourceVer = createdInternalSecret.ResourceVersion
+			}, timeout, interval).Should(Succeed())
+
+			By("faking deployed resources")
+			// this can't work b/c we are faking the openshift env and no route crd is deployed
+			// reconcilerImpl.CurrentDeployedResources(&crd, k8sClient)
+
+			By("populating deployed")
+			reconcilerImpl.deployed = make(map[reflect.Type][]client.Object)
+			reconcilerImpl.requestedResources = nil
+
+			By("finding in etcd, cache flushed")
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, consoleSecretKey, createdDefaultSecret)).Should(Succeed())
+				g.Expect(strconv.Atoi(createdDefaultSecret.ResourceVersion)).Should(BeNumerically(">", 0))
+				g.Expect(len(createdDefaultSecret.OwnerReferences)).Should(BeEquivalentTo(1))
+
+				g.Expect(k8sClient.Get(ctx, internalConsoleSecretKey, createdInternalSecret)).Should(Succeed())
+				g.Expect(strconv.Atoi(createdInternalSecret.ResourceVersion)).Should(BeNumerically(">", 0))
+				g.Expect(len(createdInternalSecret.OwnerReferences)).Should(BeEquivalentTo(1))
+
+			}, timeout, interval).Should(Succeed())
+
+			By("populating deployed with " + createdDefaultSecret.Name)
+			reconcilerImpl.addToDeployed(reflect.TypeOf(corev1.Secret{}), createdDefaultSecret)
+
+			Expect(k8sClient.Get(ctx, internalConsoleSecretKey, createdInternalSecret)).Should(Succeed())
+			By("populating deployed with " + createdInternalSecret.Name)
+			reconcilerImpl.addToDeployed(reflect.TypeOf(corev1.Secret{}), createdInternalSecret)
+
+			By("forcing second reconcile subset with mod to AMQ_CONSOLE_ARGS content for internal secret")
+			crd.Spec.Console.UseClientAuth = true
+
+			reconcilerImpl.ProcessConsole(&crd, *namer, k8sClient, k8sClient.Scheme(), currentSS)
+			reconcilerImpl.ProcessResources(&crd, k8sClient, k8sClient.Scheme())
+
+			By("finding again internal secret with owner ref")
+			createdInternalSecret = &corev1.Secret{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, internalConsoleSecretKey, createdInternalSecret)).Should(Succeed())
+				g.Expect(len(createdInternalSecret.OwnerReferences)).Should(BeEquivalentTo(1))
+				g.Expect(createdInternalSecret.ResourceVersion).ShouldNot(BeEquivalentTo(resourceVer))
+			}, timeout, interval).Should(Succeed())
+
+			By("cleanup")
+			k8sClient.Delete(ctx, createdInternalSecret)
+			k8sClient.Delete(ctx, createdDefaultSecret)
+			k8sClient.Delete(ctx, &crd)
+		})
+
+		It("reconcile verify adopt internal secret that has lost owner ref", func() {
+			By("stop existing manager as we wish to populate etcd and reconcile directly")
+			shutdownControllerManager()
+			defer createControllerManagerForSuite()
+
+			os.Setenv("OPERATOR_OPENSHIFT", "true")
+			defer os.Unsetenv("OPERATOR_OPENSHIFT")
+
+			crd := generateArtemisSpec(defaultNamespace)
+			crd.Spec.Console.Expose = true
+			crd.Spec.Console.SSLEnabled = true
+
+			By("real owner ref requirements, it must exist else we get GC")
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+			crdKey := types.NamespacedName{Namespace: crd.Namespace, Name: crd.Name}
+
+			By("using typed client to retain kind info")
+			restConfig.NegotiatedSerializer = serializer.NewCodecFactory(scheme.Scheme)
+			typedClient, err := v1beta1.NewForConfig(restConfig)
+			Expect(err).Should(BeNil())
+			Eventually(func(g Gomega) {
+				createdCrd, err = typedClient.ActiveMQArtemises(crdKey.Namespace).Get(crdKey.Name, metav1.GetOptions{})
+				g.Expect(err).Should(BeNil())
+				g.Expect(createdCrd.ResourceVersion).ShouldNot(BeEmpty())
+				// kind gets whacked by the non typed (or non Reader) GET
+				g.Expect(createdCrd.Kind).ShouldNot(BeEmpty())
+
+			}, timeout, interval).Should(Succeed())
+
+			reconcilerImpl := &ActiveMQArtemisReconcilerImpl{}
+			reconcilerImpl.deployed = make(map[reflect.Type][]client.Object)
+
+			namer := MakeNamers(&crd)
+			defaultConsoleSecretName := crd.Name + "-console-secret"
+			internalSecretName := defaultConsoleSecretName + "-internal"
+			internalConsoleSecretKey := types.NamespacedName{Namespace: crd.Namespace, Name: internalSecretName}
+
+			By("making abandoned internal secret")
+			createdInternalSecret := &corev1.Secret{}
+			createdInternalSecret.Name = internalConsoleSecretKey.Name
+			createdInternalSecret.Namespace = internalConsoleSecretKey.Namespace
+
+			Expect(k8sClient.Create(ctx, createdInternalSecret)).Should(Succeed())
+
+			var resourceVer string
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, internalConsoleSecretKey, createdInternalSecret)).Should(Succeed())
+				g.Expect(len(createdInternalSecret.OwnerReferences)).Should(BeEquivalentTo(0))
+				g.Expect(createdInternalSecret.ResourceVersion).ShouldNot(BeNil())
+				resourceVer = createdInternalSecret.ResourceVersion
+			}, timeout, interval).Should(Succeed())
+
+			currentSS := &appsv1.StatefulSet{}
+			currentSS.Name = namer.SsNameBuilder.Name()
+			currentSS.Namespace = defaultNamespace
+
+			By("reconciling expecting generation of secret and adoption of secret -internal")
+			reconcilerImpl.ProcessConsole(createdCrd, *namer, k8sClient, k8sClient.Scheme(), currentSS)
+			By("creating internal secret via process resources")
+			reconcilerImpl.ProcessResources(createdCrd, k8sClient, k8sClient.Scheme())
+
+			By("finding internal secret with owner ref updated")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, internalConsoleSecretKey, createdInternalSecret)).Should(Succeed())
+				g.Expect(len(createdInternalSecret.OwnerReferences)).Should(BeEquivalentTo(1))
+				g.Expect(createdInternalSecret.ResourceVersion).ShouldNot(BeNil())
+				By("on update - resource version changes" + createdInternalSecret.ResourceVersion)
+				g.Expect(createdInternalSecret.ResourceVersion).ShouldNot(Equal(resourceVer))
+			}, timeout, interval).Should(Succeed())
+
+			By("cleanup")
+			k8sClient.Delete(ctx, createdInternalSecret)
+			k8sClient.Delete(ctx, createdCrd)
 		})
 	})
 
