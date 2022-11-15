@@ -13,7 +13,7 @@ COPY metadata/annotations.yaml /metadata/annotations.yaml
 LABEL com.redhat.component="amq-broker-rhel8-operator-bundle-container"
 LABEL com.redhat.delivery.operator.bundle="true"
 LABEL com.redhat.delivery.backport=false
-LABEL com.redhat.openshift.versions="v4.6-v4.12"
+LABEL com.redhat.openshift.versions="v4.6"
 LABEL description="Red Hat AMQ Broker 7.10 Operator Bundle"
 LABEL io.k8s.description="An associated operator bundle of metadata."
 LABEL io.k8s.display-name="Red Hat AMQ Broker 7.10 Operator Bundle"
