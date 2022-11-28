@@ -37,6 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/artemiscloud/activemq-artemis-management/jolokia"
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	appsv1 "k8s.io/api/apps/v1"
@@ -418,6 +419,69 @@ var _ = Describe("Address controller", Label("do"), func() {
 					Eventually(func(g Gomega) {
 						stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, gomega.Default)
 						g.Expect(stdOutContent).Should(ContainSubstring(addressName))
+					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				}
+			}
+
+			// cleanup
+			k8sClient.Delete(ctx, &addressCrd)
+			k8sClient.Delete(ctx, &crd)
+		})
+
+		It("address creation before controller manager restart", func() {
+
+			By("By deploying address cr in advance")
+
+			addressName := "A2"
+			addressCrd := brokerv1beta1.ActiveMQArtemisAddress{}
+			addressCrd.SetName("address-" + randString())
+			addressCrd.SetNamespace(defaultNamespace)
+			addressCrd.Spec.AddressName = addressName
+			addressCrd.Spec.QueueName = &addressName
+			routingTypeShouldBeOptional := "anycast"
+			addressCrd.Spec.RoutingType = &routingTypeShouldBeOptional
+
+			Expect(k8sClient.Create(ctx, &addressCrd)).Should(Succeed())
+
+			// Restart the controller manager
+			shutdownControllerManager()
+			createControllerManagerForSuite()
+
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+			crd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
+				InitialDelaySeconds: 5,
+				PeriodSeconds:       10,
+			}
+			crd.Spec.DeploymentPlan.Size = 1
+			crd.Spec.DeploymentPlan.JolokiaAgentEnabled = true
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				By("Deploying a broker")
+				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+				By("Checking ready on SS")
+				Eventually(func(g Gomega) {
+					key := types.NamespacedName{Name: namer.CrToSS(crd.Name), Namespace: defaultNamespace}
+					sfsFound := &appsv1.StatefulSet{}
+
+					g.Expect(k8sClient.Get(ctx, key, sfsFound)).Should(Succeed())
+					g.Expect(sfsFound.Status.ReadyReplicas).Should(BeEquivalentTo(1))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("Verfying address is present")
+				for i := int32(0); i < crd.Spec.DeploymentPlan.Size; i++ {
+					Eventually(func(g Gomega) {
+						pod := &corev1.Pod{}
+						podName := namer.CrToSS(crd.Name) + "-" + strconv.FormatInt(int64(i), 10)
+						podNamespacedName := types.NamespacedName{Name: podName, Namespace: defaultNamespace}
+						g.Expect(k8sClient.Get(ctx, podNamespacedName, pod)).Should(Succeed())
+
+						jolokia := jolokia.GetJolokia(pod.Status.PodIP, "8161", "/console/jolokia", "", "", "http")
+						data, err := jolokia.Exec("", `{ "type":"EXEC","mbean":"org.apache.activemq.artemis:broker=\"amq-broker\"","operation":"listAddresses(java.lang.String)","arguments":[","] }`)
+						g.Expect(err).To(BeNil())
+						g.Expect(data.Value).Should(ContainSubstring(addressName))
 					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 				}
 			}

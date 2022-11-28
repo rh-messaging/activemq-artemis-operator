@@ -103,21 +103,24 @@ func (r *ActiveMQArtemisAddressReconciler) Reconcile(ctx context.Context, reques
 		return ctrl.Result{}, err
 	}
 
+	addressDeployment := AddressDeployment{
+		AddressResource:      *instance,
+		SsTargetNameBuilders: createNameBuilders(instance),
+	}
+
 	if !lookupSucceeded {
 		//check stored cr
 		if existingCr := lsrcrs.RetrieveLastSuccessfulReconciledCR(request.NamespacedName, "address", r.Client, getAddressLabels(instance)); existingCr != nil {
 			//compare resource version
 			if existingCr.Checksum == instance.ResourceVersion {
 				reqLogger.V(1).Info("The incoming address CR is identical to stored CR, don't do reconcile")
+				//the namespacedNameToAddressName is empty after a restart
+				namespacedNameToAddressName[request.NamespacedName] = addressDeployment
 				return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
 			}
 		}
 	}
 
-	addressDeployment := AddressDeployment{
-		AddressResource:      *instance,
-		SsTargetNameBuilders: createNameBuilders(instance),
-	}
 	err = createQueue(&addressDeployment, request, r.Client, r.Scheme)
 	if nil == err {
 		namespacedNameToAddressName[request.NamespacedName] = addressDeployment
