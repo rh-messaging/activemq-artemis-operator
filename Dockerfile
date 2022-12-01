@@ -45,6 +45,9 @@ COPY --from=builder /workspace/entrypoint/entrypoint /home/${BROKER_NAME}-operat
 RUN useradd ${BROKER_NAME}-operator
 RUN chown -R `id -u`:0 /home/${BROKER_NAME}-operator/bin && chmod -R 755 /home/${BROKER_NAME}-operator/bin
 
+# Upgrade packages
+RUN dnf update -y && rm -rf /var/cache/yum
+
 USER ${USER_UID}
 ENTRYPOINT ["/home/${BROKER_NAME}-operator/bin/entrypoint"]
 

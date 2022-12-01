@@ -31,6 +31,9 @@ COPY --from=build-env $REMOTE_SOURCE_DIR/app/bin/${BROKER_NAME}-operator /home/$
 
 RUN chown -R `id -u`:0 /home/${BROKER_NAME}-operator/bin && chmod -R 755 /home/${BROKER_NAME}-operator/bin
 
+# Upgrade packages
+RUN dnf update -y && rm -rf /var/cache/yum
+
 USER ${USER_UID}
 ENTRYPOINT ["/home/${BROKER_NAME}-operator/bin/entrypoint"]
 
