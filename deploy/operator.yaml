@@ -68,8 +68,8 @@ spec:
           #value: registry.redhat.io/amq7/amq-broker-init-rhel8:0.3-20
           value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:be26e205a21244511ccb2b774fdf952a67d020a0ce9a699394debecf3362ef31
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_787
-          #value: registry.redhat.io/amq7/amq-broker-init-rhel8:7.8-7
-          value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:d7d4318451353b67fb4a5570d006d1cc366bfb600a1812fe77295aa058da2ca3
+          #value: registry.redhat.io/amq7/amq-broker-init-rhel8:7.8-8
+          value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:392b91460aada0cfd97d8e09736e70ae1863e777baf798ee1801ade2bc0d6535
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781
           #value: registry.redhat.io/amq7/amq-broker-rhel8:7.8-3
           value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:0d857b95084e39c011651be89482d4dcc77c2d1c3ac3c6a819f3c9d5a57a425f
@@ -89,8 +89,8 @@ spec:
           #value: registry.redhat.io/amq7/amq-broker-rhel8:7.8-20
           value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:62d3193f1d72bad598ecf35f4ca4187a732d2360dee0932e3736f98b3840f69b
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_787
-          #value: registry.redhat.io/amq7/amq-broker-rhel8:7.8-28
-          value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:9fba6be94d90ef81f8272acec97c8196b78159515840b98a2bef95b5c7174e64
+          #value: registry.redhat.io/amq7/amq-broker-rhel8:7.8-29
+          value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:1f52a08020040d9f7365b0688096639b3ee3988966a284035b7f2973e23d497a
 
         # PPC64LE
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_781_ppc64le
@@ -180,8 +180,8 @@ spec:
           #value: registry.redhat.io/amq7/amq-broker-78-openshift-openjdk-11-rhel8:7.8-8.1669834199
           value: registry.redhat.io/amq7/amq-broker-78-openshift-openjdk-11-rhel8@sha256:cb356e25b0dd0a257007105d58e9f71ec6d91da525f3d7878d57b47e407d76c1
 
-        #image: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.8-31
-        image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:49bde2e9f525b89eadb29b172f30ba73916dc4ab8fb26988c835c4c60e661b8c
+        #image: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.8-32
+        image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:b199c02c561d4ec01b3af7d46e8f296457941d98b86819c3ce6e79384be7da5a
 
         # If floating tags are configured above you may want to set this to true.
         #imagePullPolicy: Always
