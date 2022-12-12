@@ -245,6 +245,10 @@ func cleanUpTestProxy() {
 	Expect(err != nil || errors.IsNotFound(err))
 }
 
+func createControllerManagerForSuite() {
+	createControllerManager(false, "")
+}
+
 func createControllerManager(disableMetrics bool, watchNamespace string) {
 
 	managerCtx, managerCancel = context.WithCancel(ctx)

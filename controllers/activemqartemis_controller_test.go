@@ -27,7 +27,6 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	brokerv2alpha4 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha4"
 	"github.com/artemiscloud/activemq-artemis-operator/api/v2alpha5"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v1beta1"
@@ -36,9 +35,6 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
-	"github.com/artemiscloud/activemq-artemis-operator/version"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 
 	"math/rand"
 	"reflect"
@@ -1340,7 +1336,7 @@ var _ = Describe("artemis controller", func() {
 
 				// added back owner reference
 				pvc.OwnerReferences = []metav1.OwnerReference{{
-					APIVersion: v1beta1.GroupVersion.String(),
+					APIVersion: brokerv1beta1.GroupVersion.String(),
 					Kind:       "ActiveMQArtemis",
 					Name:       createdCrd.Name,
 					UID:        createdCrd.GetUID()}}
