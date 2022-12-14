@@ -774,7 +774,7 @@ var _ = Describe("artemis controller", func() {
 				},
 				Spec: brokerv1beta1.ActiveMQArtemisSpec{
 					BrokerProperties: []string{
-						"addressesSettings.#.redeliveryDelayMultiplier=2.3",
+						"addressesSettings.#.redeliveryMultiplier=2.3",
 						"addressesSettings.#.redeliveryCollisionAvoidanceFactor=1.2",
 					},
 				},
