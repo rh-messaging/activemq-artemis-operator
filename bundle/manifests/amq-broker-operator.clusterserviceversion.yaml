@@ -1,7 +1,7 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: amq-broker-operator.v7.10.2-opr-1
+  name: amq-broker-operator.v7.10.2-opr-2
   namespace: placeholder
   labels:
     operator-activemqartemis: "true"
@@ -14,8 +14,8 @@ metadata:
     categories: "Streaming & Messaging"
     certified: "false"
     description: AMQ Broker Operator for RHEL 8 (Multiarch) provides the ability to deploy and manage stateful AMQ Broker clusters
-    #containerImage: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.10-40
-    containerImage: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:f33dd9b56033fe323ae5ddc81774abd124ef6439720e128433e921f83476c5f8
+    #containerImage: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.10-41
+    containerImage: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:9283428b8f219915defa2f2a81c36193d771db8f5db4ef133add7408286bd5d3
     createdAt: 2021-06-18T00:02:04Z
     capabilities: Seamless Upgrades
     repository: https://github.com/rh-messaging/activemq-artemis-operator
@@ -105,8 +105,8 @@ spec:
   keywords:
     - activemqartemis
     - operator
-  version: 7.10.2-opr-1
-  replaces: amq-broker-operator.v7.10.1-opr-2
+  version: 7.10.2-opr-2
+  replaces: amq-broker-operator.v7.10.2-opr-1
   maturity: beta
   maintainers:
     - name: Red Hat
@@ -123,12 +123,12 @@ spec:
       mediatype: image/png
   labels:
     alm-owner-amq-broker: amq-broker-operator
-    operated-by: amq-broker-operator.v7.10.2-opr-1
+    operated-by: amq-broker-operator.v7.10.2-opr-2
   selector:
     matchLabels:
       ActiveMQArtemis: ex-aao
       application: ex-aao-app
-      operated-by: amq-broker-operator.v7.10.2-opr-1
+      operated-by: amq-broker-operator.v7.10.2-opr-2
   installModes:
     - type: OwnNamespace
       supported: true
@@ -2208,8 +2208,8 @@ spec:
                   runAsNonRoot: true
                 containers:
                   - name: amq-broker-operator
-                    #image: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.10-40
-                    image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:f33dd9b56033fe323ae5ddc81774abd124ef6439720e128433e921f83476c5f8
+                    #image: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.10-41
+                    image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:9283428b8f219915defa2f2a81c36193d771db8f5db4ef133add7408286bd5d3
                     livenessProbe:
                       httpGet:
                         path: /healthz
