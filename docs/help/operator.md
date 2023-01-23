@@ -839,6 +839,29 @@ spec:
     expose: true
 ```
 
+### Enable JVM metrics
+
+JVM memory metrics are enabled by default. Use the `spec.brokerProperties` field to enable JVM GC and threads metrics, for further details see the following example:
+
+```yaml
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: artemis-jvm
+spec:
+  console:
+    expose: true
+  deploymentPlan:
+    size: 1
+    enableMetricsPlugin: true
+  brokerProperties:
+    - "metricsConfiguration.jvmGc=true"
+    - "metricsConfiguration.jvmMemory=true"
+    - "metricsConfiguration.jvmThread=true"
+```
+
+### Monitor broker metrics by using Prometheus
+
 The operator will expose a containerPort named **wsconj** for the Prometheus to monitor. The following
 is a sample Prometheus ServiceMonitor resource
 

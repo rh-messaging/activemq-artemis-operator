@@ -24,6 +24,7 @@ import (
 	"crypto/tls"
 	"encoding/hex"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"net"
 	"net/http"
@@ -7068,6 +7069,56 @@ var _ = Describe("artemis controller", func() {
 		Eventually(func() bool {
 			return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
 		}, timeout, interval).Should(BeTrue())
+	})
+
+	It("enable JVM metrics by using broker properties", func() {
+		ctx := context.Background()
+		crd := generateArtemisSpec(defaultNamespace)
+		enableMetricsPlugin := true
+		crd.Spec.Console.Expose = true
+		crd.Spec.DeploymentPlan.Size = common.Int32ToPtr(1)
+		crd.Spec.DeploymentPlan.EnableMetricsPlugin = &enableMetricsPlugin
+		crd.Spec.BrokerProperties = []string{
+			"metricsConfiguration.jvmGc=true",
+			"metricsConfiguration.jvmThread=true",
+		}
+
+		By("Deploying the CRD " + crd.ObjectMeta.Name)
+		Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+		if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+			By("verifying started")
+			brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+				g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+				g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
+				g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("verifying metrics")
+			Eventually(func(g Gomega) {
+				pod := &corev1.Pod{}
+				podName := namer.CrToSS(crd.Name) + "-0"
+				podNamespacedName := types.NamespacedName{Name: podName, Namespace: defaultNamespace}
+				g.Expect(k8sClient.Get(ctx, podNamespacedName, pod)).Should(Succeed())
+
+				resp, err := http.Get("http://" + pod.Status.PodIP + ":8161/metrics/")
+				g.Expect(err).Should(Succeed())
+
+				defer resp.Body.Close()
+				body, err := ioutil.ReadAll(resp.Body)
+				g.Expect(err).Should(Succeed())
+
+				g.Expect(body).Should(ContainSubstring("jvm_gc"))
+				g.Expect(body).Should(ContainSubstring("jvm_threads"))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+		}
+
+		By("By checking it has gone")
+		Expect(k8sClient.Delete(ctx, &crd)).To(Succeed())
 	})
 
 	Context("config projection", Label("slow"), func() {
