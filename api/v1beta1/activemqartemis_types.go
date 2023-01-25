@@ -64,6 +64,9 @@ type ActiveMQArtemisSpec struct {
 	// Optional list of environment variables to apply to the container(s), not exclusive
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Environment Variables"
 	Env []corev1.EnvVar `json:"env,omitempty"`
+	// The ingress domain to expose the application. By default, on Kubernetes it is apps.artemiscloud.io and on OpenShift it is the Ingress Controller domain.
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Ingress Domain",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:text"}
+	IngressDomain string `json:"ingressDomain,omitempty"`
 }
 
 type AddressSettingsType struct {

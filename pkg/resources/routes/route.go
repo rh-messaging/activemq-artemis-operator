@@ -7,7 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func NewRouteDefinitionForCR(existing *routev1.Route, namespacedName types.NamespacedName, labels map[string]string, targetServiceName string, targetPortName string, passthroughTLS bool) *routev1.Route {
+func NewRouteDefinitionForCR(existing *routev1.Route, namespacedName types.NamespacedName, labels map[string]string, targetServiceName string, targetPortName string, passthroughTLS bool, domain string) *routev1.Route {
 
 	var desired *routev1.Route = nil
 	if existing == nil {
@@ -26,6 +26,10 @@ func NewRouteDefinitionForCR(existing *routev1.Route, namespacedName types.Names
 
 	} else {
 		desired = existing
+	}
+
+	if domain != "" {
+		desired.Spec.Host = desired.GetObjectMeta().GetName() + "." + domain
 	}
 
 	desired.Spec.Port = &routev1.RoutePort{

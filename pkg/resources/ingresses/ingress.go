@@ -9,7 +9,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func NewIngressForCRWithSSL(existing *netv1.Ingress, namespacedName types.NamespacedName, labels map[string]string, targetServiceName string, targetPortName string, sslEnabled bool) *netv1.Ingress {
+const defaultIngressDomain string = "apps.artemiscloud.io"
+
+func NewIngressForCRWithSSL(existing *netv1.Ingress, namespacedName types.NamespacedName, labels map[string]string, targetServiceName string, targetPortName string, sslEnabled bool, domain string) *netv1.Ingress {
 
 	pathType := netv1.PathTypePrefix
 
@@ -67,7 +69,12 @@ func NewIngressForCRWithSSL(existing *netv1.Ingress, namespacedName types.Namesp
 			Name: portName,
 		}
 	}
-	host := desired.GetObjectMeta().GetName() + ".apps.artemiscloud.io"
+
+	if domain == "" {
+		domain = defaultIngressDomain
+	}
+
+	host := desired.GetObjectMeta().GetName() + "." + domain
 	desired.Spec.Rules[0].Host = host
 	if sslEnabled {
 		//ingress assumes TLS termination at the ingress point and uses default https port 443

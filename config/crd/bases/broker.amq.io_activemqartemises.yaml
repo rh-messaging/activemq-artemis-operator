@@ -2214,6 +2214,11 @@ spec:
                   - name
                   type: object
                 type: array
+              ingressDomain:
+                description: The ingress domain to expose the application. By default,
+                  on Kubernetes it is apps.artemiscloud.io and on OpenShift it is
+                  the Ingress Controller domain.
+                type: string
               upgrades:
                 description: Specifies the upgrades
                 properties:

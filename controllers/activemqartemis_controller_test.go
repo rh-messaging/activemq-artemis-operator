@@ -1231,6 +1231,7 @@ var _ = Describe("artemis controller", func() {
 
 				crd.Spec.Console.Expose = true
 				crd.Spec.Console.SSLEnabled = true
+				crd.Spec.IngressDomain = "tests.artemiscloud.io"
 
 				isOpenshift, err := environments.DetectOpenshift()
 				Expect(err).To(BeNil())
@@ -1320,6 +1321,7 @@ var _ = Describe("artemis controller", func() {
 						g.Expect(route.Spec.To.Name).To(Equal(crd.Name + "-wconsj-0-svc"))
 						g.Expect(route.Spec.TLS.Termination).To(BeEquivalentTo(routev1.TLSTerminationPassthrough))
 						g.Expect(route.Spec.TLS.InsecureEdgeTerminationPolicy).To(BeEquivalentTo(routev1.InsecureEdgeTerminationPolicyNone))
+						g.Expect(route.Spec.Host).To(Equal(route.Name + "." + crd.Spec.IngressDomain))
 					}).Should(Succeed())
 
 				} else {
@@ -1333,7 +1335,7 @@ var _ = Describe("artemis controller", func() {
 						g.Expect(k8sClient.Get(ctx, ingKey, &ingress)).To(Succeed())
 
 						g.Expect(len(ingress.Spec.Rules)).To(Equal(1))
-						g.Expect(ingress.Spec.Rules[0].Host).To(ContainSubstring(ingressHostDomainSubString))
+						g.Expect(ingress.Spec.Rules[0].Host).To(Equal(ingress.Name + "." + crd.Spec.IngressDomain))
 						g.Expect(len(ingress.Spec.Rules[0].HTTP.Paths)).To(BeEquivalentTo(1))
 						g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).To(BeEquivalentTo(crd.Name + "-wconsj-0-svc"))
 						g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name).To(BeEquivalentTo("wconsj-0"))
@@ -1342,7 +1344,7 @@ var _ = Describe("artemis controller", func() {
 
 						g.Expect(len(ingress.Spec.TLS)).To(BeEquivalentTo(1))
 						g.Expect(len(ingress.Spec.TLS[0].Hosts)).To(BeEquivalentTo(1))
-						g.Expect(ingress.Spec.TLS[0].Hosts[0]).To(ContainSubstring(ingressHostDomainSubString))
+						g.Expect(ingress.Spec.TLS[0].Hosts[0]).To(Equal(ingress.Name + "." + crd.Spec.IngressDomain))
 
 					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 				}

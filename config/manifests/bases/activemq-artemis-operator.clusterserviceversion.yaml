@@ -1033,6 +1033,13 @@ spec:
           not exclusive
         displayName: Environment Variables
         path: env
+      - description: The ingress domain to expose the application. By default, on
+          Kubernetes it is apps.artemiscloud.io and on OpenShift it is the Ingress
+          Controller domain.
+        displayName: Ingress Domain
+        path: ingressDomain
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
       - description: Specifies the upgrades
         displayName: Upgrades
         path: upgrades
