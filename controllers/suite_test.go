@@ -100,6 +100,9 @@ var (
 	ctx        context.Context
 	cancel     context.CancelFunc
 
+	// the cluster url
+	clusterUrl *url.URL
+
 	// the manager may be stopped/restarted via tests
 	managerCtx    context.Context
 	managerCancel context.CancelFunc
@@ -148,6 +151,9 @@ func setUpEnvTest() {
 	restConfig, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(restConfig).NotTo(BeNil())
+
+	clusterUrl, err = url.Parse(testEnv.Config.Host)
+	Expect(err).NotTo(HaveOccurred())
 
 	setUpK8sClient()
 
@@ -222,9 +228,6 @@ func setUpTestProxy() {
 
 	err = k8sClient.Create(ctx, &testProxyService)
 	Expect(err != nil || errors.IsConflict(err))
-
-	clusterUrl, err := url.Parse(testEnv.Config.Host)
-	Expect(err).NotTo(HaveOccurred())
 
 	proxyUrl, err := url.Parse(fmt.Sprintf("http://%s:%d", clusterUrl.Hostname(), testProxyNodePort))
 	Expect(err).NotTo(HaveOccurred())

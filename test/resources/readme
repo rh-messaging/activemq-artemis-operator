@@ -1,13 +1,12 @@
 The broker.ks and client.ts are self-signed keystore and trustore for testing purposes.
 They are generated using keytool:
 
-keytool -genkeypair -alias amq7 -keyalg RSA -keysize 2048 -storetype PKCS12 -keystore broker.ks -validity 3000
-keytool -export -alias amq7 -file broker.cert -keystore broker.ks 
-keytool -import -v -trustcacerts -alias amq7 -file broker.cert -keystore client.ts
+keytool -storetype pkcs12 -keystore broker.ks -storepass password -keypass password -alias broker -genkey -keyalg "RSA" -keysize 2048 -dname "CN=ArtemisCloud Broker, OU=Broker, O=ArtemisCloud" -validity 36500 -ext bc=ca:false -ext eku=sA -ext "san=dns:*.apps.artemiscloud.io,dns:*.tests.artemiscloud.io"
+keytool -storetype pkcs12 -keystore broker.ks -storepass password -alias broker -exportcert -rfc > broker.crt
+keytool -storetype pkcs12 -keystore client.ts -storepass password -keypass password -importcert -alias broker -file broker.crt -noprompt
 
 The password is 'password' for both
 
 To show details of the stores using this command
 
 keytool -list -v -keystore [client.ts/broker.ks]
-

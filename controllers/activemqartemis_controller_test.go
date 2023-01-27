@@ -21,10 +21,12 @@ package controllers
 import (
 	"container/list"
 	"context"
+	"crypto/tls"
 	"encoding/hex"
 	"fmt"
 	"math/rand"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"reflect"
@@ -1237,46 +1239,43 @@ var _ = Describe("artemis controller", func() {
 
 				var consoleSecret corev1.Secret
 
-				if isOpenshift {
+				By("deploying well known secret name that the operator will look for")
+				certData := make(map[string][]byte)
+				stringData := make(map[string]string)
 
-					By("deploying well known secret name that the operator will look for")
-					certData := make(map[string][]byte)
-					stringData := make(map[string]string)
+				brokerKs, ferr := os.ReadFile("../test/resources/broker.ks")
+				Expect(ferr).To(BeNil())
+				clientTs, ferr := os.ReadFile("../test/resources/client.ts")
+				Expect(ferr).To(BeNil())
 
-					brokerKs, ferr := os.ReadFile("../test/resources/broker.ks")
-					Expect(ferr).To(BeNil())
-					clientTs, ferr := os.ReadFile("../test/resources/client.ts")
-					Expect(ferr).To(BeNil())
+				certData["broker.ks"] = brokerKs
+				certData["client.ts"] = clientTs
+				stringData["keyStorePassword"] = "password"
+				stringData["trustStorePassword"] = "password"
 
-					certData["broker.ks"] = brokerKs
-					certData["client.ts"] = clientTs
-					stringData["keyStorePassword"] = "password"
-					stringData["trustStorePassword"] = "password"
-
-					consoleSecretName := crd.Name + "-console-secret"
-					consoleSecret = corev1.Secret{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: "v1",
-							Kind:       "Secret",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      consoleSecretName,
-							Namespace: defaultNamespace,
-						},
-						Data:       certData,
-						StringData: stringData,
-					}
-					Expect(k8sClient.Create(ctx, &consoleSecret)).Should(Succeed())
-
-					createdSecret := corev1.Secret{}
-					secretKey := types.NamespacedName{
+				consoleSecretName := crd.Name + "-console-secret"
+				consoleSecret = corev1.Secret{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "v1",
+						Kind:       "Secret",
+					},
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      consoleSecretName,
 						Namespace: defaultNamespace,
-					}
-					Eventually(func(g Gomega) {
-						g.Expect(k8sClient.Get(ctx, secretKey, &createdSecret)).To(Succeed())
-					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+					},
+					Data:       certData,
+					StringData: stringData,
 				}
+				Expect(k8sClient.Create(ctx, &consoleSecret)).Should(Succeed())
+
+				createdSecret := corev1.Secret{}
+				secretKey := types.NamespacedName{
+					Name:      consoleSecretName,
+					Namespace: defaultNamespace,
+				}
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, secretKey, &createdSecret)).To(Succeed())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("Deploying broker" + crd.Name)
 				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
@@ -1302,9 +1301,11 @@ var _ = Describe("artemis controller", func() {
 				Eventually(func(g Gomega) {
 					pod := &corev1.Pod{}
 					g.Expect(k8sClient.Get(ctx, podKey, pod)).Should(Succeed())
-					g.Expect(len(pod.Status.ContainerStatuses)).Should(Equal(1))
+					g.Expect(pod.Status.ContainerStatuses).Should(HaveLen(1))
 					g.Expect(pod.Status.ContainerStatuses[0].State.Running).Should(Not(BeNil()))
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				var host string
 
 				if isOpenshift {
 					By("check route is created")
@@ -1315,12 +1316,14 @@ var _ = Describe("artemis controller", func() {
 					route := routev1.Route{}
 					Eventually(func(g Gomega) {
 						g.Expect(k8sClient.Get(ctx, routeKey, &route)).To(Succeed())
+
+						host = route.Name + "." + crd.Spec.IngressDomain
 						g.Expect(route.Spec.Port.TargetPort).To(Equal(intstr.FromString("wconsj-0")))
 						g.Expect(route.Spec.To.Kind).To(Equal("Service"))
 						g.Expect(route.Spec.To.Name).To(Equal(crd.Name + "-wconsj-0-svc"))
 						g.Expect(route.Spec.TLS.Termination).To(BeEquivalentTo(routev1.TLSTerminationPassthrough))
 						g.Expect(route.Spec.TLS.InsecureEdgeTerminationPolicy).To(BeEquivalentTo(routev1.InsecureEdgeTerminationPolicyNone))
-						g.Expect(route.Spec.Host).To(Equal(route.Name + "." + crd.Spec.IngressDomain))
+						g.Expect(route.Spec.Host).To(Equal(host))
 					}).Should(Succeed())
 
 				} else {
@@ -1333,25 +1336,39 @@ var _ = Describe("artemis controller", func() {
 					Eventually(func(g Gomega) {
 						g.Expect(k8sClient.Get(ctx, ingKey, &ingress)).To(Succeed())
 
-						g.Expect(len(ingress.Spec.Rules)).To(Equal(1))
-						g.Expect(ingress.Spec.Rules[0].Host).To(Equal(ingress.Name + "." + crd.Spec.IngressDomain))
-						g.Expect(len(ingress.Spec.Rules[0].HTTP.Paths)).To(BeEquivalentTo(1))
+						host = ingress.Name + "." + crd.Spec.IngressDomain
+						g.Expect(ingress.Spec.Rules).To(HaveLen(1))
+						g.Expect(ingress.Spec.Rules[0].Host).To(Equal(host))
+						g.Expect(ingress.Spec.Rules[0].HTTP.Paths).To(HaveLen(1))
 						g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).To(BeEquivalentTo(crd.Name + "-wconsj-0-svc"))
 						g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name).To(BeEquivalentTo("wconsj-0"))
 						g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Path).To(BeEquivalentTo("/"))
 						g.Expect(*ingress.Spec.Rules[0].HTTP.Paths[0].PathType).To(BeEquivalentTo(netv1.PathTypePrefix))
 
-						g.Expect(len(ingress.Spec.TLS)).To(BeEquivalentTo(1))
-						g.Expect(len(ingress.Spec.TLS[0].Hosts)).To(BeEquivalentTo(1))
-						g.Expect(ingress.Spec.TLS[0].Hosts[0]).To(Equal(ingress.Name + "." + crd.Spec.IngressDomain))
-
+						g.Expect(ingress.Spec.TLS).To(HaveLen(1))
+						g.Expect(ingress.Spec.TLS[0].Hosts).To(HaveLen(1))
+						g.Expect(ingress.Spec.TLS[0].Hosts[0]).To(Equal(host))
 					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 				}
 
-				Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
-				if isOpenshift {
-					Expect(k8sClient.Delete(ctx, &consoleSecret)).Should(Succeed())
+				By("check console is reachable")
+				httpClient := http.Client{
+					Transport: &http.Transport{
+						DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+							return (&net.Dialer{}).DialContext(ctx, network, clusterUrl.Hostname()+":443")
+						},
+						TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+					},
+					Timeout: timeout,
 				}
+				Eventually(func(g Gomega) {
+					res, err := httpClient.Get("https://" + host + "/console")
+					g.Expect(err).NotTo(HaveOccurred())
+					g.Expect(res.StatusCode).Should(Equal(200))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
+				Expect(k8sClient.Delete(ctx, &consoleSecret)).Should(Succeed())
 			}
 		})
 
@@ -1394,45 +1411,43 @@ var _ = Describe("artemis controller", func() {
 
 				var consoleSecret corev1.Secret
 
-				if isOpenshift {
-					By("deploying user specified secret")
-					certData := make(map[string][]byte)
-					stringData := make(map[string]string)
+				By("deploying user specified secret")
+				certData := make(map[string][]byte)
+				stringData := make(map[string]string)
 
-					brokerKs, ferr := os.ReadFile("../test/resources/broker.ks")
-					Expect(ferr).To(BeNil())
-					clientTs, ferr := os.ReadFile("../test/resources/client.ts")
-					Expect(ferr).To(BeNil())
+				brokerKs, ferr := os.ReadFile("../test/resources/broker.ks")
+				Expect(ferr).To(BeNil())
+				clientTs, ferr := os.ReadFile("../test/resources/client.ts")
+				Expect(ferr).To(BeNil())
 
-					certData["broker.ks"] = brokerKs
-					certData["client.ts"] = clientTs
-					stringData["keyStorePassword"] = "password"
-					stringData["trustStorePassword"] = "password"
+				certData["broker.ks"] = brokerKs
+				certData["client.ts"] = clientTs
+				stringData["keyStorePassword"] = "password"
+				stringData["trustStorePassword"] = "password"
 
-					consoleSecretName := "my-secret"
-					consoleSecret = corev1.Secret{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: "v1",
-							Kind:       "Secret",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      consoleSecretName,
-							Namespace: defaultNamespace,
-						},
-						Data:       certData,
-						StringData: stringData,
-					}
-					Expect(k8sClient.Create(ctx, &consoleSecret)).Should(Succeed())
-
-					createdSecret := corev1.Secret{}
-					secretKey := types.NamespacedName{
+				consoleSecretName := "my-secret"
+				consoleSecret = corev1.Secret{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "v1",
+						Kind:       "Secret",
+					},
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      consoleSecretName,
 						Namespace: defaultNamespace,
-					}
-					Eventually(func(g Gomega) {
-						g.Expect(k8sClient.Get(ctx, secretKey, &createdSecret)).To(Succeed())
-					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+					},
+					Data:       certData,
+					StringData: stringData,
 				}
+				Expect(k8sClient.Create(ctx, &consoleSecret)).Should(Succeed())
+
+				createdSecret := corev1.Secret{}
+				secretKey := types.NamespacedName{
+					Name:      consoleSecretName,
+					Namespace: defaultNamespace,
+				}
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, secretKey, &createdSecret)).To(Succeed())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("Deploying broker" + crd.Name)
 				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
@@ -1511,9 +1526,7 @@ var _ = Describe("artemis controller", func() {
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
-				if isOpenshift {
-					Expect(k8sClient.Delete(ctx, &consoleSecret)).Should(Succeed())
-				}
+				Expect(k8sClient.Delete(ctx, &consoleSecret)).Should(Succeed())
 
 				By("verify service gets owned and deleted")
 				Eventually(func(g Gomega) {

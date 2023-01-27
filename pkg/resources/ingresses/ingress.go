@@ -77,18 +77,8 @@ func NewIngressForCRWithSSL(existing *netv1.Ingress, namespacedName types.Namesp
 	host := desired.GetObjectMeta().GetName() + "." + domain
 	desired.Spec.Rules[0].Host = host
 	if sslEnabled {
-		//ingress assumes TLS termination at the ingress point and uses default https port 443
-		//it requires a host name that matches the certificate's CN value
-		//it also uses a self-signed cert if you don't provide one
-		//this is the default configuration in minikube
-		tls := []netv1.IngressTLS{
-			{
-				Hosts: []string{host},
-			},
-		}
-		desired.Spec.TLS = tls
-	} else {
-		desired.Spec.TLS = []netv1.IngressTLS{}
+		desired.Annotations = map[string]string{"nginx.ingress.kubernetes.io/ssl-passthrough": "true"}
+		desired.Spec.TLS = []netv1.IngressTLS{{Hosts: []string{host}}}
 	}
 	return desired
 }

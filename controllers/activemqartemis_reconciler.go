@@ -395,13 +395,6 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessConsole(customResource *
 		return
 	}
 
-	isOpenshift, _ := environments.DetectOpenshift()
-	if !isOpenshift && customResource.Spec.Console.Expose {
-		//if it is kubernetes the tls termination at ingress point
-		//so the console shouldn't be secured.
-		return
-	}
-
 	sslFlags := ""
 	envVarName := "AMQ_CONSOLE_ARGS"
 	secretName := namer.SecretsConsoleNameBuilder.Name()
@@ -1531,16 +1524,13 @@ func MakeVolumes(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers) []
 	}
 
 	if customResource.Spec.Console.SSLEnabled {
-		isOpenshift, _ := environments.DetectOpenshift()
-		if !customResource.Spec.Console.Expose || isOpenshift {
-			clog.V(1).Info("Make volumes for ssl console exposure on k8s")
-			secretName := namer.SecretsConsoleNameBuilder.Name()
-			if "" != customResource.Spec.Console.SSLSecret {
-				secretName = customResource.Spec.Console.SSLSecret
-			}
-			volume := volumes.MakeVolume(secretName)
-			volumeDefinitions = append(volumeDefinitions, volume)
+		clog.V(1).Info("Make volumes for ssl console exposure on k8s")
+		secretName := namer.SecretsConsoleNameBuilder.Name()
+		if "" != customResource.Spec.Console.SSLSecret {
+			secretName = customResource.Spec.Console.SSLSecret
 		}
+		volume := volumes.MakeVolume(secretName)
+		volumeDefinitions = append(volumeDefinitions, volume)
 	}
 
 	return volumeDefinitions
@@ -1581,16 +1571,13 @@ func MakeVolumeMounts(customResource *brokerv1beta1.ActiveMQArtemis, namer Namer
 	}
 
 	if customResource.Spec.Console.SSLEnabled {
-		isOpenshift, _ := environments.DetectOpenshift()
-		if !customResource.Spec.Console.Expose || isOpenshift {
-			clog.V(1).Info("Make volume mounts for ssl console exposure on k8s")
-			volumeMountName := namer.SecretsConsoleNameBuilder.Name() + "-volume"
-			if "" != customResource.Spec.Console.SSLSecret {
-				volumeMountName = customResource.Spec.Console.SSLSecret + "-volume"
-			}
-			volumeMount := volumes.MakeVolumeMount(volumeMountName)
-			volumeMounts = append(volumeMounts, volumeMount)
+		clog.V(1).Info("Make volume mounts for ssl console exposure on k8s")
+		volumeMountName := namer.SecretsConsoleNameBuilder.Name() + "-volume"
+		if "" != customResource.Spec.Console.SSLSecret {
+			volumeMountName = customResource.Spec.Console.SSLSecret + "-volume"
 		}
+		volumeMount := volumes.MakeVolumeMount(volumeMountName)
+		volumeMounts = append(volumeMounts, volumeMount)
 	}
 
 	return volumeMounts
