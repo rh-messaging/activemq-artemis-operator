@@ -1409,6 +1409,14 @@ func getDeployedResources(instance *brokerv1beta1.ActiveMQArtemis, client rtclie
 	return resourceMap, nil
 }
 
+func addNewVolumes(existingNames map[string]string, existing *[]corev1.Volume, newVolumeName *string) {
+	if _, ok := existingNames[*newVolumeName]; !ok {
+		volume := volumes.MakeVolume(*newVolumeName)
+		*existing = append(*existing, volume)
+		existingNames[*newVolumeName] = *newVolumeName
+	}
+}
+
 func MakeVolumes(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers) []corev1.Volume {
 
 	volumeDefinitions := []corev1.Volume{}
@@ -1417,6 +1425,7 @@ func MakeVolumes(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers) []
 		volumeDefinitions = append(volumeDefinitions, basicCRVolume...)
 	}
 
+	secretVolumes := make(map[string]string)
 	// Scan acceptors for any with sslEnabled
 	for _, acceptor := range customResource.Spec.Acceptors {
 		if !acceptor.SSLEnabled {
@@ -1426,8 +1435,7 @@ func MakeVolumes(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers) []
 		if "" != acceptor.SSLSecret {
 			secretName = acceptor.SSLSecret
 		}
-		volume := volumes.MakeVolume(secretName)
-		volumeDefinitions = append(volumeDefinitions, volume)
+		addNewVolumes(secretVolumes, &volumeDefinitions, &secretName)
 	}
 
 	// Scan connectors for any with sslEnabled
@@ -1439,8 +1447,7 @@ func MakeVolumes(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers) []
 		if "" != connector.SSLSecret {
 			secretName = connector.SSLSecret
 		}
-		volume := volumes.MakeVolume(secretName)
-		volumeDefinitions = append(volumeDefinitions, volume)
+		addNewVolumes(secretVolumes, &volumeDefinitions, &secretName)
 	}
 
 	if customResource.Spec.Console.SSLEnabled {
@@ -1448,11 +1455,18 @@ func MakeVolumes(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers) []
 		if "" != customResource.Spec.Console.SSLSecret {
 			secretName = customResource.Spec.Console.SSLSecret
 		}
-		volume := volumes.MakeVolume(secretName)
-		volumeDefinitions = append(volumeDefinitions, volume)
+		addNewVolumes(secretVolumes, &volumeDefinitions, &secretName)
 	}
 
 	return volumeDefinitions
+}
+
+func addNewVolumeMounts(existingNames map[string]string, existing *[]corev1.VolumeMount, newVolumeMountName *string) {
+	if _, ok := existingNames[*newVolumeMountName]; !ok {
+		volumeMount := volumes.MakeVolumeMount(*newVolumeMountName)
+		*existing = append(*existing, volumeMount)
+		existingNames[*newVolumeMountName] = *newVolumeMountName
+	}
 }
 
 func MakeVolumeMounts(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers) []corev1.VolumeMount {
@@ -1464,6 +1478,7 @@ func MakeVolumeMounts(customResource *brokerv1beta1.ActiveMQArtemis, namer Namer
 	}
 
 	// Scan acceptors for any with sslEnabled
+	secretVolumeMounts := make(map[string]string)
 	for _, acceptor := range customResource.Spec.Acceptors {
 		if !acceptor.SSLEnabled {
 			continue
@@ -1472,8 +1487,7 @@ func MakeVolumeMounts(customResource *brokerv1beta1.ActiveMQArtemis, namer Namer
 		if "" != acceptor.SSLSecret {
 			volumeMountName = acceptor.SSLSecret + "-volume"
 		}
-		volumeMount := volumes.MakeVolumeMount(volumeMountName)
-		volumeMounts = append(volumeMounts, volumeMount)
+		addNewVolumeMounts(secretVolumeMounts, &volumeMounts, &volumeMountName)
 	}
 
 	// Scan connectors for any with sslEnabled
@@ -1485,8 +1499,7 @@ func MakeVolumeMounts(customResource *brokerv1beta1.ActiveMQArtemis, namer Namer
 		if "" != connector.SSLSecret {
 			volumeMountName = connector.SSLSecret + "-volume"
 		}
-		volumeMount := volumes.MakeVolumeMount(volumeMountName)
-		volumeMounts = append(volumeMounts, volumeMount)
+		addNewVolumeMounts(secretVolumeMounts, &volumeMounts, &volumeMountName)
 	}
 
 	if customResource.Spec.Console.SSLEnabled {
@@ -1494,8 +1507,7 @@ func MakeVolumeMounts(customResource *brokerv1beta1.ActiveMQArtemis, namer Namer
 		if "" != customResource.Spec.Console.SSLSecret {
 			volumeMountName = customResource.Spec.Console.SSLSecret + "-volume"
 		}
-		volumeMount := volumes.MakeVolumeMount(volumeMountName)
-		volumeMounts = append(volumeMounts, volumeMount)
+		addNewVolumeMounts(secretVolumeMounts, &volumeMounts, &volumeMountName)
 	}
 
 	return volumeMounts
