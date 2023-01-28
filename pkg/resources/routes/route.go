@@ -25,7 +25,18 @@ func NewRouteDefinitionForCR(existing *routev1.Route, namespacedName types.Names
 		}
 
 	} else {
-		desired = existing
+		desired = &routev1.Route{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Route",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Labels:    existing.Labels,
+				Name:      existing.Name,
+				Namespace: namespacedName.Namespace,
+			},
+			Spec: existing.Spec,
+		}
 	}
 
 	if domain != "" {

@@ -109,7 +109,8 @@ func Update(client client.Client, clientObject client.Object) error {
 				// "StatefulSet.apps is invalid: spec: Forbidden: updates to statefulset spec for fields other than 'replicas', 'template', 'updateStrategy' and 'minReadySeconds' are forbidden"}
 				reqLogger.V(1).Info("Deleting on failed updating "+objectTypeString, "obj", clientObject, "Forbidden", err)
 				err = Delete(client, clientObject)
-				break
+			} else {
+				reqLogger.Error(err, "Got status error")
 			}
 		default:
 			reqLogger.Error(err, "Failed to update "+objectTypeString)
