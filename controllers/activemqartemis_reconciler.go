@@ -1634,6 +1634,22 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	for key, value := range namer.LabelBuilder.Labels() {
 		labels[key] = value
 	}
+
+	// Add additional labels
+	compactVersionForAdditionalLabels, versionError := determineCompactVersionToUse(customResource)
+	if versionError != nil {
+		reqLogger.Error(versionError, "failed to get compact version for", customResource.Spec.Version)
+		return nil, versionError
+	}
+	fullVersionForAdditionalLabels := version.FullVersionFromCompactVersion[compactVersionForAdditionalLabels]
+	additionalLabels := pods.GetAdditionalLabels(fullVersionForAdditionalLabels)
+	if additionalLabels != nil {
+		reqLogger.Info("Adding additional Labels", "broker version", fullVersionForAdditionalLabels, "labels", additionalLabels)
+		for key, value := range additionalLabels {
+			labels[key] = value
+		}
+	}
+
 	if customResource.Spec.DeploymentPlan.Labels != nil {
 		for key, value := range customResource.Spec.DeploymentPlan.Labels {
 			reqLogger.V(1).Info("Adding CR Label", "key", key, "value", value)

@@ -8,6 +8,9 @@ patches:
 - path: amq_broker_manager_related_images.yaml
   target:
     kind: Deployment
+- path: amq_broker_manager_labels.yaml
+  target:
+    kind: Deployment
 
 configMapGenerator:
 - files:
