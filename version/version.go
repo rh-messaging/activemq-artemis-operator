@@ -3,9 +3,9 @@ package version
 import "strings"
 
 var (
-	Version = "1.0.10"
+	Version = "7.11.0.OPR.1"
 	// PriorVersion - prior version
-	PriorVersion = "1.0.9"
+	PriorVersion = "7.10.2.OPR.2"
 
 	//Vars injected at build-time
 	BuildTimestamp = ""
@@ -13,13 +13,13 @@ var (
 
 const (
 	// LatestVersion product version supported
-	LatestVersion        = "2.28.0"
-	CompactLatestVersion = "2280"
+	LatestVersion        = "7.11.0"
+	CompactLatestVersion = "7110"
 	// LastMinorVersion product version supported
-	LastMinorVersion = "2.20.0"
+	LastMinorVersion = "7.10.0"
 
-	LatestKubeImage = "quay.io/artemiscloud/activemq-artemis-broker-kubernetes:artemis." + LatestVersion
-	LatestInitImage = "quay.io/artemiscloud/activemq-artemis-broker-init:artemis." + LatestVersion
+	LatestKubeImage = "registry.redhat.io/amq7/amq-broker-rhel8:7.11"
+	LatestInitImage = "registry.redhat.io/amq7/amq-broker-init-rhel8:7.11"
 )
 
 func DefaultImageName(archSpecificRelatedImageEnvVarName string) string {
@@ -31,46 +31,55 @@ func DefaultImageName(archSpecificRelatedImageEnvVarName string) string {
 }
 
 var CompactVersionFromVersion map[string]string = map[string]string{
-	"2.15.0": "2150",
-	"2.16.0": "2160",
-	"2.18.0": "2180",
-	"2.20.0": "2200",
-	"2.21.0": "2210",
-	"2.22.0": "2220",
-	"2.23.0": "2230",
-	"2.25.0": "2250",
-	"2.26.0": "2260",
-	"2.27.0": "2270",
-	"2.28.0": "2280",
+	"7.7.0":  "770",
+	"7.8.0":  "780",
+	"7.8.1":  "781",
+	"7.8.2":  "782",
+	"7.8.3":  "783",
+	"7.9.0":  "790",
+	"7.9.1":  "791",
+	"7.9.2":  "792",
+	"7.9.3":  "793",
+	"7.9.4":  "794",
+	"7.10.0": "7100",
+	"7.10.1": "7101",
+	"7.10.2": "7102",
+	"7.11.0": "7110",
 }
 
 var FullVersionFromCompactVersion map[string]string = map[string]string{
-	"2150": "2.15.0",
-	"2160": "2.16.0",
-	"2180": "2.18.0",
-	"2200": "2.20.0",
-	"2210": "2.21.0",
-	"2220": "2.22.0",
-	"2230": "2.23.0",
-	"2250": "2.25.0",
-	"2260": "2.26.0",
-	"2270": "2.27.0",
-	"2280": "2.28.0",
+	"770":  "7.7.0",
+	"780":  "7.8.0",
+	"781":  "7.8.1",
+	"782":  "7.8.2",
+	"783":  "7.8.3",
+	"790":  "7.9.0",
+	"791":  "7.9.1",
+	"792":  "7.9.2",
+	"793":  "7.9.3",
+	"794":  "7.9.4",
+	"7100": "7.10.0",
+	"7101": "7.10.1",
+	"7102": "7.10.2",
+	"7110": "7.11.0",
 }
 
 //The yacfg profile to use for a given full version of broker
 var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
-	"2.15.0": "2.15.0",
-	"2.16.0": "2.16.0",
-	"2.18.0": "2.18.0",
-	"2.20.0": "2.18.0",
-	"2.21.0": "2.21.0",
-	"2.22.0": "2.21.0",
-	"2.23.0": "2.21.0",
-	"2.25.0": "2.21.0",
-	"2.26.0": "2.21.0",
-	"2.27.0": "2.21.0",
-	"2.28.0": "2.21.0",
+	"7.7.0":  "7.7.0",
+	"7.8.0":  "7.8.0",
+	"7.8.1":  "7.8.1",
+	"7.8.2":  "7.8.2",
+	"7.8.3":  "7.8.2",
+	"7.9.0":  "7.9.0",
+	"7.9.1":  "7.9.0",
+	"7.9.2":  "7.9.0",
+	"7.9.3":  "7.9.0",
+	"7.9.4":  "7.9.0",
+	"7.10.0": "7.10.0",
+	"7.10.1": "7.10.0",
+	"7.10.2": "7.10.0",
+	"7.11.0": "7.10.0",
 }
 
-var YacfgProfileName string = "artemis"
+var YacfgProfileName string = "amq_broker"

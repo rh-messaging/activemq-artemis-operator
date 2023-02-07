@@ -31,7 +31,7 @@ spec:
         runAsNonRoot: true
       containers:
       - command:
-        - /home/activemq-artemis-operator/bin/entrypoint
+        - /home/amq-broker-operator/bin/entrypoint
         args:
         # Explicitly set the logging level.
         # Valid values are debug, info, and error

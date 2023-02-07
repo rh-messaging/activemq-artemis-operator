@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM golang:1.17 as builder
+FROM openshift/golang-builder:1.17 as builder
 
 ENV GO_MODULE=github.com/artemiscloud/activemq-artemis-operator
 
@@ -31,11 +31,11 @@ RUN mv $REMOTE_SOURCE_DIR/app /workspace
 WORKDIR /workspace/app
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags="-X '${GO_MODULE}/version.BuildTimestamp=`date '+%Y-%m-%dT%H:%M:%S'`'" -o /workspace/manager main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -a -ldflags="-X '${GO_MODULE}/version.BuildTimestamp=`date '+%Y-%m-%dT%H:%M:%S'`'" -o /workspace/manager main.go
 
 FROM registry.access.redhat.com/ubi8:8.6-855 as base-env
 
-ENV BROKER_NAME=activemq-artemis
+ENV BROKER_NAME=amq-broker
 ENV USER_UID=1000
 ENV USER_NAME=${BROKER_NAME}-operator
 ENV USER_HOME=/home/${USER_NAME}
@@ -59,7 +59,12 @@ RUN dnf update -y --setopt=install_weak_deps=0 && rm -rf /var/cache/yum
 USER ${USER_UID}
 ENTRYPOINT ["${USER_HOME}/bin/entrypoint"]
 
-LABEL name="artemiscloud/activemq-artemis-operator"
-LABEL description="ActiveMQ Artemis Broker Operator"
+LABEL name="amq7/amq-broker-rhel8-operator"
+LABEL description="Red Hat AMQ Broker 7.11 Operator"
 LABEL maintainer="Roddie Kieley <rkieley@redhat.com>"
-LABEL version="1.0.10"
+LABEL version="7.11"
+LABEL summary="Red Hat AMQ Broker 7.11 Operator"
+LABEL amq.broker.version="7.11.0.OPR.1.CR1"
+LABEL com.redhat.component="amq-broker-rhel8-operator-container"
+LABEL io.k8s.display-name="Red Hat AMQ Broker 7.11 Operator"
+LABEL io.openshift.tags="messaging,amq,integration,operator,golang"
