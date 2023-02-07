@@ -663,7 +663,7 @@ func (c *Controller) enqueueStatefulSet(obj interface{}) {
 	}
 
 	if enquequingSTS.ObjectMeta.Labels[selectors.LabelResourceKey] == "" {
-		dlog.Info("Skipping statefulset", "key", key, "controller ns", c.name)
+		dlog.V(4).Info("Skipping statefulset without expected label", "key", key, "controller ns", c.name)
 		return
 	}
 
