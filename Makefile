@@ -208,6 +208,8 @@ bundle: manifests kustomize ## Generate bundle manifests and metadata, then vali
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --package $(OPERATOR_NAMESPACE) --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	sed -i '/creationTimestamp/d' ./bundle/manifests/*.yaml
+	sed 's/annotations://' config/metadata/$(OPERATOR_NAMESPACE).annotations.yaml >> bundle/metadata/annotations.yaml
+	sed -e 's/annotations://' -e 's/  /LABEL /g' -e 's/: /=/g'  config/metadata/$(OPERATOR_NAMESPACE).annotations.yaml >> bundle.Dockerfile
 	operator-sdk bundle validate ./bundle
 
 .PHONY: bundle-clean

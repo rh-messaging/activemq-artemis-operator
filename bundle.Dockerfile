@@ -19,3 +19,8 @@ LABEL operators.operatorframework.io.test.config.v1=tests/scorecard/
 COPY bundle/manifests /manifests/
 COPY bundle/metadata /metadata/
 COPY bundle/tests/scorecard /tests/scorecard/
+
+LABEL name="artemiscloud/activemq-artemis-operator-bundle"
+LABEL description="ActiveMQ Artemis Broker Operator Bundle"
+LABEL maintainer="Roddie Kieley <rkieley@redhat.com>"
+LABEL version="1.0.10"
