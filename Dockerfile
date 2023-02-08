@@ -1,15 +1,14 @@
 # Build the manager binary
 FROM golang:1.17 as builder
 
-ENV GOOS=linux
-ENV CGO_ENABLED=0
-ENV BROKER_NAME=activemq-artemis
 ENV GO_MODULE=github.com/artemiscloud/activemq-artemis-operator
 
-
-RUN mkdir -p /tmp/activemq-artemis-operator
-
-WORKDIR /workspace
+### BEGIN REMOTE SOURCE
+# Use the COPY instruction only inside the REMOTE SOURCE block
+# Use the COPY instruction only to copy files to the container path $REMOTE_SOURCE_DIR/app
+ARG REMOTE_SOURCE_DIR=/tmp/remote_source
+RUN mkdir -p $REMOTE_SOURCE_DIR/app
+WORKDIR $REMOTE_SOURCE_DIR/app
 # Copy the Go Modules manifests
 COPY go.mod go.mod
 COPY go.sum go.sum
@@ -22,40 +21,47 @@ COPY .git/ .git/
 COPY main.go main.go
 COPY api/ api/
 COPY controllers/ controllers/
+COPY entrypoint/ entrypoint/
 COPY pkg/ pkg/
 COPY version/ version/
-COPY entrypoint/ entrypoint/
+### END REMOTE SOURCE
+
+# Set up the workspace
+RUN mkdir -p /workspace
+RUN mv $REMOTE_SOURCE_DIR/app /workspace
+WORKDIR /workspace/app
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a \
     -ldflags="-X '${GO_MODULE}/version.CommitHash=`git rev-parse --short HEAD`' \
     -X '${GO_MODULE}/version.BuildTimestamp=`date '+%Y-%m-%dT%H:%M:%S'`'" \
-    -o /tmp/activemq-artemis-operator/${BROKER_NAME}-operator main.go
+    -o /workspace/manager main.go
 
-FROM registry.access.redhat.com/ubi8:8.6-855 AS base-env
+FROM registry.access.redhat.com/ubi8:8.6-855 as base-env
 
 ENV BROKER_NAME=activemq-artemis
-ENV OPERATOR=/home/${BROKER_NAME}-operator/bin/${BROKER_NAME}-operator
 ENV USER_UID=1000
 ENV USER_NAME=${BROKER_NAME}-operator
-ENV CGO_ENABLED=0
-ENV GOPATH=/tmp/go
-ENV JBOSS_IMAGE_NAME="amq7/amq-broker-rhel8-operator"
-ENV JBOSS_IMAGE_VERSION="1.0"
+ENV USER_HOME=/home/${USER_NAME}
+ENV OPERATOR=${USER_HOME}/bin/${BROKER_NAME}-operator
 
 WORKDIR /
 
-COPY --from=builder /tmp/activemq-artemis-operator /home/${BROKER_NAME}-operator/bin
-COPY --from=builder /workspace/entrypoint/entrypoint /home/${BROKER_NAME}-operator/bin
+# Create operator user
+RUN useradd --uid ${USER_UID} --home-dir ${USER_HOME} --shell /sbin/nologin ${USER_NAME}
 
-RUN useradd ${BROKER_NAME}-operator
-RUN chown -R `id -u`:0 /home/${BROKER_NAME}-operator/bin && chmod -R 755 /home/${BROKER_NAME}-operator/bin
+# Copy the manager binary
+RUN mkdir -p ${USER_HOME}/bin
+COPY --from=builder /workspace/manager ${OPERATOR}
+
+# Copy the entrypoint script
+COPY --from=builder /workspace/app/entrypoint/entrypoint ${USER_HOME}/bin/entrypoint
 
 # Upgrade packages
 RUN dnf update -y --setopt=install_weak_deps=0 && rm -rf /var/cache/yum
 
 USER ${USER_UID}
-ENTRYPOINT ["/home/${BROKER_NAME}-operator/bin/entrypoint"]
+ENTRYPOINT ["${USER_HOME}/bin/entrypoint"]
 
 LABEL name="artemiscloud/activemq-artemis-operator"
 LABEL description="ActiveMQ Artemis Broker Operator"
