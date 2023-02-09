@@ -1,9 +1,19 @@
 ## Append samples you want in your CSV to this file as resources ##
 resources:
-- broker_activemqartemis_cr.yaml
-- broker_activemqartemisaddress_cr.yaml
-- broker_activemqartemissecurity_cr.yaml
-- broker_activemqartemisscaledown_cr.yaml
+- broker_activemqartemis_v2alpha1_cr.yaml
+- broker_activemqartemis_v2alpha2_cr.yaml
+- broker_activemqartemis_v2alpha3_cr.yaml
+- broker_activemqartemis_v2alpha4_cr.yaml
+- broker_activemqartemis_v2alpha5_cr.yaml
+- broker_activemqartemis_v1beta1_cr.yaml
+- broker_activemqartemisaddress_v2alpha1_cr.yaml
+- broker_activemqartemisaddress_v2alpha2_cr.yaml
+- broker_activemqartemisaddress_v2alpha3_cr.yaml
+- broker_activemqartemisaddress_v1beta1_cr.yaml
+- broker_activemqartemissecurity_v1alpha1_cr.yaml
+- broker_activemqartemissecurity_v1beta1_cr.yaml
+- broker_activemqartemisscaledown_v2alpha1_cr.yaml
+- broker_activemqartemisscaledown_v1beta1_cr.yaml
 
 #+kubebuilder:scaffold:manifestskustomizesamples
 

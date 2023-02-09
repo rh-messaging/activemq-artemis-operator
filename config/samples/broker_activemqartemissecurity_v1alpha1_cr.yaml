@@ -1,0 +1,18 @@
+apiVersion: broker.amq.io/v1alpha1
+kind: ActiveMQArtemisSecurity
+metadata:
+  name: ex-prop
+spec:
+  loginModules:
+    propertiesLoginModules:
+    - name: 'prop-module'
+      users:
+      - name: bob
+        roles:
+        - root
+  securityDomains:
+    brokerDomain:
+      name: 'activemq'
+      loginModules:
+      - name: 'prop-module'
+        flag: 'sufficient'

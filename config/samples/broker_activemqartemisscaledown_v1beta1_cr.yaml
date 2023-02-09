@@ -1,0 +1,6 @@
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemisScaledown
+metadata:
+  name: ex-aaoscaledown
+spec:
+  localOnly: true
