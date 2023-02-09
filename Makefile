@@ -12,7 +12,7 @@ OPERATOR_CLUSTER_ROLE_NAME := operator-role
 OPERATOR_IMAGE_REPO := registry.redhat.io/amq7/amq-broker-rhel8-operator
 OPERATOR_NAMESPACE := amq-broker-operator
 BUNDLE_PACKAGE := $(OPERATOR_NAMESPACE)
-BUNDLE_ANNOTATION_PACKAGE := $(BUNDLE_PACKAGE)
+BUNDLE_ANNOTATION_PACKAGE := amq-broker-rhel8
 GO_MODULE := github.com/artemiscloud/activemq-artemis-operator
 
 # directory to hold static resources for deploying operator
