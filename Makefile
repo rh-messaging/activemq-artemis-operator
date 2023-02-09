@@ -11,6 +11,8 @@ OPERATOR_ACCOUNT_NAME := amq-broker-operator
 OPERATOR_CLUSTER_ROLE_NAME := operator-role
 OPERATOR_IMAGE_REPO := registry.redhat.io/amq7/amq-broker-rhel8-operator
 OPERATOR_NAMESPACE := amq-broker-operator
+BUNDLE_PACKAGE := $(OPERATOR_NAMESPACE)
+BUNDLE_ANNOTATION_PACKAGE := $(BUNDLE_PACKAGE)
 GO_MODULE := github.com/artemiscloud/activemq-artemis-operator
 
 # directory to hold static resources for deploying operator
@@ -203,12 +205,14 @@ endef
 
 .PHONY: bundle
 bundle: manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
-	operator-sdk generate kustomize manifests -q --package $(OPERATOR_NAMESPACE)
+	operator-sdk generate kustomize manifests -q --package $(BUNDLE_PACKAGE)
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
-	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --package $(OPERATOR_NAMESPACE) --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --package $(BUNDLE_PACKAGE) --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	sed -i '/creationTimestamp/d' ./bundle/manifests/*.yaml
-	sed 's/annotations://' config/metadata/$(OPERATOR_NAMESPACE).annotations.yaml >> bundle/metadata/annotations.yaml
-	sed -e 's/annotations://' -e 's/  /LABEL /g' -e 's/: /=/g'  config/metadata/$(OPERATOR_NAMESPACE).annotations.yaml >> bundle.Dockerfile
+	sed 's/annotations://' config/metadata/$(BUNDLE_PACKAGE).annotations.yaml >> bundle/metadata/annotations.yaml
+	sed -e 's/annotations://' -e 's/  /LABEL /g' -e 's/: /=/g'  config/metadata/$(BUNDLE_PACKAGE).annotations.yaml >> bundle.Dockerfile
+	sed -i 's/operators.operatorframework.io.bundle.package.v1:.*/operators.operatorframework.io.bundle.package.v1: $(BUNDLE_ANNOTATION_PACKAGE)/' bundle/metadata/annotations.yaml
+	sed -i 's/operators.operatorframework.io.bundle.package.v1=.*/operators.operatorframework.io.bundle.package.v1=$(BUNDLE_ANNOTATION_PACKAGE)/' bundle.Dockerfile
 	operator-sdk bundle validate ./bundle
 
 .PHONY: bundle-clean
