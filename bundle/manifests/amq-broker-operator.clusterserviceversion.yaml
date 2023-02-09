@@ -122,6 +122,12 @@ metadata:
           "metadata": {
             "application": "ex-aao-app",
             "name": "ex-aao"
+          },
+          "spec": {
+            "deploymentPlan": {
+              "image": "placeholder",
+              "size": 2
+            }
           }
         },
         {
@@ -152,6 +158,12 @@ metadata:
           "metadata": {
             "application": "ex-aao-app",
             "name": "ex-aao"
+          },
+          "spec": {
+            "deploymentPlan": {
+              "image": "placeholder",
+              "size": 2
+            }
           }
         },
         {
@@ -172,6 +184,12 @@ metadata:
           "metadata": {
             "application": "ex-aao-app",
             "name": "ex-aao"
+          },
+          "spec": {
+            "deploymentPlan": {
+              "image": "placeholder",
+              "size": 2
+            }
           }
         },
         {
@@ -192,6 +210,12 @@ metadata:
           "metadata": {
             "application": "ex-aao-app",
             "name": "ex-aao"
+          },
+          "spec": {
+            "deploymentPlan": {
+              "image": "placeholder",
+              "size": 2
+            }
           }
         },
         {
@@ -200,6 +224,12 @@ metadata:
           "metadata": {
             "application": "ex-aao-app",
             "name": "ex-aao"
+          },
+          "spec": {
+            "deploymentPlan": {
+              "image": "placeholder",
+              "size": 2
+            }
           }
         }
       ]
