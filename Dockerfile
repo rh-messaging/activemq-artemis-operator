@@ -17,7 +17,6 @@ COPY go.sum go.sum
 RUN go mod download
 
 # Copy the go source
-COPY .git/ .git/
 COPY main.go main.go
 COPY api/ api/
 COPY controllers/ controllers/
@@ -32,10 +31,7 @@ RUN mv $REMOTE_SOURCE_DIR/app /workspace
 WORKDIR /workspace/app
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a \
-    -ldflags="-X '${GO_MODULE}/version.CommitHash=`git rev-parse --short HEAD`' \
-    -X '${GO_MODULE}/version.BuildTimestamp=`date '+%Y-%m-%dT%H:%M:%S'`'" \
-    -o /workspace/manager main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags="-X '${GO_MODULE}/version.BuildTimestamp=`date '+%Y-%m-%dT%H:%M:%S'`'" -o /workspace/manager main.go
 
 FROM registry.access.redhat.com/ubi8:8.6-855 as base-env
 

@@ -8,7 +8,6 @@ var (
 	PriorVersion = "1.0.9"
 
 	//Vars injected at build-time
-	CommitHash     = ""
 	BuildTimestamp = ""
 )
 

@@ -66,9 +66,8 @@ endif
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
-COMMIT_HASH := $(shell git rev-parse --short HEAD)
 BUILD_TIMESTAMP := $(shell date '+%Y-%m-%dT%H:%M:%S')
-LDFLAGS = "-X '$(GO_MODULE)/version.CommitHash=$(COMMIT_HASH)' -X '$(GO_MODULE)/version.BuildTimestamp=$(BUILD_TIMESTAMP)'"
+LDFLAGS = "'$(GO_MODULE)/version.BuildTimestamp=$(BUILD_TIMESTAMP)'"
 
 all: build
 
