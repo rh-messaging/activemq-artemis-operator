@@ -54,6 +54,10 @@ func (n *NamerData) Suffix(nameSuffix string) *NamerData {
 	return n
 }
 
+func (n *NamerData) SetName(override string) {
+	n.name = override
+}
+
 func (n *NamerData) Name() string {
 	return n.name
 }

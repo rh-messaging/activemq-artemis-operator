@@ -156,21 +156,15 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 	reconciler := ActiveMQArtemisReconcilerImpl{}
 
 	result := ctrl.Result{}
+	var valid = true
 
-	if hasValidationErrors, err := validate(customResource, r.Client, r.Scheme); !hasValidationErrors && err == nil {
-		requeue := reconciler.Process(customResource, *namer, r.Client, r.Scheme)
-
-		err = UpdatePodStatus(customResource, r.Client, request.NamespacedName)
-		if err != nil {
-			reqLogger.Error(err, "unable to update pod status", "Request Namespace", request.Namespace, "Request Name", request.Name)
-			return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, err
-		}
+	if valid, result = validate(customResource, r.Client, r.Scheme, *namer); valid {
+		reconciler.Process(customResource, *namer, r.Client, r.Scheme)
 
 		result = UpdateBrokerPropertiesStatus(customResource, r.Client, r.Scheme)
-		if requeue {
-			result = ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}
-		}
 	}
+
+	UpdatePodStatus(customResource, r.Client, request.NamespacedName)
 
 	err = UpdateCRStatus(customResource, r.Client, request.NamespacedName)
 
@@ -196,22 +190,19 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 	return result, err
 }
 
-func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme) (bool, error) {
+func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, namer Namers) (bool, ctrl.Result) {
 	// Do additional validation here
 	validationCondition := metav1.Condition{
 		Type:   common.ValidConditionType,
 		Status: metav1.ConditionTrue,
 		Reason: common.ValidConditionSuccessReason,
 	}
-	condition, err := validateExtraMounts(customResource, client, scheme)
-	if err != nil {
-		return false, err
-	}
+
+	condition, retry := validateExtraMounts(customResource, client, scheme)
 	if condition != nil {
 		validationCondition = *condition
 	}
 
-	// validate version
 	if validationCondition.Status == metav1.ConditionTrue {
 		condition := validateBrokerVersion(customResource)
 		if condition != nil {
@@ -219,7 +210,6 @@ func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Cli
 		}
 	}
 
-	// validate pod disruption budget
 	if validationCondition.Status == metav1.ConditionTrue && customResource.Spec.DeploymentPlan.PodDisruptionBudget != nil {
 		condition := validatePodDisruption(customResource)
 		if condition != nil {
@@ -227,9 +217,67 @@ func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Cli
 		}
 	}
 
+	if validationCondition.Status == metav1.ConditionTrue {
+		condition, retry = validateSSLEnabledSecrets(customResource, client, scheme, namer)
+		if condition != nil {
+			validationCondition = *condition
+		}
+	}
+
 	validationCondition.ObservedGeneration = customResource.Generation
 	meta.SetStatusCondition(&customResource.Status.Conditions, validationCondition)
-	return false, nil
+
+	if retry {
+		return validationCondition.Status == metav1.ConditionTrue, ctrl.Result{Requeue: retry, RequeueAfter: common.GetReconcileResyncPeriod()}
+	} else {
+		return validationCondition.Status == metav1.ConditionTrue, ctrl.Result{}
+	}
+}
+
+func validateSSLEnabledSecrets(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, namer Namers) (*metav1.Condition, bool) {
+
+	var retry = true
+	if customResource.Spec.Console.SSLEnabled {
+
+		secretName := namer.SecretsConsoleNameBuilder.Name()
+
+		secret := corev1.Secret{}
+		found := retrieveResource(secretName, customResource.Namespace, &secret, client, scheme)
+		if !found {
+			return &metav1.Condition{
+				Type:    common.ValidConditionType,
+				Status:  metav1.ConditionFalse,
+				Reason:  common.ValidConditionMissingResourcesReason,
+				Message: fmt.Sprintf(".Spec.Console.SSLEnabled is true but required secret %v is not found", secretName),
+			}, retry
+		}
+
+		contextMessage := ".Spec.Console.SSLEnabled is true but required"
+		for _, key := range []string{
+			"keyStorePassword",
+			"trustStorePassword",
+		} {
+			Condition := AssertSecretContainsKey(secret, key, contextMessage)
+			if Condition != nil {
+				return Condition, retry
+			}
+		}
+
+		Condition := AssertSecretContainsOneOf(secret, []string{
+			"keyStorePath",
+			"broker.ks"}, contextMessage)
+		if Condition != nil {
+			return Condition, retry
+		}
+
+		Condition = AssertSecretContainsOneOf(secret, []string{
+			"trustStorePath",
+			"client.ts"}, contextMessage)
+		if Condition != nil {
+			return Condition, retry
+		}
+	}
+	return nil, false
 }
 
 func validatePodDisruption(customResource *brokerv1beta1.ActiveMQArtemis) *metav1.Condition {
@@ -259,77 +307,75 @@ func validateBrokerVersion(customResource *brokerv1beta1.ActiveMQArtemis) *metav
 	return nil
 }
 
-func validateExtraMounts(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme) (*metav1.Condition, error) {
+func validateExtraMounts(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme) (*metav1.Condition, bool) {
 
 	instanceCounts := map[string]int{}
 	var Condition *metav1.Condition
-
+	var retry bool = true
+	var ContextMessage = ".Spec.DeploymentPlan.ExtraMounts.ConfigMaps,"
 	for _, cm := range customResource.Spec.DeploymentPlan.ExtraMounts.ConfigMaps {
 		configMap := corev1.ConfigMap{}
-		found, err := validateExtraMount(cm, customResource.Namespace, &configMap, client, scheme)
-		if err != nil {
-			return nil, err
-		}
+		found := retrieveResource(cm, customResource.Namespace, &configMap, client, scheme)
 		if !found {
 			return &metav1.Condition{
 				Type:    common.ValidConditionType,
 				Status:  metav1.ConditionFalse,
 				Reason:  common.ValidConditionMissingResourcesReason,
-				Message: fmt.Sprintf("Missing required configMap %v", cm),
-			}, nil
+				Message: fmt.Sprintf("%v missing required configMap %v", ContextMessage, cm),
+			}, retry
 		}
 		if strings.HasSuffix(cm, loggingConfigSuffix) {
-			Condition = AssertConfigMapContainsKey(configMap, LoggingConfigKey)
+			Condition = AssertConfigMapContainsKey(configMap, LoggingConfigKey, ContextMessage)
 			instanceCounts[loggingConfigSuffix]++
 		} else if strings.HasSuffix(cm, jaasConfigSuffix) {
 			Condition = &metav1.Condition{
 				Type:    common.ValidConditionType,
 				Status:  metav1.ConditionFalse,
 				Reason:  common.ValidConditionFailedExtraMountReason,
-				Message: fmt.Sprintf("extramount %v with suffix %v must be a secret", cm, jaasConfigSuffix),
+				Message: fmt.Sprintf("%v entry %v with suffix %v must be a secret", ContextMessage, cm, jaasConfigSuffix),
 			}
+			retry = false // Cr needs an update
 		}
 		if Condition != nil {
-			return Condition, nil
+			return Condition, retry
 		}
 	}
+
+	ContextMessage = ".Spec.DeploymentPlan.ExtraMounts.Secrets,"
 	for _, s := range customResource.Spec.DeploymentPlan.ExtraMounts.Secrets {
 		secret := corev1.Secret{}
-		found, err := validateExtraMount(s, customResource.Namespace, &secret, client, scheme)
-		if err != nil {
-			return nil, err
-		}
+		found := retrieveResource(s, customResource.Namespace, &secret, client, scheme)
 		if !found {
 			return &metav1.Condition{
 				Type:    common.ValidConditionType,
 				Status:  metav1.ConditionFalse,
 				Reason:  common.ValidConditionMissingResourcesReason,
-				Message: fmt.Sprintf("Missing required secret %v", s),
-			}, nil
+				Message: fmt.Sprintf("%v missing required secret %v", ContextMessage, s),
+			}, retry
 		}
 		if strings.HasSuffix(s, loggingConfigSuffix) {
-			Condition = AssertSecretContainsKey(secret, LoggingConfigKey)
+			Condition = AssertSecretContainsKey(secret, LoggingConfigKey, ContextMessage)
 			instanceCounts[loggingConfigSuffix]++
 		} else if strings.HasSuffix(s, jaasConfigSuffix) {
-			Condition = AssertSecretContainsKey(secret, JaasConfigKey)
+			Condition = AssertSecretContainsKey(secret, JaasConfigKey, ContextMessage)
 			if Condition == nil {
-				Condition = AssertSyntaxOkOnLoginConfigData(secret.Data[JaasConfigKey])
+				Condition = AssertSyntaxOkOnLoginConfigData(secret.Data[JaasConfigKey], s, ContextMessage)
 			}
 			instanceCounts[jaasConfigSuffix]++
 		}
 		if Condition != nil {
-			return Condition, nil
+			return Condition, retry
 		}
 	}
 	Condition = AssertInstanceCounts(instanceCounts)
 	if Condition != nil {
-		return Condition, nil
+		return Condition, false // CR needs update
 	}
 
-	return nil, nil
+	return nil, false
 }
 
-func AssertSyntaxOkOnLoginConfigData(SecretContentForLoginConfigKey []byte) *metav1.Condition {
+func AssertSyntaxOkOnLoginConfigData(SecretContentForLoginConfigKey []byte, name string, contextMessage string) *metav1.Condition {
 
 	if !MatchBytesAgainsLoginConfigRegexp(SecretContentForLoginConfigKey) {
 
@@ -337,7 +383,7 @@ func AssertSyntaxOkOnLoginConfigData(SecretContentForLoginConfigKey []byte) *met
 			Type:    common.ValidConditionType,
 			Status:  metav1.ConditionFalse,
 			Reason:  common.ValidConditionFailedExtraMountReason,
-			Message: "content of login.config key does not match supported jaas config file syntax",
+			Message: fmt.Sprintf("%s content of login.config key in secret %v does not match supported jaas config file syntax", contextMessage, name),
 		}
 	}
 
@@ -366,47 +412,55 @@ func AssertInstanceCounts(instanceCounts map[string]int) *metav1.Condition {
 				Type:    common.ValidConditionType,
 				Status:  metav1.ConditionFalse,
 				Reason:  common.ValidConditionFailedExtraMountReason,
-				Message: fmt.Sprintf("extramount with suffix %v can only be supplied once", key),
+				Message: fmt.Sprintf("Spec.DeploymentPlan.ExtraMounts, entry with suffix %v can only be supplied once", key),
 			}
 		}
 	}
 	return nil
 }
 
-func AssertConfigMapContainsKey(configMap corev1.ConfigMap, key string) *metav1.Condition {
+func AssertConfigMapContainsKey(configMap corev1.ConfigMap, key string, contextMessage string) *metav1.Condition {
 	if _, present := configMap.Data[key]; !present {
 		return &metav1.Condition{
 			Type:    common.ValidConditionType,
 			Status:  metav1.ConditionFalse,
 			Reason:  common.ValidConditionFailedExtraMountReason,
-			Message: fmt.Sprintf("extra mount %v configmap %v must have key %v", configMap.Name, configMap, key),
+			Message: fmt.Sprintf("%s configmap %v must have key %v", contextMessage, configMap.Name, key),
 		}
 	}
 	return nil
 }
 
-func AssertSecretContainsKey(secret corev1.Secret, key string) *metav1.Condition {
+func AssertSecretContainsKey(secret corev1.Secret, key string, contextMessage string) *metav1.Condition {
 	if _, present := secret.Data[key]; !present {
 		return &metav1.Condition{
 			Type:    common.ValidConditionType,
 			Status:  metav1.ConditionFalse,
 			Reason:  common.ValidConditionFailedExtraMountReason,
-			Message: fmt.Sprintf("extra mount %v secret %v must have key %v", secret.Name, secret, key),
+			Message: fmt.Sprintf("%s secret %v must have key %v", contextMessage, secret.Name, key),
 		}
 	}
 	return nil
 }
 
-func validateExtraMount(name, namespace string, obj rtclient.Object, client rtclient.Client, scheme *runtime.Scheme) (bool, error) {
-	err := client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, obj)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return false, nil
-		} else {
-			return false, err
+func AssertSecretContainsOneOf(secret corev1.Secret, keys []string, contextMessage string) *metav1.Condition {
+	for _, key := range keys {
+		_, present := secret.Data[key]
+		if present {
+			return nil
 		}
 	}
-	return true, nil
+	return &metav1.Condition{
+		Type:    common.ValidConditionType,
+		Status:  metav1.ConditionFalse,
+		Reason:  common.ValidConditionFailedExtraMountReason,
+		Message: fmt.Sprintf("%s secret %v must contain one of following keys %v", contextMessage, secret.Name, keys),
+	}
+}
+
+func retrieveResource(name, namespace string, obj rtclient.Object, client rtclient.Client, scheme *runtime.Scheme) bool {
+	err := client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, obj)
+	return err == nil
 }
 
 func hasExtraMounts(cr *brokerv1beta1.ActiveMQArtemis) bool {
@@ -451,7 +505,11 @@ func MakeNamers(customResource *brokerv1beta1.ActiveMQArtemis) *Namers {
 	newNamers.SvcPingNameBuilder.Prefix(customResource.Name).Base("ping").Suffix("svc").Generate()
 	newNamers.PodsNameBuilder.Base(customResource.Name).Suffix("container").Generate()
 	newNamers.SecretsCredentialsNameBuilder.Prefix(customResource.Name).Base("credentials").Suffix("secret").Generate()
-	newNamers.SecretsConsoleNameBuilder.Prefix(customResource.Name).Base("console").Suffix("secret").Generate()
+	if customResource.Spec.Console.SSLSecret != "" {
+		newNamers.SecretsConsoleNameBuilder.SetName(customResource.Spec.Console.SSLSecret)
+	} else {
+		newNamers.SecretsConsoleNameBuilder.Prefix(customResource.Name).Base("console").Suffix("secret").Generate()
+	}
 	newNamers.SecretsNettyNameBuilder.Prefix(customResource.Name).Base("netty").Suffix("secret").Generate()
 	newNamers.LabelBuilder.Base(customResource.Name).Suffix("app").Generate()
 

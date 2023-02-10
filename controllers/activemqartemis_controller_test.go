@@ -1536,6 +1536,97 @@ var _ = Describe("artemis controller", func() {
 		})
 	})
 
+	It("ssl console secret validation", func() {
+
+		crd := generateArtemisSpec(defaultNamespace)
+		crd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
+			InitialDelaySeconds: 1,
+			PeriodSeconds:       1,
+			TimeoutSeconds:      5,
+		}
+
+		crd.Spec.Console.Expose = true
+		crd.Spec.Console.SSLEnabled = true
+
+		By("Deploying broker" + crd.Name)
+		Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+		brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
+		deployedCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+		By("verify invalid status on no console secret")
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
+			g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, common.ValidConditionType)).Should(BeFalse())
+
+			Validation := meta.FindStatusCondition(deployedCrd.Status.Conditions, common.ValidConditionType)
+			g.Expect(Validation).ShouldNot(BeNil())
+			g.Expect(Validation.Message).Should(ContainSubstring("is not found"))
+		}, timeout, interval).Should(Succeed())
+
+		By("deploy secret - empty")
+		var consoleSecret corev1.Secret
+
+		consoleSecretName := crd.Name + "-console-secret"
+		consoleSecret = corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Secret",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      consoleSecretName,
+				Namespace: defaultNamespace,
+			},
+		}
+		Expect(k8sClient.Create(ctx, &consoleSecret)).Should(Succeed())
+
+		createdSecret := corev1.Secret{}
+		secretKey := types.NamespacedName{
+			Name:      consoleSecretName,
+			Namespace: defaultNamespace,
+		}
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, secretKey, &createdSecret)).To(Succeed())
+		}, timeout, interval).Should(Succeed())
+
+		By("verify different invalid status, auto retry on not found for external dep")
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
+			g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, common.ValidConditionType)).Should(BeFalse())
+
+			Validation := meta.FindStatusCondition(deployedCrd.Status.Conditions, common.ValidConditionType)
+			g.Expect(Validation).ToNot(BeNil())
+			g.Expect(Validation.Message).Should(ContainSubstring("must have key"))
+		}, timeout, interval).Should(Succeed())
+
+		By("update secret with valid keys")
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, secretKey, &createdSecret)).To(Succeed())
+
+			// only presence of key is validated
+			createdSecret.Data = map[string][]byte{
+				"broker.ks":      nil,
+				"trustStorePath": nil,
+			}
+			createdSecret.StringData = map[string]string{
+				"keyStorePassword":   "bla",
+				"trustStorePassword": "bla",
+			}
+			g.Expect(k8sClient.Update(ctx, &createdSecret)).To(Succeed())
+
+		}, timeout, interval).Should(Succeed())
+
+		By("verify valid status")
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
+
+			g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, common.ValidConditionType)).Should(BeTrue())
+		}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+		Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
+		Expect(k8sClient.Delete(ctx, &consoleSecret)).Should(Succeed())
+	})
+
 	Context("Image update test", func() {
 
 		It("deploy ImagePullBackOff update delete ok", func() {
@@ -2487,7 +2578,7 @@ var _ = Describe("artemis controller", func() {
 					}
 				}
 			}
-			Expect(foundSecret).To(BeTrue())
+			Expect(foundSecret).To(BeFalse())
 			Expect(foundInternalSecret).To(BeTrue())
 
 			foundSecretRef := false
@@ -2537,7 +2628,6 @@ var _ = Describe("artemis controller", func() {
 			namer := MakeNamers(&crd)
 			defaultConsoleSecretName := crd.Name + "-console-secret"
 			internalSecretName := defaultConsoleSecretName + "-internal"
-			consoleSecretKey := types.NamespacedName{Namespace: crd.Namespace, Name: defaultConsoleSecretName}
 			internalConsoleSecretKey := types.NamespacedName{Namespace: crd.Namespace, Name: internalSecretName}
 
 			currentSS := &appsv1.StatefulSet{}
@@ -2573,18 +2663,11 @@ var _ = Describe("artemis controller", func() {
 			By("finding in etcd, cache flushed")
 			Eventually(func(g Gomega) {
 
-				g.Expect(k8sClient.Get(ctx, consoleSecretKey, createdDefaultSecret)).Should(Succeed())
-				g.Expect(strconv.Atoi(createdDefaultSecret.ResourceVersion)).Should(BeNumerically(">", 0))
-				g.Expect(len(createdDefaultSecret.OwnerReferences)).Should(BeEquivalentTo(1))
-
 				g.Expect(k8sClient.Get(ctx, internalConsoleSecretKey, createdInternalSecret)).Should(Succeed())
 				g.Expect(strconv.Atoi(createdInternalSecret.ResourceVersion)).Should(BeNumerically(">", 0))
 				g.Expect(len(createdInternalSecret.OwnerReferences)).Should(BeEquivalentTo(1))
 
 			}, timeout, interval).Should(Succeed())
-
-			By("populating deployed with " + createdDefaultSecret.Name)
-			reconcilerImpl.addToDeployed(reflect.TypeOf(corev1.Secret{}), createdDefaultSecret)
 
 			Expect(k8sClient.Get(ctx, internalConsoleSecretKey, createdInternalSecret)).Should(Succeed())
 			By("populating deployed with " + createdInternalSecret.Name)
@@ -4467,7 +4550,7 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(k8sClient.Update(ctx, createdCrd)).Should(Succeed())
 			}, timeout, interval).Should(Succeed())
 
-			By("fixing secret")
+			By("fixing secret, depends on retry")
 			Eventually(func(g Gomega) {
 				createdSecret := &corev1.Secret{}
 				g.Expect(k8sClient.Get(ctx, loggingSecretKey, createdSecret)).Should(Succeed())
@@ -6643,8 +6726,7 @@ var _ = Describe("artemis controller", func() {
 
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
-				// update to verify config applied
-
+				By("update Cr to fix error")
 				Eventually(func(g Gomega) {
 					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
 
@@ -6657,6 +6739,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(k8sClient.Update(ctx, createdCrd)).Should(Succeed())
 				}, timeout, interval).Should(Succeed())
 
+				By("verify config applied is good")
 				Eventually(func(g Gomega) {
 
 					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
@@ -6802,11 +6885,13 @@ var _ = Describe("artemis controller", func() {
 
 				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
 
-				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
 				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+				g.Expect(meta.IsStatusConditionPresentAndEqual(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType, metav1.ConditionFalse)).Should(BeTrue())
+
+				deployedCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)
+				g.Expect(deployedCondition.Reason).Should(Equal(brokerv1beta1.DeployedConditionValidationFailedReason))
 
 				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, common.ValidConditionType)).Should(BeTrue())
-
 				validationCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, common.ValidConditionType)
 				g.Expect(validationCondition.Reason).To(Equal(common.ValidConditionFailedExtraMountReason))
 				g.Expect(validationCondition.Message).To(ContainSubstring(JaasConfigKey))
@@ -7162,8 +7247,6 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
 
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-
-					fmt.Printf("\nStatus: %v\n", createdCrd.Status)
 
 					// secret status won't be visible till activemq realm is exercised, ready true but with unknown condition
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())

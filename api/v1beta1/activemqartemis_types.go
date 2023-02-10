@@ -625,10 +625,12 @@ func (r *ActiveMQArtemis) Hub() {
 }
 
 const (
-	DeployedConditionType            = "Deployed"
-	DeployedConditionReadyReason     = "AllPodsReady"
-	DeployedConditionNotReadyReason  = "PodsNotReady"
-	DeployedConditionZeroSizeReason  = "ZeroSizeDeployment"
+	DeployedConditionType                   = "Deployed"
+	DeployedConditionReadyReason            = "AllPodsReady"
+	DeployedConditionNotReadyReason         = "PodsNotReady"
+	DeployedConditionZeroSizeReason         = "ZeroSizeDeployment"
+	DeployedConditionValidationFailedReason = "ValidationFailed"
+
 	DeployedConditionZeroSizeMessage = "Pods not scheduled. Deployment size is 0"
 
 	ConfigAppliedConditionType     = "BrokerPropertiesApplied"

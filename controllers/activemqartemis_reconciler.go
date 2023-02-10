@@ -118,7 +118,7 @@ type ActiveMQArtemisIReconciler interface {
 	ProcessResources(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint8
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) Process(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme) bool {
+func (reconciler *ActiveMQArtemisReconcilerImpl) Process(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme) {
 
 	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
 	log.Info("Reconciler Processing...", "Operator version", version.Version, "ActiveMQArtemis release", customResource.Spec.Version)
@@ -133,7 +133,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) Process(customResource *brokerv
 	desiredStatefulSet, err := reconciler.ProcessStatefulSet(customResource, namer, client, log)
 	if err != nil {
 		log.Error(err, "Error processing stafulset")
-		return false
+		return
 	}
 
 	reconciler.ProcessDeploymentPlan(customResource, namer, client, scheme, desiredStatefulSet)
@@ -155,8 +155,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) Process(customResource *brokerv
 
 	log.Info("Reconciler Processing... complete", "CRD ver:", customResource.ObjectMeta.ResourceVersion, "CRD Gen:", customResource.ObjectMeta.Generation)
 
-	// requeue
-	return false
+	// we dont't requeue
 }
 
 func trackSecretCheckSumInEnvVar(requestedResources []rtclient.Object, container []corev1.Container) {
@@ -395,19 +394,13 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessConsole(customResource *
 		return
 	}
 
-	sslFlags := ""
-	envVarName := "AMQ_CONSOLE_ARGS"
 	secretName := namer.SecretsConsoleNameBuilder.Name()
-	if "" != customResource.Spec.Console.SSLSecret {
-		secretName = customResource.Spec.Console.SSLSecret
-	}
-	sslFlags = generateConsoleSSLFlags(customResource, namer, client, secretName)
-	envVars := make(map[string]ValueInfo)
-	envVars[envVarName] = ValueInfo{
-		Value:    sslFlags,
+
+	envVars := map[string]ValueInfo{"AMQ_CONSOLE_ARGS": {
+		Value:    generateConsoleSSLFlags(customResource, namer, client, secretName),
 		AutoGen:  true,
 		Internal: true,
-	}
+	}}
 
 	reconciler.sourceEnvVarFromSecret(customResource, namer, currentStatefulSet, &envVars, secretName, client, scheme)
 }
@@ -520,8 +513,10 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customRe
 		} else {
 			log.Error(err, "Error while retrieving secret", "key", namespacedName)
 		}
-		// we need to create and track
-		desired = true
+		if len(stringDataMap) > 0 {
+			// we need to create and track
+			desired = true
+		}
 	} else {
 		log.V(1).Info("updating from " + secretName)
 		for k, envVar := range *envVars {
@@ -1526,9 +1521,6 @@ func MakeVolumes(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers) []
 	if customResource.Spec.Console.SSLEnabled {
 		clog.V(1).Info("Make volumes for ssl console exposure on k8s")
 		secretName := namer.SecretsConsoleNameBuilder.Name()
-		if "" != customResource.Spec.Console.SSLSecret {
-			secretName = customResource.Spec.Console.SSLSecret
-		}
 		volume := volumes.MakeVolume(secretName)
 		volumeDefinitions = append(volumeDefinitions, volume)
 	}
@@ -1573,9 +1565,6 @@ func MakeVolumeMounts(customResource *brokerv1beta1.ActiveMQArtemis, namer Namer
 	if customResource.Spec.Console.SSLEnabled {
 		clog.V(1).Info("Make volume mounts for ssl console exposure on k8s")
 		volumeMountName := namer.SecretsConsoleNameBuilder.Name() + "-volume"
-		if "" != customResource.Spec.Console.SSLSecret {
-			volumeMountName = customResource.Spec.Console.SSLSecret + "-volume"
-		}
 		volumeMount := volumes.MakeVolumeMount(volumeMountName)
 		volumeMounts = append(volumeMounts, volumeMount)
 	}
@@ -2534,7 +2523,7 @@ func NewPersistentVolumeClaimArrayForCR(customResource *brokerv1beta1.ActiveMQAr
 	return &pvcArray
 }
 
-func UpdatePodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namespacedName types.NamespacedName) error {
+func UpdatePodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namespacedName types.NamespacedName) {
 
 	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.V(1).Info("Updating status for pods")
@@ -2546,10 +2535,10 @@ func UpdatePodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, 
 	reqLogger.V(1).Info("Stopped Count......................", "info:", len(podStatus.Stopped))
 	reqLogger.V(1).Info("Starting Count.....................", "info:", len(podStatus.Starting))
 
-	meta.SetStatusCondition(&cr.Status.Conditions, getValidCondition(cr))
-	meta.SetStatusCondition(&cr.Status.Conditions, getDeploymentCondition(cr, podStatus))
+	ValidCondition := getValidCondition(cr)
+	meta.SetStatusCondition(&cr.Status.Conditions, ValidCondition)
+	meta.SetStatusCondition(&cr.Status.Conditions, getDeploymentCondition(cr, podStatus, ValidCondition.Status == metav1.ConditionTrue))
 
-	var err error
 	if !reflect.DeepEqual(podStatus, cr.Status.PodStatus) {
 		reqLogger.Info("Pods status updated")
 		cr.Status.PodStatus = podStatus
@@ -2557,7 +2546,6 @@ func UpdatePodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, 
 		// could leave this to kube, it will do a []byte comparison
 		reqLogger.Info("Pods status unchanged")
 	}
-	return err
 }
 
 func getValidCondition(cr *brokerv1beta1.ActiveMQArtemis) metav1.Condition {
@@ -2574,7 +2562,16 @@ func getValidCondition(cr *brokerv1beta1.ActiveMQArtemis) metav1.Condition {
 	}
 }
 
-func getDeploymentCondition(cr *brokerv1beta1.ActiveMQArtemis, podStatus olm.DeploymentStatus) metav1.Condition {
+func getDeploymentCondition(cr *brokerv1beta1.ActiveMQArtemis, podStatus olm.DeploymentStatus, valid bool) metav1.Condition {
+
+	if !valid {
+		return metav1.Condition{
+			Type:   brokerv1beta1.DeployedConditionType,
+			Status: metav1.ConditionFalse,
+			Reason: brokerv1beta1.DeployedConditionValidationFailedReason,
+		}
+	}
+
 	deploymentSize := getDeploymentSize(cr)
 	if deploymentSize == 0 {
 		return metav1.Condition{
