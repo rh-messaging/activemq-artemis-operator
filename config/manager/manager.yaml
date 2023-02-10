@@ -37,6 +37,8 @@ spec:
     spec:
       securityContext:
         runAsNonRoot: true
+      serviceAccountName: operator
+      terminationGracePeriodSeconds: 10
       containers:
       - command:
         - /home/amq-broker-operator/bin/entrypoint
@@ -49,6 +51,25 @@ spec:
         - --zap-encoder=console
         - --zap-time-encoding=iso8601
         - --leader-elect
+        #image: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.10-41
+        image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:9283428b8f219915defa2f2a81c36193d771db8f5db4ef133add7408286bd5d3
+        #imagePullPolicy: Always
+
+        name: manager
+        securityContext:
+          allowPrivilegeEscalation: false
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
         env:
         - name: OPERATOR_NAME
           valueFrom:
@@ -65,6 +86,9 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+
+        - name: ENABLE_WEBHOOKS
+          value: "false"
 
         # Below are the environment variables that inform the operator what container images to utilize for each product version.
         # By default the *_782 values are utilized.
@@ -276,27 +300,3 @@ spec:
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7102_s390x
           #value: registry.redhat.io/amq7/amq-broker-rhel8:7.10-53
           value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:c9eba0d1f9fba588711774f4db75221f057578407065127ed60c33eef564f499
-
-        - name: ENABLE_WEBHOOKS
-          value: "false"
-        #image: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.10-41
-        image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:9283428b8f219915defa2f2a81c36193d771db8f5db4ef133add7408286bd5d3
-        #imagePullPolicy: Always
-
-        name: manager
-        securityContext:
-          allowPrivilegeEscalation: false
-        livenessProbe:
-          httpGet:
-            path: /healthz
-            port: 8081
-          initialDelaySeconds: 15
-          periodSeconds: 20
-        readinessProbe:
-          httpGet:
-            path: /readyz
-            port: 8081
-          initialDelaySeconds: 5
-          periodSeconds: 10
-      serviceAccountName: operator
-      terminationGracePeriodSeconds: 10
