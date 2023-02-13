@@ -263,14 +263,14 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessCredentials(customResour
 	secretName := namer.SecretsCredentialsNameBuilder.Name()
 	for {
 		adminUser.Value = customResource.Spec.AdminUser
-		if "" != adminUser.Value {
+		if adminUser.Value != "" {
 			break
 		}
 
 		if amqUserEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_USER"); nil != amqUserEnvVar {
 			adminUser.Value = amqUserEnvVar.Value
 		}
-		if "" != adminUser.Value {
+		if adminUser.Value != "" {
 			break
 		}
 
@@ -283,14 +283,14 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessCredentials(customResour
 
 	for {
 		adminPassword.Value = customResource.Spec.AdminPassword
-		if "" != adminPassword.Value {
+		if adminPassword.Value != "" {
 			break
 		}
 
 		if amqPasswordEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_PASSWORD"); nil != amqPasswordEnvVar {
 			adminPassword.Value = amqPasswordEnvVar.Value
 		}
-		if "" != adminPassword.Value {
+		if adminPassword.Value != "" {
 			break
 		}
 
@@ -320,14 +320,6 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessDeploymentPlan(customRes
 	// Ensure the StatefulSet size is the same as the spec
 	replicas := getDeploymentSize(customResource)
 	currentStatefulSet.Spec.Replicas = &replicas
-
-	aioSyncCausedUpdateOn(deploymentPlan, currentStatefulSet)
-
-	persistentSyncCausedUpdateOn(namer, deploymentPlan, currentStatefulSet)
-
-	if updatedEnvVar := environments.BoolSyncCausedUpdateOn(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_REQUIRE_LOGIN", deploymentPlan.RequireLogin); updatedEnvVar != nil {
-		environments.Update(currentStatefulSet.Spec.Template.Spec.Containers, updatedEnvVar)
-	}
 
 	clog.Info("Now sync Message migration", "for cr", customResource.Name)
 	syncMessageMigration(customResource, namer, client, scheme)
@@ -469,8 +461,7 @@ func syncMessageMigration(customResource *brokerv1beta1.ActiveMQArtemis, namer N
 		if err = resources.Retrieve(namespacedName, client, scaledown); err == nil {
 			//	ReleaseController(customResource.Name)
 			// err means not found so delete
-			if retrieveError = resources.Delete(client, scaledown); retrieveError == nil {
-			}
+			resources.Delete(client, scaledown)
 		}
 	}
 }
@@ -478,10 +469,7 @@ func syncMessageMigration(customResource *brokerv1beta1.ActiveMQArtemis, namer N
 func isLocalOnly() bool {
 	oprNamespace := os.Getenv("OPERATOR_NAMESPACE")
 	watchNamespace := os.Getenv("OPERATOR_WATCH_NAMESPACE")
-	if oprNamespace == watchNamespace {
-		return true
-	}
-	return false
+	return oprNamespace == watchNamespace
 }
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, currentStatefulSet *appsv1.StatefulSet, envVars *map[string]ValueInfo, secretName string, client rtclient.Client, scheme *runtime.Scheme) {
@@ -525,7 +513,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customRe
 				continue
 			}
 			elem, exists := secretDefinition.Data[k]
-			if 0 != strings.Compare(string(elem), (*envVars)[k].Value) || !exists {
+			if strings.Compare(string(elem), (*envVars)[k].Value) != 0 || !exists {
 				log.V(1).Info("key value not equals or does not exist", "key", k, "exists", exists)
 				if !(*envVars)[k].AutoGen || string(elem) == "" {
 					secretDefinition.Data[k] = []byte((*envVars)[k].Value)
@@ -626,13 +614,13 @@ func generateAcceptorsString(customResource *brokerv1beta1.ActiveMQArtemis, name
 	var port61616InUse bool = false
 	var i uint32 = 0
 	for _, acceptor := range customResource.Spec.Acceptors {
-		if 0 == acceptor.Port {
+		if acceptor.Port == 0 {
 			acceptor.Port = 61626 + currentPortIncrement
 			currentPortIncrement += portIncrement
 			customResource.Spec.Acceptors[i].Port = acceptor.Port
 		}
-		if "" == acceptor.Protocols ||
-			"all" == strings.ToLower(acceptor.Protocols) {
+		if acceptor.Protocols == "" ||
+			strings.ToLower(acceptor.Protocols) == "all" {
 			acceptor.Protocols = "AMQP,CORE,HORNETQ,MQTT,OPENWIRE,STOMP"
 		}
 		bindAddress := "ACCEPTOR_IP"
@@ -644,30 +632,30 @@ func generateAcceptorsString(customResource *brokerv1beta1.ActiveMQArtemis, name
 		acceptorEntry = acceptorEntry + fmt.Sprintf("%d", acceptor.Port)
 		acceptorEntry = acceptorEntry + "?protocols=" + strings.ToUpper(acceptor.Protocols)
 		// TODO: Evaluate more dynamic messageMigration
-		if 61616 == acceptor.Port {
+		if acceptor.Port == 61616 {
 			port61616InUse = true
 		}
 		if ensureCOREOn61616Exists &&
-			(61616 == acceptor.Port) &&
+			(acceptor.Port == 61616) &&
 			!strings.Contains(strings.ToUpper(acceptor.Protocols), "CORE") {
 			acceptorEntry = acceptorEntry + ",CORE"
 		}
 		if acceptor.SSLEnabled {
 			secretName := customResource.Name + "-" + acceptor.Name + "-secret"
-			if "" != acceptor.SSLSecret {
+			if acceptor.SSLSecret != "" {
 				secretName = acceptor.SSLSecret
 			}
 			acceptorEntry = acceptorEntry + ";" + generateAcceptorConnectorSSLArguments(customResource, namer, client, secretName)
 			sslOptionalArguments := generateAcceptorSSLOptionalArguments(acceptor)
-			if "" != sslOptionalArguments {
+			if sslOptionalArguments != "" {
 				acceptorEntry = acceptorEntry + ";" + sslOptionalArguments
 			}
 		}
-		if "" != acceptor.AnycastPrefix {
+		if acceptor.AnycastPrefix != "" {
 			safeAnycastPrefix := strings.Replace(acceptor.AnycastPrefix, "/", "\\/", -1)
 			acceptorEntry = acceptorEntry + ";" + "anycastPrefix=" + safeAnycastPrefix
 		}
-		if "" != acceptor.MulticastPrefix {
+		if acceptor.MulticastPrefix != "" {
 			safeMulticastPrefix := strings.Replace(acceptor.MulticastPrefix, "/", "\\/", -1)
 			acceptorEntry = acceptorEntry + ";" + "multicastPrefix=" + safeMulticastPrefix
 		}
@@ -718,12 +706,12 @@ func generateConnectorsString(customResource *brokerv1beta1.ActiveMQArtemis, nam
 
 		if connector.SSLEnabled {
 			secretName := customResource.Name + "-" + connector.Name + "-secret"
-			if "" != connector.SSLSecret {
+			if connector.SSLSecret != "" {
 				secretName = connector.SSLSecret
 			}
 			connectorEntry = connectorEntry + ";" + generateAcceptorConnectorSSLArguments(customResource, namer, client, secretName)
 			sslOptionalArguments := generateConnectorSSLOptionalArguments(connector)
-			if "" != sslOptionalArguments {
+			if sslOptionalArguments != "" {
 				connectorEntry = connectorEntry + ";" + sslOptionalArguments
 			}
 		}
@@ -908,16 +896,16 @@ func generateConsoleSSLFlags(customResource *brokerv1beta1.ActiveMQArtemis, name
 	trustStorePassword := "password"
 	trustStorePath := "/etc/" + secretName + "-volume/client.ts"
 	if err := resources.Retrieve(secretNamespacedName, client, userPasswordSecret); err == nil {
-		if "" != string(userPasswordSecret.Data["keyStorePassword"]) {
+		if string(userPasswordSecret.Data["keyStorePassword"]) != "" {
 			keyStorePassword = string(userPasswordSecret.Data["keyStorePassword"])
 		}
-		if "" != string(userPasswordSecret.Data["keyStorePath"]) {
+		if string(userPasswordSecret.Data["keyStorePath"]) != "" {
 			keyStorePath = string(userPasswordSecret.Data["keyStorePath"])
 		}
-		if "" != string(userPasswordSecret.Data["trustStorePassword"]) {
+		if string(userPasswordSecret.Data["trustStorePassword"]) != "" {
 			trustStorePassword = string(userPasswordSecret.Data["trustStorePassword"])
 		}
-		if "" != string(userPasswordSecret.Data["trustStorePath"]) {
+		if string(userPasswordSecret.Data["trustStorePath"]) != "" {
 			trustStorePath = string(userPasswordSecret.Data["trustStorePath"])
 		}
 	}
@@ -952,19 +940,19 @@ func generateAcceptorConnectorSSLArguments(customResource *brokerv1beta1.ActiveM
 	trustStorePassword := "password"
 	trustStorePath := "\\/etc\\/" + secretName + "-volume\\/client.ts"
 	if err := resources.Retrieve(secretNamespacedName, client, userPasswordSecret); err == nil {
-		if "" != string(userPasswordSecret.Data["keyStorePassword"]) {
+		if string(userPasswordSecret.Data["keyStorePassword"]) != "" {
 			//noinspection GoUnresolvedReference
 			keyStorePassword = strings.ReplaceAll(string(userPasswordSecret.Data["keyStorePassword"]), "/", "\\/")
 		}
-		if "" != string(userPasswordSecret.Data["keyStorePath"]) {
+		if string(userPasswordSecret.Data["keyStorePath"]) != "" {
 			//noinspection GoUnresolvedReference
 			keyStorePath = strings.ReplaceAll(string(userPasswordSecret.Data["keyStorePath"]), "/", "\\/")
 		}
-		if "" != string(userPasswordSecret.Data["trustStorePassword"]) {
+		if string(userPasswordSecret.Data["trustStorePassword"]) != "" {
 			//noinspection GoUnresolvedReference
 			trustStorePassword = strings.ReplaceAll(string(userPasswordSecret.Data["trustStorePassword"]), "/", "\\/")
 		}
-		if "" != string(userPasswordSecret.Data["trustStorePath"]) {
+		if string(userPasswordSecret.Data["trustStorePath"]) != "" {
 			//noinspection GoUnresolvedReference
 			trustStorePath = strings.ReplaceAll(string(userPasswordSecret.Data["trustStorePath"]), "/", "\\/")
 		}
@@ -981,10 +969,10 @@ func generateAcceptorSSLOptionalArguments(acceptor brokerv1beta1.AcceptorType) s
 
 	sslOptionalArguments := ""
 
-	if "" != acceptor.EnabledCipherSuites {
+	if acceptor.EnabledCipherSuites != "" {
 		sslOptionalArguments = sslOptionalArguments + "enabledCipherSuites=" + acceptor.EnabledCipherSuites
 	}
-	if "" != acceptor.EnabledProtocols {
+	if acceptor.EnabledProtocols != "" {
 		sslOptionalArguments = sslOptionalArguments + ";" + "enabledProtocols=" + acceptor.EnabledProtocols
 	}
 	if acceptor.NeedClientAuth {
@@ -996,22 +984,22 @@ func generateAcceptorSSLOptionalArguments(acceptor brokerv1beta1.AcceptorType) s
 	if acceptor.VerifyHost {
 		sslOptionalArguments = sslOptionalArguments + ";" + "verifyHost=true"
 	}
-	if "" != acceptor.SSLProvider {
+	if acceptor.SSLProvider != "" {
 		sslOptionalArguments = sslOptionalArguments + ";" + "sslProvider=" + acceptor.SSLProvider
 	}
-	if "" != acceptor.SNIHost {
+	if acceptor.SNIHost != "" {
 		sslOptionalArguments = sslOptionalArguments + ";" + "sniHost=" + acceptor.SNIHost
 	}
 
-	if "" != acceptor.KeyStoreProvider {
+	if acceptor.KeyStoreProvider != "" {
 		sslOptionalArguments = sslOptionalArguments + ";" + "keyStoreProvider=" + acceptor.KeyStoreProvider
 	}
 
-	if "" != acceptor.TrustStoreType {
+	if acceptor.TrustStoreType != "" {
 		sslOptionalArguments = sslOptionalArguments + ";" + "trustStoreType=" + acceptor.TrustStoreType
 	}
 
-	if "" != acceptor.TrustStoreProvider {
+	if acceptor.TrustStoreProvider != "" {
 		sslOptionalArguments = sslOptionalArguments + ";" + "trustStoreProvider=" + acceptor.TrustStoreProvider
 	}
 
@@ -1022,10 +1010,10 @@ func generateConnectorSSLOptionalArguments(connector brokerv1beta1.ConnectorType
 
 	sslOptionalArguments := ""
 
-	if "" != connector.EnabledCipherSuites {
+	if connector.EnabledCipherSuites != "" {
 		sslOptionalArguments = sslOptionalArguments + "enabledCipherSuites=" + connector.EnabledCipherSuites
 	}
-	if "" != connector.EnabledProtocols {
+	if connector.EnabledProtocols != "" {
 		sslOptionalArguments = sslOptionalArguments + ";" + "enabledProtocols=" + connector.EnabledProtocols
 	}
 	if connector.NeedClientAuth {
@@ -1037,168 +1025,26 @@ func generateConnectorSSLOptionalArguments(connector brokerv1beta1.ConnectorType
 	if connector.VerifyHost {
 		sslOptionalArguments = sslOptionalArguments + ";" + "verifyHost=true"
 	}
-	if "" != connector.SSLProvider {
+	if connector.SSLProvider != "" {
 		sslOptionalArguments = sslOptionalArguments + ";" + "sslProvider=" + connector.SSLProvider
 	}
-	if "" != connector.SNIHost {
+	if connector.SNIHost != "" {
 		sslOptionalArguments = sslOptionalArguments + ";" + "sniHost=" + connector.SNIHost
 	}
 
-	if "" != connector.KeyStoreProvider {
+	if connector.KeyStoreProvider != "" {
 		sslOptionalArguments = sslOptionalArguments + ";" + "keyStoreProvider=" + connector.KeyStoreProvider
 	}
 
-	if "" != connector.TrustStoreType {
+	if connector.TrustStoreType != "" {
 		sslOptionalArguments = sslOptionalArguments + ";" + "trustStoreType=" + connector.TrustStoreType
 	}
 
-	if "" != connector.TrustStoreProvider {
+	if connector.TrustStoreProvider != "" {
 		sslOptionalArguments = sslOptionalArguments + ";" + "trustStoreProvider=" + connector.TrustStoreProvider
 	}
 
 	return sslOptionalArguments
-}
-
-// https://stackoverflow.com/questions/37334119/how-to-delete-an-element-from-a-slice-in-golang
-func remove(s []corev1.EnvVar, i int) []corev1.EnvVar {
-	s[i] = s[len(s)-1]
-	// We do not need to put s[i] at the end, as it will be discarded anyway
-	return s[:len(s)-1]
-}
-
-func aioSyncCausedUpdateOn(deploymentPlan *brokerv1beta1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
-
-	foundAio := false
-	foundNio := false
-	var extraArgs string = ""
-	extraArgsNeedsUpdate := false
-
-	// Find the existing values
-	for _, v := range currentStatefulSet.Spec.Template.Spec.Containers[0].Env {
-		if v.Name == "AMQ_JOURNAL_TYPE" {
-			if strings.Index(v.Value, "aio") > -1 {
-				foundAio = true
-			}
-			if strings.Index(v.Value, "nio") > -1 {
-				foundNio = true
-			}
-			extraArgs = v.Value
-			break
-		}
-	}
-
-	if "aio" == strings.ToLower(deploymentPlan.JournalType) && foundNio {
-		extraArgs = strings.Replace(extraArgs, "nio", "aio", 1)
-		extraArgsNeedsUpdate = true
-	}
-
-	if !("aio" == strings.ToLower(deploymentPlan.JournalType)) && foundAio {
-		extraArgs = strings.Replace(extraArgs, "aio", "nio", 1)
-		extraArgsNeedsUpdate = true
-	}
-
-	if !foundAio && !foundNio {
-		extraArgs = "--" + strings.ToLower(deploymentPlan.JournalType)
-		extraArgsNeedsUpdate = true
-	}
-
-	if extraArgsNeedsUpdate {
-		newExtraArgsValue := corev1.EnvVar{
-			"AMQ_JOURNAL_TYPE",
-			extraArgs,
-			nil,
-		}
-		environments.Update(currentStatefulSet.Spec.Template.Spec.Containers, &newExtraArgsValue)
-	}
-
-	return extraArgsNeedsUpdate
-}
-
-func persistentSyncCausedUpdateOn(namer Namers, deploymentPlan *brokerv1beta1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
-
-	foundDataDir := false
-	foundDataDirLogging := false
-
-	dataDirNeedsUpdate := false
-	dataDirLoggingNeedsUpdate := false
-
-	statefulSetUpdated := false
-
-	// TODO: Remove yuck
-	// ensure password and username are valid if can't via openapi validation?
-	if deploymentPlan.PersistenceEnabled {
-
-		envVarArray := []corev1.EnvVar{}
-		// Find the existing values
-		for _, v := range currentStatefulSet.Spec.Template.Spec.Containers[0].Env {
-			if v.Name == "AMQ_DATA_DIR" {
-				foundDataDir = true
-				if v.Value != namer.GLOBAL_DATA_PATH {
-					dataDirNeedsUpdate = true
-				}
-			}
-			if v.Name == "AMQ_DATA_DIR_LOGGING" {
-				foundDataDirLogging = true
-				if v.Value != "true" {
-					dataDirLoggingNeedsUpdate = true
-				}
-			}
-		}
-
-		if !foundDataDir || dataDirNeedsUpdate {
-			newDataDirValue := corev1.EnvVar{
-				"AMQ_DATA_DIR",
-				namer.GLOBAL_DATA_PATH,
-				nil,
-			}
-			envVarArray = append(envVarArray, newDataDirValue)
-			statefulSetUpdated = true
-		}
-
-		if !foundDataDirLogging || dataDirLoggingNeedsUpdate {
-			newDataDirLoggingValue := corev1.EnvVar{
-				"AMQ_DATA_DIR_LOGGING",
-				"true",
-				nil,
-			}
-			envVarArray = append(envVarArray, newDataDirLoggingValue)
-			statefulSetUpdated = true
-		}
-
-		if statefulSetUpdated {
-			envVarArrayLen := len(envVarArray)
-			if envVarArrayLen > 0 {
-				for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
-					for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
-						if ("AMQ_DATA_DIR" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && dataDirNeedsUpdate) ||
-							("AMQ_DATA_DIR_LOGGING" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && dataDirLoggingNeedsUpdate) {
-							currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
-						}
-					}
-				}
-
-				containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
-				for i := 0; i < containerArrayLen; i++ {
-					for j := 0; j < envVarArrayLen; j++ {
-						currentStatefulSet.Spec.Template.Spec.Containers[i].Env = append(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, envVarArray[j])
-					}
-				}
-			}
-		}
-	} else {
-
-		for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
-			for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
-				if "AMQ_DATA_DIR" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name ||
-					"AMQ_DATA_DIR_LOGGING" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name {
-					currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
-					statefulSetUpdated = true
-				}
-			}
-		}
-	}
-
-	return statefulSetUpdated
 }
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) CurrentDeployedResources(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) {
@@ -1498,7 +1344,7 @@ func MakeVolumes(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers) []
 			continue
 		}
 		secretName := customResource.Name + "-" + acceptor.Name + "-secret"
-		if "" != acceptor.SSLSecret {
+		if acceptor.SSLSecret != "" {
 			secretName = acceptor.SSLSecret
 		}
 		volume := volumes.MakeVolume(secretName)
@@ -1511,7 +1357,7 @@ func MakeVolumes(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers) []
 			continue
 		}
 		secretName := customResource.Name + "-" + connector.Name + "-secret"
-		if "" != connector.SSLSecret {
+		if connector.SSLSecret != "" {
 			secretName = connector.SSLSecret
 		}
 		volume := volumes.MakeVolume(secretName)
@@ -1542,7 +1388,7 @@ func MakeVolumeMounts(customResource *brokerv1beta1.ActiveMQArtemis, namer Namer
 			continue
 		}
 		volumeMountName := customResource.Name + "-" + acceptor.Name + "-secret-volume"
-		if "" != acceptor.SSLSecret {
+		if acceptor.SSLSecret != "" {
 			volumeMountName = acceptor.SSLSecret + "-volume"
 		}
 		volumeMount := volumes.MakeVolumeMount(volumeMountName)
@@ -1555,7 +1401,7 @@ func MakeVolumeMounts(customResource *brokerv1beta1.ActiveMQArtemis, namer Namer
 			continue
 		}
 		volumeMountName := customResource.Name + "-" + connector.Name + "-secret-volume"
-		if "" != connector.SSLSecret {
+		if connector.SSLSecret != "" {
 			volumeMountName = connector.SSLSecret + "-volume"
 		}
 		volumeMount := volumes.MakeVolumeMount(volumeMountName)
@@ -1663,8 +1509,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 
 	imageName := ""
 	var verr error
-	if "placeholder" == customResource.Spec.DeploymentPlan.Image ||
-		0 == len(customResource.Spec.DeploymentPlan.Image) {
+	if customResource.Spec.DeploymentPlan.Image == "placeholder" || len(customResource.Spec.DeploymentPlan.Image) == 0 {
 		reqLogger.Info("Determining the kubernetes image to use due to placeholder setting")
 		imageName, verr = determineImageToUse(customResource, "Kubernetes")
 		if verr != nil {
@@ -1772,8 +1617,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 
 	clog.Info("Creating init container for broker configuration")
 	initImageName := ""
-	if "placeholder" == customResource.Spec.DeploymentPlan.InitImage ||
-		0 == len(customResource.Spec.DeploymentPlan.InitImage) {
+	if customResource.Spec.DeploymentPlan.InitImage == "placeholder" || len(customResource.Spec.DeploymentPlan.InitImage) == 0 {
 		reqLogger.Info("Determining the init image to use due to placeholder setting")
 		initImageName, verr = determineImageToUse(customResource, "Init")
 		if verr != nil {
@@ -2313,7 +2157,7 @@ func determineImageToUse(customResource *brokerv1beta1.ActiveMQArtemis, imageTyp
 	genericRelatedImageEnvVarName := ImageNamePrefix + imageTypeName + "_" + compactVersionToUse
 	// Default case of x86_64/amd64 covered here
 	archSpecificRelatedImageEnvVarName := genericRelatedImageEnvVarName
-	if "s390x" == osruntime.GOARCH || "ppc64le" == osruntime.GOARCH {
+	if osruntime.GOARCH == "s390x" || osruntime.GOARCH == "ppc64le" {
 		archSpecificRelatedImageEnvVarName = genericRelatedImageEnvVarName + "_" + osruntime.GOARCH
 	}
 	imageName, found := os.LookupEnv(archSpecificRelatedImageEnvVarName)
@@ -2360,7 +2204,7 @@ func determineCompactVersionToUse(customResource *brokerv1beta1.ActiveMQArtemis)
 	// See if we need to lookup what version to use
 	for {
 		// If there's no version specified just use the default above
-		if 0 == len(resolvedFullVersion) {
+		if len(resolvedFullVersion) == 0 {
 			clog.V(1).Info("DetermineImageToUse specifiedVersion was empty")
 			break
 		}
@@ -2387,7 +2231,7 @@ func determineCompactVersionToUse(customResource *brokerv1beta1.ActiveMQArtemis)
 		// We have a specified version and upgrades are enabled in general
 		// Is the version specified on "the list"
 		compactSpecifiedVersion := version.CompactVersionFromVersion[resolvedFullVersion]
-		if 0 == len(compactSpecifiedVersion) {
+		if len(compactSpecifiedVersion) == 0 {
 			clog.V(1).Info("DetermineImageToUse failed to find the compact form of the specified version " + resolvedFullVersion)
 			break
 		}
@@ -2507,11 +2351,11 @@ func NewPersistentVolumeClaimArrayForCR(customResource *brokerv1beta1.ActiveMQAr
 		Namespace: customResource.Namespace,
 	}
 
-	if "" != customResource.Spec.DeploymentPlan.Storage.Size {
+	if customResource.Spec.DeploymentPlan.Storage.Size != "" {
 		capacity = customResource.Spec.DeploymentPlan.Storage.Size
 	}
 
-	if "" != customResource.Spec.DeploymentPlan.Storage.StorageClassName {
+	if customResource.Spec.DeploymentPlan.Storage.StorageClassName != "" {
 		storageClassName = customResource.Spec.DeploymentPlan.Storage.StorageClassName
 	}
 
@@ -2604,7 +2448,8 @@ func getPodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, nam
 	var status olm.DeploymentStatus
 	var lastStatus olm.DeploymentStatus
 
-	if lastStatus, lastStatusExist := lastStatusMap[namespacedName]; !lastStatusExist {
+	lastStatusExist := false
+	if lastStatus, lastStatusExist = lastStatusMap[namespacedName]; !lastStatusExist {
 		ctrl.Log.Info("Creating lastStatus for new CR", "name", namespacedName)
 		lastStatus = olm.DeploymentStatus{}
 		lastStatusMap[namespacedName] = lastStatus
@@ -2624,7 +2469,7 @@ func getPodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, nam
 		// More pods ready, let the address controller know
 		for i := len(lastStatus.Ready); i < len(status.Ready); i++ {
 			reqLogger.V(1).Info("Notifying address controller", "new ready", i)
-			channels.AddressListeningCh <- types.NamespacedName{namespacedName.Namespace, status.Ready[i]}
+			channels.AddressListeningCh <- types.NamespacedName{Namespace: namespacedName.Namespace, Name: status.Ready[i]}
 		}
 	}
 	lastStatusMap[namespacedName] = status
@@ -2671,7 +2516,7 @@ func MakeEnvVarArrayForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer N
 	}
 
 	journalType := "aio"
-	if "aio" == strings.ToLower(customResource.Spec.DeploymentPlan.JournalType) {
+	if strings.ToLower(customResource.Spec.DeploymentPlan.JournalType) == "aio" {
 		journalType = "aio"
 	} else {
 		journalType = "nio"

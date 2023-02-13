@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
+	//	"github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 
 	//"github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v1beta1"
@@ -49,7 +49,6 @@ import (
 	"strconv"
 	"strings"
 
-	//brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha1"
 	rbacutil "github.com/artemiscloud/activemq-artemis-operator/pkg/rbac"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
@@ -114,7 +113,7 @@ type Controller struct {
 	// sts --> ssNames
 	ssNamesMap map[types.NamespacedName]map[string]string
 
-	ssToCrMap map[types.NamespacedName]*v1beta1.ActiveMQArtemisScaledown
+	ssToCrMap map[types.NamespacedName]*brokerv1beta1.ActiveMQArtemisScaledown
 
 	ssLabels map[string]string
 
@@ -169,7 +168,7 @@ func NewController(
 		localOnly:          instance.Spec.LocalOnly,
 		resources:          instance.Spec.Resources,
 		ssNamesMap:         make(map[types.NamespacedName]map[string]string),
-		ssToCrMap:          make(map[types.NamespacedName]*v1beta1.ActiveMQArtemisScaledown),
+		ssToCrMap:          make(map[types.NamespacedName]*brokerv1beta1.ActiveMQArtemisScaledown),
 
 		ssLabels: instance.Labels,
 		stopCh:   make(chan struct{}),
@@ -210,21 +209,13 @@ func NewController(
 
 func (c *Controller) AddInstance(instance *brokerv1beta1.ActiveMQArtemisScaledown) {
 	namespacedName := types.NamespacedName{
-		instance.Annotations["CRNAMESPACE"],
-		namer.CrToSS(instance.Annotations["CRNAME"]),
+		Namespace: instance.Annotations["CRNAMESPACE"],
+		Name:      namer.CrToSS(instance.Annotations["CRNAME"]),
 	}
 	dlog.Info("adding a new scaledown instance", "key", namespacedName)
 	c.ssNamesMap[namespacedName] = instance.Annotations
 	dlog.Info("Added new instance", "key", namespacedName, "now values", len(c.ssNamesMap))
 	c.ssToCrMap[namespacedName] = instance
-}
-
-//for debug only
-func (c *Controller) dumpSsNamesMap() {
-	for k, v := range c.ssNamesMap {
-		dlog.Info("ssMap", "key", k)
-		dlog.Info("ssMap", "value", v)
-	}
 }
 
 // Run will set up the event handlers for types we are interested in, as well
@@ -361,7 +352,7 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 	// TODO: think about scale-down during a rolling upgrade
 	dlog.Info("Processing statefulset", "sts", sts.Name)
 
-	if 0 == *sts.Spec.Replicas {
+	if *sts.Spec.Replicas == 0 {
 		// Ensure data is not touched in the case of complete scaledown
 		dlog.Info("Ignoring StatefulSet " + sts.Name + " because replicas set to 0.")
 		return nil
@@ -383,7 +374,7 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 
 	claimsGroupedByOrdinal, err := c.getClaims(sts)
 	if err != nil {
-		err = fmt.Errorf("Error while getting list of PVCs in namespace %s: %s", sts.Namespace, err)
+		err = fmt.Errorf("error while getting list of PVCs in namespace %s: %s", sts.Namespace, err)
 		dlog.Error(err, "Error while getting list of PVCs in namespace "+sts.Namespace)
 		return err
 	}
@@ -398,7 +389,7 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 	for _, ordinal := range ordinals {
 
 		dlog.Info("looking ordinal", "ordinal", ordinal)
-		if 0 == ordinal {
+		if ordinal == 0 {
 			// This assumes order on scale up and down is enforced, i.e. the system waits for n, n-1,... 2, 1 to scaledown before attempting 0
 			dlog.Info("Ignoring ordinal 0 as no other pod to drain to.")
 			continue
@@ -430,10 +421,6 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 				dlog.Info("sts has orderReadyPodManagement policy, break")
 				break
 			}
-		} else {
-			// DO nothing. Pod is a regular stateful pod
-			//log.Info("Pod '%s' exists. Not taking any action.", podName)
-			//return nil
 		}
 
 		// TODO: scale down to zero? should what happens on such events be configurable? there may or may not be anywhere to drain to
@@ -478,7 +465,7 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 					}
 				}
 
-				if false == ordinalZeroPodReady {
+				if !ordinalZeroPodReady {
 					continue
 				}
 
@@ -486,11 +473,11 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 				pod, err := c.newPod(sts, ordinal)
 				if err != nil {
 					dlog.Error(err, "error creating drain pod")
-					return fmt.Errorf("Can't create drain Pod object: %s", err)
+					return fmt.Errorf("can't create drain Pod object: %s", err)
 				}
 				dlog.Info("Now creating the drain pod in namespace "+sts.Namespace, "pod", pod)
 				// needs a proper account for the pod to be created/start.
-				pod, err = c.kubeclientset.CoreV1().Pods(sts.Namespace).Create(context.TODO(), pod, metav1.CreateOptions{})
+				_, err = c.kubeclientset.CoreV1().Pods(sts.Namespace).Create(context.TODO(), pod, metav1.CreateOptions{})
 
 				// If an error occurs during Create, we'll requeue the item so we can
 				// attempt processing again later. This could have been caused by a
@@ -627,14 +614,14 @@ func (c *Controller) cleanUpDrainPodIfNeeded(sts *appsv1.StatefulSet, pod *corev
 		if !c.localOnly {
 			c.recorder.Event(sts, corev1.EventTypeNormal, PodDeleteSuccess, fmt.Sprintf(MessageDrainPodDeleted, podName, sts.Name))
 		}
-		break
+
 	case (corev1.PodFailed):
 		dlog.Info("Drain pod " + podName + " failed.")
-		break
+
 	default:
 		str := fmt.Sprintf("Drain pod Phase was %s", pod.Status.Phase)
 		dlog.Info(str)
-		break
+
 	}
 
 	return nil
@@ -708,7 +695,7 @@ func (c *Controller) handlePod(obj interface{}) {
 			return
 		}
 
-		if 0 == *sts.Spec.Replicas {
+		if *sts.Spec.Replicas == 0 {
 			dlog.V(5).Info("NameFromAnnotation not enqueueing Statefulset " + sts.Name + " as Spec.Replicas is 0.")
 			return
 		}
@@ -730,7 +717,7 @@ func (c *Controller) handlePod(obj interface{}) {
 			return
 		}
 
-		if 0 == *sts.Spec.Replicas {
+		if *sts.Spec.Replicas == 0 {
 			dlog.V(5).Info("Name from ownerRef.Name not enqueueing Statefulset " + sts.Name + " as Spec.Replicas is 0.")
 			return
 		}
@@ -775,8 +762,8 @@ func (c *Controller) getClusterCredentials(namespace string, ssNames map[string]
 func (c *Controller) newPod(sts *appsv1.StatefulSet, ordinal int) (*corev1.Pod, error) {
 
 	ssNamesKey := types.NamespacedName{
-		sts.Namespace,
-		sts.Name,
+		Namespace: sts.Namespace,
+		Name:      sts.Name,
 	}
 	dlog.Info("Creating newPod for ss", "ss", ssNamesKey)
 
@@ -811,7 +798,7 @@ func (c *Controller) newPod(sts *appsv1.StatefulSet, ordinal int) (*corev1.Pod, 
 	}
 	image := sts.Spec.Template.Spec.Containers[0].Image
 	//sts.Spec.Template.Spec.Containers[0].Resources = c.resources
-	if "" == image {
+	if image == "" {
 		return nil, fmt.Errorf("No drain pod image configured for StatefulSet " + sts.Name)
 	}
 	podTemplateJson = strings.Replace(podTemplateJson, "SSIMAGE", image, 1)

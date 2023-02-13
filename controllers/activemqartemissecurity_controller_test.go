@@ -31,7 +31,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -752,7 +751,7 @@ var _ = Describe("security controller", func() {
 			brokerCrd := generateArtemisSpec(defaultNamespace)
 			brokerCrd.Spec.DeploymentPlan.Size = common.Int32ToPtr(1)
 			// make is speedy for real cluster checks
-			brokerCrd.Spec.DeploymentPlan.ReadinessProbe = &v1.Probe{
+			brokerCrd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
 				InitialDelaySeconds: 1,
 				PeriodSeconds:       1,
 				TimeoutSeconds:      5,

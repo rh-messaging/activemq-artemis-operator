@@ -20,7 +20,6 @@ import (
 	"context"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	mgmt "github.com/artemiscloud/activemq-artemis-operator/pkg/utils/artemis"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/channels"
@@ -387,7 +386,7 @@ func GetStatefulSetNameForPod(client client.Client, pod *types.NamespacedName) (
 		if len(addressDeployment.SsTargetNameBuilders) == 0 {
 			glog.Info("this cr doesn't have target specified, it will be applied to all")
 			//deploy to all sts, need get from broker controller
-			ssInfos := statefulsets.GetDeployedStatefulSetNames(client, nil)
+			ssInfos := ss.GetDeployedStatefulSetNames(client, nil)
 			if len(ssInfos) == 0 {
 				glog.Info("No statefulset found")
 				continue

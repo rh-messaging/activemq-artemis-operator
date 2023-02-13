@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -43,7 +42,6 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -389,17 +387,6 @@ func installOperator(envMap map[string]string) error {
 	return waitForOperator()
 }
 
-func expectOperatorInstallFailureWithMessage(message *string) error {
-	logf.Log.Info("#### Installing Operator ####")
-	for _, res := range oprRes {
-		if err := installYamlResource(res, nil); err != nil {
-			return err
-		}
-	}
-
-	return waitForOperatorFailStart(message)
-}
-
 func uninstallOperator(deleteCrds bool) error {
 	logf.Log.Info("#### Uninstalling Operator ####")
 	for _, res := range oprRes {
@@ -418,45 +405,6 @@ func uninstallOperator(deleteCrds bool) error {
 		}
 		return envtest.UninstallCRDs(restConfig, options)
 	}
-	return nil
-}
-
-func waitForOperatorFailStart(expectedErrMessage *string) error {
-	podList := &corev1.PodList{}
-	opts := &client.ListOptions{
-		Namespace: defaultNamespace,
-	}
-
-	Eventually(func(g Gomega) {
-		g.Expect(k8sClient.List(ctx, podList, opts)).Should(Succeed())
-
-		g.Expect(len(podList.Items)).Should(BeEquivalentTo(1))
-		oprPod := podList.Items[0]
-		g.Expect(len(oprPod.Status.ContainerStatuses)).Should(BeEquivalentTo(1))
-		g.Expect(oprPod.Status.ContainerStatuses[0].Ready).Should(BeFalse())
-
-		//get operator pod log
-		cfg, err := config.GetConfig()
-		Expect(err).To(BeNil())
-		clientset, err := kubernetes.NewForConfig(cfg)
-		Expect(err).To(BeNil())
-
-		podLogOpts := corev1.PodLogOptions{}
-		req := clientset.CoreV1().Pods(defaultNamespace).GetLogs(oprPod.Name, &podLogOpts)
-		podLogs, err := req.Stream(context.Background())
-		Expect(err).To(BeNil())
-		defer podLogs.Close()
-
-		Expect(err).To(BeNil())
-
-		buf := new(bytes.Buffer)
-		_, err = io.Copy(buf, podLogs)
-		Expect(err).To(BeNil())
-		oprLog := buf.String()
-
-		Expect(oprLog).To(ContainSubstring(*expectedErrMessage))
-
-	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 	return nil
 }
 

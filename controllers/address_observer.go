@@ -91,7 +91,7 @@ func (c *AddressObserver) newPodReady(ready *types.NamespacedName) {
 
 	realPodName := fmt.Sprintf("%s-%d", podBaseName, podSerial)
 
-	podNamespacedName := types.NamespacedName{ready.Namespace, realPodName}
+	podNamespacedName := types.NamespacedName{Namespace: ready.Namespace, Name: realPodName}
 	pod := &corev1.Pod{}
 
 	err1 := c.opclient.Get(context.TODO(), podNamespacedName, pod)
@@ -170,7 +170,7 @@ func (c *AddressObserver) getSSNameForPod(newPod *corev1.Pod) (*string, *appsv1.
 
 	if ownerRef := metav1.GetControllerOf(newPod); ownerRef != nil {
 		sts := &appsv1.StatefulSet{}
-		err := c.opclient.Get(context.TODO(), types.NamespacedName{newPod.Namespace, ownerRef.Name}, sts)
+		err := c.opclient.Get(context.TODO(), types.NamespacedName{Namespace: newPod.Namespace, Name: ownerRef.Name}, sts)
 		if err != nil {
 			olog.Error(err, "Error finding the statefulset")
 			return nil, nil
