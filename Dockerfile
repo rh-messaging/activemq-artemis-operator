@@ -43,15 +43,17 @@ ENV OPERATOR=${USER_HOME}/bin/${BROKER_NAME}-operator
 
 WORKDIR /
 
-# Create operator user
-RUN useradd --uid ${USER_UID} --home-dir ${USER_HOME} --shell /sbin/nologin ${USER_NAME}
+# Create operator bin
+RUN mkdir -p ${USER_HOME}/bin
 
 # Copy the manager binary
-RUN mkdir -p ${USER_HOME}/bin
 COPY --from=builder /workspace/manager ${OPERATOR}
 
 # Copy the entrypoint script
 COPY --from=builder /workspace/app/entrypoint/entrypoint ${USER_HOME}/bin/entrypoint
+
+# Set operator bin owner and permissions
+RUN chown -R `id -u`:0 ${USER_HOME}/bin && chmod -R 755 ${USER_HOME}/bin
 
 # Upgrade packages
 RUN dnf update -y --setopt=install_weak_deps=0 && rm -rf /var/cache/yum
