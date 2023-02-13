@@ -1,0 +1,28 @@
+annotations:
+  # Core bundle annotations.
+  operators.operatorframework.io.bundle.mediatype.v1: registry+v1
+  operators.operatorframework.io.bundle.manifests.v1: manifests/
+  operators.operatorframework.io.bundle.metadata.v1: metadata/
+  operators.operatorframework.io.bundle.package.v1: amq-broker-rhel8
+  operators.operatorframework.io.bundle.channels.v1: 7.11.x
+  operators.operatorframework.io.bundle.channel.default.v1: 7.11.x
+  operators.operatorframework.io.metrics.builder: operator-sdk-v1.14.0+git
+  operators.operatorframework.io.metrics.mediatype.v1: metrics+v1
+  operators.operatorframework.io.metrics.project_layout: go.kubebuilder.io/v3
+
+  # Annotations for testing.
+  operators.operatorframework.io.test.mediatype.v1: scorecard+v1
+  operators.operatorframework.io.test.config.v1: tests/scorecard/
+
+  name: "amq7/amq-broker-rhel8-operator-bundle"
+  description: "Red Hat AMQ Broker 7.11 Operator Bundle"
+  maintainer: "Roddie Kieley <rkieley@redhat.com>"
+  version: "7.11"
+  summary: "Red Hat AMQ Broker 7.11 Operator Bundle"
+  amq.broker.version: "7.11.0.OPR.1.CR1"
+  com.redhat.component: "amq-broker-rhel8-operator-bundle-container"
+  com.redhat.delivery.backport: false
+  com.redhat.delivery.operator.bundle: true
+  com.redhat.openshift.versions: "v4.6"
+  io.k8s.display-name: "Red Hat AMQ Broker 7.11 Operator Bundle"
+  io.openshift.tags: "messaging,amq,integration,operator,golang"
