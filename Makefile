@@ -115,8 +115,8 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet -composites=false ./...
 
-test: manifests generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" RECONCILE_RESYNC_PERIOD=5s go test  ./... $(TEST_ARGS) -ginkgo.fail-fast -coverprofile cover.out
+## Run tests.
+test test-v: TEST_VARS = KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" RECONCILE_RESYNC_PERIOD=5s
 
 ## Run tests against minikube with local operator.
 test-mk test-mk-v: TEST_ARGS += -test.timeout=50m -ginkgo.label-filter='!do'
@@ -130,11 +130,11 @@ test-mk-do test-mk-do-v: TEST_VARS = DEPLOY_OPERATOR=true ENABLE_WEBHOOKS=false 
 test-mk-do-fast test-mk-do-fast-v: TEST_ARGS += -test.timeout=40m -ginkgo.label-filter='do && !slow'
 test-mk-do-fast test-mk-do-fast-v: TEST_VARS = DEPLOY_OPERATOR=true ENABLE_WEBHOOKS=false USE_EXISTING_CLUSTER=true
 
-test-mk-v test-mk-do-v test-mk-do-fast-v: TEST_ARGS += -v
-test-mk test-mk-v test-mk-do test-mk-do-v test-mk-do-fast test-mk-do-fast-v: TEST_ARGS += -ginkgo.slow-spec-threshold=30s -ginkgo.fail-fast -coverprofile cover-mk.out
+test-v test-mk-v test-mk-do-v test-mk-do-fast-v: TEST_ARGS += -v
+test-v test-mk test-mk-v test-mk-do test-mk-do-v test-mk-do-fast test-mk-do-fast-v: TEST_ARGS += -ginkgo.slow-spec-threshold=30s -ginkgo.fail-fast -coverprofile cover-mk.out
 
-test-mk test-mk-v test-mk-do test-mk-do-v test-mk-do-fast test-mk-do-fast-v: manifests generate fmt vet envtest 
-	for PACKAGE in $$(go list ./...); do $(TEST_VARS) go test $${PACKAGE} $(TEST_ARGS); done;
+test test-v test-mk test-mk-v test-mk-do test-mk-do-v test-mk-do-fast test-mk-do-fast-v: manifests generate fmt vet envtest 
+	$(TEST_VARS) go test ./... -p 1 $(TEST_ARGS)
 
 ##@ Build
 
