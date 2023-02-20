@@ -26,11 +26,11 @@ const (
 	ImageVersionConflictMessage = "Version and Images cannot be specified at the same time"
 	PDBNonNilSelectorMessage    = "PodDisruptionBudget's selector should not be specified"
 
-	ValidConditionType                       = "Validation"
+	ValidConditionType                       = "Valid"
 	ValidConditionSuccessReason              = "ValidationSucceded"
 	ValidConditionMissingResourcesReason     = "MissingDependentResources"
 	ValidConditionImageVersionConflictReason = "VersionAndImagesConflict"
-	ValidConditionPDBNonNilSelectorReason    = "PDBNonNilSelector"
+	ValidConditionPDBNonNilSelectorReason    = "PodDisruptionBudgetNonNilSelector"
 	ValidConditionFailedReservedLabelReason  = "ReservedLabelReference"
 	ValidConditionFailedExtraMountReason     = "InvalidExtraMount"
 )
