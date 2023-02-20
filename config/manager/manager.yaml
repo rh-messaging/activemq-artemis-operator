@@ -26,7 +26,7 @@ spec:
     metadata:
       labels:
         control-plane: controller-manager
-        name: activemq-artemis-operator
+        name: amq-broker-operator
     spec:
       securityContext:
         runAsNonRoot: true
