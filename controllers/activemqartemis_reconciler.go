@@ -2701,9 +2701,11 @@ type propertyFile struct {
 func AssertBrokersAvailable(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme) ArtemisError {
 	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", cr.Name)
 
-	if getDeploymentSize(cr) == 0 || meta.IsStatusConditionFalse(cr.Status.Conditions, brokerv1beta1.DeployedConditionType) {
-		reqLogger.Info("There are no available brokers")
-		return NewUnknownJolokiaError(errors.New("Broker not available"))
+	// pre-condition, we must be deployed, avoid broker status roundtrip till ready
+	DeployedCondition := meta.FindStatusCondition(cr.Status.Conditions, brokerv1beta1.DeployedConditionType)
+	if DeployedCondition == nil || DeployedCondition.Status == metav1.ConditionFalse {
+		reqLogger.Info("There are no available brokers from DeployedCondition", "condition", DeployedCondition)
+		return NewUnknownJolokiaError(errors.New("no available brokers"))
 	}
 	return nil
 }

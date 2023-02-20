@@ -3334,8 +3334,6 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
 
-			// would like more status updates on createdCrd
-
 			By("By checking absence of stateful set with no matching controller")
 			key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: nonDefaultNamespace}
 			createdSs := &appsv1.StatefulSet{}
@@ -3356,6 +3354,7 @@ var _ = Describe("artemis controller", func() {
 					Reason:  brokerv1beta1.DeployedConditionZeroSizeReason,
 					Message: brokerv1beta1.DeployedConditionZeroSizeMessage,
 				})).Should(BeTrue())
+				g.Expect(meta.IsStatusConditionPresentAndEqual(createdCrd.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType, metav1.ConditionUnknown)).Should(BeTrue())
 				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
 				g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ValidConditionType)).Should(BeTrue())
 
@@ -4215,7 +4214,7 @@ var _ = Describe("artemis controller", func() {
 			By("By creating a crd with BrokerProperties in the spec")
 			ctx := context.Background()
 			crd := generateArtemisSpec(defaultNamespace)
-
+			crd.Spec.DeploymentPlan.Size = common.Int32ToPtr(0)
 			crd.Spec.BrokerProperties = []string{"globalMaxSize=64g"}
 
 			propsResourceName := crd.Name + "-props"
@@ -4233,7 +4232,7 @@ var _ = Describe("artemis controller", func() {
 				cmResourceVersion = createdPropsResource.ResourceVersion
 			}, timeout, interval).Should(Succeed())
 
-			By("updating the crd, expect new ConfigMap generation")
+			By("updating the crd, expect updated secret")
 			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
 
 			By("pushing the update on the current version...")
@@ -4247,7 +4246,7 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(k8sClient.Update(ctx, createdCrd)).Should(Succeed())
 			}, timeout, interval).Should(Succeed())
 
-			By("finding the updated config map")
+			By("finding the updated secret")
 			Eventually(func(g Gomega) {
 
 				g.Expect(k8sClient.Get(ctx, propsResourceKey, createdPropsResource)).Should(Succeed())
@@ -7393,11 +7392,17 @@ var _ = Describe("artemis controller", func() {
 
 			customLogFilePropertiesFileName := "customLogging.properties"
 			configMap.Data = map[string]string{
-				customLogFilePropertiesFileName: "appender.stdout.name = STDOUT\nappender.stdout.type = Console\nrootLogger = INFO, STDOUT",
+				customLogFilePropertiesFileName: `appender.stdout.name = STDOUT
+				appender.stdout.type = Console
+				rootLogger = INFO, STDOUT
+				logger.tooVerbose.name=io.hawt.web
+				logger.tooVerbose.level=TRACE
+				`,
 			}
 
 			crd.Spec.DeploymentPlan.ExtraMounts.ConfigMaps = []string{configMap.Name}
 			crd.Spec.Env = []corev1.EnvVar{
+				{Name: "LOG4J_SIMPLELOG_SHOW_SHORT_LOGNAME", Value: "false"},
 				{Name: "JAVA_ARGS_APPEND", Value: "-Dlog4j2.configurationFile=file:/amq/extra/configmaps/" + configMap.Name + "/" + customLogFilePropertiesFileName},
 			}
 
