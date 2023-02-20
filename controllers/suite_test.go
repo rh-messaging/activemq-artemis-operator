@@ -60,6 +60,7 @@ import (
 
 	//+kubebuilder:scaffold:imports
 
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -124,6 +125,9 @@ var (
 	logBuffer *bytes.Buffer
 
 	artemisGvk = schema.GroupVersionKind{Group: "broker", Version: "v1beta1", Kind: "ActiveMQArtemis"}
+
+	isOpenshift                    = false
+	isIngressSSLPassthroughEnabled = false
 )
 
 func TestAPIs(t *testing.T) {
@@ -155,11 +159,45 @@ func setUpEnvTest() {
 
 	setUpK8sClient()
 
+	setUpIngressSSLPassthrough()
+
 	setUpTestProxy()
 
 	stateManager = common.GetStateManager()
 
 	createControllerManagerForSuite()
+}
+
+func setUpIngressSSLPassthrough() {
+	isIngressSSLPassthroughEnabled = false
+
+	if isOpenshift {
+		isIngressSSLPassthroughEnabled = true
+	} else {
+		ingressNginxControllerDeployment := &appsv1.Deployment{}
+		ingressNginxControllerDeploymentKey := types.NamespacedName{Name: "ingress-nginx-controller", Namespace: "ingress-nginx"}
+		err := k8sClient.Get(ctx, ingressNginxControllerDeploymentKey, ingressNginxControllerDeployment)
+		if err == nil {
+			if len(ingressNginxControllerDeployment.Spec.Template.Spec.Containers) > 0 {
+				ingressNginxControllerContainer := &ingressNginxControllerDeployment.Spec.Template.Spec.Containers[0]
+
+				for i := 0; i < len(ingressNginxControllerContainer.Args); i++ {
+					if ingressNginxControllerContainer.Args[i] == "--enable-ssl-passthrough" {
+						isIngressSSLPassthroughEnabled = true
+						break
+					}
+				}
+
+				if !isIngressSSLPassthroughEnabled && os.Getenv("ENABLE_INGRESS_SSL_PASSTHROUGH") == "true" {
+					ingressNginxControllerContainer.Args = append(ingressNginxControllerContainer.Args, "--enable-ssl-passthrough")
+
+					Expect(k8sClient.Update(ctx, ingressNginxControllerDeployment)).Should(Succeed())
+
+					isIngressSSLPassthroughEnabled = true
+				}
+			}
+		}
+	}
 }
 
 //Set up test-proxy for external http requests
@@ -303,6 +341,8 @@ func createControllerManager(disableMetrics bool, watchNamespace string) {
 	} else {
 		autodetect.DetectOpenshift()
 	}
+
+	isOpenshift, _ = environments.DetectOpenshift()
 
 	brokerReconciler = &ActiveMQArtemisReconciler{
 		Client: k8Manager.GetClient(),

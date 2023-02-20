@@ -1351,21 +1351,23 @@ var _ = Describe("artemis controller", func() {
 					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 				}
 
-				By("check console is reachable")
-				httpClient := http.Client{
-					Transport: &http.Transport{
-						DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-							return (&net.Dialer{}).DialContext(ctx, network, clusterUrl.Hostname()+":443")
+				if isOpenshift || isIngressSSLPassthroughEnabled {
+					By("check console is reachable")
+					httpClient := http.Client{
+						Transport: &http.Transport{
+							DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+								return (&net.Dialer{}).DialContext(ctx, network, clusterUrl.Hostname()+":443")
+							},
+							TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 						},
-						TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-					},
-					Timeout: timeout,
+						Timeout: timeout,
+					}
+					Eventually(func(g Gomega) {
+						res, err := httpClient.Get("https://" + host + "/console")
+						g.Expect(err).NotTo(HaveOccurred())
+						g.Expect(res.StatusCode).Should(Equal(200))
+					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 				}
-				Eventually(func(g Gomega) {
-					res, err := httpClient.Get("https://" + host + "/console")
-					g.Expect(err).NotTo(HaveOccurred())
-					g.Expect(res.StatusCode).Should(Equal(200))
-				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
 				Expect(k8sClient.Delete(ctx, &consoleSecret)).Should(Succeed())
