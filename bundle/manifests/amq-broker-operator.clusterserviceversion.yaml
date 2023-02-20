@@ -1901,6 +1901,7 @@ spec:
               labels:
                 com.company: Red_Hat
                 control-plane: controller-manager
+                name: activemq-artemis-operator
                 rht.comp: Broker_AMQ
                 rht.comp_ver: 7.11.0
                 rht.prod_name: Red_Hat_Integration
