@@ -631,7 +631,17 @@ const (
 	DeployedConditionZeroSizeReason         = "ZeroSizeDeployment"
 	DeployedConditionValidationFailedReason = "ValidationFailed"
 
-	DeployedConditionZeroSizeMessage = "Pods not scheduled. Deployment size is 0"
+	ValidConditionType                       = "Valid"
+	ValidConditionSuccessReason              = "ValidationSucceded"
+	ValidConditionMissingResourcesReason     = "MissingDependentResources"
+	ValidConditionImageVersionConflictReason = "VersionAndImagesConflict"
+	ValidConditionPDBNonNilSelectorReason    = "PodDisruptionBudgetNonNilSelector"
+	ValidConditionFailedReservedLabelReason  = "ReservedLabelReference"
+	ValidConditionFailedExtraMountReason     = "InvalidExtraMount"
+
+	ReadyConditionType      = "Ready"
+	ReadyConditionReason    = "ResourceReady"
+	NotReadyConditionReason = "WaitingForAllConditions"
 
 	ConfigAppliedConditionType     = "BrokerPropertiesApplied"
 	JaasConfigAppliedConditionType = "JaasPropertiesApplied"
@@ -641,6 +651,5 @@ const (
 
 	ConfigAppliedConditionUnknownReason                   = "UnableToRetrieveStatus"
 	ConfigAppliedConditionOutOfSyncReason                 = "OutOfSync"
-	ConfigAppliedConditionOutOfSyncMessage                = "Waiting for the Broker to acknowledge changes"
 	ConfigAppliedConditionNoJolokiaClientsAvailableReason = "NoJolokiaClientsAvailable"
 )

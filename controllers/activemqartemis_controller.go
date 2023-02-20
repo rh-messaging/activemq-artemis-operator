@@ -193,9 +193,9 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, namer Namers) (bool, ctrl.Result) {
 	// Do additional validation here
 	validationCondition := metav1.Condition{
-		Type:   common.ValidConditionType,
+		Type:   brokerv1beta1.ValidConditionType,
 		Status: metav1.ConditionTrue,
-		Reason: common.ValidConditionSuccessReason,
+		Reason: brokerv1beta1.ValidConditionSuccessReason,
 	}
 
 	condition, retry := validateExtraMounts(customResource, client, scheme)
@@ -245,9 +245,9 @@ func validateSSLEnabledSecrets(customResource *brokerv1beta1.ActiveMQArtemis, cl
 		found := retrieveResource(secretName, customResource.Namespace, &secret, client, scheme)
 		if !found {
 			return &metav1.Condition{
-				Type:    common.ValidConditionType,
+				Type:    brokerv1beta1.ValidConditionType,
 				Status:  metav1.ConditionFalse,
-				Reason:  common.ValidConditionMissingResourcesReason,
+				Reason:  brokerv1beta1.ValidConditionMissingResourcesReason,
 				Message: fmt.Sprintf(".Spec.Console.SSLEnabled is true but required secret %v is not found", secretName),
 			}, retry
 		}
@@ -284,9 +284,9 @@ func validatePodDisruption(customResource *brokerv1beta1.ActiveMQArtemis) *metav
 	pdb := customResource.Spec.DeploymentPlan.PodDisruptionBudget
 	if pdb.Selector != nil {
 		return &metav1.Condition{
-			Type:    common.ValidConditionType,
+			Type:    brokerv1beta1.ValidConditionType,
 			Status:  metav1.ConditionFalse,
-			Reason:  common.ValidConditionPDBNonNilSelectorReason,
+			Reason:  brokerv1beta1.ValidConditionPDBNonNilSelectorReason,
 			Message: common.PDBNonNilSelectorMessage,
 		}
 	}
@@ -297,9 +297,9 @@ func validateBrokerVersion(customResource *brokerv1beta1.ActiveMQArtemis) *metav
 	if customResource.Spec.Version != "" {
 		if customResource.Spec.DeploymentPlan.Image != "" || customResource.Spec.DeploymentPlan.InitImage != "" {
 			return &metav1.Condition{
-				Type:    common.ValidConditionType,
+				Type:    brokerv1beta1.ValidConditionType,
 				Status:  metav1.ConditionFalse,
-				Reason:  common.ValidConditionImageVersionConflictReason,
+				Reason:  brokerv1beta1.ValidConditionImageVersionConflictReason,
 				Message: common.ImageVersionConflictMessage,
 			}
 		}
@@ -318,9 +318,9 @@ func validateExtraMounts(customResource *brokerv1beta1.ActiveMQArtemis, client r
 		found := retrieveResource(cm, customResource.Namespace, &configMap, client, scheme)
 		if !found {
 			return &metav1.Condition{
-				Type:    common.ValidConditionType,
+				Type:    brokerv1beta1.ValidConditionType,
 				Status:  metav1.ConditionFalse,
-				Reason:  common.ValidConditionMissingResourcesReason,
+				Reason:  brokerv1beta1.ValidConditionMissingResourcesReason,
 				Message: fmt.Sprintf("%v missing required configMap %v", ContextMessage, cm),
 			}, retry
 		}
@@ -329,9 +329,9 @@ func validateExtraMounts(customResource *brokerv1beta1.ActiveMQArtemis, client r
 			instanceCounts[loggingConfigSuffix]++
 		} else if strings.HasSuffix(cm, jaasConfigSuffix) {
 			Condition = &metav1.Condition{
-				Type:    common.ValidConditionType,
+				Type:    brokerv1beta1.ValidConditionType,
 				Status:  metav1.ConditionFalse,
-				Reason:  common.ValidConditionFailedExtraMountReason,
+				Reason:  brokerv1beta1.ValidConditionFailedExtraMountReason,
 				Message: fmt.Sprintf("%v entry %v with suffix %v must be a secret", ContextMessage, cm, jaasConfigSuffix),
 			}
 			retry = false // Cr needs an update
@@ -347,9 +347,9 @@ func validateExtraMounts(customResource *brokerv1beta1.ActiveMQArtemis, client r
 		found := retrieveResource(s, customResource.Namespace, &secret, client, scheme)
 		if !found {
 			return &metav1.Condition{
-				Type:    common.ValidConditionType,
+				Type:    brokerv1beta1.ValidConditionType,
 				Status:  metav1.ConditionFalse,
-				Reason:  common.ValidConditionMissingResourcesReason,
+				Reason:  brokerv1beta1.ValidConditionMissingResourcesReason,
 				Message: fmt.Sprintf("%v missing required secret %v", ContextMessage, s),
 			}, retry
 		}
@@ -380,9 +380,9 @@ func AssertSyntaxOkOnLoginConfigData(SecretContentForLoginConfigKey []byte, name
 	if !MatchBytesAgainsLoginConfigRegexp(SecretContentForLoginConfigKey) {
 
 		return &metav1.Condition{
-			Type:    common.ValidConditionType,
+			Type:    brokerv1beta1.ValidConditionType,
 			Status:  metav1.ConditionFalse,
-			Reason:  common.ValidConditionFailedExtraMountReason,
+			Reason:  brokerv1beta1.ValidConditionFailedExtraMountReason,
 			Message: fmt.Sprintf("%s content of login.config key in secret %v does not match supported jaas config file syntax", contextMessage, name),
 		}
 	}
@@ -409,9 +409,9 @@ func AssertInstanceCounts(instanceCounts map[string]int) *metav1.Condition {
 	for key, v := range instanceCounts {
 		if v > 1 {
 			return &metav1.Condition{
-				Type:    common.ValidConditionType,
+				Type:    brokerv1beta1.ValidConditionType,
 				Status:  metav1.ConditionFalse,
-				Reason:  common.ValidConditionFailedExtraMountReason,
+				Reason:  brokerv1beta1.ValidConditionFailedExtraMountReason,
 				Message: fmt.Sprintf("Spec.DeploymentPlan.ExtraMounts, entry with suffix %v can only be supplied once", key),
 			}
 		}
@@ -422,9 +422,9 @@ func AssertInstanceCounts(instanceCounts map[string]int) *metav1.Condition {
 func AssertConfigMapContainsKey(configMap corev1.ConfigMap, key string, contextMessage string) *metav1.Condition {
 	if _, present := configMap.Data[key]; !present {
 		return &metav1.Condition{
-			Type:    common.ValidConditionType,
+			Type:    brokerv1beta1.ValidConditionType,
 			Status:  metav1.ConditionFalse,
-			Reason:  common.ValidConditionFailedExtraMountReason,
+			Reason:  brokerv1beta1.ValidConditionFailedExtraMountReason,
 			Message: fmt.Sprintf("%s configmap %v must have key %v", contextMessage, configMap.Name, key),
 		}
 	}
@@ -434,9 +434,9 @@ func AssertConfigMapContainsKey(configMap corev1.ConfigMap, key string, contextM
 func AssertSecretContainsKey(secret corev1.Secret, key string, contextMessage string) *metav1.Condition {
 	if _, present := secret.Data[key]; !present {
 		return &metav1.Condition{
-			Type:    common.ValidConditionType,
+			Type:    brokerv1beta1.ValidConditionType,
 			Status:  metav1.ConditionFalse,
-			Reason:  common.ValidConditionFailedExtraMountReason,
+			Reason:  brokerv1beta1.ValidConditionFailedExtraMountReason,
 			Message: fmt.Sprintf("%s secret %v must have key %v", contextMessage, secret.Name, key),
 		}
 	}
@@ -451,9 +451,9 @@ func AssertSecretContainsOneOf(secret corev1.Secret, keys []string, contextMessa
 		}
 	}
 	return &metav1.Condition{
-		Type:    common.ValidConditionType,
+		Type:    brokerv1beta1.ValidConditionType,
 		Status:  metav1.ConditionFalse,
-		Reason:  common.ValidConditionFailedExtraMountReason,
+		Reason:  brokerv1beta1.ValidConditionFailedExtraMountReason,
 		Message: fmt.Sprintf("%s secret %v must contain one of following keys %v", contextMessage, secret.Name, keys),
 	}
 }

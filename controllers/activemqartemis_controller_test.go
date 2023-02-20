@@ -153,11 +153,11 @@ var _ = Describe("artemis controller", func() {
 
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, brokerKey, createdCr)).Should(Succeed())
-				g.Expect(meta.IsStatusConditionTrue(createdCr.Status.Conditions, common.ValidConditionType)).Should(BeFalse())
+				g.Expect(meta.IsStatusConditionTrue(createdCr.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeFalse())
 
-				pdbCondition := meta.FindStatusCondition(createdCr.Status.Conditions, common.ValidConditionType)
+				pdbCondition := meta.FindStatusCondition(createdCr.Status.Conditions, brokerv1beta1.ValidConditionType)
 				g.Expect(pdbCondition).NotTo(BeNil())
-				g.Expect(pdbCondition.Reason).To(Equal(common.ValidConditionPDBNonNilSelectorReason))
+				g.Expect(pdbCondition.Reason).To(Equal(brokerv1beta1.ValidConditionPDBNonNilSelectorReason))
 				g.Expect(pdbCondition.Message).To(Equal(common.PDBNonNilSelectorMessage))
 
 			}, timeout, interval).Should(Succeed())
@@ -313,10 +313,10 @@ var _ = Describe("artemis controller", func() {
 			Eventually(func(g Gomega) {
 
 				g.Expect(k8sClient.Get(ctx, brokerKey, createdBrokerCr)).Should(Succeed())
-				g.Expect(meta.IsStatusConditionTrue(createdBrokerCr.Status.Conditions, common.ValidConditionType)).Should(BeFalse())
-				condition := meta.FindStatusCondition(createdBrokerCr.Status.Conditions, common.ValidConditionType)
+				g.Expect(meta.IsStatusConditionTrue(createdBrokerCr.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeFalse())
+				condition := meta.FindStatusCondition(createdBrokerCr.Status.Conditions, brokerv1beta1.ValidConditionType)
 				g.Expect(condition).NotTo(BeNil())
-				g.Expect(condition.Reason).To(Equal(common.ValidConditionImageVersionConflictReason))
+				g.Expect(condition.Reason).To(Equal(brokerv1beta1.ValidConditionImageVersionConflictReason))
 				g.Expect(condition.Message).To(Equal(common.ImageVersionConflictMessage))
 			}, timeout, interval).Should(Succeed())
 
@@ -1014,7 +1014,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
 					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 			}
 
@@ -1557,9 +1557,9 @@ var _ = Describe("artemis controller", func() {
 		By("verify invalid status on no console secret")
 		Eventually(func(g Gomega) {
 			g.Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
-			g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, common.ValidConditionType)).Should(BeFalse())
+			g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeFalse())
 
-			Validation := meta.FindStatusCondition(deployedCrd.Status.Conditions, common.ValidConditionType)
+			Validation := meta.FindStatusCondition(deployedCrd.Status.Conditions, brokerv1beta1.ValidConditionType)
 			g.Expect(Validation).ShouldNot(BeNil())
 			g.Expect(Validation.Message).Should(ContainSubstring("is not found"))
 		}, timeout, interval).Should(Succeed())
@@ -1592,9 +1592,9 @@ var _ = Describe("artemis controller", func() {
 		By("verify different invalid status, auto retry on not found for external dep")
 		Eventually(func(g Gomega) {
 			g.Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
-			g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, common.ValidConditionType)).Should(BeFalse())
+			g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeFalse())
 
-			Validation := meta.FindStatusCondition(deployedCrd.Status.Conditions, common.ValidConditionType)
+			Validation := meta.FindStatusCondition(deployedCrd.Status.Conditions, brokerv1beta1.ValidConditionType)
 			g.Expect(Validation).ToNot(BeNil())
 			g.Expect(Validation.Message).Should(ContainSubstring("must have key"))
 		}, timeout, interval).Should(Succeed())
@@ -1620,7 +1620,7 @@ var _ = Describe("artemis controller", func() {
 		Eventually(func(g Gomega) {
 			g.Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
 
-			g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, common.ValidConditionType)).Should(BeTrue())
+			g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
 		}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 		Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
@@ -1885,7 +1885,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(k8sClient.Get(ctx, crdNsName, deployedCrd)).Should(Succeed())
 					g.Expect(len(deployedCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(2))
 					g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-					g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("exposing ss-0 via NodePort")
@@ -2013,7 +2013,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
 					g.Expect(len(deployedCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
 					g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-					g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 				}, timeout*5, interval).Should(Succeed())
 
 				key := types.NamespacedName{
@@ -2098,7 +2098,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
 					g.Expect(len(deployedCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
 					g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-					g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 				}, timeout*5, interval).Should(Succeed())
 
 			}
@@ -2137,7 +2137,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
 					g.Expect(len(deployedCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
 					g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-					g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				unequalEntries := FindAllFromCapturedLog("Unequal")
@@ -2192,7 +2192,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
 					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
@@ -2230,7 +2230,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
 					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("finding PVC")
@@ -2270,7 +2270,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
 					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("finding PVC")
@@ -2348,7 +2348,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
 					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 				}, timeout*5, interval).Should(Succeed())
 
 				By("veryify no taints on node")
@@ -2369,8 +2369,8 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
 					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
-					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ValidConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
 				}, timeout*2, interval).Should(Succeed())
 
 				By("applying taints to node")
@@ -2394,7 +2394,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
 					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 				}, timeout*2, interval).Should(Succeed())
 
 				By("reverting taints on node")
@@ -2451,7 +2451,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
 					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 				}, timeout*5, interval).Should(Succeed())
 
 				By("apply matching taint with wrong value, force eviction")
@@ -2481,7 +2481,7 @@ var _ = Describe("artemis controller", func() {
 						Reason:  brokerv1beta1.DeployedConditionNotReadyReason,
 						Message: "0/1 pods ready",
 					})).Should(BeTrue())
-					g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("updating taint to match key and value")
@@ -2504,7 +2504,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
 					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
@@ -3352,11 +3352,11 @@ var _ = Describe("artemis controller", func() {
 					Type:    brokerv1beta1.DeployedConditionType,
 					Status:  metav1.ConditionFalse,
 					Reason:  brokerv1beta1.DeployedConditionZeroSizeReason,
-					Message: brokerv1beta1.DeployedConditionZeroSizeMessage,
+					Message: common.DeployedConditionZeroSizeMessage,
 				})).Should(BeTrue())
 				g.Expect(meta.IsStatusConditionPresentAndEqual(createdCrd.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType, metav1.ConditionUnknown)).Should(BeTrue())
-				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
-				g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ValidConditionType)).Should(BeTrue())
+				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
+				g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
 
 			}, timeout, interval).Should(Succeed())
 
@@ -3953,7 +3953,7 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(deployedCrd.Name).Should(Equal(validCrd.ObjectMeta.Name))
 				g.Expect(len(deployedCrd.Status.PodStatus.Stopped)).Should(Equal(1))
 				g.Expect(deployedCrd.Status.PodStatus.Stopped[0]).Should(Equal(namer.CrToSS(validCrd.Name)))
-				g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, common.ValidConditionType)).Should(BeTrue())
+				g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
 			}, timeout, interval).Should(Succeed())
 
 			By("checking deployed resources of valid CR")
@@ -3979,10 +3979,10 @@ var _ = Describe("artemis controller", func() {
 			By("verify status valid false")
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, deployedCrdKey, &deployedCrd)).Should(Succeed())
-				g.Expect(meta.IsStatusConditionFalse(deployedCrd.Status.Conditions, common.ValidConditionType)).Should(BeTrue())
-				g.Expect(meta.FindStatusCondition(deployedCrd.Status.Conditions, common.ValidConditionType).Reason).Should(Equal(common.ValidConditionFailedReservedLabelReason))
-				g.Expect(meta.FindStatusCondition(deployedCrd.Status.Conditions, common.ValidConditionType).Message).Should(ContainSubstring("application"))
-				g.Expect(meta.IsStatusConditionFalse(deployedCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+				g.Expect(meta.IsStatusConditionFalse(deployedCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
+				g.Expect(meta.FindStatusCondition(deployedCrd.Status.Conditions, brokerv1beta1.ValidConditionType).Reason).Should(Equal(brokerv1beta1.ValidConditionFailedReservedLabelReason))
+				g.Expect(meta.FindStatusCondition(deployedCrd.Status.Conditions, brokerv1beta1.ValidConditionType).Message).Should(ContainSubstring("application"))
+				g.Expect(meta.IsStatusConditionFalse(deployedCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 			}, timeout, interval).Should(Succeed())
 
 			By("updating invalid crd")
@@ -4002,8 +4002,8 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(len(deployedCrd.Status.PodStatus.Stopped)).Should(Equal(1))
 				g.Expect(deployedCrd.Status.PodStatus.Stopped[0]).Should(Equal(namer.CrToSS(invalidCrd.Name)))
 				By("verify status valid true")
-				g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, common.ValidConditionType)).Should(BeTrue())
-				g.Expect(meta.FindStatusCondition(deployedCrd.Status.Conditions, common.ValidConditionType).Reason).Should(Equal(common.ValidConditionSuccessReason))
+				g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
+				g.Expect(meta.FindStatusCondition(deployedCrd.Status.Conditions, brokerv1beta1.ValidConditionType).Reason).Should(Equal(brokerv1beta1.ValidConditionSuccessReason))
 			}, timeout, interval).Should(Succeed())
 
 			By("checking deployed resources of updated invalid CR")
@@ -4465,10 +4465,10 @@ var _ = Describe("artemis controller", func() {
 
 			Eventually(func(g Gomega) {
 				g.Expect(getPersistedVersionedCrd(crd.Name, defaultNamespace, createdCrd)).To(BeTrue())
-				validCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, common.ValidConditionType)
+				validCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)
 				g.Expect(validCondition).NotTo(BeNil())
 				g.Expect(validCondition.Status).To(Equal(metav1.ConditionFalse))
-				g.Expect(validCondition.Reason).To(Equal(common.ValidConditionFailedExtraMountReason))
+				g.Expect(validCondition.Reason).To(Equal(brokerv1beta1.ValidConditionFailedExtraMountReason))
 				g.Expect(validCondition.Message).To(ContainSubstring("must have key logging.properties"))
 			}, timeout, interval).Should(Succeed())
 
@@ -4514,10 +4514,10 @@ var _ = Describe("artemis controller", func() {
 
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, crdKey, createdCrd)).To(Succeed())
-				validCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, common.ValidConditionType)
+				validCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)
 				g.Expect(validCondition).NotTo(BeNil())
 				g.Expect(validCondition.Status).To(Equal(metav1.ConditionFalse))
-				g.Expect(validCondition.Reason).To(Equal(common.ValidConditionFailedExtraMountReason))
+				g.Expect(validCondition.Reason).To(Equal(brokerv1beta1.ValidConditionFailedExtraMountReason))
 				g.Expect(validCondition.Message).To(ContainSubstring("must have key logging.properties"))
 
 			}, timeout, interval).Should(Succeed())
@@ -4551,10 +4551,10 @@ var _ = Describe("artemis controller", func() {
 			By("verifying validation status reflects need for single instance")
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, crdKey, createdCrd)).To(Succeed())
-				validCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, common.ValidConditionType)
+				validCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)
 				g.Expect(validCondition).NotTo(BeNil())
 				g.Expect(validCondition.Status).To(Equal(metav1.ConditionFalse))
-				g.Expect(validCondition.Reason).To(Equal(common.ValidConditionFailedExtraMountReason))
+				g.Expect(validCondition.Reason).To(Equal(brokerv1beta1.ValidConditionFailedExtraMountReason))
 				g.Expect(validCondition.Message).To(ContainSubstring("once"))
 
 			}, timeout, interval).Should(Succeed())
@@ -4569,7 +4569,7 @@ var _ = Describe("artemis controller", func() {
 			By("verifying valid status and resource version")
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, crdKey, createdCrd)).To(Succeed())
-				validCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, common.ValidConditionType)
+				validCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)
 				g.Expect(validCondition).NotTo(BeNil())
 				g.Expect(validCondition.Status).To(Equal(metav1.ConditionTrue))
 
@@ -4898,15 +4898,15 @@ var _ = Describe("artemis controller", func() {
 					Type:    brokerv1beta1.DeployedConditionType,
 					Status:  metav1.ConditionFalse,
 					Reason:  brokerv1beta1.DeployedConditionZeroSizeReason,
-					Message: brokerv1beta1.DeployedConditionZeroSizeMessage,
+					Message: common.DeployedConditionZeroSizeMessage,
 				})).Should(BeTrue())
-				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 
 				condition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType)
 				g.Expect(condition).NotTo(BeNil())
 				g.Expect(condition.Status).Should(Equal(metav1.ConditionUnknown))
 
-				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 			}, timeout, interval).Should(Succeed())
 
 			By("adding an address via update")
@@ -5159,7 +5159,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(deploymentSize))
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType)).Should(BeTrue())
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
@@ -5197,7 +5197,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType)).Should(BeTrue())
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
@@ -5225,7 +5225,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(createdCrd.Generation).Should(BeNumerically("==", 2))
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType)).Should(BeTrue())
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
@@ -6301,7 +6301,7 @@ var _ = Describe("artemis controller", func() {
 					Reason:  brokerv1beta1.DeployedConditionNotReadyReason,
 					Message: "0/1 pods ready",
 				})).Should(BeTrue())
-				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 		}
@@ -6360,7 +6360,7 @@ var _ = Describe("artemis controller", func() {
 				By("verify ready status" + fmt.Sprintf("%v", createdCrd.Status.PodStatus))
 				g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
 				g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-				g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+				g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 		}
@@ -6616,7 +6616,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
 					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(3))
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 
 					// setting name from non default amq-broker causes JMX error and unknown is expected
 					g.Expect(meta.IsStatusConditionPresentAndEqual(createdCrd.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType, metav1.ConditionUnknown)).Should(BeTrue())
@@ -6706,7 +6706,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(2))
 
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeFalse())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeFalse())
 
 					g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType)).Should(BeTrue())
 
@@ -6736,7 +6736,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(2))
 
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType)).Should(BeTrue())
 
@@ -6791,7 +6791,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
 					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
@@ -6875,15 +6875,15 @@ var _ = Describe("artemis controller", func() {
 
 				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
 
-				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 				g.Expect(meta.IsStatusConditionPresentAndEqual(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType, metav1.ConditionFalse)).Should(BeTrue())
 
 				deployedCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)
 				g.Expect(deployedCondition.Reason).Should(Equal(brokerv1beta1.DeployedConditionValidationFailedReason))
 
-				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, common.ValidConditionType)).Should(BeTrue())
-				validationCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, common.ValidConditionType)
-				g.Expect(validationCondition.Reason).To(Equal(common.ValidConditionFailedExtraMountReason))
+				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
+				validationCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)
+				g.Expect(validationCondition.Reason).To(Equal(brokerv1beta1.ValidConditionFailedExtraMountReason))
 				g.Expect(validationCondition.Message).To(ContainSubstring(JaasConfigKey))
 
 			}, timeout, interval).Should(Succeed())
@@ -6902,7 +6902,7 @@ var _ = Describe("artemis controller", func() {
 			By("verifying now valid")
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
-				g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ValidConditionType)).Should(BeTrue())
+				g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
 			}, timeout, interval).Should(Succeed())
 
 			Expect(k8sClient.Delete(ctx, secret)).To(Succeed())
@@ -6959,12 +6959,12 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
 
 				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 
-				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, common.ValidConditionType)).Should(BeTrue())
+				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
 
-				validationCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, common.ValidConditionType)
-				g.Expect(validationCondition.Reason).To(Equal(common.ValidConditionFailedExtraMountReason))
+				validationCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)
+				g.Expect(validationCondition.Reason).To(Equal(brokerv1beta1.ValidConditionFailedExtraMountReason))
 				g.Expect(validationCondition.Message).To(ContainSubstring("once"))
 
 			}, timeout, interval).Should(Succeed())
@@ -7057,7 +7057,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
 
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType)).Should(BeTrue())
 
@@ -7239,7 +7239,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
 
 					// secret status won't be visible till activemq realm is exercised, ready true but with unknown condition
-					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 					g.Expect(meta.IsStatusConditionPresentAndEqual(createdCrd.Status.Conditions, brokerv1beta1.JaasConfigAppliedConditionType, metav1.ConditionUnknown)).Should(BeTrue())
 
 					ConfigAppliedCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.JaasConfigAppliedConditionType)
@@ -7264,7 +7264,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
 
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType)).Should(BeTrue())
 
@@ -7316,7 +7316,7 @@ var _ = Describe("artemis controller", func() {
 			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, crdKey, createdCrd)).To(Succeed())
-				validCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, common.ValidConditionType)
+				validCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)
 				g.Expect(validCondition).NotTo(BeNil())
 				g.Expect(validCondition.Status).To(Equal(metav1.ConditionFalse))
 				g.Expect(validCondition.Message).To(ContainSubstring("secret"))
@@ -7355,7 +7355,7 @@ var _ = Describe("artemis controller", func() {
 			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, crdKey, createdCrd)).To(Succeed())
-				validCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, common.ValidConditionType)
+				validCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)
 				g.Expect(validCondition).NotTo(BeNil())
 				g.Expect(validCondition.Status).To(Equal(metav1.ConditionFalse))
 				g.Expect(validCondition.Message).To(ContainSubstring("syntax"))
@@ -7423,7 +7423,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
 					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
-					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 

@@ -14,38 +14,30 @@ limitations under the License.
 package common
 
 import (
+	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
-	ReadyConditionType          = "Ready"
-	ReadyConditionReason        = "ResourceReady"
-	NotReadyConditionReason     = "WaitingForAllConditions"
-	NotReadyConditionMessage    = "Some conditions are not met"
-	ImageVersionConflictMessage = "Version and Images cannot be specified at the same time"
-	PDBNonNilSelectorMessage    = "PodDisruptionBudget's selector should not be specified"
-
-	ValidConditionType                       = "Valid"
-	ValidConditionSuccessReason              = "ValidationSucceded"
-	ValidConditionMissingResourcesReason     = "MissingDependentResources"
-	ValidConditionImageVersionConflictReason = "VersionAndImagesConflict"
-	ValidConditionPDBNonNilSelectorReason    = "PodDisruptionBudgetNonNilSelector"
-	ValidConditionFailedReservedLabelReason  = "ReservedLabelReference"
-	ValidConditionFailedExtraMountReason     = "InvalidExtraMount"
+	DeployedConditionZeroSizeMessage       = "Pods not scheduled. Deployment size is 0"
+	ConfigAppliedConditionOutOfSyncMessage = "Waiting for the Broker to acknowledge changes"
+	NotReadyConditionMessage               = "Some conditions are not met"
+	ImageVersionConflictMessage            = "Version and Images cannot be specified at the same time"
+	PDBNonNilSelectorMessage               = "PodDisruptionBudget's selector should not be specified"
 )
 
 func SetReadyCondition(conditions *[]metav1.Condition) {
 	condition := newReadyCondition()
 	ready := true
 	for _, c := range *conditions {
-		if c.Type != ReadyConditionType && c.Status == metav1.ConditionFalse {
+		if c.Type != brokerv1beta1.ReadyConditionType && c.Status == metav1.ConditionFalse {
 			ready = false
 		}
 	}
 	if !ready {
 		condition.Status = metav1.ConditionFalse
-		condition.Reason = NotReadyConditionReason
+		condition.Reason = brokerv1beta1.NotReadyConditionReason
 		condition.Message = NotReadyConditionMessage
 	}
 	meta.SetStatusCondition(conditions, condition)
@@ -65,8 +57,8 @@ func IsConditionPresentAndEqual(conditions []metav1.Condition, condition metav1.
 
 func newReadyCondition() metav1.Condition {
 	return metav1.Condition{
-		Type:   ReadyConditionType,
-		Reason: ReadyConditionReason,
+		Type:   brokerv1beta1.ReadyConditionType,
+		Reason: brokerv1beta1.ReadyConditionReason,
 		Status: metav1.ConditionTrue,
 	}
 }
