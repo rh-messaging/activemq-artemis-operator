@@ -320,22 +320,21 @@ Using the Kubernetes command-line interface switch to the namespace you are usin
 $ kubectl config set-context $(kubectl config current-context) --namespace= <project-name>
 ```
 
-Open the sample CR file called broker_activemqartemis_cr.yaml that is included in the deploy/crs directory of the Operator 
+Open the sample CR file called broker_activemqartemis_v1beta1_cr.yaml that is included in the deploy/crs directory of the Operator
 installation archive that you downloaded and extracted. For a basic broker deployment, the configuration might resemble 
 that shown below. This configuration is the default content of the broker_activemqartemis_cr.yaml sample CR.
 
 ```yaml
-apiVersion: broker.amq.io/v2alpha4
+apiVersion: broker.amq.io/v1beta1
 kind: ActiveMQArtemis
 metadata:
   name: ex-aao
   application: ex-aao-app
 spec:
-    version: 7.7.0
-    deploymentPlan:
-        size: 2
-        image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:
-        ...
+  deploymentPlan:
+    image: placeholder
+    size: 2
+    ...
 ```
 
 Observe that the sample CR uses a naming convention of **ex-aao**. This naming convention denotes that the CR is an example 
@@ -347,17 +346,7 @@ You might use this label in a Pod selector, for example.
 The size value specifies the number of brokers to deploy. The default value of 2 specifies a clustered broker deployment 
 of two brokers. However, to deploy a single broker instance, change the value to 1.
 
-The image value specifies the container image to use to launch the broker. Ensure that this value specifies the latest 
-version of the ActiveMQ Artemis broker container image in the Quay.io repository, as shown below.
-
-
-    image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.1
-    
-In the preceding step, the image attribute specifies a floating image tag (that is, ) rather than a full image tag (for example, -5). 
-When you specify this floating tag, your deployment uses the latest image available in the image stream. In addition, 
-when you specify a floating tag such as this, if the imagePullPolicy attribute in your Stateful Set is set to Always, 
-your deployment automatically pulls and uses new micro image versions (for example, -6, -7, and so on) when they become 
-available from quay.io. Deploy the CR instance.
+The image value specifies the container image to use to launch the broker. It uses the **placeholder** key to identify that the operator should choose the latest supported broker image.
 
 Save the CR file.
 
@@ -445,16 +434,14 @@ Open the CR file that you used for your basic broker deployment.
 
 For a clustered deployment, ensure that the value of deploymentPlan.size is 2 or greater. For example:
 ```yaml
-apiVersion: broker.amq.io/v2alpha4
+apiVersion: broker.amq.io/v1beta1
 kind: ActiveMQArtemis
 metadata:
   name: ex-aao
   application: ex-aao-app
 spec:
-    version: 7.7.0
     deploymentPlan:
         size: 4
-        image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:
         ...
 ```
 
@@ -780,8 +767,7 @@ By default the operator deploys a broker with a default logging configuration th
 (https://github.com/artemiscloud/activemq-artemis-broker-kubernetes-image). Broker logs its messages to console only.
 
 Users can change the broker logging configuration by providing their own in a configmap or secret. The name of the configmap
-or secret must have the suffix **-logging-config**. There must be one entry in the configmap or secret. The key of the entry
-must be **logging.properties** and the value must of the full content of the logging configuration. (The broker is using slf4j with
+or secret must have the suffix **-logging-config**. There must a key **logging.properties** and the value must of the full content of the logging configuration. (The broker is using slf4j with
 log4j2 binding so the content should be log4j2's configuration in Java's properties file format).
 
 Then you need to give the name of the configmap or secret in the broker custom resource via **extraMounts**. For example
@@ -818,6 +804,19 @@ spec:
       secrets:
       - "my-logging-config"
 ```
+
+## Locking down a broker deployment
+
+Often when verificiation is complete it is desirable to lock down the broker images and prevent auto upgrades, which will result in a roll out of images and a restart of your broker.
+The key enabler here is the **image** and **initImage** fields. When a fully qualified SHA uri is provided, the operator will only deploy that exact version.
+Note: both the image and initImage fields must be set because they have an implicit dependency on each other.
+
+The second enabler is the **version** field. The version field can restrict the matching versions selected by the operator using a ``major<.minor><.patch>`` format. When the Version field is empty, the operator will choose the latest version. When a major version is specified, only minor or patch version of that major will be chosen. An exact match can be configuired as **2.28.0**.
+The operator supports a level of indirection when resolving versions, there are env vars that map version to image uris. If these change, via an operator redeployment, then locking down via a version may not be sufficient. In that case, the image and initImage fields will be necessary.
+
+The operator will validate the a CR specifies both image and initImage or a Version. It will also validate that a speficied version matches the internal list of supported versions.
+The CR Status sub resource will contain feedback via the Valid Condition if validation fails.
+
 
 ## Enable broker's metrics plugin
 

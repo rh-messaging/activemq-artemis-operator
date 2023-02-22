@@ -49,10 +49,10 @@ type ActiveMQArtemisSpec struct {
 	// Specifies the console configuration
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Console Configurations"
 	Console ConsoleType `json:"console,omitempty"`
-	// The version of the broker deployment.
+	// The desired version of the broker. Can be x, or x.y or x.y.z to configure upgrades
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:text"}
 	Version string `json:"version,omitempty"`
-	// Specifies the upgrades
+	// Specifies the upgrades (deprecated in favour of Version)
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Upgrades"
 	Upgrades ActiveMQArtemisUpgrades `json:"upgrades,omitempty"`
 	// Specifies the address configurations
@@ -286,10 +286,10 @@ type AddressSettingType struct {
 }
 
 type DeploymentPlanType struct {
-	//The image used for the broker deployment
+	//The image used for the broker, all upgrades are disabled. Needs a corresponding initImage
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Image",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:text"}
 	Image string `json:"image,omitempty"`
-	// The init container image used to configure broker
+	// The init container image used to configure broker, all upgrades are disabled. Needs a corresponding image
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Init Image",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:text"}
 	InitImage string `json:"initImage,omitempty"`
 	// The number of broker pods to deploy
@@ -575,16 +575,42 @@ type ActiveMQArtemisStatus struct {
 	//see 3scale https://github.com/3scale/3scale-operator/blob/8abbabd926616b98db0e7e736e68e5ceba90ed9d/apis/apps/v1alpha1/apimanager_types.go#L87
 
 	// Current state of external referenced resources
-	//+optional
 	//+operator-sdk:csv:customresourcedefinitions:type=status,displayName="External Configurations Status"
 	ExternalConfigs []ExternalConfigStatus `json:"externalConfigs,omitempty"`
+
+	//+operator-sdk:csv:customresourcedefinitions:type=status,displayName="Version Status"
+	Version VersionStatus `json:"version,omitempty"`
+
+	//+operator-sdk:csv:customresourcedefinitions:type=status,displayName="Upgrade Status"
+	Upgrade UpgradeStatus `json:"upgrade,omitempty"`
+}
+
+type VersionStatus struct {
+
+	//+operator-sdk:csv:customresourcedefinitions:type=status,displayName="BrokerVersion",xDescriptors="urn:alm:descriptor:text"
+	BrokerVersion string `json:"brokerVersion,omitempty"`
+
+	//+operator-sdk:csv:customresourcedefinitions:type=status,displayName="Image URI",xDescriptors="urn:alm:descriptor:org.w3:link"
+	Image string `json:"image,omitempty"`
+	//+operator-sdk:csv:customresourcedefinitions:type=status,displayName="InitImage URI",xDescriptors="urn:alm:descriptor:org.w3:link"
+	InitImage string `json:"initImage,omitempty"`
+}
+
+type UpgradeStatus struct {
+	//+operator-sdk:csv:customresourcedefinitions:type=status,displayName="SecurityUpdates",xDescriptors="urn:alm:descriptor:text"
+	SecurityUpdates bool `json:"securityUpdates,omitempty"` // false if image != "" && init image != ""
+
+	//+operator-sdk:csv:customresourcedefinitions:type=status,displayName="MajorUpdates",xDescriptors="urn:alm:descriptor:text"
+	MajorUpdates bool `json:"majorUpdates,omitempty"` // true for empty version, false if version = x
+	//+operator-sdk:csv:customresourcedefinitions:type=status,displayName="MinorUpdates",xDescriptors="urn:alm:descriptor:text"
+	MinorUpdates bool `json:"minorUpdates,omitempty"` // false if version = x.y
+	//+operator-sdk:csv:customresourcedefinitions:type=status,displayName="PatchUpdates",xDescriptors="urn:alm:descriptor:text"
+	PatchUpdates bool `json:"patchUpdates,omitempty"` // false if version = x.y.z
 }
 
 type ExternalConfigStatus struct {
-	// Name
 	//+operator-sdk:csv:customresourcedefinitions:type=status,displayName="Name",xDescriptors="urn:alm:descriptor:text"
 	Name string `json:"name"`
-	// Resource Version
 	//+operator-sdk:csv:customresourcedefinitions:type=status,displayName="Resource Version",xDescriptors="urn:alm:descriptor:text"
 	ResourceVersion string `json:"resourceVersion"`
 }
@@ -635,9 +661,12 @@ const (
 	ValidConditionSuccessReason              = "ValidationSucceded"
 	ValidConditionMissingResourcesReason     = "MissingDependentResources"
 	ValidConditionImageVersionConflictReason = "VersionAndImagesConflict"
-	ValidConditionPDBNonNilSelectorReason    = "PodDisruptionBudgetNonNilSelector"
-	ValidConditionFailedReservedLabelReason  = "ReservedLabelReference"
-	ValidConditionFailedExtraMountReason     = "InvalidExtraMount"
+	ValidConditionImagePairRequiredReason    = "InitImageMustBePairedWithBrokerImage"
+	ValidConditionInvalidVersionReason       = "SpecVersionInvalid"
+
+	ValidConditionPDBNonNilSelectorReason   = "PodDisruptionBudgetNonNilSelector"
+	ValidConditionFailedReservedLabelReason = "ReservedLabelReference"
+	ValidConditionFailedExtraMountReason    = "InvalidExtraMount"
 
 	ReadyConditionType      = "Ready"
 	ReadyConditionReason    = "ResourceReady"

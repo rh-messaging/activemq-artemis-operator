@@ -1439,10 +1439,12 @@ spec:
                         type: array
                     type: object
                   image:
-                    description: The image used for the broker deployment
+                    description: The image used for the broker, all upgrades are disabled.
+                      Needs a corresponding initImage
                     type: string
                   initImage:
-                    description: The init container image used to configure broker
+                    description: The init container image used to configure broker,
+                      all upgrades are disabled. Needs a corresponding image
                     type: string
                   jolokiaAgentEnabled:
                     description: If true enable the Jolokia JVM Agent
@@ -2220,7 +2222,7 @@ spec:
                   the Ingress Controller domain.
                 type: string
               upgrades:
-                description: Specifies the upgrades
+                description: Specifies the upgrades (deprecated in favour of Version)
                 properties:
                   enabled:
                     description: Set true to enable automatic micro version product
@@ -2236,7 +2238,8 @@ spec:
                 - minor
                 type: object
               version:
-                description: The version of the broker deployment.
+                description: The desired version of the broker. Can be x, or x.y or
+                  x.y.z to configure upgrades
                 type: string
             type: object
           status:
@@ -2318,10 +2321,8 @@ spec:
                 items:
                   properties:
                     name:
-                      description: Name
                       type: string
                     resourceVersion:
-                      description: Resource Version
                       type: string
                   required:
                   - name
@@ -2347,6 +2348,26 @@ spec:
                     items:
                       type: string
                     type: array
+                type: object
+              upgrade:
+                properties:
+                  majorUpdates:
+                    type: boolean
+                  minorUpdates:
+                    type: boolean
+                  patchUpdates:
+                    type: boolean
+                  securityUpdates:
+                    type: boolean
+                type: object
+              version:
+                properties:
+                  brokerVersion:
+                    type: string
+                  image:
+                    type: string
+                  initImage:
+                    type: string
                 type: object
             required:
             - podStatus

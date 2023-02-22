@@ -3,11 +3,11 @@ package common
 import (
 	"encoding/json"
 	"os"
-	"sort"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver"
+	"github.com/blang/semver/v4"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -135,53 +135,62 @@ func ResolveWatchNamespaceForManager(oprNamespace string, watchNamespace string)
 	return false, strings.Split(watchNamespace, ",")
 }
 
-type BrokerVersion struct {
-	Version *semver.Version
-}
+func ResolveBrokerVersion(versions []semver.Version, desired string) *semver.Version {
 
-func NewBrokerVersion(ver *semver.Version) *BrokerVersion {
-	return &BrokerVersion{
-		Version: ver,
+	if len(versions) == 0 {
+		return nil
 	}
-}
-
-func (bver *BrokerVersion) MajorOnly() bool {
-	fields := strings.Split(bver.Version.Original(), ".")
-	return len(fields) == 1
-}
-
-func (bver *BrokerVersion) MinorOnly() bool {
-	fields := strings.Split(bver.Version.Original(), ".")
-	return len(fields) == 2
-}
-
-func (bver *BrokerVersion) IsMatch(ver *semver.Version) bool {
-	if bver.MajorOnly() {
-		return bver.Version.Major() == ver.Major()
-	}
-	if bver.MinorOnly() {
-		return bver.Version.Major() == ver.Major() && bver.Version.Minor() == ver.Minor()
-	}
-	return bver.Version.Equal(ver)
-}
-
-func ResolveBrokerVersion(existingVersions map[string]*semver.Version, expected *semver.Version) *semver.Version {
-
-	versions := []*semver.Version{}
-	for _, v := range existingVersions {
-		versions = append(versions, v)
+	if desired == "" {
+		// latest
+		return &versions[len(versions)-1]
 	}
 
-	sort.Sort(semver.Collection(versions))
+	major, minor, patch := resolveVersionComponents(desired)
 
-	brokerVersion := NewBrokerVersion(expected)
-
-	for i := len(versions) - 1; i >= 0; i-- {
-		if brokerVersion.IsMatch(versions[i]) {
-			return versions[i]
+	// walk the ordered tree in reverse, locking down match based on desired version components
+	var i int = len(versions) - 1
+	for ; i >= 0; i-- {
+		if major != nil {
+			if *major == versions[i].Major {
+				if minor == nil {
+					break
+				} else if *minor == versions[i].Minor {
+					if patch == nil {
+						break
+					} else if *patch == versions[i].Patch {
+						break
+					}
+				}
+			}
 		}
 	}
+	if i >= 0 {
+		return &versions[i]
+	}
 	return nil
+}
+
+func resolveVersionComponents(desired string) (major, minor, patch *uint64) {
+
+	parts := strings.SplitN(desired, ".", 3)
+	switch len(parts) {
+	case 3:
+		if v, err := strconv.ParseUint(parts[2], 10, 64); err == nil {
+			patch = &v
+		}
+		fallthrough
+	case 2:
+		if v, err := strconv.ParseUint(parts[1], 10, 64); err == nil {
+			minor = &v
+		}
+		fallthrough
+	case 1:
+		if v, err := strconv.ParseUint(parts[0], 10, 64); err == nil {
+			major = &v
+		}
+	}
+
+	return major, minor, patch
 }
 
 func Int32ToPtr(v int32) *int32 {

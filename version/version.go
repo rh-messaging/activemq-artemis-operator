@@ -1,6 +1,10 @@
 package version
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/blang/semver/v4"
+)
 
 var (
 	Version = "7.11.0.OPR.1.CR1"
@@ -15,8 +19,6 @@ const (
 	// LatestVersion product version supported
 	LatestVersion        = "7.11.0"
 	CompactLatestVersion = "7110"
-	// LastMinorVersion product version supported
-	LastMinorVersion = "7.10.0"
 
 	LatestKubeImage = "registry.redhat.io/amq7/amq-broker-rhel8:7.11"
 	LatestInitImage = "registry.redhat.io/amq7/amq-broker-init-rhel8:7.11"
@@ -28,23 +30,6 @@ func DefaultImageName(archSpecificRelatedImageEnvVarName string) string {
 	} else {
 		return LatestKubeImage
 	}
-}
-
-var CompactVersionFromVersion map[string]string = map[string]string{
-	"7.7.0":  "770",
-	"7.8.0":  "780",
-	"7.8.1":  "781",
-	"7.8.2":  "782",
-	"7.8.3":  "783",
-	"7.9.0":  "790",
-	"7.9.1":  "791",
-	"7.9.2":  "792",
-	"7.9.3":  "793",
-	"7.9.4":  "794",
-	"7.10.0": "7100",
-	"7.10.1": "7101",
-	"7.10.2": "7102",
-	"7.11.0": "7110",
 }
 
 var FullVersionFromCompactVersion map[string]string = map[string]string{
@@ -83,3 +68,32 @@ var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
 }
 
 var YacfgProfileName string = "amq_broker"
+
+// Sorted array of supported ActiveMQ Artemis versions
+var SupportedActiveMQArtemisVersions = []string{
+	"2.21.0",
+	"2.22.0",
+	"2.23.0",
+	"2.25.0",
+	"2.26.0",
+	"2.27.0",
+	"2.28.0",
+}
+
+func CompactActiveMQArtemisVersion(version string) string {
+	return strings.Replace(version, ".", "", -1)
+}
+
+var supportedActiveMQArtemisSemanticVersions []semver.Version
+
+func SupportedActiveMQArtemisSemanticVersions() []semver.Version {
+	if supportedActiveMQArtemisSemanticVersions == nil {
+		supportedActiveMQArtemisSemanticVersions = make([]semver.Version, len(SupportedActiveMQArtemisVersions))
+		for i := 0; i < len(SupportedActiveMQArtemisVersions); i++ {
+			supportedActiveMQArtemisSemanticVersions[i] = semver.MustParse(SupportedActiveMQArtemisVersions[i])
+		}
+		semver.Sort(supportedActiveMQArtemisSemanticVersions)
+	}
+
+	return supportedActiveMQArtemisSemanticVersions
+}

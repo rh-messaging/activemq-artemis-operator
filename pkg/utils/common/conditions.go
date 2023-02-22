@@ -24,6 +24,7 @@ const (
 	ConfigAppliedConditionOutOfSyncMessage = "Waiting for the Broker to acknowledge changes"
 	NotReadyConditionMessage               = "Some conditions are not met"
 	ImageVersionConflictMessage            = "Version and Images cannot be specified at the same time"
+	ImageDependentPairMessage              = "Init image and broker image must both be configured as an interdependent pair"
 	PDBNonNilSelectorMessage               = "PodDisruptionBudget's selector should not be specified"
 )
 

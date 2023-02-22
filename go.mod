@@ -4,7 +4,6 @@ go 1.17
 
 require (
 	github.com/Azure/go-amqp v0.17.4
-	github.com/Masterminds/semver v1.5.0
 	//this module is problematic
 	github.com/RHsyseng/operator-utils v1.4.10
 	github.com/go-logr/logr v1.2.0
@@ -21,6 +20,8 @@ require (
 	k8s.io/client-go v0.23.0
 	sigs.k8s.io/controller-runtime v0.11.1
 )
+
+require github.com/blang/semver/v4 v4.0.0
 
 require (
 	cloud.google.com/go v0.81.0 // indirect

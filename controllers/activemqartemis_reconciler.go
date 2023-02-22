@@ -11,7 +11,8 @@ import (
 	osruntime "runtime"
 	"sort"
 
-	"github.com/Masterminds/semver"
+	"github.com/blang/semver/v4"
+
 	"github.com/RHsyseng/operator-utils/pkg/olm"
 	"github.com/RHsyseng/operator-utils/pkg/resource/compare"
 	"github.com/RHsyseng/operator-utils/pkg/resource/read"
@@ -68,6 +69,8 @@ import (
 
 const (
 	ImageNamePrefix                  = "RELATED_IMAGE_ActiveMQ_Artemis_Broker_"
+	BrokerImageKey                   = "Kubernetes"
+	InitImageKey                     = "Init"
 	defaultLivenessProbeInitialDelay = 5
 	TCPLivenessPort                  = 8161
 	jaasConfigSuffix                 = "-jaas-config"
@@ -1507,21 +1510,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 		podSpec = &corev1.PodSpec{}
 	}
 
-	imageName := ""
-	var verr error
-	if customResource.Spec.DeploymentPlan.Image == "placeholder" || len(customResource.Spec.DeploymentPlan.Image) == 0 {
-		reqLogger.Info("Determining the kubernetes image to use due to placeholder setting")
-		imageName, verr = determineImageToUse(customResource, "Kubernetes")
-		if verr != nil {
-			reqLogger.Error(verr, "failed to determine image for", customResource.Spec.Version)
-			return nil, verr
-		}
-	} else {
-		reqLogger.Info("Using the user provided kubernetes image " + customResource.Spec.DeploymentPlan.Image)
-		imageName = customResource.Spec.DeploymentPlan.Image
-	}
-	reqLogger.V(1).Info("NewPodTemplateSpecForCR determined image to use " + imageName)
-	container := containers.MakeContainer(podSpec, customResource.Name, imageName, MakeEnvVarArrayForCR(customResource, namer))
+	container := containers.MakeContainer(podSpec, customResource.Name, resolveImage(customResource, BrokerImageKey), MakeEnvVarArrayForCR(customResource, namer))
 
 	container.Resources = customResource.Spec.DeploymentPlan.Resources
 
@@ -1616,21 +1605,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	podSpec.Containers[0].VolumeMounts = append(podSpec.Containers[0].VolumeMounts, volumeMountForCfg)
 
 	clog.Info("Creating init container for broker configuration")
-	initImageName := ""
-	if customResource.Spec.DeploymentPlan.InitImage == "placeholder" || len(customResource.Spec.DeploymentPlan.InitImage) == 0 {
-		reqLogger.Info("Determining the init image to use due to placeholder setting")
-		initImageName, verr = determineImageToUse(customResource, "Init")
-		if verr != nil {
-			reqLogger.Error(verr, "failed to determine init image for", customResource.Spec.Version)
-			return nil, verr
-		}
-	} else {
-		reqLogger.Info("Using the user provided init image " + customResource.Spec.DeploymentPlan.InitImage)
-		initImageName = customResource.Spec.DeploymentPlan.InitImage
-	}
-	reqLogger.V(1).Info("NewPodTemplateSpecForCR initImage to use " + initImageName)
-
-	initContainer := containers.MakeInitContainer(podSpec, customResource.Name, initImageName, MakeEnvVarArrayForCR(customResource, namer))
+	initContainer := containers.MakeInitContainer(podSpec, customResource.Name, resolveImage(customResource, InitImageKey), MakeEnvVarArrayForCR(customResource, namer))
 	initContainer.Resources = customResource.Spec.DeploymentPlan.Resources
 
 	var initCmds []string
@@ -1810,6 +1785,23 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	pts.Spec = *podSpec
 
 	return pts, nil
+}
+
+func resolveImage(customResource *brokerv1beta1.ActiveMQArtemis, key string) string {
+	var imageName string
+
+	if key == InitImageKey && isLockedDown(customResource.Spec.DeploymentPlan.InitImage) {
+		imageName = customResource.Spec.DeploymentPlan.InitImage
+	} else if key == BrokerImageKey && isLockedDown(customResource.Spec.DeploymentPlan.Image) {
+		imageName = customResource.Spec.DeploymentPlan.Image
+	} else {
+		imageName = determineImageToUse(customResource, key)
+	}
+	return imageName
+}
+
+func isLockedDown(imageAttribute string) bool {
+	return imageAttribute != "placeholder" && imageAttribute != ""
 }
 
 func brokerPropertiesConfigSystemPropValue(mountPoint, resourceName string, brokerPropertiesData map[string]string) string {
@@ -2149,12 +2141,12 @@ func configPodSecurity(podSpec *corev1.PodSpec, podSecurity *brokerv1beta1.PodSe
 	}
 }
 
-func determineImageToUse(customResource *brokerv1beta1.ActiveMQArtemis, imageTypeName string) (string, error) {
+func determineImageToUse(customResource *brokerv1beta1.ActiveMQArtemis, imageTypeKey string) string {
 
 	imageName := ""
 	compactVersionToUse, _ := determineCompactVersionToUse(customResource)
 
-	genericRelatedImageEnvVarName := ImageNamePrefix + imageTypeName + "_" + compactVersionToUse
+	genericRelatedImageEnvVarName := ImageNamePrefix + imageTypeKey + "_" + compactVersionToUse
 	// Default case of x86_64/amd64 covered here
 	archSpecificRelatedImageEnvVarName := genericRelatedImageEnvVarName
 	if osruntime.GOARCH == "s390x" || osruntime.GOARCH == "ppc64le" {
@@ -2167,87 +2159,33 @@ func determineImageToUse(customResource *brokerv1beta1.ActiveMQArtemis, imageTyp
 		clog.V(1).Info("DetermineImageToUse - from default", "env", archSpecificRelatedImageEnvVarName, "imageName", imageName)
 	}
 
-	return imageName, nil
+	return imageName
 }
 
 func resolveBrokerVersion(cr *brokerv1beta1.ActiveMQArtemis) (string, error) {
-	specifiedVersion := cr.Spec.Version
-	if specifiedVersion == "" {
-		return "", nil
-	}
-	originalVersion, verr := semver.NewVersion(specifiedVersion)
-	if verr != nil {
-		return "", verr
-	}
 
-	existingVersionMap := map[string]*semver.Version{}
-	for _, v := range version.FullVersionFromCompactVersion {
-		if existingVersionMap[v], verr = semver.NewVersion(v); verr != nil {
+	if cr.Spec.Version != "" {
+		_, verr := semver.ParseTolerant(cr.Spec.Version)
+		if verr != nil {
 			return "", verr
 		}
 	}
-	result := common.ResolveBrokerVersion(existingVersionMap, originalVersion)
+
+	result := common.ResolveBrokerVersion(version.SupportedActiveMQArtemisSemanticVersions(), cr.Spec.Version)
 	if result == nil {
-		return "", errors.New("Did not find a matched broker version")
+		return "", errors.Errorf("did not find a matching broker in the supported list for %v", cr.Spec.Version)
 	}
 	return result.String(), nil
 }
 
 func determineCompactVersionToUse(customResource *brokerv1beta1.ActiveMQArtemis) (string, error) {
 
-	compactVersionToUse := version.CompactLatestVersion
-
 	resolvedFullVersion, err := resolveBrokerVersion(customResource)
 	if err != nil {
+		clog.V(1).Error(err, "failed to determine broker version from cr")
 		return "", err
 	}
-	// See if we need to lookup what version to use
-	for {
-		// If there's no version specified just use the default above
-		if len(resolvedFullVersion) == 0 {
-			clog.V(1).Info("DetermineImageToUse specifiedVersion was empty")
-			break
-		}
-		clog.V(1).Info("DetermineImageToUse specifiedVersion was " + resolvedFullVersion)
-
-		// There is a version specified by the user...
-		if !customResource.Spec.Upgrades.Enabled {
-			clog.V(1).Info("DetermineImageToUse upgrades are disabled, using version as specified")
-
-			// Upgrades deprecated, we just respect the specified version when (by default) false
-			compactSpecifiedVersion := version.CompactVersionFromVersion[resolvedFullVersion]
-			if len(compactSpecifiedVersion) == 0 {
-				clog.V(1).Info("DetermineImageToUse failed to find the compact form of", "specified version ", resolvedFullVersion, "defaulting to", compactVersionToUse)
-				break
-			}
-			compactVersionToUse = compactSpecifiedVersion
-			clog.V(1).Info("DetermineImageToUse found the compact form of ", "specified version ", resolvedFullVersion, "using version", compactSpecifiedVersion)
-			break
-
-		} else {
-			clog.V(1).Info("DetermineImageToUse upgrades are enabled")
-		}
-
-		// We have a specified version and upgrades are enabled in general
-		// Is the version specified on "the list"
-		compactSpecifiedVersion := version.CompactVersionFromVersion[resolvedFullVersion]
-		if len(compactSpecifiedVersion) == 0 {
-			clog.V(1).Info("DetermineImageToUse failed to find the compact form of the specified version " + resolvedFullVersion)
-			break
-		}
-		clog.V(1).Info("DetermineImageToUse found the compact form " + compactSpecifiedVersion + " of specifiedVersion")
-
-		// We found the compact form in our list, is it a minor bump?
-		if version.LastMinorVersion == resolvedFullVersion &&
-			!customResource.Spec.Upgrades.Minor {
-			clog.V(1).Info("DetermineImageToUse requested minor version upgrade but minor upgrades NOT enabled")
-			break
-		}
-
-		clog.V(1).Info("DetermineImageToUse all checks ok using user specified version " + resolvedFullVersion)
-		compactVersionToUse = compactSpecifiedVersion
-		break
-	}
+	compactVersionToUse := version.CompactActiveMQArtemisVersion(resolvedFullVersion)
 
 	return compactVersionToUse, nil
 }
@@ -2367,9 +2305,12 @@ func NewPersistentVolumeClaimArrayForCR(customResource *brokerv1beta1.ActiveMQAr
 	return &pvcArray
 }
 
-func UpdatePodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namespacedName types.NamespacedName) {
+func UpdateStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namespacedName types.NamespacedName) {
 
 	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", cr.Name)
+
+	updateVersionStatus(cr)
+
 	reqLogger.V(1).Info("Updating status for pods")
 
 	podStatus := getPodStatus(cr, client, namespacedName)
@@ -2390,6 +2331,44 @@ func UpdatePodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, 
 		// could leave this to kube, it will do a []byte comparison
 		reqLogger.Info("Pods status unchanged")
 	}
+}
+
+func updateVersionStatus(cr *brokerv1beta1.ActiveMQArtemis) {
+	cr.Status.Version.Image = resolveImage(cr, BrokerImageKey)
+	cr.Status.Version.InitImage = resolveImage(cr, InitImageKey)
+
+	if isLockedDown(cr.Spec.DeploymentPlan.Image) || isLockedDown(cr.Spec.DeploymentPlan.InitImage) {
+		cr.Status.Version.BrokerVersion = ""
+		cr.Status.Upgrade.SecurityUpdates = false
+		cr.Status.Upgrade.MajorUpdates = false
+		cr.Status.Upgrade.MinorUpdates = false
+		cr.Status.Upgrade.PatchUpdates = false
+
+	} else {
+		cr.Status.Version.BrokerVersion, _ = resolveBrokerVersion(cr)
+		cr.Status.Upgrade.SecurityUpdates = true
+
+		if cr.Spec.Version == "" {
+			cr.Status.Upgrade.MajorUpdates = true
+			cr.Status.Upgrade.MinorUpdates = true
+			cr.Status.Upgrade.PatchUpdates = true
+		} else {
+
+			cr.Status.Upgrade.MajorUpdates = false
+			cr.Status.Upgrade.MinorUpdates = false
+			cr.Status.Upgrade.PatchUpdates = false
+
+			// flip defaults based on specificity of Version
+			switch len(strings.Split(cr.Spec.Version, ".")) {
+			case 1:
+				cr.Status.Upgrade.MinorUpdates = true
+				fallthrough
+			case 2:
+				cr.Status.Upgrade.PatchUpdates = true
+			}
+		}
+	}
+
 }
 
 func getValidCondition(cr *brokerv1beta1.ActiveMQArtemis) metav1.Condition {

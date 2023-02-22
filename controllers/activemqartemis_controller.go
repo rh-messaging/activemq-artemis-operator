@@ -159,12 +159,13 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 	var valid = true
 
 	if valid, result = validate(customResource, r.Client, r.Scheme, *namer); valid {
+
 		reconciler.Process(customResource, *namer, r.Client, r.Scheme)
 
 		result = UpdateBrokerPropertiesStatus(customResource, r.Client, r.Scheme)
 	}
 
-	UpdatePodStatus(customResource, r.Client, request.NamespacedName)
+	UpdateStatus(customResource, r.Client, request.NamespacedName)
 
 	err = UpdateCRStatus(customResource, r.Client, request.NamespacedName)
 
@@ -303,7 +304,29 @@ func validateBrokerVersion(customResource *brokerv1beta1.ActiveMQArtemis) *metav
 				Message: common.ImageVersionConflictMessage,
 			}
 		}
+
+		_, err := resolveBrokerVersion(customResource)
+		if err != nil {
+			return &metav1.Condition{
+				Type:    brokerv1beta1.ValidConditionType,
+				Status:  metav1.ConditionFalse,
+				Reason:  brokerv1beta1.ValidConditionInvalidVersionReason,
+				Message: fmt.Sprintf(".Spec.Version does not resolve to a supported broker version, reason %v", err),
+			}
+		}
 	}
+
+	if customResource.Spec.DeploymentPlan.Image != "" || customResource.Spec.DeploymentPlan.InitImage != "" {
+		if customResource.Spec.DeploymentPlan.Image == "" || customResource.Spec.DeploymentPlan.InitImage == "" {
+			return &metav1.Condition{
+				Type:    brokerv1beta1.ValidConditionType,
+				Status:  metav1.ConditionFalse,
+				Reason:  brokerv1beta1.ValidConditionImagePairRequiredReason,
+				Message: common.ImageDependentPairMessage,
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -560,6 +583,9 @@ func UpdateCRStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, n
 		return err
 	}
 
+	if !reflect.DeepEqual(current.Status.Version, cr.Status.Version) {
+		return resources.UpdateStatus(client, cr)
+	}
 	if len(cr.Status.ExternalConfigs) != len(current.Status.ExternalConfigs) {
 		return resources.UpdateStatus(client, cr)
 	}
