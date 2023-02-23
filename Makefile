@@ -249,6 +249,7 @@ endif
 OPERATOR_SDK = $(shell pwd)/bin/operator-sdk
 operator-sdk: ## Download operator-sdk locally if necessary.
 ifeq (,$(wildcard $(OPERATOR_SDK)))
+ifeq (,$(shell which operator-sdk 2>/dev/null))
 	@{ \
 	set -e ;\
 	mkdir -p $(dir $(OPERATOR_SDK)) ;\
@@ -256,6 +257,9 @@ ifeq (,$(wildcard $(OPERATOR_SDK)))
 	curl -sSLo $(OPERATOR_SDK) https://github.com/operator-framework/operator-sdk/releases/download/v1.15.0/operator-sdk_${OS}_${ARCH} ;\
 	chmod +x $(OPERATOR_SDK) ;\
 	}
+else
+OPERATOR_SDK = $(shell which operator-sdk)
+endif	
 endif
 
 # A comma-separated list of bundle images (e.g. make catalog-build BUNDLE_IMGS=example.com/operator-bundle:v0.1.0,example.com/operator-bundle:v0.2.0).
