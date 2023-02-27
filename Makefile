@@ -14,6 +14,9 @@ OPERATOR_NAMESPACE := amq-broker-operator
 BUNDLE_PACKAGE := $(OPERATOR_NAMESPACE)
 BUNDLE_ANNOTATION_PACKAGE := amq-broker-rhel8
 GO_MODULE := github.com/artemiscloud/activemq-artemis-operator
+OS := $(shell go env GOOS)
+ARCH := $(shell go env GOARCH)
+
 
 # directory to hold static resources for deploying operator
 DEPLOY := ./deploy
@@ -70,6 +73,7 @@ SHELL = /usr/bin/env bash -o pipefail
 
 BUILD_TIMESTAMP := $(shell date '+%Y-%m-%dT%H:%M:%S')
 LDFLAGS = "'$(GO_MODULE)/version.BuildTimestamp=$(BUILD_TIMESTAMP)'"
+
 
 all: build
 
@@ -236,7 +240,6 @@ ifeq (,$(shell which opm 2>/dev/null))
 	@{ \
 	set -e ;\
 	mkdir -p $(dir $(OPM)) ;\
-	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
 	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/v1.15.1/$${OS}-$${ARCH}-opm ;\
 	chmod +x $(OPM) ;\
 	}
@@ -253,7 +256,6 @@ ifeq (,$(shell which operator-sdk 2>/dev/null))
 	@{ \
 	set -e ;\
 	mkdir -p $(dir $(OPERATOR_SDK)) ;\
-	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
 	curl -sSLo $(OPERATOR_SDK) https://github.com/operator-framework/operator-sdk/releases/download/v1.15.0/operator-sdk_${OS}_${ARCH} ;\
 	chmod +x $(OPERATOR_SDK) ;\
 	}
