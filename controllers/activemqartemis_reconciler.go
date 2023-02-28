@@ -2456,7 +2456,7 @@ func getPodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, nam
 	sfsFound := &appsv1.StatefulSet{}
 	err := client.Get(context.TODO(), ssNamespacedName, sfsFound)
 	if err == nil {
-		status = getSingleStatefulSetStatus(sfsFound)
+		status = getSingleStatefulSetStatus(sfsFound, cr)
 	}
 
 	// TODO: Remove global usage
@@ -2474,12 +2474,13 @@ func getPodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, nam
 	return status
 }
 
-func getSingleStatefulSetStatus(ss *appsv1.StatefulSet) olm.DeploymentStatus {
+func getSingleStatefulSetStatus(ss *appsv1.StatefulSet, cr *brokerv1beta1.ActiveMQArtemis) olm.DeploymentStatus {
 	var ready, starting, stopped []string
 	var requestedCount = int32(0)
 	if ss.Spec.Replicas != nil {
 		requestedCount = *ss.Spec.Replicas
 	}
+	cr.Status.DeploymentPlanSize = requestedCount
 
 	targetCount := ss.Status.Replicas
 	readyCount := ss.Status.ReadyReplicas

@@ -1071,6 +1071,8 @@ spec:
         path: conditions
         x-descriptors:
         - urn:alm:descriptor:io.kubernetes.conditions
+      - displayName: Deployment Plan Size
+        path: deploymentPlanSize
       - description: Current state of external referenced resources
         displayName: External Configurations Status
         path: externalConfigs

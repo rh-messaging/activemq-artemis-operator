@@ -50,6 +50,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	brokerv1alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v1alpha1"
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
@@ -105,6 +106,7 @@ var (
 	// the manager may be stopped/restarted via tests
 	managerCtx    context.Context
 	managerCancel context.CancelFunc
+	k8Manager     manager.Manager
 
 	stateManager *common.StateManager
 
@@ -331,7 +333,8 @@ func createControllerManager(disableMetrics bool, watchNamespace string) {
 	mgrOptions.LeaderElectionReleaseOnCancel = true
 
 	// start our controler
-	k8Manager, err := ctrl.NewManager(restConfig, mgrOptions)
+	var err error
+	k8Manager, err = ctrl.NewManager(restConfig, mgrOptions)
 	Expect(err).ToNot(HaveOccurred())
 
 	// Create and start a new auto detect process for this operator

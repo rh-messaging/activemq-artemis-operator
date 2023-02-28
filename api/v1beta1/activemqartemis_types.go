@@ -574,6 +574,9 @@ type ActiveMQArtemisStatus struct {
 	//we probably use Deployments as operatorHub shows invalid field podStatus
 	//see 3scale https://github.com/3scale/3scale-operator/blob/8abbabd926616b98db0e7e736e68e5ceba90ed9d/apis/apps/v1alpha1/apimanager_types.go#L87
 
+	//+operator-sdk:csv:customresourcedefinitions:type=status,displayName="Deployment Plan Size"
+	DeploymentPlanSize int32 `json:"deploymentPlanSize,omitempty"`
+
 	// Current state of external referenced resources
 	//+operator-sdk:csv:customresourcedefinitions:type=status,displayName="External Configurations Status"
 	ExternalConfigs []ExternalConfigStatus `json:"externalConfigs,omitempty"`
@@ -617,6 +620,7 @@ type ExternalConfigStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:subresource:scale:specpath=.spec.deploymentPlan.size,statuspath=.status.deploymentPlanSize
 //+kubebuilder:storageversion
 //+kubebuilder:resource:path=activemqartemises
 //+operator-sdk:csv:customresourcedefinitions:resources={{"Service", "v1"}}

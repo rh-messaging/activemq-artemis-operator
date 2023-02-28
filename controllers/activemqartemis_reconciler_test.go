@@ -200,7 +200,8 @@ func TestGetSingleStatefulSetStatus(t *testing.T) {
 	ss.Status.Replicas = 1
 	ss.Status.ReadyReplicas = 1
 
-	statusRunning := getSingleStatefulSetStatus(ss)
+	cr := &brokerv1beta1.ActiveMQArtemis{}
+	statusRunning := getSingleStatefulSetStatus(ss, cr)
 	if statusRunning.Ready[0] != "joe-0" {
 		t.Errorf("not good!, expect correct 0 ordinal" + statusRunning.Ready[0])
 	}
@@ -208,7 +209,7 @@ func TestGetSingleStatefulSetStatus(t *testing.T) {
 	ss.Status.Replicas = 0
 	ss.Status.ReadyReplicas = 0
 
-	statusRunning = getSingleStatefulSetStatus(ss)
+	statusRunning = getSingleStatefulSetStatus(ss, cr)
 	if statusRunning.Stopped[0] != "joe" {
 		t.Errorf("not good!, expect ss name in stopped" + statusRunning.Stopped[0])
 	}
@@ -218,7 +219,7 @@ func TestGetSingleStatefulSetStatus(t *testing.T) {
 	ss.Status.Replicas = 2
 	ss.Status.ReadyReplicas = 1
 
-	statusRunning = getSingleStatefulSetStatus(ss)
+	statusRunning = getSingleStatefulSetStatus(ss, cr)
 	if statusRunning.Ready[0] != "joe-0" {
 		t.Errorf("not good!, expect correct 0 ordinal ready" + statusRunning.Ready[0])
 	}
@@ -227,6 +228,9 @@ func TestGetSingleStatefulSetStatus(t *testing.T) {
 		t.Errorf("not good!, expect ss name in starting" + statusRunning.Stopped[0])
 	}
 
+	if cr.Status.DeploymentPlanSize != 2 {
+		t.Errorf("not good!, status not updated")
+	}
 }
 
 func TestGetConfigAppliedConfigMapName(t *testing.T) {
