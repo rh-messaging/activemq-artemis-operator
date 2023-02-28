@@ -296,7 +296,7 @@ func validatePodDisruption(customResource *brokerv1beta1.ActiveMQArtemis) *metav
 
 func validateBrokerVersion(customResource *brokerv1beta1.ActiveMQArtemis) *metav1.Condition {
 	if customResource.Spec.Version != "" {
-		if customResource.Spec.DeploymentPlan.Image != "" || customResource.Spec.DeploymentPlan.InitImage != "" {
+		if isLockedDown(customResource.Spec.DeploymentPlan.Image) || isLockedDown(customResource.Spec.DeploymentPlan.InitImage) {
 			return &metav1.Condition{
 				Type:    brokerv1beta1.ValidConditionType,
 				Status:  metav1.ConditionFalse,
@@ -314,16 +314,13 @@ func validateBrokerVersion(customResource *brokerv1beta1.ActiveMQArtemis) *metav
 				Message: fmt.Sprintf(".Spec.Version does not resolve to a supported broker version, reason %v", err),
 			}
 		}
-	}
 
-	if customResource.Spec.DeploymentPlan.Image != "" || customResource.Spec.DeploymentPlan.InitImage != "" {
-		if customResource.Spec.DeploymentPlan.Image == "" || customResource.Spec.DeploymentPlan.InitImage == "" {
-			return &metav1.Condition{
-				Type:    brokerv1beta1.ValidConditionType,
-				Status:  metav1.ConditionFalse,
-				Reason:  brokerv1beta1.ValidConditionImagePairRequiredReason,
-				Message: common.ImageDependentPairMessage,
-			}
+	} else if (isLockedDown(customResource.Spec.DeploymentPlan.Image) && !isLockedDown(customResource.Spec.DeploymentPlan.InitImage)) || (isLockedDown(customResource.Spec.DeploymentPlan.InitImage) && !isLockedDown(customResource.Spec.DeploymentPlan.Image)) {
+		return &metav1.Condition{
+			Type:    brokerv1beta1.ValidConditionType,
+			Status:  metav1.ConditionFalse,
+			Reason:  brokerv1beta1.ValidConditionImagePairRequiredReason,
+			Message: common.ImageDependentPairMessage,
 		}
 	}
 

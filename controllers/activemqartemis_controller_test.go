@@ -587,6 +587,30 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(BeTrue())
 		})
 
+		It("version validation when version and images are loosly specified", func() {
+			By("deploy a broker with images default and version")
+			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				candidate.Spec.Version = "2"
+				candidate.Spec.DeploymentPlan.Image = "placeholder"
+				candidate.Spec.DeploymentPlan.InitImage = ""
+			})
+
+			By("checking the CR ok")
+			brokerKey := types.NamespacedName{Name: createdBrokerCr.Name, Namespace: createdBrokerCr.Namespace}
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdBrokerCr)).Should(Succeed())
+				g.Expect(meta.IsStatusConditionTrue(createdBrokerCr.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
+			}, timeout, interval).Should(Succeed())
+
+			// cleanup
+			Expect(k8sClient.Delete(ctx, brokerCr)).Should(Succeed())
+			By("check it has gone")
+			Eventually(func() bool {
+				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
+			}, timeout, interval).Should(BeTrue())
+		})
+
 		It("images need to be in pairs", func() {
 			By("deploy a broker with one image specified")
 			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
@@ -614,6 +638,39 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(createdBrokerCr.Status.Upgrade.MinorUpdates).Should(BeFalse())
 				g.Expect(createdBrokerCr.Status.Upgrade.PatchUpdates).Should(BeFalse())
 				g.Expect(createdBrokerCr.Status.Upgrade.SecurityUpdates).Should(BeFalse())
+
+			}, timeout, interval).Should(Succeed())
+
+			// cleanup
+			Expect(k8sClient.Delete(ctx, brokerCr)).Should(Succeed())
+			By("check it has gone")
+			Eventually(func() bool {
+				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
+			}, timeout, interval).Should(BeTrue())
+		})
+
+		It("images need to be in pairs, image placeholder ok", func() {
+			By("deploy a broker with just image placeholder")
+			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				candidate.Spec.DeploymentPlan.Image = "placeholder"
+			})
+
+			By("checking the CR does not get rejected with status updated")
+			brokerKey := types.NamespacedName{Name: createdBrokerCr.Name, Namespace: createdBrokerCr.Namespace}
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdBrokerCr)).Should(Succeed())
+
+				g.Expect(meta.IsStatusConditionTrue(createdBrokerCr.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
+
+				By("checking status has useful info on what the operator would deploy")
+				g.Expect(createdBrokerCr.Status.Version.Image).ShouldNot(BeEmpty())
+				g.Expect(createdBrokerCr.Status.Version.BrokerVersion).ShouldNot(BeEmpty())
+
+				g.Expect(createdBrokerCr.Status.Upgrade.MajorUpdates).Should(BeTrue())
+				g.Expect(createdBrokerCr.Status.Upgrade.MinorUpdates).Should(BeTrue())
+				g.Expect(createdBrokerCr.Status.Upgrade.PatchUpdates).Should(BeTrue())
+				g.Expect(createdBrokerCr.Status.Upgrade.SecurityUpdates).Should(BeTrue())
 
 			}, timeout, interval).Should(Succeed())
 
