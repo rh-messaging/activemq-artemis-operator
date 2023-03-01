@@ -32,6 +32,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -143,6 +144,44 @@ var _ = Describe("subresource scale down", func() {
 				Expect(k8sClient.Delete(ctx, createdBrokerCrd)).Should(Succeed())
 			}
 
+		})
+
+		It("deploy plan with label for autoscale", func() {
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				ctx := context.Background()
+				brokerCrd := generateArtemisSpec(defaultNamespace)
+
+				// need to popluate scale json path
+				brokerCrd.Spec.DeploymentPlan.Size = common.Int32ToPtr(1)
+				brokerCrd.Spec.DeploymentPlan.Labels = map[string]string{"A": "a"}
+
+				Expect(k8sClient.Create(ctx, &brokerCrd)).Should(Succeed())
+
+				createdBrokerCrd := &brokerv1beta1.ActiveMQArtemis{}
+				createdBrokerCrdKey := types.NamespacedName{
+					Name:      brokerCrd.Name,
+					Namespace: defaultNamespace,
+				}
+
+				By("verifying started")
+				Eventually(func(g Gomega) {
+
+					g.Expect(k8sClient.Get(ctx, createdBrokerCrdKey, createdBrokerCrd)).Should(Succeed())
+					g.Expect(meta.IsStatusConditionTrue(createdBrokerCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
+
+					g.Expect(createdBrokerCrd.Status.ScaleLabelSelector).Should(ContainSubstring("A=a"))
+					g.Expect(createdBrokerCrd.Status.ScaleLabelSelector).Should(ContainSubstring(createdBrokerCrd.Name))
+					g.Expect(createdBrokerCrd.Status.ScaleLabelSelector).Should(ContainSubstring(","))
+
+					selector, err := labels.Parse(createdBrokerCrd.Status.ScaleLabelSelector)
+					g.Expect(err).Should(BeNil())
+					g.Expect(selector.Empty()).Should(BeFalse())
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				Expect(k8sClient.Delete(ctx, createdBrokerCrd)).Should(Succeed())
+			}
 		})
 	})
 })

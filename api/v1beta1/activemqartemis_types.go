@@ -577,6 +577,9 @@ type ActiveMQArtemisStatus struct {
 	//+operator-sdk:csv:customresourcedefinitions:type=status,displayName="Deployment Plan Size"
 	DeploymentPlanSize int32 `json:"deploymentPlanSize,omitempty"`
 
+	//+operator-sdk:csv:customresourcedefinitions:type=status,displayName="Auto scale label selector"
+	ScaleLabelSelector string `json:"scaleLabelSelector,omitempty"`
+
 	// Current state of external referenced resources
 	//+operator-sdk:csv:customresourcedefinitions:type=status,displayName="External Configurations Status"
 	ExternalConfigs []ExternalConfigStatus `json:"externalConfigs,omitempty"`
@@ -620,7 +623,7 @@ type ExternalConfigStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:subresource:scale:specpath=.spec.deploymentPlan.size,statuspath=.status.deploymentPlanSize
+//+kubebuilder:subresource:scale:specpath=.spec.deploymentPlan.size,statuspath=.status.deploymentPlanSize,selectorpath=.status.scaleLabelSelector
 //+kubebuilder:storageversion
 //+kubebuilder:resource:path=activemqartemises
 //+operator-sdk:csv:customresourcedefinitions:resources={{"Service", "v1"}}

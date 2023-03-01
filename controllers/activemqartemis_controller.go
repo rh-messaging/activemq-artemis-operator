@@ -165,7 +165,7 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 		result = UpdateBrokerPropertiesStatus(customResource, r.Client, r.Scheme)
 	}
 
-	UpdateStatus(customResource, r.Client, request.NamespacedName)
+	UpdateStatus(customResource, r.Client, request.NamespacedName, *namer)
 
 	err = UpdateCRStatus(customResource, r.Client, request.NamespacedName)
 
@@ -581,6 +581,14 @@ func UpdateCRStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, n
 	if err != nil {
 		clog.Error(err, "unable to retrieve current resource", "ActiveMQArtemis", namespacedName)
 		return err
+	}
+
+	if current.Status.DeploymentPlanSize != cr.Status.DeploymentPlanSize {
+		return resources.UpdateStatus(client, cr)
+	}
+
+	if current.Status.ScaleLabelSelector != cr.Status.ScaleLabelSelector {
+		return resources.UpdateStatus(client, cr)
 	}
 
 	if !reflect.DeepEqual(current.Status.Version, cr.Status.Version) {

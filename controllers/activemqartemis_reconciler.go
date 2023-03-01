@@ -2323,15 +2323,17 @@ func NewPersistentVolumeClaimArrayForCR(customResource *brokerv1beta1.ActiveMQAr
 	return &pvcArray
 }
 
-func UpdateStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namespacedName types.NamespacedName) {
+func UpdateStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namespacedName types.NamespacedName, namer Namers) {
 
 	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", cr.Name)
 
 	updateVersionStatus(cr)
 
+	updateScaleStatus(cr, namer)
+
 	reqLogger.V(1).Info("Updating status for pods")
 
-	podStatus := getPodStatus(cr, client, namespacedName)
+	podStatus := updatePodStatus(cr, client, namespacedName)
 
 	reqLogger.V(1).Info("PodStatus current..................", "info:", podStatus)
 	reqLogger.V(1).Info("Ready Count........................", "info:", len(podStatus.Ready))
@@ -2349,6 +2351,27 @@ func UpdateStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, nam
 		// could leave this to kube, it will do a []byte comparison
 		reqLogger.Info("Pods status unchanged")
 	}
+}
+
+func updateScaleStatus(cr *brokerv1beta1.ActiveMQArtemis, namer Namers) {
+	Selector := new(bytes.Buffer)
+
+	var needsSep bool = false
+	for k, v := range namer.LabelBuilder.Labels() {
+		if needsSep {
+			fmt.Fprintf(Selector, ",")
+		}
+		fmt.Fprintf(Selector, "%s=%s", k, v)
+		needsSep = true
+	}
+	for k, v := range cr.Spec.DeploymentPlan.Labels {
+		if needsSep {
+			fmt.Fprintf(Selector, ",")
+		}
+		fmt.Fprintf(Selector, "%s=%s", k, v)
+		needsSep = true
+	}
+	cr.Status.ScaleLabelSelector = Selector.String()
 }
 
 func updateVersionStatus(cr *brokerv1beta1.ActiveMQArtemis) {
@@ -2437,7 +2460,7 @@ func getDeploymentCondition(cr *brokerv1beta1.ActiveMQArtemis, podStatus olm.Dep
 	}
 }
 
-func getPodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namespacedName types.NamespacedName) olm.DeploymentStatus {
+func updatePodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namespacedName types.NamespacedName) olm.DeploymentStatus {
 
 	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
 	reqLogger.V(1).Info("Getting status for pods")
