@@ -135,6 +135,102 @@ var _ = Describe("security controller", func() {
 				return checkCrdDeleted(securityCr.Name, defaultNamespace, createdSecurityCr)
 			}, existingClusterTimeout, existingClusterInterval).Should(BeTrue())
 		})
+
+		It("security with console domain name specified", Label("sec-console-domain-name"), func() {
+
+			By("deploy a security cr")
+
+			module1Name := "module1"
+			user1Name := "user1"
+			password1 := "password1"
+			user2Name := "user2"
+			password2 := "password2"
+
+			brokerDomainName := "activemq"
+			consoleDomainName := "consoleDomain"
+			requiredFlag := "required"
+			secCrd, createdSecCrd := DeploySecurity("ex-security", defaultNamespace, func(secCrdToDeploy *brokerv1beta1.ActiveMQArtemisSecurity) {
+
+				secCrdToDeploy.Spec.LoginModules = brokerv1beta1.LoginModulesType{
+					PropertiesLoginModules: []brokerv1beta1.PropertiesLoginModuleType{
+						{
+							Name: module1Name,
+							Users: []brokerv1beta1.UserType{
+								{
+									Name:     user1Name,
+									Password: &password1,
+									Roles: []string{
+										"admin",
+									},
+								},
+								{
+									Name:     user2Name,
+									Password: &password2,
+									Roles: []string{
+										"guest",
+									},
+								},
+							},
+						},
+					},
+				}
+
+				secCrdToDeploy.Spec.SecurityDomains = brokerv1beta1.SecurityDomainsType{
+					BrokerDomain: brokerv1beta1.BrokerDomainType{
+						Name: &brokerDomainName,
+						LoginModules: []brokerv1beta1.LoginModuleReferenceType{
+							{
+								Name: &module1Name,
+								Flag: &requiredFlag,
+							},
+						},
+					},
+					ConsoleDomain: brokerv1beta1.BrokerDomainType{
+						Name: &consoleDomainName,
+						LoginModules: []brokerv1beta1.LoginModuleReferenceType{
+							{
+								Name: &module1Name,
+								Flag: &requiredFlag,
+							},
+						},
+					},
+				}
+			})
+
+			By("deploy a broker cr")
+			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, nil)
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+				By("make sure the broker is up and running")
+				Eventually(func(g Gomega) {
+					key := types.NamespacedName{Name: namer.CrToSS(brokerCr.Name), Namespace: defaultNamespace}
+					sfsFound := &appsv1.StatefulSet{}
+
+					g.Expect(k8sClient.Get(ctx, key, sfsFound)).Should(Succeed())
+					g.Expect(sfsFound.Status.ReadyReplicas).Should(BeEquivalentTo(1))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("Checking console domain name is applied in artemis.profile " + createdBrokerCr.Name)
+				podWithOrdinal := namer.CrToSS(brokerCr.Name) + "-0"
+				command := []string{"cat", "amq-broker/etc/artemis.profile"}
+
+				Eventually(func(g Gomega) {
+					stdOutContent := ExecOnPod(podWithOrdinal, brokerCr.Name, defaultNamespace, command, g)
+					g.Expect(stdOutContent).Should(ContainSubstring("-Dhawtio.realm=" + consoleDomainName))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
+
+			//cleanup
+			Expect(k8sClient.Delete(ctx, createdBrokerCr)).Should(Succeed())
+			Eventually(func() bool {
+				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
+			}, existingClusterTimeout, existingClusterInterval).Should(BeTrue())
+
+			Expect(k8sClient.Delete(ctx, createdSecCrd)).Should(Succeed())
+			Eventually(func() bool {
+				return checkCrdDeleted(secCrd.Name, defaultNamespace, createdSecCrd)
+			}, existingClusterTimeout, existingClusterInterval).Should(BeTrue())
+		})
 	})
 
 	Context("Reconcile Test", func() {
