@@ -880,6 +880,8 @@ spec:
   - port: wconsj
 ```
 
+For a complete example please refer to this [artemiscloud example](https://github.com/artemiscloud/artemiscloud-examples/tree/main/operator/prometheus).
+
 ## Configuring PodDisruptionBudget for broker deployment
 
 The ActiveMQArtemis custom resource offers a PodDisruptionBudget option
@@ -907,4 +909,3 @@ When deploying the above custom resource the operator will create a PodDisruptio
 object with the **minAvailable** set to 1. The operator also sets the proper selector
 so that the PodDisruptionBudget matches the broker statefulset.
 
-For a complete example please refer to this [artemiscloud example](https://github.com/artemiscloud/artemiscloud-examples/tree/main/operator/prometheus).
