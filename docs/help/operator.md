@@ -743,8 +743,11 @@ Note: you are configuring an array of [envVar](https://kubernetes.io/docs/refere
 
 ## Configuring brokerProperties
 
-The CRD brokerProperties attribute allows the direct configuration of the Artemis internal configuration Bean of a broker via key value pairs. It is usefull to override or augment elements of the CR, or to configure broker features that are not exposed via CRD attributes. In cases where the init container is used to augment xml configuration, broker properties can provide an in CR alternative. As a general 'bag of configration' it is very powerful but it must be treated with due respect to all other sources of configuration. For details of what can be configured see the [Artemis configuraton documentation](https://activemq.apache.org/components/artemis/documentation/latest/configuration-index.html#broker-properties)
-The format is an array of strings of the form key=value where the key identifies a (potentially nested) property of the configuration bean.
+The CRD brokerProperties attribute allows the direct configuration of the Artemis internal configuration Bean of a broker via key value pairs. It is usefull to override or augment elements of the CR, or to configure broker features that are not exposed via CRD attributes. In cases where the init container is used to augment xml configuration, broker properties can provide an in CR alternative. As a general 'bag of configration' it is very powerful but it must be treated with due respect to all other sources of configuration. For details of what can be configured see the [Artemis configuraton documentation](https://activemq.apache.org/components/artemis/documentation/latest/configuration-index.html#broker-properties).
+
+The format is an array of strings of the form `key=value` where the key identifies a (potentially nested) property of the configuration bean.
+Note: the array of strings ends up in a java properties file, where the following list of characters are significant: (space)`' '`, (colon)`':'`, (equals)`'='`. If these need to be present in your keys or values, they need to be escaped with a leading back slash `'\'`.
+
 The CR Status contains a Condition reflecting the application of the brokerProperties volume mount projection.
 For advanced use cases, with a broker version >= 2.27.1, it is possible to use a `broker-N.` prefix to provide configuration to a specific instance(0-N) of your deployment plan.
 
@@ -753,9 +756,7 @@ For example, to provide explicit config for the amount of memory messages will c
 ```yaml
 ...
 spec:
-  deploymentPlan:
-    size: 1
-    image: placeholder
+  ...
   brokerProperties:
     - globalMaxSize=512m
 ```
@@ -879,7 +880,6 @@ spec:
   endpoints:
   - port: wconsj
 ```
-
 For a complete example please refer to this [artemiscloud example](https://github.com/artemiscloud/artemiscloud-examples/tree/main/operator/prometheus).
 
 ## Configuring PodDisruptionBudget for broker deployment

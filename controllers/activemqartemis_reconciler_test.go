@@ -287,6 +287,14 @@ func TestAlder32Gen(t *testing.T) {
 	assert.True(t, strings.Contains(res, "2905476010"))
 }
 
+func TestAlder32GenSpace(t *testing.T) {
+
+	userProps := `admin = joe`
+
+	res := alder32FromData([]byte(userProps))
+	assert.True(t, strings.Contains(res, "295568261"))
+}
+
 func TestAlder32GenWithEmptyLine(t *testing.T) {
 
 	userProps := `
@@ -296,6 +304,16 @@ func TestAlder32GenWithEmptyLine(t *testing.T) {
 
 	res := alder32FromData([]byte(userProps))
 	assert.True(t, strings.Contains(res, "2905476010"))
+}
+
+func TestAlder32GenWithSpace(t *testing.T) {
+
+	userProps := `addressesSettings.#.redeliveryMultiplier=2.3
+	addressesSettings.#.redeliveryCollisionAvoidanceFactor=1.2
+	addressesSettings.Some\ value\ with\ space.redeliveryCollisionAvoidanceFactor=1.2`
+
+	res := alder32FromData([]byte(userProps))
+	assert.EqualValues(t, "2211202255", res)
 }
 
 func TestAlder32GenBrokerProps(t *testing.T) {

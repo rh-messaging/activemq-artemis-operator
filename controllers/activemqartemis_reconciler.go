@@ -10,6 +10,7 @@ import (
 	"hash/adler32"
 	osruntime "runtime"
 	"sort"
+	"unicode"
 
 	"github.com/blang/semver/v4"
 
@@ -1377,7 +1378,7 @@ func MakeVolumes(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers) []
 	if customResource.Spec.Console.SSLEnabled {
 		clog.V(1).Info("Make volumes for ssl console exposure on k8s")
 		secretName := namer.SecretsConsoleNameBuilder.Name()
-		if "" != customResource.Spec.Console.SSLSecret {
+		if customResource.Spec.Console.SSLSecret != "" {
 			secretName = customResource.Spec.Console.SSLSecret
 		}
 		addNewVolumes(secretVolumes, &volumeDefinitions, &secretName)
@@ -1430,7 +1431,7 @@ func MakeVolumeMounts(customResource *brokerv1beta1.ActiveMQArtemis, namer Namer
 	if customResource.Spec.Console.SSLEnabled {
 		clog.V(1).Info("Make volume mounts for ssl console exposure on k8s")
 		volumeMountName := namer.SecretsConsoleNameBuilder.Name() + "-volume"
-		if "" != customResource.Spec.Console.SSLSecret {
+		if customResource.Spec.Console.SSLSecret != "" {
 			volumeMountName = customResource.Spec.Console.SSLSecret + "-volume"
 		}
 		addNewVolumeMounts(secretVolumeMounts, &volumeMounts, &volumeMountName)
@@ -2959,9 +2960,25 @@ func alder32FromData(data []byte) string {
 }
 
 func appendNonEmpty(propsKvs []string, data []byte) []string {
-	keyValue := strings.TrimSpace(string(data))
-	if keyValue != "" {
-		propsKvs = append(propsKvs, keyValue)
+	keyAndValue := strings.TrimSpace(string(data))
+	if keyAndValue != "" {
+		// need to trim space arround the '=' in x = y to match properties loader check sum
+		equalsSeparator := "="
+		keyAndValueTokens := strings.SplitN(keyAndValue, equalsSeparator, 2)
+		numTokens := len(keyAndValueTokens)
+		if numTokens == 2 {
+			keyAndValue =
+				strings.TrimRightFunc(keyAndValueTokens[0], unicode.IsSpace) +
+					equalsSeparator +
+					strings.TrimLeftFunc(keyAndValueTokens[1], unicode.IsSpace)
+		}
+		// escaped x will converted on read, need to replace for check sum
+		keyAndValue = strings.ReplaceAll(keyAndValue, `\ `, ` `)
+		keyAndValue = strings.ReplaceAll(keyAndValue, `\:`, `:`)
+		keyAndValue = strings.ReplaceAll(keyAndValue, `\=`, `=`)
+		if keyAndValue != "" {
+			propsKvs = append(propsKvs, keyAndValue)
+		}
 	}
 	return propsKvs
 }

@@ -7211,6 +7211,55 @@ var _ = Describe("artemis controller", func() {
 			Expect(k8sClient.Delete(ctx, &crd)).To(Succeed())
 		})
 
+		It("brokerProperties with escapes", func() {
+
+			loggingConfigMapName := "my-logging-config-s"
+			loggingData := make(map[string]string)
+			loggingData[LoggingConfigKey] = `appender.stdout.name = STDOUT
+		appender.stdout.type = Console
+		rootLogger = info, STDOUT
+		logger.activemq.name=org.apache.activemq.artemis.core.config.impl.ConfigurationImpl
+        logger.activemq.level=TRACE`
+
+			loggingConfigMap := configmaps.MakeConfigMap(defaultNamespace, loggingConfigMapName, loggingData)
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Create(ctx, loggingConfigMap, &client.CreateOptions{})).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			toCreate := generateArtemisSpec(defaultNamespace)
+
+			toCreate.Spec.DeploymentPlan.ExtraMounts.ConfigMaps = []string{loggingConfigMapName}
+
+			toCreate.Spec.BrokerProperties = []string{
+				"addressesSettings.#.redeliveryMultiplier=2.3",
+				"addressesSettings.#.redeliveryCollisionAvoidanceFactor=1.2",
+				// note, values formated for a java properties file encoding, space in name escaped
+				// https://docs.oracle.com/javase/6/docs/api/java/util/Properties.html#load%28java.io.Reader%29
+				`addressesSettings.Some\ value\ with\ space.redeliveryCollisionAvoidanceFactor=1.2`,
+				`addressesSettings.FF\:\:QN.redeliveryCollisionAvoidanceFactor=1.2`,
+				`addressesSettings.NameWith\=Equals.redeliveryCollisionAvoidanceFactor=1.2`,
+			}
+
+			Expect(k8sClient.Create(context.TODO(), &toCreate)).Should(Succeed())
+
+			key := types.NamespacedName{Name: toCreate.Name, Namespace: toCreate.Namespace}
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, key, createdCrd)).Should(Succeed())
+
+					g.Expect(meta.IsStatusConditionPresentAndEqual(createdCrd.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType, metav1.ConditionTrue)).Should(BeTrue())
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			}
+
+			Expect(k8sClient.Delete(ctx, loggingConfigMap)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, &toCreate)).Should(Succeed())
+		})
+
 		It("mod ordinal broker properties with error and update", func() {
 			ctx := context.Background()
 			crd := generateArtemisSpec(defaultNamespace)
@@ -7557,7 +7606,7 @@ var _ = Describe("artemis controller", func() {
 				userPropsKey: `
 			tom=tom
 			peter=peter`,
-				"roles.properties": `admin=joe`, // this is a cheat to allow joe, when added as a user, to access the DLQ
+				"roles.properties": `admin = joe`, // this is a cheat to allow joe, when added as a user, to access the DLQ
 			}
 
 			// extra bits - prefixed with '_' not read by the broker - won't be in brokerStatus
