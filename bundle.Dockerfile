@@ -29,6 +29,6 @@ LABEL amq.broker.version="7.11.0.OPR.1.CR1"
 LABEL com.redhat.component="amq-broker-rhel8-operator-bundle-container"
 LABEL com.redhat.delivery.backport=false
 LABEL com.redhat.delivery.operator.bundle=true
-LABEL com.redhat.openshift.versions="v4.6"
+LABEL com.redhat.openshift.versions="v4.9"
 LABEL io.k8s.display-name="Red Hat AMQ Broker 7.11 Operator Bundle"
 LABEL io.openshift.tags="messaging,amq,integration,operator,golang"
