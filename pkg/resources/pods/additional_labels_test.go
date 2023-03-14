@@ -4,7 +4,13 @@ import (
 	"testing"
 
 	"github.com/artemiscloud/activemq-artemis-operator/version"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
+
+func TestPods(t *testing.T) {
+	RegisterFailHandler(Fail)
+}
 
 func TestCurrentCompVer(t *testing.T) {
 
