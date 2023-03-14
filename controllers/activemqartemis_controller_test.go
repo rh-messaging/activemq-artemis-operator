@@ -7866,6 +7866,110 @@ var _ = Describe("artemis controller", func() {
 			Expect(k8sClient.Delete(ctx, &crd)).To(Succeed())
 		})
 
+		It("onboarding - jaas-config new user queue rbac", func() {
+
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+
+			secret := &corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "k8s.io.api.core.v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "w-jaas-config",
+					Namespace: crd.ObjectMeta.Namespace,
+				},
+			}
+
+			secret.StringData = map[string]string{JaasConfigKey: `
+		    // a full login.config
+		    activemq {
+
+				// ensure the operator can connect to the mgmt console by referencing the existing properties config
+				org.apache.activemq.artemis.spi.core.security.jaas.PropertiesLoginModule sufficient
+					reload=true
+					debug=true
+					org.apache.activemq.jaas.properties.user="artemis-users.properties"
+					org.apache.activemq.jaas.properties.role="artemis-roles.properties"
+					baseDir="/home/jboss/amq-broker/etc";
+
+				// app specific users and roles	
+				org.apache.activemq.artemis.spi.core.security.jaas.PropertiesLoginModule sufficient
+					reload=true
+					debug=true
+					org.apache.activemq.jaas.properties.user="users.properties"
+					org.apache.activemq.jaas.properties.role="roles.properties";
+
+			};`,
+				"users.properties": `tom=tom`,
+				"roles.properties": `toms=tom`,
+			}
+
+			crd.Spec.DeploymentPlan.ExtraMounts.Secrets = []string{secret.Name}
+
+			// avoiding SecurityCR and AddressCR
+			crd.Spec.BrokerProperties = []string{
+				"# create tom's work queue",
+				"addressConfigurations.TOMS_WORK_QUEUE.queueConfigs.TOMS_WORK_QUEUE.routingType=ANYCAST",
+				"addressConfigurations.TOMS_WORK_QUEUE.queueConfigs.TOMS_WORK_QUEUE.durable=true",
+
+				"# rbac, give tom's role send/consume access",
+				"securityRoles.TOMS_WORK_QUEUE.toms.send=true",
+				"securityRoles.TOMS_WORK_QUEUE.toms.consume=true",
+			}
+
+			By("Deploying the jaas secret " + secret.ObjectMeta.Name)
+			Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
+
+			By("Deploying the CRD " + crd.ObjectMeta.Name)
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+				brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
+				Eventually(func(g Gomega) {
+
+					By("verifying ready status")
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
+					// user/role custom properties won't yet be in memory on the broker
+					g.Expect(meta.IsStatusConditionPresentAndEqual(createdCrd.Status.Conditions, brokerv1beta1.JaasConfigAppliedConditionType, metav1.ConditionUnknown)).Should(BeTrue())
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("tom doing his thing")
+
+				podWithOrdinal := namer.CrToSS(crd.Name) + "-0"
+				command := []string{"amq-broker/bin/artemis", "producer", "--user", "tom", "--password", "tom", "--url", "tcp://" + podWithOrdinal + ":61616", "--message-count", "1", "--destination", "queue://TOMS_WORK_QUEUE", "--verbose"}
+
+				By("producing")
+				Eventually(func(g Gomega) {
+					stdOutContent := ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+					g.Expect(stdOutContent).Should(ContainSubstring("Produced: 1 messages"))
+				}, existingClusterTimeout, existingClusterInterval*2).Should(Succeed())
+
+				By("consuming")
+				command = []string{"amq-broker/bin/artemis", "consumer", "--user", "tom", "--password", "tom", "--url", "tcp://" + podWithOrdinal + ":61616", "--message-count", "1", "--destination", "queue://TOMS_WORK_QUEUE", "--receive-timeout", "10000", "--break-on-null", "--verbose"}
+				Eventually(func(g Gomega) {
+					stdOutContent := ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+					g.Expect(stdOutContent).Should(ContainSubstring("JMS Message ID:"))
+				}, existingClusterTimeout, existingClusterInterval*2).Should(Succeed())
+
+				Eventually(func(g Gomega) {
+					By("verifying jaas status")
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					// user/role custom properties have been loaded
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.JaasConfigAppliedConditionType)).Should(BeTrue())
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
+
+			Expect(k8sClient.Delete(ctx, secret)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, &crd)).To(Succeed())
+		})
+
 		It("jaas-config not allowed in config map", func() {
 
 			ctx := context.Background()
