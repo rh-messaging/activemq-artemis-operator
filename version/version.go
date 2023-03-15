@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	Version = "7.11.0.OPR.1.CR1"
+	Version = "7.11.0.OPR.1"
 	// PriorVersion - prior version
 	PriorVersion = "7.10.2.OPR.2"
 
