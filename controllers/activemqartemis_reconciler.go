@@ -1638,7 +1638,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	// Add additional labels
 	compactVersionForAdditionalLabels, versionError := determineCompactVersionToUse(customResource)
 	if versionError != nil {
-		reqLogger.Error(versionError, "failed to get compact version for", customResource.Spec.Version)
+		reqLogger.Error(versionError, "failed to get compact version", "Spec.Version", customResource.Spec.Version)
 		return nil, versionError
 	}
 	fullVersionForAdditionalLabels := version.FullVersionFromCompactVersion[compactVersionForAdditionalLabels]
