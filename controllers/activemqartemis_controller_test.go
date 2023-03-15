@@ -589,8 +589,9 @@ var _ = Describe("artemis controller", func() {
 
 		It("version validation when version and images are loosly specified", func() {
 			By("deploy a broker with images default and version")
+			latestVersion := semver.MustParse(version.LatestVersion)
 			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
-				candidate.Spec.Version = "2"
+				candidate.Spec.Version = strconv.FormatUint(latestVersion.Major, 10)
 				candidate.Spec.DeploymentPlan.Image = "placeholder"
 				candidate.Spec.DeploymentPlan.InitImage = ""
 			})
