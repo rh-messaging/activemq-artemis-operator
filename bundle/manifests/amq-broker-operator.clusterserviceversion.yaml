@@ -1167,12 +1167,14 @@ spec:
       - description: Specifies Secret names
         displayName: Secret Names
         path: deploymentPlan.extraMounts.secrets
-      - description: The image used for the broker deployment
+      - description: The image used for the broker, all upgrades are disabled. Needs
+          a corresponding initImage
         displayName: Image
         path: deploymentPlan.image
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
-      - description: The init container image used to configure broker
+      - description: The init container image used to configure broker, all upgrades
+          are disabled. Needs a corresponding image
         displayName: Init Image
         path: deploymentPlan.initImage
         x-descriptors:
@@ -1273,7 +1275,14 @@ spec:
           not exclusive
         displayName: Environment Variables
         path: env
-      - description: Specifies the upgrades
+      - description: The ingress domain to expose the application. By default, on
+          Kubernetes it is apps.artemiscloud.io and on OpenShift it is the Ingress
+          Controller domain.
+        displayName: Ingress Domain
+        path: ingressDomain
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Specifies the upgrades (deprecated in favour of Version)
         displayName: Upgrades
         path: upgrades
       - description: Set true to enable automatic micro version product upgrades,
@@ -1289,7 +1298,8 @@ spec:
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldDependency:upgrades.enabled:true
         - urn:alm:descriptor:com.tectonic.ui:ui:booleanSwitch
-      - description: The version of the broker deployment.
+      - description: The desired version of the broker. Can be x, or x.y or x.y.z
+          to configure upgrades
         displayName: Version
         path: version
         x-descriptors:
@@ -1301,16 +1311,16 @@ spec:
         path: conditions
         x-descriptors:
         - urn:alm:descriptor:io.kubernetes.conditions
+      - displayName: Deployment Plan Size
+        path: deploymentPlanSize
       - description: Current state of external referenced resources
         displayName: External Configurations Status
         path: externalConfigs
-      - description: Name
-        displayName: Name
+      - displayName: Name
         path: externalConfigs[0].name
         x-descriptors:
         - urn:alm:descriptor:text
-      - description: Resource Version
-        displayName: Resource Version
+      - displayName: Resource Version
         path: externalConfigs[0].resourceVersion
         x-descriptors:
         - urn:alm:descriptor:text
@@ -1319,6 +1329,40 @@ spec:
         path: podStatus
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:podStatuses
+      - displayName: Auto scale label selector
+        path: scaleLabelSelector
+      - displayName: Upgrade Status
+        path: upgrade
+      - displayName: MajorUpdates
+        path: upgrade.majorUpdates
+        x-descriptors:
+        - urn:alm:descriptor:text
+      - displayName: MinorUpdates
+        path: upgrade.minorUpdates
+        x-descriptors:
+        - urn:alm:descriptor:text
+      - displayName: PatchUpdates
+        path: upgrade.patchUpdates
+        x-descriptors:
+        - urn:alm:descriptor:text
+      - displayName: SecurityUpdates
+        path: upgrade.securityUpdates
+        x-descriptors:
+        - urn:alm:descriptor:text
+      - displayName: Version Status
+        path: version
+      - displayName: BrokerVersion
+        path: version.brokerVersion
+        x-descriptors:
+        - urn:alm:descriptor:text
+      - displayName: Image URI
+        path: version.image
+        x-descriptors:
+        - urn:alm:descriptor:org.w3:link
+      - displayName: InitImage URI
+        path: version.initImage
+        x-descriptors:
+        - urn:alm:descriptor:org.w3:link
       version: v1beta1
     - description: ActiveMQArtemis is the Schema for the activemqartemises API
       displayName: Active MQArtemis
