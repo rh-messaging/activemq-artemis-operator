@@ -71,13 +71,10 @@ var YacfgProfileName string = "amq_broker"
 
 // Sorted array of supported ActiveMQ Artemis versions
 var SupportedActiveMQArtemisVersions = []string{
-	"2.21.0",
-	"2.22.0",
-	"2.23.0",
-	"2.25.0",
-	"2.26.0",
-	"2.27.0",
-	"2.28.0",
+	"7.10.0",
+	"7.10.1",
+	"7.10.2",
+	"7.11.0",
 }
 
 func CompactActiveMQArtemisVersion(version string) string {
