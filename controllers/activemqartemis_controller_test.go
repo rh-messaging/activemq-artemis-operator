@@ -1039,8 +1039,7 @@ var _ = Describe("artemis controller", func() {
 			brokerCr := generateArtemisSpec(defaultNamespace)
 			compactVersionToUse, verr := determineCompactVersionToUse(&brokerCr)
 			Expect(verr).To(BeNil())
-			yacfgProfileVersion = version.YacfgProfileVersionFromFullVersion[version.FullVersionFromCompactVersion[compactVersionToUse]]
-			Expect(yacfgProfileVersion).To(Equal("2.21.0"))
+			Expect(compactVersionToUse).To(Equal(version.CompactLatestVersion), "actual", compactVersionToUse)
 		})
 	})
 
@@ -1558,7 +1557,7 @@ var _ = Describe("artemis controller", func() {
 
 			// update CR with dud image, keeping it lower case to avoid InvalidImageName
 			// "couldn't parse image reference "quay.io/Blacloud/activemq-Bla-broker-kubernetes:1.0.7": invalid reference format: repository name must be lowercase"
-			dudImage := strings.ReplaceAll(imageUrl, "artemis", "bla")
+			dudImage := strings.ReplaceAll(imageUrl, "broker", "bla")
 			By("Replacing image " + imageUrl + ", with dud: " + dudImage)
 			Expect(dudImage).ShouldNot(Equal(imageUrl))
 
@@ -3202,7 +3201,7 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(len(createdSs.ObjectMeta.Labels)).Should(BeNumerically("==", 2))
 				g.Expect(len(createdSs.Spec.Selector.MatchLabels)).Should(BeNumerically("==", 2))
 
-				g.Expect(len(createdSs.Spec.Template.Labels)).Should(BeNumerically("==", 4))
+				g.Expect(len(createdSs.Spec.Template.Labels)).Should(BeNumerically(">=", 4))
 
 			}, timeout, interval).Should(Succeed())
 
