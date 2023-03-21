@@ -1543,13 +1543,13 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 
 	configMapsToCreate := customResource.Spec.DeploymentPlan.ExtraMounts.ConfigMaps
 	secretsToCreate := customResource.Spec.DeploymentPlan.ExtraMounts.Secrets
-	resourceName, isSecret, brokerPropertiesMapData := reconciler.addResourceForBrokerProperties(customResource, namer)
+	brokerPropertiesResourceName, isSecret, brokerPropertiesMapData := reconciler.addResourceForBrokerProperties(customResource, namer)
 	if isSecret {
-		secretsToCreate = append(secretsToCreate, resourceName)
+		secretsToCreate = append(secretsToCreate, brokerPropertiesResourceName)
 	} else {
-		configMapsToCreate = append(configMapsToCreate, resourceName)
+		configMapsToCreate = append(configMapsToCreate, brokerPropertiesResourceName)
 	}
-	extraVolumes, extraVolumeMounts := createExtraConfigmapsAndSecrets(container, configMapsToCreate, secretsToCreate, brokerPropertiesMapData)
+	extraVolumes, extraVolumeMounts := createExtraConfigmapsAndSecretsVolumeMounts(container, configMapsToCreate, secretsToCreate, brokerPropertiesResourceName, brokerPropertiesMapData)
 
 	reqLogger.Info("Extra volumes", "volumes", extraVolumes)
 	reqLogger.Info("Extra mounts", "mounts", extraVolumeMounts)
@@ -1737,7 +1737,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	}
 	javaOpts := corev1.EnvVar{
 		Name:  "JAVA_OPTS",
-		Value: brokerPropertiesConfigSystemPropValue(mountPoint, resourceName, brokerPropertiesMapData),
+		Value: brokerPropertiesConfigSystemPropValue(mountPoint, brokerPropertiesResourceName, brokerPropertiesMapData),
 	}
 	environments.CreateOrAppend(podSpec.InitContainers, &javaOpts)
 
@@ -2209,7 +2209,7 @@ func determineCompactVersionToUse(customResource *brokerv1beta1.ActiveMQArtemis)
 	return compactVersionToUse, nil
 }
 
-func createExtraConfigmapsAndSecrets(brokerContainer *corev1.Container, configMaps []string, secrets []string, brokerPropsData map[string]string) ([]corev1.Volume, []corev1.VolumeMount) {
+func createExtraConfigmapsAndSecretsVolumeMounts(brokerContainer *corev1.Container, configMaps []string, secrets []string, brokePropertiesResourceName string, brokerPropsData map[string]string) ([]corev1.Volume, []corev1.VolumeMount) {
 
 	var extraVolumes []corev1.Volume
 	var extraVolumeMounts []corev1.VolumeMount
@@ -2240,7 +2240,7 @@ func createExtraConfigmapsAndSecrets(brokerContainer *corev1.Container, configMa
 			//now we have a secret. First create a volume
 			secretVol := volumes.MakeVolumeForSecret(secret)
 
-			if _, isBrokerProperties := brokerPropsData[BrokerPropertiesName]; isBrokerProperties && len(brokerPropsData) > 1 {
+			if secret == brokePropertiesResourceName && len(brokerPropsData) > 1 {
 				// place ordinal data in subpath
 				for key := range brokerPropsData {
 					if hasOrdinal, separatorIndex := extractOrdinalPrefixSeperatorIndex(key); hasOrdinal {
