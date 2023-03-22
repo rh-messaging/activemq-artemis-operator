@@ -222,7 +222,7 @@ var _ = Describe("Scale down controller", func() {
 
 			Expect(err).To(BeNil())
 
-			Expect(content).Should(ContainSubstring("Produced: 1 messages"))
+			Expect(*content).Should(ContainSubstring("Produced: 1 messages"))
 
 			By("Scaling down to 1")
 			Eventually(func(g Gomega) {
@@ -247,7 +247,7 @@ var _ = Describe("Scale down controller", func() {
 
 			Expect(err).To(BeNil())
 
-			Expect(content).Should(ContainSubstring("JMS Message ID:"))
+			Expect(*content).Should(ContainSubstring("JMS Message ID:"))
 
 			By("reverting taints on node")
 			Eventually(func(g Gomega) {
