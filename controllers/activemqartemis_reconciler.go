@@ -223,7 +223,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(customResour
 		currentStatefulSet = obj.(*appsv1.StatefulSet)
 	}
 
-	log.Info("Reconciling desired statefulset", "name", ssNamespacedName, "current", currentStatefulSet)
+	log.V(3).Info("Reconciling desired statefulset", "name", ssNamespacedName, "current", currentStatefulSet)
 	currentStatefulSet, err = reconciler.NewStatefulSetForCR(customResource, namer, currentStatefulSet, client)
 	if err != nil {
 		reqLogger.Error(err, "Error creating new stafulset")
@@ -590,14 +590,14 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customRe
 			ValueFrom: envVarSource,
 		}
 		if retrievedEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, envVarName); nil == retrievedEnvVar {
-			log.V(1).Info("containers: failed to retrieve " + envVarName + " creating")
+			log.V(3).Info("containers: failed to retrieve " + envVarName + " creating")
 			environments.Create(currentStatefulSet.Spec.Template.Spec.Containers, envVarDefinition)
 		}
 
 		//custom init container
 		if len(currentStatefulSet.Spec.Template.Spec.InitContainers) > 0 {
 			if retrievedEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.InitContainers, envVarName); nil == retrievedEnvVar {
-				log.V(1).Info("init_containers: failed to retrieve " + envVarName + " creating")
+				log.V(3).Info("init_containers: failed to retrieve " + envVarName + " creating")
 				environments.Create(currentStatefulSet.Spec.Template.Spec.InitContainers, envVarDefinition)
 			}
 		}
@@ -852,13 +852,10 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureConsoleExposure(custom
 			reconciler.checkExistingService(customResource, serviceDefinition, client)
 			reconciler.trackDesired(serviceDefinition)
 
-			var err error = nil
 			isOpenshift := false
-			if isOpenshift, err = environments.DetectOpenshift(); err != nil {
-				clog.Error(err, "Failed to get env, will try kubernetes")
-			}
+			isOpenshift, _ = environments.DetectOpenshift()
 			if isOpenshift {
-				clog.Info("routeDefinition for " + targetPortName)
+				clog.V(2).Info("routeDefinition for " + targetPortName)
 				var existing *routev1.Route = nil
 				obj := reconciler.cloneOfDeployed(reflect.TypeOf(routev1.Route{}), targetServiceName+"-rte")
 				if obj != nil {
@@ -868,7 +865,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureConsoleExposure(custom
 				reconciler.trackDesired(routeDefinition)
 
 			} else {
-				clog.Info("ingress for " + targetPortName)
+				clog.V(2).Info("ingress for " + targetPortName)
 				var existing *netv1.Ingress = nil
 				obj := reconciler.cloneOfDeployed(reflect.TypeOf(netv1.Ingress{}), targetServiceName+"-ing")
 				if obj != nil {
@@ -1075,7 +1072,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) CurrentDeployedResources(custom
 
 	for t, objs := range reconciler.deployed {
 		for _, obj := range objs {
-			reqLogger.Info("Deployed ", "Type", t, "Name", obj.GetName())
+			reqLogger.V(3).Info("Deployed ", "Type", t, "Name", obj.GetName())
 		}
 	}
 }
@@ -1103,7 +1100,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(customResource
 		isEqual := equality.Semantic.DeepEqual(ss1.Spec, ss2.Spec)
 
 		if !isEqual {
-			reqLogger.V(1).Info("Unequal", "depoyed", ss1.Spec, "requested", ss2.Spec)
+			reqLogger.V(3).Info("Unequal", "depoyed", ss1.Spec, "requested", ss2.Spec)
 		}
 		return isEqual
 	})
@@ -1178,7 +1175,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) deleteRequestedResource(customR
 
 	var deleteError error
 	if deleteError := resources.Delete(client, requested); deleteError == nil {
-		reqLogger.Info("deleted", "kind", kind, " named ", requested.GetName())
+		reqLogger.V(2).Info("deleted", "kind", kind, " named ", requested.GetName())
 	} else {
 		reqLogger.Error(deleteError, "delete Failed", "kind", kind, " named ", requested.GetName())
 	}
@@ -1799,7 +1796,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	configPodSecurity(podSpec, &customResource.Spec.DeploymentPlan.PodSecurity)
 	configurePodSecurityContext(podSpec, customResource.Spec.DeploymentPlan.PodSecurityContext)
 
-	clog.Info("Final Init spec", "Detail", podSpec.InitContainers)
+	clog.V(3).Info("Final Init spec", "Detail", podSpec.InitContainers)
 
 	pts.Spec = *podSpec
 
@@ -2346,11 +2343,11 @@ func UpdateStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, nam
 	meta.SetStatusCondition(&cr.Status.Conditions, getDeploymentCondition(cr, podStatus, ValidCondition.Status == metav1.ConditionTrue))
 
 	if !reflect.DeepEqual(podStatus, cr.Status.PodStatus) {
-		reqLogger.Info("Pods status updated")
+		reqLogger.V(1).Info("Pods status updated")
 		cr.Status.PodStatus = podStatus
 	} else {
 		// could leave this to kube, it will do a []byte comparison
-		reqLogger.Info("Pods status unchanged")
+		reqLogger.V(1).Info("Pods status unchanged")
 	}
 }
 
