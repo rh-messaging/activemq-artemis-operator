@@ -69,7 +69,7 @@ func (r *ActiveMQArtemisReconciler) UpdatePodForSecurity(securityHandlerNamespac
 			candidate.Name = artemis.Name
 			candidate.Namespace = artemis.Namespace
 			if handler.IsApplicableFor(candidate) {
-				clog.Info("force reconcile for security", "handler", securityHandlerNamespacedName, "CR", candidate)
+				clog.V(1).Info("force reconcile for security", "handler", securityHandlerNamespacedName, "CR", candidate)
 				r.events <- event.GenericEvent{Object: &existingCrs.Items[index]}
 			}
 		}
@@ -78,21 +78,21 @@ func (r *ActiveMQArtemisReconciler) UpdatePodForSecurity(securityHandlerNamespac
 }
 
 func (r *ActiveMQArtemisReconciler) RemoveBrokerConfigHandler(namespacedName types.NamespacedName) {
-	clog.Info("Removing config handler", "name", namespacedName)
+	clog.V(1).Info("Removing config handler", "name", namespacedName)
 	oldHandler, ok := namespaceToConfigHandler[namespacedName]
 	if ok {
 		delete(namespaceToConfigHandler, namespacedName)
-		clog.Info("Handler removed", "name", namespacedName)
+		clog.V(2).Info("Handler removed", "name", namespacedName)
 		r.UpdatePodForSecurity(namespacedName, oldHandler)
 	}
 }
 
 func (r *ActiveMQArtemisReconciler) AddBrokerConfigHandler(namespacedName types.NamespacedName, handler common.ActiveMQArtemisConfigHandler, toReconcile bool) error {
 	if _, ok := namespaceToConfigHandler[namespacedName]; ok {
-		clog.V(1).Info("There is an old config handler, it'll be replaced")
+		clog.V(2).Info("There is an old config handler, it'll be replaced")
 	}
 	namespaceToConfigHandler[namespacedName] = handler
-	clog.V(1).Info("A new config handler has been added", "handler", handler)
+	clog.V(2).Info("A new config handler has been added", "handler", handler)
 	if toReconcile {
 		clog.V(1).Info("Updating broker security")
 		return r.UpdatePodForSecurity(namespacedName, handler)
@@ -145,7 +145,7 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			reqLogger.Info("ActiveMQArtemis Controller Reconcile encountered a IsNotFound, for request NamespacedName " + request.NamespacedName.String())
+			reqLogger.V(1).Info("ActiveMQArtemis Controller Reconcile encountered a IsNotFound, for request NamespacedName " + request.NamespacedName.String())
 			return ctrl.Result{}, nil
 		}
 		reqLogger.Error(err, "unable to retrieve the ActiveMQArtemis", "request", request)
@@ -174,7 +174,7 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 			reqLogger.V(1).Info("unable to update ActiveMQArtemis status", "Request Namespace", request.Namespace, "Request Name", request.Name, "error", err)
 			err = nil // we don't want the controller event loop reporting this as an error
 		} else {
-			reqLogger.Error(err, "unable to update ActiveMQArtemis status", "Request Namespace", request.Namespace, "Request Name", request.Name)
+			reqLogger.V(1).Error(err, "unable to update ActiveMQArtemis status", "Request Namespace", request.Namespace, "Request Name", request.Name)
 		}
 		return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, err
 	}
@@ -182,11 +182,11 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 	if result.IsZero() {
 		reqLogger.Info("resource successfully reconciled")
 		if hasExtraMounts(customResource) {
-			reqLogger.Info("resource has extraMounts, requeuing for periodic sync")
+			reqLogger.V(1).Info("resource has extraMounts, requeuing for periodic sync")
 			result = ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}
 		}
 	} else {
-		reqLogger.Info("requeue resource")
+		reqLogger.V(1).Info("requeue resource")
 	}
 	return result, err
 }
@@ -568,55 +568,54 @@ func (r *ActiveMQArtemisReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return err
 }
 
-func UpdateCRStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namespacedName types.NamespacedName) error {
+func UpdateCRStatus(desired *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namespacedName types.NamespacedName) error {
 
-	common.SetReadyCondition(&cr.Status.Conditions)
+	common.SetReadyCondition(&desired.Status.Conditions)
 
 	current := &brokerv1beta1.ActiveMQArtemis{}
 
 	err := client.Get(context.TODO(), namespacedName, current)
 	if err != nil {
-		clog.Error(err, "unable to retrieve current resource", "ActiveMQArtemis", namespacedName)
+		clog.V(1).Error(err, "unable to retrieve current resource", "ActiveMQArtemis", namespacedName)
 		return err
 	}
 
-	if current.Status.DeploymentPlanSize != cr.Status.DeploymentPlanSize {
-		return resources.UpdateStatus(client, cr)
+	if current.Status.DeploymentPlanSize != desired.Status.DeploymentPlanSize ||
+		current.Status.ScaleLabelSelector != desired.Status.ScaleLabelSelector ||
+		!reflect.DeepEqual(current.Status.Version, desired.Status.Version) ||
+		len(desired.Status.ExternalConfigs) != len(current.Status.ExternalConfigs) ||
+		externalConfigsModified(desired, current) ||
+		!reflect.DeepEqual(current.Status.PodStatus, desired.Status.PodStatus) ||
+		len(current.Status.Conditions) != len(desired.Status.Conditions) ||
+		conditionsModified(desired, current) {
+
+		clog.Info("CR.status update", "Namespace", desired.Namespace, "Name", desired.Name, "Observed status", desired.Status)
+		return resources.UpdateStatus(client, desired)
 	}
 
-	if current.Status.ScaleLabelSelector != cr.Status.ScaleLabelSelector {
-		return resources.UpdateStatus(client, cr)
-	}
+	return nil
+}
 
-	if !reflect.DeepEqual(current.Status.Version, cr.Status.Version) {
-		return resources.UpdateStatus(client, cr)
+func conditionsModified(desired *brokerv1beta1.ActiveMQArtemis, current *brokerv1beta1.ActiveMQArtemis) bool {
+	for _, c := range desired.Status.Conditions {
+		if !common.IsConditionPresentAndEqual(current.Status.Conditions, c) {
+			return true
+		}
 	}
-	if len(cr.Status.ExternalConfigs) != len(current.Status.ExternalConfigs) {
-		return resources.UpdateStatus(client, cr)
-	}
-	if len(cr.Status.ExternalConfigs) >= 0 {
-		for _, cfg := range cr.Status.ExternalConfigs {
+	return false
+}
+
+func externalConfigsModified(desired *brokerv1beta1.ActiveMQArtemis, current *brokerv1beta1.ActiveMQArtemis) bool {
+	if len(desired.Status.ExternalConfigs) >= 0 {
+		for _, cfg := range desired.Status.ExternalConfigs {
 			for _, curCfg := range current.Status.ExternalConfigs {
 				if curCfg.Name == cfg.Name && curCfg.ResourceVersion != cfg.ResourceVersion {
-					return resources.UpdateStatus(client, cr)
+					return true
 				}
 			}
 		}
 	}
-
-	if !reflect.DeepEqual(current.Status.PodStatus, cr.Status.PodStatus) {
-		return resources.UpdateStatus(client, cr)
-	}
-	if len(current.Status.Conditions) != len(cr.Status.Conditions) {
-		return resources.UpdateStatus(client, cr)
-	}
-	for _, c := range current.Status.Conditions {
-		if !common.IsConditionPresentAndEqual(cr.Status.Conditions, c) {
-			return resources.UpdateStatus(client, cr)
-		}
-	}
-
-	return nil
+	return false
 }
 
 // Controller Errors
