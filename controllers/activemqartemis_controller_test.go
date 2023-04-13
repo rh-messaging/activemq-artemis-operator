@@ -7314,6 +7314,8 @@ var _ = Describe("artemis controller", func() {
 			crd.Spec.BrokerProperties = []string{
 				"globalMaxSize=512m",
 				"broker-1.populateValidatedUser=true",
+				"broker-0.populateValidatedUser=true",
+				"broker-2.populateValidatedUser=true",
 				"broker-1.nonGlobalNonExistSholdError=7",
 			}
 
@@ -7341,6 +7343,15 @@ var _ = Describe("artemis controller", func() {
 
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
+				var ssGeneration int64 = 0
+
+				ssNamespacedName := types.NamespacedName{Name: namer.CrToSS(crd.Name), Namespace: defaultNamespace}
+				Eventually(func(g Gomega) {
+					currentStatefulSet, err := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, nil, k8sClient)
+					g.Expect(err).To(BeNil())
+					ssGeneration = currentStatefulSet.Generation
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
 				By("update Cr to fix error")
 				Eventually(func(g Gomega) {
 					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
@@ -7348,6 +7359,8 @@ var _ = Describe("artemis controller", func() {
 					createdCrd.Spec.BrokerProperties = []string{
 						"globalMaxSize=512m",
 						"broker-1.populateValidatedUser=true",
+						"broker-0.populateValidatedUser=true",
+						"broker-2.populateValidatedUser=true",
 						"broker-1.globalMaxSize=612m",
 					}
 
@@ -7366,6 +7379,14 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType)).Should(BeTrue())
 
 				}, existingClusterTimeout, existingClusterInterval*5).Should(Succeed())
+
+				By("verify same ss generation")
+				Eventually(func(g Gomega) {
+					currentStatefulSet, err := ss.RetrieveStatefulSet(ssNamespacedName.Name, ssNamespacedName, nil, k8sClient)
+					g.Expect(err).To(BeNil())
+					g.Expect(currentStatefulSet.Generation).To(Equal(ssGeneration))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
 			}
 
 			By("By checking it has gone")

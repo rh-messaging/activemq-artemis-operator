@@ -2238,8 +2238,8 @@ func createExtraConfigmapsAndSecretsVolumeMounts(brokerContainer *corev1.Contain
 			secretVol := volumes.MakeVolumeForSecret(secret)
 
 			if secret == brokePropertiesResourceName && len(brokerPropsData) > 1 {
-				// place ordinal data in subpath
-				for key := range brokerPropsData {
+				// place ordinal data in subpath in order
+				for _, key := range sortedKeys(brokerPropsData) {
 					if hasOrdinal, separatorIndex := extractOrdinalPrefixSeperatorIndex(key); hasOrdinal {
 						subPath := key[:separatorIndex]
 						secretVol.VolumeSource.Secret.Items = append(secretVol.VolumeSource.Secret.Items, corev1.KeyToPath{Key: key, Path: fmt.Sprintf("%s/%s", subPath, key)})
