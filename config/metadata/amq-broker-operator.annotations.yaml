@@ -4,7 +4,7 @@ annotations:
   maintainer: "Roddie Kieley <rkieley@redhat.com>"
   version: "7.11.0"
   summary: "Red Hat AMQ Broker 7.11 Operator Bundle"
-  amq.broker.version: "7.11.0.OPR.1.CR3"
+  amq.broker.version: "7.11.0.OPR.2.CR1"
   com.redhat.component: "amq-broker-rhel8-operator-bundle-container"
   com.redhat.delivery.backport: false
   com.redhat.delivery.operator.bundle: true
