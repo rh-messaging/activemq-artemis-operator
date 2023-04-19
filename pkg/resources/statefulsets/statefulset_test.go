@@ -31,7 +31,7 @@ var _ = Describe("Statefulset", func() {
 			objs := []client.Object{
 				&appsv1.StatefulSet{
 					ObjectMeta: v1.ObjectMeta{
-						Name:      "sts-0",
+						Name:      "sts-0-ss",
 						Namespace: "some-ns",
 						Labels: map[string]string{
 							"label1": "value1",
@@ -40,7 +40,7 @@ var _ = Describe("Statefulset", func() {
 				},
 				&appsv1.StatefulSet{
 					ObjectMeta: v1.ObjectMeta{
-						Name:      "sts-1",
+						Name:      "sts-1-ss",
 						Namespace: "some-ns",
 						Labels: map[string]string{
 							"label1": "value1",
@@ -50,7 +50,7 @@ var _ = Describe("Statefulset", func() {
 				},
 				&appsv1.StatefulSet{
 					ObjectMeta: v1.ObjectMeta{
-						Name:      "sts-0",
+						Name:      "sts-0-ss",
 						Namespace: "other-ns",
 						Labels: map[string]string{
 							"label2": "value2",
@@ -64,7 +64,7 @@ var _ = Describe("Statefulset", func() {
 				Expect(infos).Should(HaveLen(3))
 				Expect(infos).Should(ContainElements(statefulsets.StatefulSetInfo{
 					NamespacedName: types.NamespacedName{
-						Name:      "sts-0",
+						Name:      "sts-0-ss",
 						Namespace: "some-ns",
 					},
 					Labels: map[string]string{
@@ -72,7 +72,7 @@ var _ = Describe("Statefulset", func() {
 					},
 				}, statefulsets.StatefulSetInfo{
 					NamespacedName: types.NamespacedName{
-						Name:      "sts-1",
+						Name:      "sts-1-ss",
 						Namespace: "some-ns",
 					},
 					Labels: map[string]string{
@@ -81,7 +81,7 @@ var _ = Describe("Statefulset", func() {
 					},
 				}, statefulsets.StatefulSetInfo{
 					NamespacedName: types.NamespacedName{
-						Name:      "sts-0",
+						Name:      "sts-0-ss",
 						Namespace: "other-ns",
 					},
 					Labels: map[string]string{
@@ -103,7 +103,7 @@ var _ = Describe("Statefulset", func() {
 				Expect(infos).Should(HaveLen(2))
 				Expect(infos).Should(ContainElements(statefulsets.StatefulSetInfo{
 					NamespacedName: types.NamespacedName{
-						Name:      "sts-0",
+						Name:      "sts-0-ss",
 						Namespace: "some-ns",
 					},
 					Labels: map[string]string{
@@ -111,7 +111,7 @@ var _ = Describe("Statefulset", func() {
 					},
 				}, statefulsets.StatefulSetInfo{
 					NamespacedName: types.NamespacedName{
-						Name:      "sts-0",
+						Name:      "sts-0-ss",
 						Namespace: "other-ns",
 					},
 					Labels: map[string]string{

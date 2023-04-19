@@ -92,7 +92,7 @@ var _ = Describe("JolokiaClient", func() {
 				objs := []client.Object{
 					&appsv1.StatefulSet{
 						ObjectMeta: v1.ObjectMeta{
-							Name:      "broker",
+							Name:      "broker-ss",
 							Namespace: "some-ns",
 							Labels: map[string]string{
 								"label1": "value1",
@@ -104,7 +104,7 @@ var _ = Describe("JolokiaClient", func() {
 					},
 					&corev1.Pod{
 						ObjectMeta: v1.ObjectMeta{
-							Name:      "broker-0",
+							Name:      "broker-ss-0",
 							Namespace: "some-ns",
 						},
 						Spec: corev1.PodSpec{
@@ -123,9 +123,10 @@ var _ = Describe("JolokiaClient", func() {
 					Namespace: "some-ns",
 				}
 				ssInfos := ss.GetDeployedStatefulSetNames(client, []types.NamespacedName{brokerRef})
+				Expect(len(ssInfos)).To(Equal(1))
 				infos := jolokia_client.GetBrokers(brokerRef, ssInfos, client)
 				Expect(infos).Should(HaveLen(1))
-				Expect(infos[0].IP).To(Equal("1.2.3.4"))
+				Expect(infos[0].IP).To(Equal("broker-ss-0.broker-hdls-svc.some-ns.svc.cluster.local"))
 				Expect(infos[0].Artemis).NotTo(BeNil())
 			})
 		})

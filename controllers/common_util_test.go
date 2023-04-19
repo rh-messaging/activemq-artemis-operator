@@ -19,9 +19,14 @@ package controllers
 import (
 	"bytes"
 	"context"
+	crand "crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/hex"
 	"fmt"
 	"io"
+	"math/big"
 	"math/rand"
 	"os"
 	"path"
@@ -36,6 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"software.sslmate.com/src/go-pkcs12"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -599,4 +605,116 @@ func GetOperatorLog(ns string) (*string, error) {
 	str := buf.String()
 
 	return &str, nil
+}
+
+func NewPriveKey() (*rsa.PrivateKey, error) {
+	caPrivKey, err := rsa.GenerateKey(crand.Reader, 2048)
+	if err != nil {
+		return nil, err
+	}
+	if err := caPrivKey.Validate(); err != nil {
+		return nil, err
+	}
+	return caPrivKey, nil
+}
+
+// generate a keystore file in bytes
+// the keystore contains a self signed cert
+func GenerateKeystore(password string, dnsNames []string) ([]byte, error) {
+	// create the key pair
+	caPrivKey, err := NewPriveKey()
+	if err != nil {
+		return nil, err
+	}
+	if err := caPrivKey.Validate(); err != nil {
+		return nil, err
+	}
+
+	// set up our CA certificate
+	ca := &x509.Certificate{
+		SerialNumber: big.NewInt(202305071030),
+		Subject: pkix.Name{
+			CommonName:         "ArtemisCloud Broker",
+			OrganizationalUnit: []string{"Broker"},
+			Organization:       []string{"ArtemisCloud"},
+		},
+		NotBefore:          time.Now(),
+		NotAfter:           time.Now().AddDate(10, 0, 0),
+		IsCA:               false,
+		SignatureAlgorithm: x509.SHA256WithRSA,
+		ExtKeyUsage:        []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+	}
+	if len(dnsNames) > 0 {
+		// Subject Alternative Names
+		ca.DNSNames = dnsNames
+	}
+
+	// create the self-signed CA
+	caBytes, err := x509.CreateCertificate(crand.Reader, ca, ca, &caPrivKey.PublicKey, caPrivKey)
+	if err != nil {
+		return nil, err
+	}
+
+	cert, err := x509.ParseCertificate(caBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	ksBytes, err := pkcs12.Encode(crand.Reader, caPrivKey, cert, []*x509.Certificate{}, password)
+	if err != nil {
+		return nil, err
+	}
+
+	return ksBytes, nil
+}
+
+func GenerateTrustStoreFromKeyStore(ksBytes []byte, password string) ([]byte, error) {
+
+	_, cert, _, err := pkcs12.DecodeChain(ksBytes, password)
+
+	if err != nil {
+		return nil, err
+	}
+
+	pfxBytes, err := pkcs12.EncodeTrustStore(crand.Reader, []*x509.Certificate{cert}, password)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return pfxBytes, nil
+}
+
+func CreateTlsSecret(secretName string, ns string, ksPassword string, nsNames []string) (*corev1.Secret, error) {
+
+	certData := make(map[string][]byte)
+	stringData := make(map[string]string)
+
+	brokerKs, ferr := GenerateKeystore(ksPassword, nsNames)
+	if ferr != nil {
+		return nil, ferr
+	}
+	clientTs, ferr := GenerateTrustStoreFromKeyStore(brokerKs, ksPassword)
+	if ferr != nil {
+		return nil, ferr
+	}
+
+	certData["broker.ks"] = brokerKs
+	certData["client.ts"] = clientTs
+	stringData["keyStorePassword"] = ksPassword
+	stringData["trustStorePassword"] = ksPassword
+
+	tlsSecret := corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: ns,
+		},
+		Data:       certData,
+		StringData: stringData,
+	}
+	return &tlsSecret, nil
 }
