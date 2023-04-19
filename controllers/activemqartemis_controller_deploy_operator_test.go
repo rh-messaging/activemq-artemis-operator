@@ -42,12 +42,15 @@ var _ = Describe("artemis controller", Label("do"), func() {
 	Context("operator logging config test", Label("do-operator-log"), func() {
 		It("test operator with env var", func() {
 			if os.Getenv("DEPLOY_OPERATOR") == "true" {
-				By("checking default operator should have INFO/DEBUG logs")
+				// re-install a new operator to have a fresh log
+				uninstallOperator(false)
+				installOperator(nil)
+				By("checking default operator should have INFO logs")
 				Eventually(func(g Gomega) {
 					oprLog, err := GetOperatorLog(defaultNamespace)
 					g.Expect(err).To(BeNil())
 					g.Expect(*oprLog).To(ContainSubstring("INFO"))
-					g.Expect(*oprLog).To(ContainSubstring("DEBUG"))
+					g.Expect(*oprLog).NotTo(ContainSubstring("DEBUG"))
 					g.Expect(*oprLog).NotTo(ContainSubstring("ERROR"))
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
