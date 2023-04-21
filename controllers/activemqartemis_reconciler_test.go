@@ -324,6 +324,52 @@ func TestAlder32GenBrokerProps(t *testing.T) {
 	assert.True(t, strings.Contains(res, "1897435425"))
 }
 
+func TestAlder32RolesProps(t *testing.T) {
+
+	propsStringWithLeadingWhiteSpaceBeforeComment := `
+	# rbac
+    control-plane=control-plane,control-plane-0,control-plane-1
+    consumers=c1,c2,c3,c4
+    producers=p
+	! exclimation mark comment to strip with leading ws
+! as start of line to strip
+     # partitioned consumer roles for connectionRouter
+shard-consumers-broker-0=c1,c2
+shard-consumers-broker-1=c3,c4
+
+     		# should resolve to NULL in absence of this
+shard-control-plane=control-plane,control-plane-0,control-plane-1
+shard-producers=p`
+
+	propsStringCommentsStripped := `
+control-plane=control-plane,control-plane-0,control-plane-1
+consumers=c1,c2,c3,c4
+producers=p
+shard-consumers-broker-0=c1,c2
+shard-consumers-broker-1=c3,c4
+shard-control-plane=control-plane,control-plane-0,control-plane-1
+shard-producers=p`
+
+	res := alder32FromData([]byte(propsStringWithLeadingWhiteSpaceBeforeComment))
+
+	expected := alder32FromData([]byte(propsStringCommentsStripped))
+
+	assert.Equal(t, res, expected)
+}
+
+func TestAlder32PropsWithFF(t *testing.T) {
+
+	propsStringWithLeadingWhiteSpaceBeforeComment := "\n\t\f# with form feed\nproducers=p"
+
+	propsStringCommentsStripped := "producers=p"
+
+	res := alder32FromData([]byte(propsStringWithLeadingWhiteSpaceBeforeComment))
+
+	expected := alder32FromData([]byte(propsStringCommentsStripped))
+
+	assert.Equal(t, res, expected)
+}
+
 func TestExtractErrors(t *testing.T) {
 
 	json := "{\"configuration\":{\"properties\":{\"broker.properties\":{\"alder32\":\"1\"},\"system\":{\"alder32\":\"1\"}}},\"server\":{\"jaas\":{\"properties\":{\"artemis-users.properties\":{\"reloadTime\":\"1669744377685\",\"Alder32\":\"955331033\"},\"artemis-roles.properties\":{\"reloadTime\":\"1669744377685\",\"Alder32\":\"701302135\"}}},\"state\":\"STARTED\",\"version\":\"2.27.0\",\"nodeId\":\"a644c0c6-700e-11ed-9d4f-0a580ad90188\",\"identity\":null,\"uptime\":\"33.176 seconds\"}}"

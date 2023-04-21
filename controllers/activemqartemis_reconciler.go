@@ -2923,40 +2923,19 @@ func alder32FromData(data []byte) string {
 	// need to skip white space and comments for checksum
 	keyValuePairs := []string{}
 
-	var skip_comment bool = false
-	var startOfLine = -1
-	for i, v := range data {
-		switch v {
-		case '#':
-			{
-				if startOfLine == -1 {
-					skip_comment = true
-				}
-			}
-		case '\n':
-			{
-				if !skip_comment && startOfLine != -1 {
-					keyValuePairs = appendNonEmpty(keyValuePairs, data[startOfLine:i])
-				}
-				skip_comment = false
-				startOfLine = -1
-			}
-		default:
-			{
-				if startOfLine == -1 {
-					startOfLine = i
-				}
-			}
+	uniCodeDataLines := strings.Split(string(data), "\n")
+	for _, lineToTrim := range uniCodeDataLines {
+		line := strings.TrimLeftFunc(lineToTrim, unicode.IsSpace)
+		if strings.HasPrefix(line, "#") || strings.HasPrefix(line, "!") {
+			// ignore comments
+			continue
 		}
-	}
-	// no ending \n
-	if !skip_comment && startOfLine != -1 {
-		keyValuePairs = appendNonEmpty(keyValuePairs, data[startOfLine:])
+		keyValuePairs = appendNonEmpty(keyValuePairs, line)
 	}
 	return alder32StringValue(alder32Of(keyValuePairs))
 }
 
-func appendNonEmpty(propsKvs []string, data []byte) []string {
+func appendNonEmpty(propsKvs []string, data string) []string {
 	keyAndValue := strings.TrimSpace(string(data))
 	if keyAndValue != "" {
 		// need to trim space arround the '=' in x = y to match properties loader check sum
