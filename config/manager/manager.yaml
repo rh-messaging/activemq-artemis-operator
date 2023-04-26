@@ -51,8 +51,8 @@ spec:
         - --zap-encoder=console
         - --zap-time-encoding=iso8601
         - --leader-elect
-        #image: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.10.3-4
-        image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:88c4fb8e502bbb0068a53aefa2f8fcfe73040ab3887375d60471bf833c99c124
+        #image: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.10.3-5
+        image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:0d354b22874526a4f8604ecc77ddf85b5de9b350bfd199c07638772dc82725b9
         #imagePullPolicy: Always
 
         name: manager
