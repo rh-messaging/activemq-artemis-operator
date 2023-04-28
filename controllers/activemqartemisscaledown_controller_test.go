@@ -19,7 +19,6 @@ As usual, we start with the necessary imports. We also define some utility varia
 package controllers
 
 import (
-	"bytes"
 	"context"
 	"os"
 	"strings"
@@ -27,11 +26,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
@@ -39,7 +34,6 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/tools/remotecommand"
 )
 
 var _ = Describe("Scale down controller", func() {
@@ -290,53 +284,3 @@ var _ = Describe("Scale down controller", func() {
 		}
 	})
 })
-
-func RunCommandInPod(podName string, containerName string, command []string) (*string, error) {
-	gvk := schema.GroupVersionKind{
-		Group:   "",
-		Version: "v1",
-		Kind:    "Pod",
-	}
-	restClient, err := apiutil.RESTClientForGVK(gvk, false, testEnv.Config, serializer.NewCodecFactory(testEnv.Scheme))
-	Expect(err).To(BeNil())
-	execReq := restClient.
-		Post().
-		Namespace(defaultNamespace).
-		Resource("pods").
-		Name(podName).
-		SubResource("exec").
-		VersionedParams(&corev1.PodExecOptions{
-			Container: containerName,
-			Command:   command,
-			Stdin:     true,
-			Stdout:    true,
-			Stderr:    true,
-		}, runtime.NewParameterCodec(testEnv.Scheme))
-
-	exec, err := remotecommand.NewSPDYExecutor(testEnv.Config, "POST", execReq.URL())
-
-	if err != nil {
-		return nil, err
-	}
-
-	var consumerCapturedOut bytes.Buffer
-
-	err = exec.Stream(remotecommand.StreamOptions{
-		Stdin:  os.Stdin,
-		Stdout: &consumerCapturedOut,
-		Stderr: os.Stderr,
-		Tty:    false,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	//try get some content if any
-	Eventually(func(g Gomega) {
-		g.Expect(consumerCapturedOut.Len() > 0)
-	}, existingClusterTimeout, interval)
-
-	content := consumerCapturedOut.String()
-
-	return &content, nil
-}

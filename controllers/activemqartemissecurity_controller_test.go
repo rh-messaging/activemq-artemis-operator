@@ -31,7 +31,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -68,7 +67,7 @@ var _ = Describe("security controller", func() {
 		It("security after recreating broker cr", func() {
 
 			By("deploy a security cr")
-			securityCr, createdSecurityCr := DeploySecurity(NextSpecResourceName(), defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemisSecurity) {
+			_, createdSecurityCr := DeploySecurity(NextSpecResourceName(), defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemisSecurity) {
 			})
 
 			By("deploy a broker cr")
@@ -95,10 +94,7 @@ var _ = Describe("security controller", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			By("delete the broker cr")
-			Expect(k8sClient.Delete(ctx, createdBrokerCr)).Should(Succeed())
-			Eventually(func() bool {
-				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(createdBrokerCr, createdBrokerCr.Name, defaultNamespace)
 
 			By("re-deploy the broker cr")
 			brokerCr, createdBrokerCr = DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
@@ -124,16 +120,8 @@ var _ = Describe("security controller", func() {
 				return secApplied
 			}, timeout, interval).Should(BeTrue())
 
-			//cleanup
-			Expect(k8sClient.Delete(ctx, createdBrokerCr)).Should(Succeed())
-			Eventually(func() bool {
-				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
-			}, existingClusterTimeout, existingClusterInterval).Should(BeTrue())
-
-			Expect(k8sClient.Delete(ctx, createdSecurityCr)).Should(Succeed())
-			Eventually(func() bool {
-				return checkCrdDeleted(securityCr.Name, defaultNamespace, createdSecurityCr)
-			}, existingClusterTimeout, existingClusterInterval).Should(BeTrue())
+			CleanResource(createdBrokerCr, createdBrokerCr.Name, defaultNamespace)
+			CleanResource(createdSecurityCr, createdSecurityCr.Name, defaultNamespace)
 		})
 
 		It("security with console domain name specified", Label("sec-console-domain-name"), func() {
@@ -149,7 +137,7 @@ var _ = Describe("security controller", func() {
 			brokerDomainName := "activemq"
 			consoleDomainName := "consoleDomain"
 			requiredFlag := "required"
-			secCrd, createdSecCrd := DeploySecurity("ex-security", defaultNamespace, func(secCrdToDeploy *brokerv1beta1.ActiveMQArtemisSecurity) {
+			_, createdSecCrd := DeploySecurity("ex-security", defaultNamespace, func(secCrdToDeploy *brokerv1beta1.ActiveMQArtemisSecurity) {
 
 				secCrdToDeploy.Spec.LoginModules = brokerv1beta1.LoginModulesType{
 					PropertiesLoginModules: []brokerv1beta1.PropertiesLoginModuleType{
@@ -220,16 +208,8 @@ var _ = Describe("security controller", func() {
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 			}
 
-			//cleanup
-			Expect(k8sClient.Delete(ctx, createdBrokerCr)).Should(Succeed())
-			Eventually(func() bool {
-				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
-			}, existingClusterTimeout, existingClusterInterval).Should(BeTrue())
-
-			Expect(k8sClient.Delete(ctx, createdSecCrd)).Should(Succeed())
-			Eventually(func() bool {
-				return checkCrdDeleted(secCrd.Name, defaultNamespace, createdSecCrd)
-			}, existingClusterTimeout, existingClusterInterval).Should(BeTrue())
+			CleanClusterResource(createdBrokerCr, createdBrokerCr.Name, defaultNamespace)
+			CleanClusterResource(createdSecCrd, createdSecCrd.Name, defaultNamespace)
 		})
 	})
 
@@ -279,7 +259,7 @@ var _ = Describe("security controller", func() {
 			}
 
 			By("deploying the security cr")
-			secCrd, createdSecCrd := DeploySecurity("ex-keycloak", defaultNamespace, func(secCrdToDeploy *brokerv1beta1.ActiveMQArtemisSecurity) {
+			_, createdSecCrd := DeploySecurity("ex-keycloak", defaultNamespace, func(secCrdToDeploy *brokerv1beta1.ActiveMQArtemisSecurity) {
 
 				brokerModuleName := "keycloak-broker"
 				consoleModuleName := "keycloak-console"
@@ -513,16 +493,8 @@ var _ = Describe("security controller", func() {
 			}
 
 			By("checking resources get removed")
-			Expect(k8sClient.Delete(ctx, crd)).Should(Succeed())
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.Name, defaultNamespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(k8sClient.Delete(ctx, createdSecCrd)).Should(Succeed())
-			Eventually(func() bool {
-				return checkCrdDeleted(secCrd.ObjectMeta.Name, defaultNamespace, createdSecCrd)
-			}, timeout, interval).Should(BeTrue())
-
+			CleanResource(crd, crd.Name, defaultNamespace)
+			CleanResource(createdSecCrd, createdSecCrd.Name, defaultNamespace)
 		})
 
 		It("reconcile twice with nothing changed", func() {
@@ -610,11 +582,7 @@ var _ = Describe("security controller", func() {
 			Expect(equal).To(BeTrue())
 
 			By("check it has gone")
-			Expect(k8sClient.Delete(ctx, createdCrd))
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
-
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
 
 		It("Testing applyToCrNames working properly", func() {
@@ -751,7 +719,7 @@ var _ = Describe("security controller", func() {
 			broker2Cr, createdBroker2Cr := DeployBroker("ex-aao1", defaultNamespace)
 			broker3Cr, createdBroker3Cr := DeployBroker("ex-aao2", defaultNamespace)
 
-			secCrd, createdSecCrd := DeploySecurity("", defaultNamespace, func(secCrdToDeploy *brokerv1beta1.ActiveMQArtemisSecurity) {
+			_, createdSecCrd := DeploySecurity("", defaultNamespace, func(secCrdToDeploy *brokerv1beta1.ActiveMQArtemisSecurity) {
 				applyToCrs := make([]string, 0)
 				applyToCrs = append(applyToCrs, "ex-aao")
 				applyToCrs = append(applyToCrs, "ex-aao2")
@@ -818,27 +786,11 @@ var _ = Describe("security controller", func() {
 
 			}, timeout, interval).Should(BeTrue())
 
-			By("check it has gone")
-			Expect(k8sClient.Delete(ctx, createdBroker1Cr)).Should(Succeed())
-			Eventually(func() bool {
-				return checkCrdDeleted(broker1Cr.ObjectMeta.Name, defaultNamespace, createdBroker1Cr)
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(k8sClient.Delete(ctx, createdBroker2Cr)).Should(Succeed())
-			Eventually(func() bool {
-				return checkCrdDeleted(broker2Cr.ObjectMeta.Name, defaultNamespace, createdBroker2Cr)
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(k8sClient.Delete(ctx, createdBroker3Cr)).Should(Succeed())
-			Eventually(func() bool {
-				return checkCrdDeleted(broker3Cr.ObjectMeta.Name, defaultNamespace, createdBroker3Cr)
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(k8sClient.Delete(ctx, createdSecCrd)).Should(Succeed())
-			Eventually(func() bool {
-				return checkCrdDeleted(secCrd.ObjectMeta.Name, defaultNamespace, createdSecCrd)
-			}, timeout, interval).Should(BeTrue())
-
+			By("cleaning up")
+			CleanResource(createdBroker1Cr, createdBroker1Cr.Name, defaultNamespace)
+			CleanResource(createdBroker2Cr, createdBroker2Cr.Name, defaultNamespace)
+			CleanResource(createdBroker3Cr, createdBroker3Cr.Name, defaultNamespace)
+			CleanResource(createdSecCrd, createdSecCrd.Name, defaultNamespace)
 		})
 
 		It("Reconcile security on broker with non shell safe annotations", func() {
@@ -1136,86 +1088,9 @@ var _ = Describe("security controller", func() {
 
 		}, timeout, interval).Should(Succeed())
 
-		By("check it has gone")
-		Expect(k8sClient.Delete(ctx, createdBrokerCrd))
-		Expect(k8sClient.Delete(ctx, createdCrd))
-		Eventually(func() bool {
-			return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-		}, timeout, interval).Should(BeTrue())
-
+		By("cleaning up")
+		CleanResource(createdBrokerCrd, createdBrokerCrd.Name, defaultNamespace)
+		CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 	})
 
 })
-
-func DeploySecurity(secName string, targetNamespace string, customFunc func(candidate *brokerv1beta1.ActiveMQArtemisSecurity)) (*brokerv1beta1.ActiveMQArtemisSecurity, *brokerv1beta1.ActiveMQArtemisSecurity) {
-	ctx := context.Background()
-	secCrd := generateSecuritySpec(secName, targetNamespace)
-
-	brokerDomainName := "activemq"
-	loginModuleName := "module1"
-	loginModuleFlag := "sufficient"
-	okDefaultPwd := "ok"
-
-	loginModuleList := make([]brokerv1beta1.PropertiesLoginModuleType, 1)
-	propLoginModule := brokerv1beta1.PropertiesLoginModuleType{
-		Name: loginModuleName,
-		Users: []brokerv1beta1.UserType{
-			{
-				Name:     "user1",
-				Password: &okDefaultPwd,
-				Roles: []string{
-					"admin", "amq",
-				},
-			},
-		},
-	}
-	loginModuleList = append(loginModuleList, propLoginModule)
-	secCrd.Spec.LoginModules.PropertiesLoginModules = loginModuleList
-
-	secCrd.Spec.SecurityDomains.BrokerDomain = brokerv1beta1.BrokerDomainType{
-		Name: &brokerDomainName,
-		LoginModules: []brokerv1beta1.LoginModuleReferenceType{
-			{
-				Name: &loginModuleName,
-				Flag: &loginModuleFlag,
-			},
-		},
-	}
-
-	customFunc(secCrd)
-
-	Expect(k8sClient.Create(ctx, secCrd)).Should(Succeed())
-
-	createdSecCrd := &brokerv1beta1.ActiveMQArtemisSecurity{}
-
-	Eventually(func() bool {
-		return getPersistedVersionedCrd(secCrd.ObjectMeta.Name, targetNamespace, createdSecCrd)
-	}, timeout, interval).Should(BeTrue())
-	Expect(createdSecCrd.Name).Should(Equal(secCrd.ObjectMeta.Name))
-
-	return secCrd, createdSecCrd
-}
-
-func generateSecuritySpec(secName string, targetNamespace string) *brokerv1beta1.ActiveMQArtemisSecurity {
-
-	spec := brokerv1beta1.ActiveMQArtemisSecuritySpec{}
-
-	theName := secName
-	if secName == "" {
-		theName = randString()
-	}
-
-	toCreate := brokerv1beta1.ActiveMQArtemisSecurity{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ActiveMQArtemisSecurity",
-			APIVersion: brokerv1beta1.GroupVersion.Identifier(),
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      theName,
-			Namespace: targetNamespace,
-		},
-		Spec: spec,
-	}
-
-	return &toCreate
-}

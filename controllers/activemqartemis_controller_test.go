@@ -22,10 +22,8 @@ import (
 	"container/list"
 	"context"
 	"crypto/tls"
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
@@ -422,10 +420,7 @@ var _ = Describe("artemis controller", func() {
 
 			}, timeout, interval).Should(Succeed())
 
-			Expect(k8sClient.Delete(ctx, brokerCr)).Should(Succeed())
-			Eventually(func() bool {
-				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdCr)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
 		})
 
 		It("pod disruption apply number", func() {
@@ -459,11 +454,7 @@ var _ = Describe("artemis controller", func() {
 				}
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
-			Expect(k8sClient.Delete(ctx, brokerCr)).Should(Succeed())
-			Eventually(func() bool {
-				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdCr)
-			}, existingClusterTimeout, existingClusterInterval).Should(BeTrue())
-
+			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
 		})
 
 		It("pod disruption apply percentage", func() {
@@ -492,10 +483,7 @@ var _ = Describe("artemis controller", func() {
 
 			}, timeout, interval).Should(Succeed())
 
-			Expect(k8sClient.Delete(ctx, brokerCr)).Should(Succeed())
-			Eventually(func() bool {
-				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdCr)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
 		})
 	})
 
@@ -580,12 +568,7 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(condition.Message).To(Equal(common.ImageVersionConflictMessage))
 			}, timeout, interval).Should(Succeed())
 
-			// cleanup
-			Expect(k8sClient.Delete(ctx, brokerCr)).Should(Succeed())
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
 		})
 
 		It("version validation when version and images are loosly specified", func() {
@@ -605,12 +588,7 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(meta.IsStatusConditionTrue(createdBrokerCr.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
 			}, timeout, interval).Should(Succeed())
 
-			// cleanup
-			Expect(k8sClient.Delete(ctx, brokerCr)).Should(Succeed())
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
 		})
 
 		It("images need to be in pairs", func() {
@@ -643,12 +621,7 @@ var _ = Describe("artemis controller", func() {
 
 			}, timeout, interval).Should(Succeed())
 
-			// cleanup
-			Expect(k8sClient.Delete(ctx, brokerCr)).Should(Succeed())
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
 		})
 
 		It("images need to be in pairs, image placeholder ok", func() {
@@ -676,12 +649,7 @@ var _ = Describe("artemis controller", func() {
 
 			}, timeout, interval).Should(Succeed())
 
-			// cleanup
-			Expect(k8sClient.Delete(ctx, brokerCr)).Should(Succeed())
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
 		})
 
 		It("version validation invalid", func() {
@@ -704,11 +672,7 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(Succeed())
 
 			// cleanup
-			Expect(k8sClient.Delete(ctx, brokerCr)).Should(Succeed())
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
 		})
 
 		It("version validation not found", func() {
@@ -730,12 +694,7 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(condition.Message).Should(ContainSubstring("version"))
 			}, timeout, interval).Should(Succeed())
 
-			// cleanup
-			Expect(k8sClient.Delete(ctx, brokerCr)).Should(Succeed())
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
 		})
 
 		It("version handling when images are explicitly specified", func() {
@@ -775,12 +734,7 @@ var _ = Describe("artemis controller", func() {
 
 			}, timeout, interval).Should(Succeed())
 
-			// cleanup
-			Expect(k8sClient.Delete(ctx, brokerCr)).Should(Succeed())
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
 		})
 
 		It("specify only major version", func() {
@@ -828,12 +782,7 @@ var _ = Describe("artemis controller", func() {
 
 			}, timeout, interval).Should(Succeed())
 
-			// cleanup
-			Expect(k8sClient.Delete(ctx, brokerCr)).Should(Succeed())
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
 		})
 
 		It("specify only major.minor version", func() {
@@ -882,12 +831,7 @@ var _ = Describe("artemis controller", func() {
 
 			}, timeout, interval).Should(Succeed())
 
-			// cleanup
-			Expect(k8sClient.Delete(ctx, brokerCr)).Should(Succeed())
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
 		})
 
 		It("default broker versions", func() {
@@ -933,19 +877,14 @@ var _ = Describe("artemis controller", func() {
 
 			}, timeout, interval).Should(Succeed())
 
-			// cleanup
-			Expect(k8sClient.Delete(ctx, brokerCr)).Should(Succeed())
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
 		})
 	})
 
 	Context("broker resource tracking", Label("broker-resource-tracking-context"), func() {
 		It("default user credential secret", func() {
 			By("deploy a broker")
-			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, nil)
+			brokerCr, _ := DeployCustomBroker(defaultNamespace, nil)
 
 			By("checking the default credential secret created")
 			credSecretKey := types.NamespacedName{
@@ -1004,17 +943,12 @@ var _ = Describe("artemis controller", func() {
 
 			}, timeout, interval).Should(Succeed())
 
-			// cleanup
-			Expect(k8sClient.Delete(ctx, brokerCr)).Should(Succeed())
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
 		})
 
 		It("default user credential secret with values in CR", func() {
 			By("deploy a broker with adminUser and adminPassword specified")
-			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+			brokerCr, _ := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
 				candidate.Spec.AdminUser = "adminuser"
 				candidate.Spec.AdminPassword = "adminpassword"
 			})
@@ -1078,12 +1012,7 @@ var _ = Describe("artemis controller", func() {
 
 			}, timeout, interval).Should(Succeed())
 
-			// cleanup
-			Expect(k8sClient.Delete(ctx, brokerCr)).Should(Succeed())
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
 		})
 
 		It("user credential secret", func() {
@@ -1096,7 +1025,7 @@ var _ = Describe("artemis controller", func() {
 			secretData["AMQ_CLUSTER_PASSWORD"] = "myclusterpassword"
 
 			By("deploy a user credential secret")
-			secret, createdSecret := DeploySecret(defaultNamespace, func(candidate *corev1.Secret) {
+			secret, _ := DeploySecret(defaultNamespace, func(candidate *corev1.Secret) {
 				candidate.Name = userSecretName
 				candidate.StringData = secretData
 			})
@@ -1244,16 +1173,8 @@ var _ = Describe("artemis controller", func() {
 			Expect(matchErr).To(BeNil())
 			Expect(hasMatch).To(BeFalse())
 
-			// cleanup
-			Expect(k8sClient.Delete(ctx, brokerCr)).Should(Succeed())
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
-			}, timeout, interval).Should(BeTrue())
-			Expect(k8sClient.Delete(ctx, secret)).Should(Succeed())
-			Eventually(func() bool {
-				return checkCrdDeleted(secret.Name, defaultNamespace, createdSecret)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
+			CleanResource(secret, secret.Name, defaultNamespace)
 		})
 
 		It("user credential secret with CR values provided", func() {
@@ -1266,7 +1187,7 @@ var _ = Describe("artemis controller", func() {
 			secretData["AMQ_CLUSTER_PASSWORD"] = "myclusterpassword"
 
 			By("deploy a user credential secret")
-			secret, createdSecret := DeploySecret(defaultNamespace, func(candidate *corev1.Secret) {
+			secret, _ := DeploySecret(defaultNamespace, func(candidate *corev1.Secret) {
 				candidate.Name = userSecretName
 				candidate.StringData = secretData
 			})
@@ -1406,16 +1327,8 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(newVarFound).To(BeTrue())
 			}, timeout, interval).Should(Succeed())
 
-			// cleanup
-			Expect(k8sClient.Delete(ctx, brokerCr)).Should(Succeed())
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
-			}, timeout, interval).Should(BeTrue())
-			Expect(k8sClient.Delete(ctx, secret)).Should(Succeed())
-			Eventually(func() bool {
-				return checkCrdDeleted(secret.Name, defaultNamespace, createdSecret)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
+			CleanResource(secret, secret.Name, defaultNamespace)
 		})
 	})
 
@@ -1499,13 +1412,7 @@ var _ = Describe("artemis controller", func() {
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 			}
 
-			// cleanup
-			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
-
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
 	})
 
@@ -1691,10 +1598,7 @@ var _ = Describe("artemis controller", func() {
 				}, timeout, interval).Should(Succeed())
 			}
 
-			Expect(k8sClient.Delete(ctx, createdBrokerCr)).Should(Succeed())
-			Eventually(func() bool {
-				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(createdBrokerCr, createdBrokerCr.Name, defaultNamespace)
 		})
 
 		It("Exposing secured console", Label("console-expose-ssl"), func() {
@@ -3278,11 +3182,7 @@ var _ = Describe("artemis controller", func() {
 				return nil != createdSS.Spec.Template.Spec.SecurityContext
 			})
 
-			By("Check for default CR instance deletion")
-			Expect(k8sClient.Delete(context, retrievedCR)).Should(Succeed())
-			Eventually(func() bool {
-				return checkCrdDeleted(defaultCR.ObjectMeta.Name, defaultNamespace, retrievedCR)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(retrievedCR, retrievedCR.Name, defaultNamespace)
 
 			By("Creating a non-default SELinuxOptions CR instance")
 			nonDefaultCR := generateArtemisSpec(defaultNamespace)
@@ -3363,10 +3263,7 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(Succeed())
 
 			By("Check for non-default CR instance deletion")
-			Expect(k8sClient.Delete(context, &retrievednonDefaultCR)).Should(Succeed())
-			Eventually(func() bool {
-				return checkCrdDeleted(retrievednonDefaultCR.ObjectMeta.Name, defaultNamespace, &retrievednonDefaultCR)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(&retrievednonDefaultCR, retrievednonDefaultCR.Name, defaultNamespace)
 		})
 	})
 
@@ -3450,12 +3347,9 @@ var _ = Describe("artemis controller", func() {
 
 			}, timeout, interval).Should(Succeed())
 
-			By("check it has gone")
-			Expect(k8sClient.Delete(ctx, createdCrd))
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
+
 		It("setting Pod AntiAffinity", func() {
 			By("Creating a crd with pod anti affinity")
 			ctx := context.Background()
@@ -3533,11 +3427,7 @@ var _ = Describe("artemis controller", func() {
 
 			}, timeout, interval).Should(Succeed())
 
-			By("check it has gone")
-			Expect(k8sClient.Delete(ctx, createdCrd))
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
 		It("setting Node AntiAffinity", func() {
 			By("Creating a crd with node affinity")
@@ -3620,11 +3510,7 @@ var _ = Describe("artemis controller", func() {
 
 			}, timeout, interval).Should(Succeed())
 
-			By("check it has gone")
-			Expect(k8sClient.Delete(ctx, createdCrd))
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
 	})
 
@@ -3692,11 +3578,7 @@ var _ = Describe("artemis controller", func() {
 			Expect(createdSs.Spec.Template.Spec.NodeSelector["location"] == "production").Should(BeFalse())
 			Expect(createdSs.Spec.Template.Spec.NodeSelector["type"] == "foo").Should(BeTrue())
 
-			By("check it has gone")
-			Expect(k8sClient.Delete(ctx, createdCrd))
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
 	})
 
@@ -3734,13 +3616,7 @@ var _ = Describe("artemis controller", func() {
 
 			}, timeout, interval).Should(Succeed())
 
-			Expect(k8sClient.Delete(ctx, createdCr)).To(Succeed())
-
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(createdCr.Name, defaultNamespace, createdCr)
-			}, timeout, interval).Should(BeTrue())
-
+			CleanResource(createdCr, createdCr.Name, defaultNamespace)
 		})
 	})
 
@@ -3845,13 +3721,7 @@ var _ = Describe("artemis controller", func() {
 
 			}, timeout, interval).Should(Succeed())
 
-			By("deleting crd")
-			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
-
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 
 			By("restoring default manager")
 			shutdownControllerManager()
@@ -3951,12 +3821,7 @@ var _ = Describe("artemis controller", func() {
 			Expect(createdSs.Spec.Template.Spec.Tolerations[0].Value == "No").Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Tolerations[0].Effect == "NoSchedule").Should(BeTrue())
 
-			By("check it has gone")
-			Expect(k8sClient.Delete(ctx, createdCrd))
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
-
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
 	})
 
@@ -4044,9 +3909,7 @@ var _ = Describe("artemis controller", func() {
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.SuccessThreshold == 18).Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.FailureThreshold == 19).Should(BeTrue())
 
-			By("check it has gone")
-			Expect(k8sClient.Delete(ctx, createdCrd))
-			Eventually(func() bool { return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd) }, timeout, interval).Should(BeTrue())
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
 
 		It("Override Liveness Probe Exec", func() {
@@ -4098,12 +3961,7 @@ var _ = Describe("artemis controller", func() {
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.SuccessThreshold == 8).Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.FailureThreshold == 9).Should(BeTrue())
 
-			Expect(k8sClient.Delete(ctx, createdCrd))
-
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
 
 		It("Default Liveness Probe", func() {
@@ -4141,18 +3999,13 @@ var _ = Describe("artemis controller", func() {
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.ProbeHandler.TCPSocket.Port.String() == "8161").Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds).Should(BeEquivalentTo(5))
 
-			Expect(k8sClient.Delete(ctx, createdCrd))
-
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
 
 		It("Override Liveness Probe Default TCPSocket", func() {
 			By("By creating a crd with Liveness Probe")
 			ctx := context.Background()
-			crd, createdCrd := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+			_, createdCrd := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
 				tcpSocketAction := corev1.TCPSocketAction{
 					Port: intstr.FromInt(8161),
 				}
@@ -4190,12 +4043,7 @@ var _ = Describe("artemis controller", func() {
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds).Should(BeEquivalentTo(10))
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.SuccessThreshold).Should(BeEquivalentTo(1))
 
-			Expect(k8sClient.Delete(ctx, createdCrd))
-
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
 	})
 
@@ -4241,12 +4089,8 @@ var _ = Describe("artemis controller", func() {
 			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.ProbeHandler.Exec.Command[0] == "/bin/bash").Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.ProbeHandler.Exec.Command[1] == "-c").Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.ProbeHandler.Exec.Command[2] == "/opt/amq/bin/readinessProbe.sh").Should(BeTrue())
-			Expect(k8sClient.Delete(ctx, createdCrd))
 
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
 
 		It("Override Readiness Probe Exec", func() {
@@ -4287,12 +4131,8 @@ var _ = Describe("artemis controller", func() {
 			By("Making sure the Readiness probe is correct")
 			Expect(len(createdSs.Spec.Template.Spec.Containers) == 1).Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.ProbeHandler.Exec.Command[0] == "/broker/bin/artemis check node").Should(BeTrue())
-			Expect(k8sClient.Delete(ctx, createdCrd))
 
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
 
 		It("Default Readiness Probe", func() {
@@ -4327,12 +4167,8 @@ var _ = Describe("artemis controller", func() {
 			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.ProbeHandler.Exec.Command[0] == "/bin/bash").Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.ProbeHandler.Exec.Command[1] == "-c").Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.ProbeHandler.Exec.Command[2] == "/opt/amq/bin/readinessProbe.sh").Should(BeTrue())
-			Expect(k8sClient.Delete(ctx, createdCrd))
 
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
 	})
 
@@ -4400,12 +4236,7 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(Equal(3))
 
 			By("deleting crd")
-			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
-
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
 	})
 
@@ -4583,13 +4414,7 @@ var _ = Describe("artemis controller", func() {
 				return found, err
 			}, duration, interval).Should(Equal(true))
 
-			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
-
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
-
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
 	})
 
@@ -4686,13 +4511,7 @@ var _ = Describe("artemis controller", func() {
 				return found, err
 			}, duration, interval).Should(Equal(true))
 
-			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
-
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
-
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
 
 		It("Expect updated config map on update to BrokerProperties", func() {
@@ -4754,13 +4573,7 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(condition.Status).Should(Equal(metav1.ConditionUnknown))
 			}, timeout, interval).Should(Succeed())
 
-			// cleanup
-			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
-
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
 
 		It("Upgrade brokerProps respect existing immutable config map", func() {
@@ -4958,17 +4771,9 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(Succeed())
 
 			By("deleting the logging configmap")
-			Expect(k8sClient.Delete(ctx, configMap)).Should(Succeed())
-
-			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
-
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(loggingConfigMapName, crd.Namespace, configMap)
-			}, timeout, interval).Should(BeTrue())
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(configMap, loggingConfigMapName, defaultNamespace)
+			By("deleting the CR")
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
 
 		It("logging secret and configmap validation", func() {
@@ -5131,17 +4936,8 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(Succeed())
 
 			By("cleanup")
-			Expect(k8sClient.Delete(ctx, configMap)).Should(Succeed())
-			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
-
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(loggingConfigMapName, crd.Namespace, configMap)
-			}, timeout, interval).Should(BeTrue())
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
-
+			CleanResource(configMap, loggingConfigMapName, defaultNamespace)
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
 
 		It("Expect vol mount for logging secret deployed", func() {
@@ -5207,17 +5003,8 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(Succeed())
 
 			By("cleanup")
-			Expect(k8sClient.Delete(ctx, secret)).Should(Succeed())
-			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
-
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(loggingSecretName, crd.Namespace, secret)
-			}, timeout, interval).Should(BeTrue())
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
-
+			CleanResource(secret, loggingSecretName, defaultNamespace)
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
 	})
 
@@ -5336,12 +5123,7 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(Succeed())
 
 			// cleanup
-			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
-
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
 	})
 
@@ -5480,12 +5262,7 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(Equal(true))
 
 			// cleanup
-			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
-
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
 	})
 
@@ -5585,12 +5362,7 @@ var _ = Describe("artemis controller", func() {
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			// cleanup
-			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-			}, timeout, interval).Should(BeTrue())
-
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
 	})
 
@@ -5644,11 +5416,7 @@ var _ = Describe("artemis controller", func() {
 
 			}
 			// cleanup
-			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, &crd)
-			}, timeout, interval).Should(BeTrue())
+			CleanResource(&crd, crd.Name, defaultNamespace)
 		})
 	})
 
@@ -5724,10 +5492,8 @@ var _ = Describe("artemis controller", func() {
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			}
-			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
 
-			By("check it has gone")
-			Eventually(checkCrdDeleted(crd.Name, defaultNamespace, &crd), timeout, interval).Should(BeTrue())
+			CleanResource(&crd, crd.Name, defaultNamespace)
 		})
 
 		It("Checking acceptor service and route/ingress while toggle expose", func() {
@@ -5888,10 +5654,7 @@ var _ = Describe("artemis controller", func() {
 					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 				}
 
-				Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
-
-				By("check it has gone")
-				Eventually(checkCrdDeleted(crd.Name, defaultNamespace, &crd), timeout, interval).Should(BeTrue())
+				CleanResource(&crd, crd.Name, defaultNamespace)
 			}
 		})
 	})
@@ -6064,11 +5827,9 @@ var _ = Describe("artemis controller", func() {
 				}
 			}, timeout, interval).Should(Succeed())
 
-			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
-
-			By("check it has gone")
-			Eventually(checkCrdDeleted(crd.Name, defaultNamespace, &crd), timeout, interval).Should(BeTrue())
+			CleanResource(&crd, crd.Name, defaultNamespace)
 		})
+
 		It("Testing acceptor bindToAllInterfaces being false", func() {
 			By("By creating a new crd")
 			ctx := context.Background()
@@ -6121,11 +5882,9 @@ var _ = Describe("artemis controller", func() {
 				}
 			}, timeout, interval).Should(Succeed())
 
-			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
-
-			By("check it has gone")
-			Eventually(checkCrdDeleted(crd.Name, defaultNamespace, &crd), timeout, interval).Should(BeTrue())
+			CleanResource(&crd, crd.Name, defaultNamespace)
 		})
+
 		It("Testing acceptor bindToAllInterfaces being true", func() {
 			By("By creating a new crd")
 			ctx := context.Background()
@@ -6191,10 +5950,7 @@ var _ = Describe("artemis controller", func() {
 
 			}, timeout, interval).Should(Succeed())
 
-			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
-
-			By("check it has gone")
-			Eventually(checkCrdDeleted(crd.Name, defaultNamespace, &crd), timeout, interval).Should(BeTrue())
+			CleanResource(&crd, crd.Name, defaultNamespace)
 		})
 	})
 
@@ -6247,11 +6003,9 @@ var _ = Describe("artemis controller", func() {
 
 			}, timeout, interval).Should(Succeed())
 
-			Expect(k8sClient.Delete(ctx, &cr)).Should(Succeed())
-
-			By("check it has gone")
-			Eventually(checkCrdDeleted(cr.Name, defaultNamespace, &cr), timeout, interval).Should(BeTrue())
+			CleanResource(&cr, cr.Name, defaultNamespace)
 		})
+
 		It("Testing acceptor trustStoreType being set and unset", func() {
 			By("By creating a new custom resource instance")
 			ctx := context.Background()
@@ -6351,11 +6105,9 @@ var _ = Describe("artemis controller", func() {
 				}
 			}, timeout, interval).Should(Succeed())
 
-			Expect(k8sClient.Delete(ctx, &cr)).Should(Succeed())
-
-			By("check it has gone")
-			Eventually(checkCrdDeleted(cr.Name, defaultNamespace, &cr), timeout, interval).Should(BeTrue())
+			CleanResource(&cr, cr.Name, defaultNamespace)
 		})
+
 		It("Testing acceptor trustStoreProvider being set", func() {
 			By("By creating a new custom resource instance")
 			ctx := context.Background()
@@ -6400,10 +6152,8 @@ var _ = Describe("artemis controller", func() {
 					}
 				}
 			}, timeout, interval).Should(Succeed())
-			Expect(k8sClient.Delete(ctx, &cr)).Should(Succeed())
 
-			By("check it has gone")
-			Eventually(checkCrdDeleted(cr.Name, defaultNamespace, &cr), timeout, interval).Should(BeTrue())
+			CleanResource(&cr, cr.Name, defaultNamespace)
 		})
 	})
 
@@ -6439,10 +6189,7 @@ var _ = Describe("artemis controller", func() {
 				return err == nil
 			}, timeout, interval).Should(Equal(true))
 
-			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
-
-			By("check it has gone")
-			Eventually(checkCrdDeleted(crd.Name, defaultNamespace, &crd), timeout, interval).Should(BeTrue())
+			CleanResource(&crd, crd.Name, defaultNamespace)
 		})
 	})
 
@@ -6487,10 +6234,7 @@ var _ = Describe("artemis controller", func() {
 			storageClassName := volumeTemplates[0].Spec.StorageClassName
 			Expect(*storageClassName).To(Equal("some-storage-class"))
 
-			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
-
-			By("check it has gone")
-			Eventually(checkCrdDeleted(crd.Name, defaultNamespace, &crd), timeout, interval).Should(BeTrue())
+			CleanResource(&crd, crd.Name, defaultNamespace)
 		})
 	})
 
@@ -6786,7 +6530,7 @@ var _ = Describe("artemis controller", func() {
 		}
 
 		By("Deploying security")
-		secCrd, createdSecCrd := DeploySecurity("sec-"+randString, defaultNamespace,
+		_, createdSecCrd := DeploySecurity("sec-"+randString, defaultNamespace,
 			func(secCrdToDeploy *brokerv1beta1.ActiveMQArtemisSecurity) {
 				secCrdToDeploy.Spec.ApplyToCrNames = []string{createdCrd.Name}
 			})
@@ -6845,15 +6589,8 @@ var _ = Describe("artemis controller", func() {
 		}
 
 		By("check it has gone")
-		Expect(k8sClient.Delete(ctx, createdCrd)).To(Succeed())
-		Eventually(func() bool {
-			return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-		}, timeout, interval).Should(BeTrue())
-
-		Expect(k8sClient.Delete(ctx, createdSecCrd)).To(Succeed())
-		Eventually(func() bool {
-			return checkCrdDeleted(secCrd.Name, defaultNamespace, createdSecCrd)
-		}, timeout, interval).Should(BeTrue())
+		CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
+		CleanResource(createdSecCrd, createdSecCrd.Name, defaultNamespace)
 	})
 
 	It("cascade delete foreground test", func() {
@@ -6954,10 +6691,7 @@ var _ = Describe("artemis controller", func() {
 		}, duration, interval).Should(Equal(true))
 
 		By("By checking it has gone")
-		Expect(k8sClient.Delete(ctx, createdCrd)).To(Succeed())
-		Eventually(func() bool {
-			return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-		}, timeout, interval).Should(BeTrue())
+		CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 	})
 
 	It("env Var", func() {
@@ -7065,10 +6799,7 @@ var _ = Describe("artemis controller", func() {
 		}
 
 		By("By checking it has gone")
-		Expect(k8sClient.Delete(ctx, createdCrd)).To(Succeed())
-		Eventually(func() bool {
-			return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
-		}, timeout, interval).Should(BeTrue())
+		CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 	})
 
 	It("enable JVM metrics by using broker properties", func() {
@@ -8198,168 +7929,3 @@ var _ = Describe("artemis controller", func() {
 
 	})
 })
-
-func newArtemisSpecWithFastProbes() brokerv1beta1.ActiveMQArtemisSpec {
-	spec := brokerv1beta1.ActiveMQArtemisSpec{}
-
-	// sensible fast defaults for tests against existing cluster
-	spec.DeploymentPlan.LivenessProbe = &corev1.Probe{
-		InitialDelaySeconds: 1,
-		PeriodSeconds:       2,
-	}
-	spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
-		InitialDelaySeconds: 1,
-		PeriodSeconds:       2,
-	}
-
-	return spec
-}
-
-func generateArtemisSpec(namespace string) brokerv1beta1.ActiveMQArtemis {
-
-	toCreate := brokerv1beta1.ActiveMQArtemis{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ActiveMQArtemis",
-			APIVersion: brokerv1beta1.GroupVersion.Identifier(),
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      NextSpecResourceName(),
-			Namespace: namespace,
-		},
-		Spec: newArtemisSpecWithFastProbes(),
-	}
-
-	return toCreate
-}
-
-func generateOriginalArtemisSpec(namespace string, name string) *brokerv1beta1.ActiveMQArtemis {
-
-	spec := newArtemisSpecWithFastProbes()
-
-	toCreate := brokerv1beta1.ActiveMQArtemis{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ActiveMQArtemis",
-			APIVersion: brokerv1beta1.GroupVersion.Identifier(),
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Spec: spec,
-	}
-
-	return &toCreate
-}
-
-func DeployBroker(brokerName string, targetNamespace string) (*brokerv1beta1.ActiveMQArtemis, *brokerv1beta1.ActiveMQArtemis) {
-	ctx := context.Background()
-	brokerCrd := generateOriginalArtemisSpec(targetNamespace, brokerName)
-
-	Expect(k8sClient.Create(ctx, brokerCrd)).Should(Succeed())
-
-	createdBrokerCrd := &brokerv1beta1.ActiveMQArtemis{}
-
-	Eventually(func() bool {
-		return getPersistedVersionedCrd(brokerCrd.ObjectMeta.Name, targetNamespace, createdBrokerCrd)
-	}, timeout, interval).Should(BeTrue())
-	Expect(createdBrokerCrd.Name).Should(Equal(createdBrokerCrd.ObjectMeta.Name))
-
-	return brokerCrd, createdBrokerCrd
-
-}
-
-var chars = []rune("hgjkmnpqrtvwxyzslbcdaefiou")
-
-func randStringWithPrefix(prefix string) string {
-	rand.Seed(time.Now().UnixNano())
-	length := 6
-	var b strings.Builder
-	b.WriteString(prefix)
-	for i := 0; i < length; i++ {
-		b.WriteRune(chars[rand.Intn(len(chars))])
-	}
-	return b.String()
-}
-
-func randString() string {
-	return randStringWithPrefix("br-")
-}
-
-func getPersistedVersionedCrd(name string, nameSpace string, object client.Object) bool {
-	key := types.NamespacedName{Name: name, Namespace: nameSpace}
-	err := k8sClient.Get(ctx, key, object)
-	return err == nil
-}
-
-func checkCrdDeleted(name string, namespace string, crd client.Object) bool {
-	err := k8sClient.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, crd)
-	return errors.IsNotFound(err)
-}
-
-func checkSecretHasCorrectKeyValue(g Gomega, secName string, ns types.NamespacedName, key string, expectedValue string) {
-	g.Eventually(func(g Gomega) {
-		secret, err := secrets.RetriveSecret(ns, secName, make(map[string]string), k8sClient)
-		g.Expect(err).Should(BeNil())
-		data := secret.Data[key]
-		g.Expect(strings.Contains(string(data), expectedValue)).Should(BeTrue())
-	}, timeout, interval).Should(Succeed())
-}
-
-func DeployCustomBroker(targetNamespace string, customFunc func(candidate *brokerv1beta1.ActiveMQArtemis)) (*brokerv1beta1.ActiveMQArtemis, *brokerv1beta1.ActiveMQArtemis) {
-	ctx := context.Background()
-	brokerCrd := generateArtemisSpec(targetNamespace)
-
-	brokerCrd.Spec.DeploymentPlan.Size = common.Int32ToPtr(1)
-
-	if customFunc != nil {
-		customFunc(&brokerCrd)
-	}
-
-	Expect(k8sClient.Create(ctx, &brokerCrd)).Should(Succeed())
-
-	createdBrokerCrd := brokerv1beta1.ActiveMQArtemis{}
-
-	Eventually(func() bool {
-		return getPersistedVersionedCrd(brokerCrd.Name, targetNamespace, &createdBrokerCrd)
-	}, timeout, interval).Should(BeTrue())
-	Expect(createdBrokerCrd.Name).Should(Equal(brokerCrd.ObjectMeta.Name))
-	Expect(createdBrokerCrd.Namespace).Should(Equal(targetNamespace))
-
-	return &brokerCrd, &createdBrokerCrd
-}
-
-func DeploySecret(targetNamespace string, customFunc func(candidate *corev1.Secret)) (*corev1.Secret, *corev1.Secret) {
-	ctx := context.Background()
-
-	secretName := NextSpecResourceName()
-	secretDefinition := corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Secret",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: targetNamespace,
-		},
-	}
-
-	if customFunc != nil {
-		customFunc(&secretDefinition)
-	}
-
-	Expect(k8sClient.Create(ctx, &secretDefinition)).Should(Succeed())
-
-	createdSecret := corev1.Secret{}
-
-	Eventually(func() bool {
-		return getPersistedVersionedCrd(secretDefinition.Name, targetNamespace, &createdSecret)
-	}, timeout, interval).Should(BeTrue())
-	Expect(createdSecret.Name).Should(Equal(secretDefinition.ObjectMeta.Name))
-	Expect(createdSecret.Namespace).Should(Equal(targetNamespace))
-
-	return &secretDefinition, &createdSecret
-}
-
-func hexShaHashOfMap(props []string) string {
-	return hex.EncodeToString(alder32Of(props))
-}

@@ -350,15 +350,14 @@ var _ = Describe("pub sub scale", func() {
 
 				}, existingClusterTimeout*2, existingClusterInterval*5).Should(Succeed())
 
-				k8sClient.Delete(ctx, &producer)
-				k8sClient.Delete(ctx, &consumer1)
-				k8sClient.Delete(ctx, &consumer3)
+				CleanResource(&producer, producer.Name, defaultNamespace)
+				CleanResource(&consumer1, producer.Name, defaultNamespace)
+				CleanResource(&consumer3, producer.Name, defaultNamespace)
 
-				k8sClient.Delete(ctx, createdBrokerCrd)
-				k8sClient.Delete(ctx, jaasSecret)
-				k8sClient.Delete(ctx, loggingConfigMap)
-				k8sClient.Delete(ctx, svc)
-
+				CleanResource(createdBrokerCrd, createdBrokerCrd.Name, defaultNamespace)
+				CleanResource(jaasSecret, jaasSecret.Name, defaultNamespace)
+				CleanResource(loggingConfigMap, loggingConfigMap.Name, defaultNamespace)
+				CleanResource(svc, svc.Name, defaultNamespace)
 			}
 
 		})

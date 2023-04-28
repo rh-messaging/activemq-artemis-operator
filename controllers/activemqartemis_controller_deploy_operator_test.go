@@ -19,18 +19,10 @@ As usual, we start with the necessary imports. We also define some utility varia
 package controllers
 
 import (
-	"bytes"
-	"context"
-	"io"
 	"os"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 var _ = Describe("artemis controller", Label("do"), func() {
@@ -82,34 +74,3 @@ var _ = Describe("artemis controller", Label("do"), func() {
 		})
 	})
 })
-
-func GetOperatorLog(ns string) (*string, error) {
-	cfg, err := config.GetConfig()
-	Expect(err).To(BeNil())
-	labelSelector, err := labels.Parse("control-plane=controller-manager")
-	Expect(err).To(BeNil())
-	clientset, err := kubernetes.NewForConfig(cfg)
-	Expect(err).To(BeNil())
-	listOpts := metav1.ListOptions{
-		LabelSelector: labelSelector.String(),
-	}
-	podList, err := clientset.CoreV1().Pods(ns).List(ctx, listOpts)
-	Expect(err).To(BeNil())
-	Expect(len(podList.Items)).To(Equal(1))
-	operatorPod := podList.Items[0]
-
-	podLogOpts := corev1.PodLogOptions{}
-	req := clientset.CoreV1().Pods(ns).GetLogs(operatorPod.Name, &podLogOpts)
-	podLogs, err := req.Stream(context.Background())
-	Expect(err).To(BeNil())
-	defer podLogs.Close()
-
-	Expect(err).To(BeNil())
-
-	buf := new(bytes.Buffer)
-	_, err = io.Copy(buf, podLogs)
-	Expect(err).To(BeNil())
-	str := buf.String()
-
-	return &str, nil
-}
