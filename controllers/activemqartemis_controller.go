@@ -121,7 +121,7 @@ type ActiveMQArtemisReconciler struct {
 //+kubebuilder:rbac:groups=monitoring.coreos.com,namespace=activemq-artemis-operator,resources=servicemonitors,verbs=get;create
 //+kubebuilder:rbac:groups=apps,namespace=activemq-artemis-operator,resources=deployments/finalizers,verbs=update
 //+kubebuilder:rbac:groups=rbac.authorization.k8s.io,namespace=activemq-artemis-operator,resources=roles;rolebindings,verbs=create;get;delete
-//+kubebuilder:rbac:groups=policy,namespace=activemq-artemis-operator,resources=poddisruptionbudgets,verbs=create;get;delete
+//+kubebuilder:rbac:groups=policy,namespace=activemq-artemis-operator,resources=poddisruptionbudgets,verbs=create;get;delete;list;update;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

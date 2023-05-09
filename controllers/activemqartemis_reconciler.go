@@ -334,29 +334,32 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessDeploymentPlan(customRes
 }
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) applyPodDisruptionBudget(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, currentStatefulSet *appsv1.StatefulSet) {
-	pdbSpec := customResource.Spec.DeploymentPlan.PodDisruptionBudget.DeepCopy()
 
-	matchLabels := make(map[string]string)
-	matchLabels["ActiveMQArtemis"] = customResource.Name
+	var desired *policyv1.PodDisruptionBudget
+	obj := reconciler.cloneOfDeployed(reflect.TypeOf(policyv1.PodDisruptionBudget{}), customResource.Name+"-pdb")
 
-	pdbSpec.Selector = &metav1.LabelSelector{
+	if obj != nil {
+		desired = obj.(*policyv1.PodDisruptionBudget)
+	} else {
+		desired = &policyv1.PodDisruptionBudget{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "policy/v1",
+				Kind:       "PodDisruptionBudget",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      customResource.Name + "-pdb",
+				Namespace: customResource.Namespace,
+			},
+		}
+	}
+	desired.Spec = *customResource.Spec.DeploymentPlan.PodDisruptionBudget.DeepCopy()
+	matchLabels := map[string]string{"ActiveMQArtemis": customResource.Name}
+
+	desired.Spec.Selector = &metav1.LabelSelector{
 		MatchLabels: matchLabels,
 	}
 
-	pdb := policyv1.PodDisruptionBudget{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "policy/v1",
-			Kind:       "PodDisruptionBudget",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      customResource.Name + "-pdb",
-			Namespace: customResource.Namespace,
-		},
-		Spec: *pdbSpec,
-	}
-
-	reconciler.trackDesired(&pdb)
-
+	reconciler.trackDesired(desired)
 }
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAcceptorsAndConnectors(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) {
@@ -1109,6 +1112,16 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(customResource
 		return equality.Semantic.DeepEqual(deployed.(*netv1.Ingress).Spec, requested.(*netv1.Ingress).Spec)
 	})
 
+	comparator.Comparator.SetComparator(reflect.TypeOf(policyv1.PodDisruptionBudget{}), func(deployed, requested rtclient.Object) bool {
+		pdb1 := deployed.(*policyv1.PodDisruptionBudget)
+		pdb2 := requested.(*policyv1.PodDisruptionBudget)
+		isEqual := equality.Semantic.DeepEqual(pdb1.Spec, pdb2.Spec)
+		if !isEqual {
+			reqLogger.V(3).Info("Unequal", "depoyed", pdb1.Spec, "requested", pdb2.Spec)
+		}
+		return isEqual
+	})
+
 	deltas := comparator.Compare(reconciler.deployed, requested)
 	for _, resourceType := range getOrderedTypeList() {
 		delta, ok := deltas[resourceType]
@@ -1313,6 +1326,7 @@ func getDeployedResources(instance *brokerv1beta1.ActiveMQArtemis, client rtclie
 			&routev1.RouteList{},
 			&corev1.SecretList{},
 			&corev1.ConfigMapList{},
+			&policyv1.PodDisruptionBudgetList{},
 		)
 	} else {
 		resourceMap, err = reader.ListAll(
@@ -1321,6 +1335,7 @@ func getDeployedResources(instance *brokerv1beta1.ActiveMQArtemis, client rtclie
 			&netv1.IngressList{},
 			&corev1.SecretList{},
 			&corev1.ConfigMapList{},
+			&policyv1.PodDisruptionBudgetList{},
 		)
 	}
 	if err != nil {

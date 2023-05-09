@@ -385,7 +385,6 @@ var _ = Describe("artemis controller", func() {
 	})
 
 	Context("pod disruption budget", Label("pod-disruption-budget"), func() {
-
 		It("pod disruption budget validation", func() {
 			minOne := intstr.FromInt(1)
 			matchLabels := make(map[string]string)
@@ -442,10 +441,12 @@ var _ = Describe("artemis controller", func() {
 			pdbObject := policyv1.PodDisruptionBudget{}
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, pdbKey, &pdbObject)).Should(Succeed())
+
 				g.Expect(*pdbObject.Spec.MinAvailable).To(BeEquivalentTo(intstr.FromInt(1)))
 				labelValue, ok := pdbObject.Spec.Selector.MatchLabels["ActiveMQArtemis"]
 				g.Expect(ok).To(BeTrue())
 				g.Expect(labelValue).To(Equal(createdCr.Name))
+
 				if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 					g.Expect(pdbObject.Status.DisruptionsAllowed).To(Equal(int32(1)))
 					g.Expect(pdbObject.Status.CurrentHealthy).To(Equal(int32(2)))
@@ -482,6 +483,57 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(labelValue).To(Equal(createdCr.Name))
 
 			}, timeout, interval).Should(Succeed())
+
+			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
+		})
+
+		It("pod disruption update", func() {
+			minOne := intstr.FromInt(1)
+			minTwo := intstr.FromInt(2)
+			pdb := policyv1.PodDisruptionBudgetSpec{
+				MinAvailable: &minOne,
+			}
+
+			brokerCr, createdCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				candidate.Spec.DeploymentPlan.PodDisruptionBudget = &pdb
+				candidate.Spec.DeploymentPlan.Size = common.Int32ToPtr(2)
+			})
+
+			pdbKey := types.NamespacedName{
+				Name:      brokerCr.Name + "-pdb",
+				Namespace: defaultNamespace,
+			}
+
+			pdbObject := policyv1.PodDisruptionBudget{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, pdbKey, &pdbObject)).Should(Succeed())
+
+				g.Expect(*pdbObject.Spec.MinAvailable).To(BeEquivalentTo(intstr.FromInt(1)))
+				labelValue, ok := pdbObject.Spec.Selector.MatchLabels["ActiveMQArtemis"]
+				g.Expect(ok).To(BeTrue())
+				g.Expect(labelValue).To(Equal(createdCr.Name))
+
+				if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+					g.Expect(pdbObject.Status.DisruptionsAllowed).To(Equal(int32(1)))
+					g.Expect(pdbObject.Status.CurrentHealthy).To(Equal(int32(2)))
+					g.Expect(pdbObject.Status.DesiredHealthy).To(Equal(int32(1)))
+					g.Expect(pdbObject.Status.ExpectedPods).To(Equal(int32(2)))
+				}
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("update pdb minAvaliable")
+			prevResourceVersion := pdbObject.ResourceVersion
+
+			brokerKey := types.NamespacedName{Name: createdCr.Name, Namespace: createdCr.Namespace}
+			Expect(k8sClient.Get(ctx, brokerKey, createdCr)).Should(Succeed())
+			createdCr.Spec.DeploymentPlan.PodDisruptionBudget.MinAvailable = &minTwo
+			Expect(k8sClient.Update(ctx, createdCr)).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, pdbKey, &pdbObject)).Should(Succeed())
+				g.Expect(*pdbObject.Spec.MinAvailable).To(BeEquivalentTo(intstr.FromInt(2)))
+				g.Expect(prevResourceVersion).NotTo(Equal(pdbObject.ResourceVersion))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
 		})
