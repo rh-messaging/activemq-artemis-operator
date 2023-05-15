@@ -2340,7 +2340,7 @@ func UpdateStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, nam
 
 	ValidCondition := getValidCondition(cr)
 	meta.SetStatusCondition(&cr.Status.Conditions, ValidCondition)
-	meta.SetStatusCondition(&cr.Status.Conditions, getDeploymentCondition(cr, podStatus, ValidCondition.Status == metav1.ConditionTrue))
+	meta.SetStatusCondition(&cr.Status.Conditions, getDeploymentCondition(cr, podStatus, ValidCondition.Status != metav1.ConditionFalse))
 
 	if !reflect.DeepEqual(podStatus, cr.Status.PodStatus) {
 		reqLogger.V(1).Info("Pods status updated")

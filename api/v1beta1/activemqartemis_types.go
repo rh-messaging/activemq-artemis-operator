@@ -664,12 +664,11 @@ const (
 	DeployedConditionZeroSizeReason         = "ZeroSizeDeployment"
 	DeployedConditionValidationFailedReason = "ValidationFailed"
 
-	ValidConditionType                       = "Valid"
-	ValidConditionSuccessReason              = "ValidationSucceded"
-	ValidConditionMissingResourcesReason     = "MissingDependentResources"
-	ValidConditionImageVersionConflictReason = "VersionAndImagesConflict"
-	ValidConditionImagePairRequiredReason    = "InitImageMustBePairedWithBrokerImage"
-	ValidConditionInvalidVersionReason       = "SpecVersionInvalid"
+	ValidConditionType                   = "Valid"
+	ValidConditionSuccessReason          = "ValidationSucceded"
+	ValidConditionUnknownReason          = "NonFatalValidationFailure"
+	ValidConditionMissingResourcesReason = "MissingDependentResources"
+	ValidConditionInvalidVersionReason   = "SpecVersionInvalid"
 
 	ValidConditionPDBNonNilSelectorReason   = "PodDisruptionBudgetNonNilSelector"
 	ValidConditionFailedReservedLabelReason = "ReservedLabelReference"

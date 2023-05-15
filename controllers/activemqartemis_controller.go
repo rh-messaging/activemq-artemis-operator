@@ -204,13 +204,6 @@ func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Cli
 		validationCondition = *condition
 	}
 
-	if validationCondition.Status == metav1.ConditionTrue {
-		condition := validateBrokerVersion(customResource)
-		if condition != nil {
-			validationCondition = *condition
-		}
-	}
-
 	if validationCondition.Status == metav1.ConditionTrue && customResource.Spec.DeploymentPlan.PodDisruptionBudget != nil {
 		condition := validatePodDisruption(customResource)
 		if condition != nil {
@@ -225,13 +218,20 @@ func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Cli
 		}
 	}
 
+	if validationCondition.Status == metav1.ConditionTrue {
+		condition := validateBrokerVersion(customResource)
+		if condition != nil {
+			validationCondition = *condition
+		}
+	}
+
 	validationCondition.ObservedGeneration = customResource.Generation
 	meta.SetStatusCondition(&customResource.Status.Conditions, validationCondition)
 
 	if retry {
-		return validationCondition.Status == metav1.ConditionTrue, ctrl.Result{Requeue: retry, RequeueAfter: common.GetReconcileResyncPeriod()}
+		return validationCondition.Status != metav1.ConditionFalse, ctrl.Result{Requeue: retry, RequeueAfter: common.GetReconcileResyncPeriod()}
 	} else {
-		return validationCondition.Status == metav1.ConditionTrue, ctrl.Result{}
+		return validationCondition.Status != metav1.ConditionFalse, ctrl.Result{}
 	}
 }
 
@@ -295,19 +295,21 @@ func validatePodDisruption(customResource *brokerv1beta1.ActiveMQArtemis) *metav
 }
 
 func validateBrokerVersion(customResource *brokerv1beta1.ActiveMQArtemis) *metav1.Condition {
+
+	var result *metav1.Condition = nil
 	if customResource.Spec.Version != "" {
 		if isLockedDown(customResource.Spec.DeploymentPlan.Image) || isLockedDown(customResource.Spec.DeploymentPlan.InitImage) {
-			return &metav1.Condition{
+			result = &metav1.Condition{
 				Type:    brokerv1beta1.ValidConditionType,
-				Status:  metav1.ConditionFalse,
-				Reason:  brokerv1beta1.ValidConditionImageVersionConflictReason,
+				Status:  metav1.ConditionUnknown,
+				Reason:  brokerv1beta1.ValidConditionUnknownReason,
 				Message: common.ImageVersionConflictMessage,
 			}
 		}
 
 		_, err := resolveBrokerVersion(customResource)
 		if err != nil {
-			return &metav1.Condition{
+			result = &metav1.Condition{
 				Type:    brokerv1beta1.ValidConditionType,
 				Status:  metav1.ConditionFalse,
 				Reason:  brokerv1beta1.ValidConditionInvalidVersionReason,
@@ -316,15 +318,15 @@ func validateBrokerVersion(customResource *brokerv1beta1.ActiveMQArtemis) *metav
 		}
 
 	} else if (isLockedDown(customResource.Spec.DeploymentPlan.Image) && !isLockedDown(customResource.Spec.DeploymentPlan.InitImage)) || (isLockedDown(customResource.Spec.DeploymentPlan.InitImage) && !isLockedDown(customResource.Spec.DeploymentPlan.Image)) {
-		return &metav1.Condition{
+		result = &metav1.Condition{
 			Type:    brokerv1beta1.ValidConditionType,
-			Status:  metav1.ConditionFalse,
-			Reason:  brokerv1beta1.ValidConditionImagePairRequiredReason,
+			Status:  metav1.ConditionUnknown,
+			Reason:  brokerv1beta1.ValidConditionUnknownReason,
 			Message: common.ImageDependentPairMessage,
 		}
 	}
 
-	return nil
+	return result
 }
 
 func validateExtraMounts(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme) (*metav1.Condition, bool) {

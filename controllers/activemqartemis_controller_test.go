@@ -556,16 +556,17 @@ var _ = Describe("artemis controller", func() {
 				candidate.Spec.DeploymentPlan.InitImage = "myrepo/my-init-image:1.0"
 			})
 
-			By("checking the CR gets rejected with status updated")
+			By("checking the CR gets status updated")
 			brokerKey := types.NamespacedName{Name: createdBrokerCr.Name, Namespace: createdBrokerCr.Namespace}
 			Eventually(func(g Gomega) {
 
 				g.Expect(k8sClient.Get(ctx, brokerKey, createdBrokerCr)).Should(Succeed())
-				g.Expect(meta.IsStatusConditionTrue(createdBrokerCr.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeFalse())
+				g.Expect(meta.IsStatusConditionPresentAndEqual(createdBrokerCr.Status.Conditions, brokerv1beta1.ValidConditionType, metav1.ConditionUnknown)).Should(BeTrue())
+
 				condition := meta.FindStatusCondition(createdBrokerCr.Status.Conditions, brokerv1beta1.ValidConditionType)
 				g.Expect(condition).NotTo(BeNil())
-				g.Expect(condition.Reason).To(Equal(brokerv1beta1.ValidConditionImageVersionConflictReason))
-				g.Expect(condition.Message).To(Equal(common.ImageVersionConflictMessage))
+				g.Expect(condition.Reason).To(Equal(brokerv1beta1.ValidConditionUnknownReason))
+				g.Expect(condition.Message).To(ContainSubstring(common.ImageVersionConflictMessage))
 			}, timeout, interval).Should(Succeed())
 
 			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
@@ -597,16 +598,16 @@ var _ = Describe("artemis controller", func() {
 				candidate.Spec.DeploymentPlan.InitImage = "myrepo/my-init-image:1.0"
 			})
 
-			By("checking the CR gets rejected with status updated")
+			By("checking the CR gets status updated")
 			brokerKey := types.NamespacedName{Name: createdBrokerCr.Name, Namespace: createdBrokerCr.Namespace}
 			Eventually(func(g Gomega) {
 
 				g.Expect(k8sClient.Get(ctx, brokerKey, createdBrokerCr)).Should(Succeed())
 
-				g.Expect(meta.IsStatusConditionTrue(createdBrokerCr.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeFalse())
+				g.Expect(meta.IsStatusConditionPresentAndEqual(createdBrokerCr.Status.Conditions, brokerv1beta1.ValidConditionType, metav1.ConditionUnknown)).Should(BeTrue())
 				condition := meta.FindStatusCondition(createdBrokerCr.Status.Conditions, brokerv1beta1.ValidConditionType)
 				g.Expect(condition).NotTo(BeNil())
-				g.Expect(condition.Reason).To(Equal(brokerv1beta1.ValidConditionImagePairRequiredReason))
+				g.Expect(condition.Reason).To(Equal(brokerv1beta1.ValidConditionUnknownReason))
 				g.Expect(condition.Message).To(ContainSubstring("both"))
 
 				By("checking status has useful info on what the operator would deploy")
@@ -879,6 +880,73 @@ var _ = Describe("artemis controller", func() {
 
 			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
 		})
+
+		It("ok with valid=unknown, relaxed version validation", func() {
+			By("deploy a broker")
+			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				candidate.Spec.Version = ""
+				candidate.Spec.DeploymentPlan.Image = ""
+				candidate.Spec.DeploymentPlan.InitImage = ""
+			})
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				var initImage = ""
+				var versionString = ""
+				brokerKey := types.NamespacedName{Name: createdBrokerCr.Name, Namespace: createdBrokerCr.Namespace}
+				Eventually(func(g Gomega) {
+
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdBrokerCr)).Should(Succeed())
+
+					By("verifying started")
+
+					g.Expect(meta.IsStatusConditionTrue(createdBrokerCr.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(createdBrokerCr.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
+
+					By("extracting version info from the CR status")
+
+					initImage = createdBrokerCr.Status.Version.InitImage
+					versionString = createdBrokerCr.Status.Version.BrokerVersion
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				Eventually(func(g Gomega) {
+
+					By("updating with invalid  but non fatal version and just init image")
+
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdBrokerCr)).Should(Succeed())
+
+					createdBrokerCr.Spec.Version = versionString
+					createdBrokerCr.Spec.DeploymentPlan.InitImage = initImage
+
+					g.Expect(k8sClient.Update(ctx, createdBrokerCr)).Should(Succeed())
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				Eventually(func(g Gomega) {
+
+					By("verifying restarted")
+
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdBrokerCr)).Should(Succeed())
+
+					g.Expect(meta.IsStatusConditionTrue(createdBrokerCr.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(createdBrokerCr.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
+
+					By("verifying unknown validation status but ok")
+
+					g.Expect(meta.IsStatusConditionPresentAndEqual(createdBrokerCr.Status.Conditions, brokerv1beta1.ValidConditionType, metav1.ConditionUnknown)).Should(BeTrue())
+
+					condition := meta.FindStatusCondition(createdBrokerCr.Status.Conditions, brokerv1beta1.ValidConditionType)
+					g.Expect(condition).NotTo(BeNil())
+					g.Expect(condition.Reason).To(Equal(brokerv1beta1.ValidConditionUnknownReason))
+					g.Expect(condition.Message).To(ContainSubstring(common.ImageVersionConflictMessage))
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
+
+			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
+		})
+
 	})
 
 	Context("broker resource tracking", Label("broker-resource-tracking-context"), func() {
