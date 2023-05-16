@@ -551,7 +551,7 @@ var _ = Describe("artemis controller", func() {
 		It("version validation when both version and images are explicitly specified", func() {
 			By("deploy a broker with images specified")
 			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
-				candidate.Spec.Version = "2"
+				candidate.Spec.Version = version.LatestVersion
 				candidate.Spec.DeploymentPlan.Image = "myrepo/my-image:1.0"
 				candidate.Spec.DeploymentPlan.InitImage = "myrepo/my-init-image:1.0"
 			})
