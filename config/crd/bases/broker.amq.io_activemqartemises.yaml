@@ -2364,6 +2364,11 @@ spec:
                     type: boolean
                   securityUpdates:
                     type: boolean
+                required:
+                - majorUpdates
+                - minorUpdates
+                - patchUpdates
+                - securityUpdates
                 type: object
               version:
                 properties:

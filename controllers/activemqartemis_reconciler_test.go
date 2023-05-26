@@ -1,11 +1,13 @@
 package controllers
 
 import (
+	"encoding/json"
 	"errors"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/RHsyseng/operator-utils/pkg/olm"
 	"github.com/RHsyseng/operator-utils/pkg/resource/compare"
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/stretchr/testify/assert"
@@ -661,5 +663,26 @@ func TestLoginConfigSyntaxCheck(t *testing.T) {
 	for k, v := range bad {
 		assert.False(t, MatchBytesAgainsLoginConfigRegexp(v), "for key "+k)
 	}
+
+}
+
+func TestStatusMarshall(t *testing.T) {
+
+	Status := brokerv1beta1.ActiveMQArtemisStatus{
+		Conditions: []metav1.Condition{},
+		PodStatus: olm.DeploymentStatus{
+			Ready:    []string{},
+			Starting: []string{},
+			Stopped:  []string{},
+		},
+		DeploymentPlanSize: 0,
+		ScaleLabelSelector: "",
+		ExternalConfigs:    []brokerv1beta1.ExternalConfigStatus{},
+		Version:            brokerv1beta1.VersionStatus{},
+		Upgrade:            brokerv1beta1.UpgradeStatus{},
+	}
+	v, err := json.Marshal(Status)
+	assert.Nil(t, err)
+	assert.True(t, strings.Contains(string(v), ":false"))
 
 }

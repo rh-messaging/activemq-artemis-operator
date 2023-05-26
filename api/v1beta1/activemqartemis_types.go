@@ -604,14 +604,14 @@ type VersionStatus struct {
 
 type UpgradeStatus struct {
 	//+operator-sdk:csv:customresourcedefinitions:type=status,displayName="SecurityUpdates",xDescriptors="urn:alm:descriptor:text"
-	SecurityUpdates bool `json:"securityUpdates,omitempty"` // false if image != "" && init image != ""
+	SecurityUpdates bool `json:"securityUpdates"` // false if image != "" && init image != ""
 
 	//+operator-sdk:csv:customresourcedefinitions:type=status,displayName="MajorUpdates",xDescriptors="urn:alm:descriptor:text"
-	MajorUpdates bool `json:"majorUpdates,omitempty"` // true for empty version, false if version = x
+	MajorUpdates bool `json:"majorUpdates"` // true for empty version, false if version = x
 	//+operator-sdk:csv:customresourcedefinitions:type=status,displayName="MinorUpdates",xDescriptors="urn:alm:descriptor:text"
-	MinorUpdates bool `json:"minorUpdates,omitempty"` // false if version = x.y
+	MinorUpdates bool `json:"minorUpdates"` // false if version = x.y
 	//+operator-sdk:csv:customresourcedefinitions:type=status,displayName="PatchUpdates",xDescriptors="urn:alm:descriptor:text"
-	PatchUpdates bool `json:"patchUpdates,omitempty"` // false if version = x.y.z
+	PatchUpdates bool `json:"patchUpdates"` // false if version = x.y.z
 }
 
 type ExternalConfigStatus struct {
