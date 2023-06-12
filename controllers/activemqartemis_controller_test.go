@@ -4292,6 +4292,106 @@ var _ = Describe("artemis controller", func() {
 		})
 	})
 
+	Context("Startup Probe Tests", func() {
+		It("Startup Probe with Exec", func() {
+			By("By creating a crd with Startup Probe")
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+			crd.Spec.AdminUser = "admin"
+			crd.Spec.AdminPassword = "password"
+			exec := corev1.ExecAction{
+				Command: []string{"/broker/bin/artemis check node"},
+			}
+			startupProbe := corev1.Probe{}
+			startupProbe.Exec = &exec
+			crd.Spec.DeploymentPlan.StartupProbe = &startupProbe
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+			createdSs := &appsv1.StatefulSet{}
+			By("Deploying the CRD")
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			By("Making sure that the CRD gets deployed")
+			Eventually(func() bool {
+				return getPersistedVersionedCrd(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
+
+			By("Checking that Stateful Set is Created with the Startup Probe")
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: defaultNamespace}
+
+				err := k8sClient.Get(ctx, key, createdSs)
+
+				if err != nil {
+					return false
+				}
+				return createdSs.Spec.Template.Spec.Containers[0].StartupProbe.Exec != nil
+			}, timeout, interval).Should(Equal(true))
+
+			By("Making sure the Startup probe is correct")
+			Expect(len(createdSs.Spec.Template.Spec.Containers) == 1).Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].StartupProbe.ProbeHandler.Exec.Command[0] == "/broker/bin/artemis check node").Should(BeTrue())
+
+			By("Removing the Startup Probe")
+			Eventually(func() bool {
+				if getPersistedVersionedCrd(crd.ObjectMeta.Name, defaultNamespace, createdCrd) {
+					createdCrd.Spec.DeploymentPlan.StartupProbe = nil
+
+					err := k8sClient.Update(ctx, createdCrd)
+
+					if err == nil {
+						return true
+					}
+				}
+				return false
+			}, timeout, interval).Should(BeTrue())
+
+			By("Checking that Stateful Set is Updated without the Startup Probe")
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: defaultNamespace}
+
+				err := k8sClient.Get(ctx, key, createdSs)
+
+				if err != nil {
+					return false
+				}
+				return createdSs.Spec.Template.Spec.Containers[0].StartupProbe == nil
+			}, timeout, interval).Should(Equal(true))
+
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
+		})
+
+		It("Default Startup Probe", func() {
+			By("By creating a crd without Startup Probe")
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+			crd.Spec.AdminUser = "admin"
+			crd.Spec.AdminPassword = "password"
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+			createdSs := &appsv1.StatefulSet{}
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			Eventually(func() bool {
+				return getPersistedVersionedCrd(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
+
+			By("Checking that the Startup Probe is not created")
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: defaultNamespace}
+
+				err := k8sClient.Get(ctx, key, createdSs)
+
+				if err != nil {
+					return false
+				}
+				return createdSs.Spec.Template.Spec.Containers[0].StartupProbe == nil
+			}, timeout, interval).Should(Equal(true))
+
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
+		})
+	})
+
 	Context("Status", func() {
 		It("Expect pod desc", func() {
 			By("By creating a new crd")

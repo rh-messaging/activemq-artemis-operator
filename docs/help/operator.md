@@ -490,9 +490,9 @@ However, when the scaledown operation is complete, the Operator restores the dep
 ## Configuring Scheduling, Preemption and Eviction
 
 
-### Liveness and Readiness Probes
+### Liveness, Readiness and Startup Probes
 
-The Liveness and readiness Probes are used by Kubernetes to detect when the Broker is started and to check it is still alive. 
+The Liveness, Readiness Startup Probes are used by Kubernetes to detect when the Broker is started and to check it is still alive. 
 For full documentation on this topic refer to the [Configure Liveness, Readiness and Startup Probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/) 
 chapter in the Kubernetes documentation.
 
@@ -606,6 +606,28 @@ As with the Liveness Probe the Readiness probe has a default probe if not config
 a script that is shipped in the Kubernetes Image, this can be found [here](https://github.com/artemiscloud/activemq-artemis-broker-kubernetes-image/blob/main/modules/activemq-artemis-launch/added/readinessProbe.sh)
 
 The script will try to establish a tcp connection to each port configured in the broker.xml.  
+
+#### The Startup Probe
+
+The Startup Probe has no default probe if not configured. The Startup Probe is configured in the Artemis CR something like:
+
+```yaml
+spec:
+  deploymentPlan:
+    startupProbe:
+      exec:
+        command:
+            - /bin/bash
+            - '-c'
+            - /opt/amq/bin/artemis
+            - 'check'
+            - 'node'
+            - '--up'
+            - '--url'
+            - 'tcp://$HOSTNAME:61616'
+      initialDelaySeconds: 5
+      periodSeconds: 5
+```
 
 ###  Tolerations
 

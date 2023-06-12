@@ -1570,6 +1570,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 		container.VolumeMounts = append(container.VolumeMounts, extraVolumeMounts...)
 	}
 
+	container.StartupProbe = configureStartupProbe(container, customResource.Spec.DeploymentPlan.StartupProbe)
 	container.LivenessProbe = configureLivenessProbe(container, customResource.Spec.DeploymentPlan.LivenessProbe)
 	container.ReadinessProbe = configureReadinessProbe(container, customResource.Spec.DeploymentPlan.ReadinessProbe)
 
@@ -1871,6 +1872,25 @@ func getConfigExtraMount(customResource *brokerv1beta1.ActiveMQArtemis, suffix s
 		}
 	}
 	return "", "", false
+}
+
+func configureStartupProbe(container *corev1.Container, probeFromCr *corev1.Probe) *corev1.Probe {
+
+	var startupProbe *corev1.Probe = container.StartupProbe
+	clog.V(1).Info("Configuring Startup Probe", "existing", startupProbe)
+
+	if probeFromCr != nil {
+		if startupProbe == nil {
+			startupProbe = &corev1.Probe{}
+		}
+
+		applyNonDefaultedValues(startupProbe, probeFromCr)
+		startupProbe.ProbeHandler = probeFromCr.ProbeHandler
+	} else {
+		startupProbe = nil
+	}
+
+	return startupProbe
 }
 
 func configureLivenessProbe(container *corev1.Container, probeFromCr *corev1.Probe) *corev1.Probe {
