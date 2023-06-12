@@ -328,6 +328,9 @@ type DeploymentPlanType struct {
 	// Specifies the pod security configurations
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Pod Security Configurations"
 	PodSecurity PodSecurityType `json:"podSecurity,omitempty"`
+	// Specifies the startup probe configuration
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Startup Probe Configurations"
+	StartupProbe *corev1.Probe `json:"startupProbe,omitempty"`
 	// Specifies the liveness probe configuration
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Liveness Probe Configurations"
 	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`

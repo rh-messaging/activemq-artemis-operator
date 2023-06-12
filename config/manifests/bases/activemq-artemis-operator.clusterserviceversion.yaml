@@ -1015,6 +1015,9 @@ spec:
         path: deploymentPlan.size
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:podCount
+      - description: Specifies the startup probe configuration
+        displayName: Startup Probe Configurations
+        path: deploymentPlan.startupProbe
       - description: Specifies the storage configurations
         displayName: Storage Configurations
         path: deploymentPlan.storage
