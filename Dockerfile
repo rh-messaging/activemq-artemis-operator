@@ -33,7 +33,7 @@ WORKDIR /workspace/app
 # Build
 RUN CGO_ENABLED=0 GOOS=linux go build -a -ldflags="-X '${GO_MODULE}/version.BuildTimestamp=`date '+%Y-%m-%dT%H:%M:%S'`'" -o /workspace/manager main.go
 
-FROM registry-proxy.engineering.redhat.com/rh-osbs/ubi8@sha256:e721f98a49e731f0bd64f8e89c229e1dbb38c46265d92849b3e0bedaf5f81139 as base-env
+FROM registry-proxy.engineering.redhat.com/rh-osbs/ubi8@sha256:a7143118671dfc61aca46e8ab9e488500495a3c4c73a69577ca9386564614c13 as base-env
 
 ENV BROKER_NAME=amq-broker
 ENV USER_UID=1000
