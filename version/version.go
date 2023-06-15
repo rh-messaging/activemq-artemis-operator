@@ -77,6 +77,7 @@ var SupportedActiveMQArtemisVersions = []string{
 	"7.10.1",
 	"7.10.2",
 	"7.11.0",
+	"7.11.1",
 }
 
 func CompactActiveMQArtemisVersion(version string) string {
