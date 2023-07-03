@@ -3096,6 +3096,7 @@ func appendNonEmpty(propsKvs []string, data string) []string {
 		keyAndValue = strings.ReplaceAll(keyAndValue, `\ `, ` `)
 		keyAndValue = strings.ReplaceAll(keyAndValue, `\:`, `:`)
 		keyAndValue = strings.ReplaceAll(keyAndValue, `\=`, `=`)
+		keyAndValue = strings.ReplaceAll(keyAndValue, `\"`, `"`)
 		if keyAndValue != "" {
 			propsKvs = append(propsKvs, keyAndValue)
 		}
