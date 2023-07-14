@@ -83,7 +83,7 @@ func (r *ActiveMQArtemisAddressReconciler) Reconcile(ctx context.Context, reques
 					err = deleteQueue(&addressInstance, request, r.Client, r.Scheme)
 					return ctrl.Result{}, err
 				} else {
-					reqLogger.Info("Not to delete address", "address", addressInstance)
+					reqLogger.Info("Not to delete address " + instance.Namespace + "/" + instance.Name)
 				}
 				delete(namespacedNameToAddressName, request.NamespacedName)
 				lsrcrs.DeleteLastSuccessfulReconciledCR(request.NamespacedName, "address", getAddressLabels(&addressInstance.AddressResource), r.Client)
@@ -167,7 +167,7 @@ func createNameBuilders(instance *brokerv1beta1.ActiveMQArtemisAddress) []SSInfo
 			return nil
 		}
 	}
-	glog.Info("Created ss name builder for addr", "instance", instance, "builders", nameBuilders)
+	glog.Info("Created ss name builders for address "+instance.Namespace+"/"+instance.Name, "builders", nameBuilders)
 	return nameBuilders
 }
 
@@ -352,7 +352,7 @@ func deleteQueue(instance *AddressDeployment, request ctrl.Request, client clien
 
 func getPodBrokers(instance *AddressDeployment, request ctrl.Request, client client.Client, scheme *runtime.Scheme) []*jc.JkInfo {
 	reqLogger := ctrl.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Getting Pod Brokers", "instance", instance)
+	reqLogger.Info("Getting Pod Brokers for address " + instance.AddressResource.Namespace + "/" + instance.AddressResource.Name)
 	targetCrNamespacedNames := createTargetCrNamespacedNames(request.Namespace, instance.AddressResource.Spec.ApplyToCrNames)
 	reqLogger.Info("target Cr names", "result", targetCrNamespacedNames)
 	ssInfos := ss.GetDeployedStatefulSetNames(client, targetCrNamespacedNames)

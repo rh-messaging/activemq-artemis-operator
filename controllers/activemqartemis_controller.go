@@ -92,7 +92,7 @@ func (r *ActiveMQArtemisReconciler) AddBrokerConfigHandler(namespacedName types.
 		clog.V(2).Info("There is an old config handler, it'll be replaced")
 	}
 	namespaceToConfigHandler[namespacedName] = handler
-	clog.V(2).Info("A new config handler has been added", "handler", handler)
+	clog.V(2).Info("A new config handler has been added for security " + namespacedName.Namespace + "/" + namespacedName.Name)
 	if toReconcile {
 		clog.V(1).Info("Updating broker security")
 		return r.UpdatePodForSecurity(namespacedName, handler)
@@ -148,7 +148,7 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 			reqLogger.V(1).Info("ActiveMQArtemis Controller Reconcile encountered a IsNotFound, for request NamespacedName " + request.NamespacedName.String())
 			return ctrl.Result{}, nil
 		}
-		reqLogger.Error(err, "unable to retrieve the ActiveMQArtemis", "request", request)
+		reqLogger.Error(err, "unable to retrieve the ActiveMQArtemis for request "+request.Namespace+"/"+request.Name)
 		return ctrl.Result{}, err
 	}
 
