@@ -29,6 +29,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"gopkg.in/yaml.v2"
 
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -93,8 +94,17 @@ var _ = Describe("security controller", func() {
 				return secApplied
 			}, timeout, interval).Should(BeTrue())
 
+			expectedSecuritySecret := corev1.Secret{}
+			expectedSecuritySecretKey := types.NamespacedName{Name: "secret-security-" + createdSecurityCr.Name, Namespace: defaultNamespace}
+
+			By("checking the security secret")
+			Eventually(k8sClient.Get(ctx, expectedSecuritySecretKey, &expectedSecuritySecret) == nil, timeout, interval).Should(BeTrue())
+
 			By("delete the broker cr")
 			CleanResource(createdBrokerCr, createdBrokerCr.Name, defaultNamespace)
+
+			By("checking the security secret")
+			Eventually(k8sClient.Get(ctx, expectedSecuritySecretKey, &expectedSecuritySecret) == nil, timeout, interval).Should(BeTrue())
 
 			By("re-deploy the broker cr")
 			brokerCr, createdBrokerCr = DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
@@ -196,6 +206,11 @@ var _ = Describe("security controller", func() {
 
 					g.Expect(k8sClient.Get(ctx, key, sfsFound)).Should(Succeed())
 					g.Expect(sfsFound.Status.ReadyReplicas).Should(BeEquivalentTo(1))
+
+					data, err := yaml.Marshal(sfsFound)
+					g.Expect(err).To(BeNil())
+					g.Expect(string(data)).ToNot(ContainSubstring(user1Name))
+					g.Expect(string(data)).ToNot(ContainSubstring(password1))
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("Checking console domain name is applied in artemis.profile " + createdBrokerCr.Name)
@@ -471,6 +486,11 @@ var _ = Describe("security controller", func() {
 				}
 				return secApplied
 			}, timeout, interval).Should(BeTrue())
+
+			By("checking the security secret")
+			expectedSecuritySecret := &corev1.Secret{}
+			expectedSecuritySecretKey := types.NamespacedName{Name: "secret-security-" + createdSecCrd.Name, Namespace: defaultNamespace}
+			Eventually(k8sClient.Get(ctx, expectedSecuritySecretKey, expectedSecuritySecret) == nil, timeout, interval).Should(BeTrue())
 
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 				By("Checking ready on SS")

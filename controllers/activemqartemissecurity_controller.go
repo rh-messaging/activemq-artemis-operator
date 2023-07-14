@@ -115,8 +115,18 @@ func (r *ActiveMQArtemisSecurityReconciler) Reconcile(ctx context.Context, reque
 		reqLogger.Error(merr, "failed to marshal cr")
 	}
 
+	instanceWithPasswords := newHandler.processCrPasswords()
+
+	// remove superfluous data that can trip up the shell
+	instanceWithPasswords.ObjectMeta = metav1.ObjectMeta{}
+
+	data, err := yaml.Marshal(instanceWithPasswords)
+	if err != nil {
+		reqLogger.Error(merr, "failed to marshal cr with passwords")
+	}
+
 	lsrcrs.StoreLastSuccessfulReconciledCR(instance, instance.Name, instance.Namespace, "security",
-		crstr, "", instance.ResourceVersion, getLabels(instance), r.Client, r.Scheme)
+		crstr, string(data), instance.ResourceVersion, getLabels(instance), r.Client, r.Scheme)
 
 	return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
 }
@@ -131,6 +141,10 @@ func getLabels(cr *brokerv1beta1.ActiveMQArtemisSecurity) map[string]string {
 	labelBuilder := selectors.LabelerData{}
 	labelBuilder.Base(cr.Name).Suffix("sec").Generate()
 	return labelBuilder.Labels()
+}
+
+func (r *ActiveMQArtemisSecurityConfigHandler) GetCRName() string {
+	return r.SecurityCR.Name
 }
 
 func (r *ActiveMQArtemisSecurityConfigHandler) IsApplicableFor(brokerNamespacedName types.NamespacedName) bool {
@@ -252,15 +266,11 @@ func (r *ActiveMQArtemisSecurityConfigHandler) getPassword(secretName string, ke
 
 func (r *ActiveMQArtemisSecurityConfigHandler) Config(initContainers []corev1.Container, outputDirRoot string, yacfgProfileVersion string, yacfgProfileName string) (value []string) {
 	ctrl.Log.Info("Reconciling ActiveMQArtemisSecurity", "cr", r.SecurityCR)
-	result := r.processCrPasswords()
 	outputDir := outputDirRoot + "/security"
 	var configCmds = []string{"echo \"making dir " + outputDir + "\"", "mkdir -p " + outputDir}
 	filePath := outputDir + "/security-config.yaml"
-	cmdPersistCRAsYaml, err := r.persistCR(filePath, result)
-	if err != nil {
-		slog.Error(err, "Error marshalling security CR", "cr", r.SecurityCR)
-		return nil
-	}
+	securitySecretVolumeName := "secret-security-" + r.SecurityCR.Name + "-volume"
+	cmdPersistCRAsYaml := "cp /etc/" + securitySecretVolumeName + "/Data " + filePath
 	slog.Info("get the command", "value", cmdPersistCRAsYaml)
 	configCmds = append(configCmds, cmdPersistCRAsYaml)
 	configCmds = append(configCmds, "/opt/amq-broker/script/cfg/config-security.sh")
@@ -290,19 +300,6 @@ func (r *ActiveMQArtemisSecurityConfigHandler) Config(initContainers []corev1.Co
 
 	ctrl.Log.Info("returning config cmds", "value", configCmds)
 	return configCmds
-}
-
-func (r *ActiveMQArtemisSecurityConfigHandler) persistCR(filePath string, cr *brokerv1beta1.ActiveMQArtemisSecurity) (value string, err error) {
-
-	// remove superfluous data that can trip up the shell
-	stripped := cr.DeepCopy()
-	stripped.ObjectMeta = metav1.ObjectMeta{}
-
-	data, err := yaml.Marshal(stripped)
-	if err != nil {
-		return "", err
-	}
-	return "echo \"" + string(data) + "\" > " + filePath, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
