@@ -1780,6 +1780,14 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 		if len(handlerCmds) > 0 {
 			clog.Info("appending to initCmd array...")
 			brokerHandlerCmds = append(brokerHandlerCmds, handlerCmds...)
+
+			securitySecretVolumeName := "secret-security-" + brokerConfigHandler.GetCRName()
+			securitySecretVolume := volumes.MakeVolume(securitySecretVolumeName)
+			podSpec.Volumes = append(podSpec.Volumes, securitySecretVolume)
+
+			securitySecretVoluneMountName := securitySecretVolumeName + "-volume"
+			securitySecretVoluneMount := volumes.MakeVolumeMount(securitySecretVoluneMountName)
+			podSpec.InitContainers[0].VolumeMounts = append(podSpec.InitContainers[0].VolumeMounts, securitySecretVoluneMount)
 		}
 	}
 

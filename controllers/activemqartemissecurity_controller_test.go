@@ -29,6 +29,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"gopkg.in/yaml.v2"
 
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -60,6 +61,171 @@ var _ = Describe("security controller", func() {
 	})
 
 	AfterEach(func() {
+	})
+
+	Context("broker with security custom resources", Label("broker-security-res"), func() {
+
+		It("security after recreating broker cr", func() {
+
+			By("deploy a security cr")
+			_, createdSecurityCr := DeploySecurity(NextSpecResourceName(), defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemisSecurity) {
+			})
+
+			By("deploy a broker cr")
+			brokerCr, createdBrokerCr := DeployCustomBroker("", defaultNamespace, nil)
+
+			By("checking the security gets applied")
+			requestedSs := &appsv1.StatefulSet{}
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(createdBrokerCr.Name), Namespace: defaultNamespace}
+				err := k8sClient.Get(ctx, key, requestedSs)
+				if err != nil {
+					return false
+				}
+
+				initContainer := requestedSs.Spec.Template.Spec.InitContainers[0]
+				secApplied := false
+				for _, arg := range initContainer.Args {
+					if strings.Contains(arg, "mkdir -p /init_cfg_root/security/security") {
+						secApplied = true
+						break
+					}
+				}
+				return secApplied
+			}, timeout, interval).Should(BeTrue())
+
+			expectedSecuritySecret := corev1.Secret{}
+			expectedSecuritySecretKey := types.NamespacedName{Name: "secret-security-" + createdSecurityCr.Name, Namespace: defaultNamespace}
+
+			By("checking the security secret")
+			Eventually(k8sClient.Get(ctx, expectedSecuritySecretKey, &expectedSecuritySecret) == nil, timeout, interval).Should(BeTrue())
+
+			By("delete the broker cr")
+			CleanResource(createdBrokerCr, createdBrokerCr.Name, defaultNamespace)
+
+			By("checking the security secret")
+			Eventually(k8sClient.Get(ctx, expectedSecuritySecretKey, &expectedSecuritySecret) == nil, timeout, interval).Should(BeTrue())
+
+			By("re-deploy the broker cr")
+			brokerCr, createdBrokerCr = DeployCustomBroker("", defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				candidate.Name = brokerCr.Name
+			})
+
+			By("verify the security is re-applied")
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(createdBrokerCr.Name), Namespace: defaultNamespace}
+				err := k8sClient.Get(ctx, key, requestedSs)
+				if err != nil {
+					return false
+				}
+
+				initContainer := requestedSs.Spec.Template.Spec.InitContainers[0]
+				secApplied := false
+				for _, arg := range initContainer.Args {
+					if strings.Contains(arg, "mkdir -p /init_cfg_root/security/security") {
+						secApplied = true
+						break
+					}
+				}
+				return secApplied
+			}, timeout, interval).Should(BeTrue())
+
+			CleanResource(createdBrokerCr, createdBrokerCr.Name, defaultNamespace)
+			CleanResource(createdSecurityCr, createdSecurityCr.Name, defaultNamespace)
+		})
+
+		It("security with console domain name specified", Label("sec-console-domain-name"), func() {
+
+			By("deploy a security cr")
+
+			module1Name := "module1"
+			user1Name := "user1"
+			password1 := "password1"
+			user2Name := "user2"
+			password2 := "password2"
+
+			brokerDomainName := "activemq"
+			consoleDomainName := "consoleDomain"
+			requiredFlag := "required"
+			_, createdSecCrd := DeploySecurity("ex-security", defaultNamespace, func(secCrdToDeploy *brokerv1beta1.ActiveMQArtemisSecurity) {
+
+				secCrdToDeploy.Spec.LoginModules = brokerv1beta1.LoginModulesType{
+					PropertiesLoginModules: []brokerv1beta1.PropertiesLoginModuleType{
+						{
+							Name: module1Name,
+							Users: []brokerv1beta1.UserType{
+								{
+									Name:     user1Name,
+									Password: &password1,
+									Roles: []string{
+										"admin",
+									},
+								},
+								{
+									Name:     user2Name,
+									Password: &password2,
+									Roles: []string{
+										"guest",
+									},
+								},
+							},
+						},
+					},
+				}
+
+				secCrdToDeploy.Spec.SecurityDomains = brokerv1beta1.SecurityDomainsType{
+					BrokerDomain: brokerv1beta1.BrokerDomainType{
+						Name: &brokerDomainName,
+						LoginModules: []brokerv1beta1.LoginModuleReferenceType{
+							{
+								Name: &module1Name,
+								Flag: &requiredFlag,
+							},
+						},
+					},
+					ConsoleDomain: brokerv1beta1.BrokerDomainType{
+						Name: &consoleDomainName,
+						LoginModules: []brokerv1beta1.LoginModuleReferenceType{
+							{
+								Name: &module1Name,
+								Flag: &requiredFlag,
+							},
+						},
+					},
+				}
+			})
+
+			By("deploy a broker cr")
+			brokerCr, createdBrokerCr := DeployCustomBroker("", defaultNamespace, nil)
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+				By("make sure the broker is up and running")
+				Eventually(func(g Gomega) {
+					key := types.NamespacedName{Name: namer.CrToSS(brokerCr.Name), Namespace: defaultNamespace}
+					sfsFound := &appsv1.StatefulSet{}
+
+					g.Expect(k8sClient.Get(ctx, key, sfsFound)).Should(Succeed())
+					g.Expect(sfsFound.Status.ReadyReplicas).Should(BeEquivalentTo(1))
+
+					data, err := yaml.Marshal(sfsFound)
+					g.Expect(err).To(BeNil())
+					g.Expect(string(data)).ToNot(ContainSubstring(user1Name))
+					g.Expect(string(data)).ToNot(ContainSubstring(password1))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("Checking console domain name is applied in artemis.profile " + createdBrokerCr.Name)
+				podWithOrdinal := namer.CrToSS(brokerCr.Name) + "-0"
+				command := []string{"cat", "amq-broker/etc/artemis.profile"}
+
+				Eventually(func(g Gomega) {
+					stdOutContent := ExecOnPod(podWithOrdinal, brokerCr.Name, defaultNamespace, command, g)
+					g.Expect(stdOutContent).Should(ContainSubstring("-Dhawtio.realm=" + consoleDomainName))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
+
+			CleanClusterResource(createdBrokerCr, createdBrokerCr.Name, defaultNamespace)
+			CleanClusterResource(createdSecCrd, createdSecCrd.Name, defaultNamespace)
+		})
 	})
 
 	Context("Reconcile Test", func() {
@@ -320,6 +486,11 @@ var _ = Describe("security controller", func() {
 				}
 				return secApplied
 			}, timeout, interval).Should(BeTrue())
+
+			By("checking the security secret")
+			expectedSecuritySecret := &corev1.Secret{}
+			expectedSecuritySecretKey := types.NamespacedName{Name: "secret-security-" + createdSecCrd.Name, Namespace: defaultNamespace}
+			Eventually(k8sClient.Get(ctx, expectedSecuritySecretKey, expectedSecuritySecret) == nil, timeout, interval).Should(BeTrue())
 
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 				By("Checking ready on SS")

@@ -42,6 +42,7 @@ func GetReconcileResyncPeriod() time.Duration {
 }
 
 type ActiveMQArtemisConfigHandler interface {
+	GetCRName() string
 	IsApplicableFor(brokerNamespacedName types.NamespacedName) bool
 	Config(initContainers []corev1.Container, outputDirRoot string, yacfgProfileVersion string, yacfgProfileName string) (value []string)
 }
