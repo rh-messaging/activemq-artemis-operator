@@ -24,7 +24,6 @@ import (
 	"strings"
 
 	"github.com/artemiscloud/activemq-artemis-operator/version"
-	"github.com/go-logr/logr"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -48,6 +47,7 @@ import (
 
 	routev1 "github.com/openshift/api/route/v1"
 
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/log"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/sdkk8sutil"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 
@@ -71,15 +71,15 @@ var (
 	//hard coded because the sdk version pkg is moved in internal package
 	sdkVersion = "1.15.0"
 	scheme     = runtime.NewScheme()
-	log        logr.Logger
+	setupLog   = ctrl.Log.WithName("setup")
 )
 
 func printVersion() {
-	log.Info(fmt.Sprintf("Go Version: %s", goruntime.Version()))
-	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", goruntime.GOOS, goruntime.GOARCH))
-	log.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion))
-	log.Info(fmt.Sprintf("Version of the operator: %s %s", version.Version, version.BuildTimestamp))
-	log.Info(fmt.Sprintf("Supported ActiveMQArtemis Kubernetes Image Versions: %s", getSupportedBrokerVersions()))
+	setupLog.Info(fmt.Sprintf("Go Version: %s", goruntime.Version()))
+	setupLog.Info(fmt.Sprintf("Go OS/Arch: %s/%s", goruntime.GOOS, goruntime.GOARCH))
+	setupLog.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion))
+	setupLog.Info(fmt.Sprintf("Version of the operator: %s %s", version.Version, version.BuildTimestamp))
+	setupLog.Info(fmt.Sprintf("Supported ActiveMQArtemis Kubernetes Image Versions: %s", getSupportedBrokerVersions()))
 }
 
 func init() {
@@ -115,34 +115,37 @@ func main() {
 
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	logger := zap.New(zap.UseFlagOptions(&opts))
 
-	log = ctrl.Log.WithName("setup")
+	// Exclude the logger with the name comparator because it logs the compared objects
+	filteredLogSink := log.NewFilteredLogSink(logger.GetSink(), []string{"comparator"})
+
+	ctrl.SetLogger(logger.WithSink(filteredLogSink))
 
 	printVersion()
 
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
 	if err != nil {
-		log.Error(err, "Error getting config for APIServer")
+		setupLog.Error(err, "Error getting config for APIServer")
 		os.Exit(1)
 	}
 
 	oprNamespace, err := sdkk8sutil.GetOperatorNamespace()
 	if err != nil {
-		log.Error(err, "failed to get operator namespace")
+		setupLog.Error(err, "failed to get operator namespace")
 		os.Exit(1)
 	}
-	log.Info("Got operator namespace", "operator ns", oprNamespace)
+	setupLog.Info("Got operator namespace", "operator ns", oprNamespace)
 
 	watchNamespace, _ := sdkk8sutil.GetWatchNamespace()
 
 	// Expose the operator's namespace and watchNamespace
 	if err := os.Setenv("OPERATOR_NAMESPACE", oprNamespace); err != nil {
-		log.Error(err, "failed to set operator's namespace to env")
+		setupLog.Error(err, "failed to set operator's namespace to env")
 	}
 	if err := os.Setenv("OPERATOR_WATCH_NAMESPACE", watchNamespace); err != nil {
-		log.Error(err, "failed to set operator's watch namespace to env")
+		setupLog.Error(err, "failed to set operator's watch namespace to env")
 	}
 
 	mgrOptions := ctrl.Options{
@@ -157,31 +160,31 @@ func main() {
 
 	isLocal, watchList := common.ResolveWatchNamespaceForManager(oprNamespace, watchNamespace)
 	if isLocal {
-		log.Info("setting up operator to watch local namespace")
+		setupLog.Info("setting up operator to watch local namespace")
 		mgrOptions.Namespace = oprNamespace
 	} else {
 		mgrOptions.Namespace = ""
 		if watchList != nil {
-			log.Info("setting up operator to watch multiple namespaces", "namespace(s)", watchList)
+			setupLog.Info("setting up operator to watch multiple namespaces", "namespace(s)", watchList)
 			mgrOptions.NewCache = cache.MultiNamespacedCacheBuilder(watchList)
 		} else {
-			log.Info("setting up operator to watch all namespaces")
+			setupLog.Info("setting up operator to watch all namespaces")
 		}
 	}
 
 	mgr, err := ctrl.NewManager(cfg, mgrOptions)
 	if err != nil {
-		log.Error(err, "unable to start manager")
+		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 
 	// Create and start a new auto detect process for this operator
 	autodetect, err := common.NewAutoDetect(mgr)
 	if err != nil {
-		log.Error(err, "failed to start the background process to auto-detect the operator capabilities")
+		setupLog.Error(err, "failed to start the background process to auto-detect the operator capabilities")
 	} else {
 		if err := autodetect.DetectOpenshift(); err != nil {
-			log.Error(err, "failed in detecting openshift")
+			setupLog.Error(err, "failed in detecting openshift")
 			os.Exit(1)
 		}
 	}
@@ -194,7 +197,7 @@ func main() {
 	name := os.Getenv("POD_NAME")
 	clnt, err := client.New(cfg, client.Options{})
 	if err != nil {
-		log.Error(err, "can't create client from config")
+		setupLog.Error(err, "can't create client from config")
 		os.Exit(1)
 	} else {
 		setupAccountName(clnt, context.TODO(), oprNamespace, name)
@@ -205,7 +208,7 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}
 	if err = brokerReconciler.SetupWithManager(mgr); err != nil {
-		log.Error(err, "unable to create controller", "controller", "ActiveMQArtemis")
+		setupLog.Error(err, "unable to create controller", "controller", "ActiveMQArtemis")
 		os.Exit(1)
 	}
 
@@ -213,7 +216,7 @@ func main() {
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr, context.TODO()); err != nil {
-		log.Error(err, "unable to create controller", "controller", "ActiveMQArtemisAddress")
+		setupLog.Error(err, "unable to create controller", "controller", "ActiveMQArtemisAddress")
 		os.Exit(1)
 	}
 	if err = (&controllers.ActiveMQArtemisScaledownReconciler{
@@ -221,7 +224,7 @@ func main() {
 		Scheme: mgr.GetScheme(),
 		Config: mgr.GetConfig(),
 	}).SetupWithManager(mgr); err != nil {
-		log.Error(err, "unable to create controller", "controller", "ActiveMQArtemisScaledown")
+		setupLog.Error(err, "unable to create controller", "controller", "ActiveMQArtemisScaledown")
 		os.Exit(1)
 	}
 	if err = (&controllers.ActiveMQArtemisSecurityReconciler{
@@ -229,37 +232,37 @@ func main() {
 		Scheme:           mgr.GetScheme(),
 		BrokerReconciler: brokerReconciler,
 	}).SetupWithManager(mgr); err != nil {
-		log.Error(err, "unable to create controller", "controller", "ActiveMQArtemisSecurity")
+		setupLog.Error(err, "unable to create controller", "controller", "ActiveMQArtemisSecurity")
 		os.Exit(1)
 	}
 
 	enableWebhooks := os.Getenv("ENABLE_WEBHOOKS")
 	if enableWebhooks != "false" {
-		log.Info("Setting up webhook functions", "ENABLE_WEBHOOKS", enableWebhooks)
+		setupLog.Info("Setting up webhook functions", "ENABLE_WEBHOOKS", enableWebhooks)
 		if err = (&brokerv1beta1.ActiveMQArtemis{}).SetupWebhookWithManager(mgr); err != nil {
-			log.Error(err, "unable to create webhook", "webhook", "ActiveMQArtemis")
+			setupLog.Error(err, "unable to create webhook", "webhook", "ActiveMQArtemis")
 			os.Exit(1)
 		}
 		if err = (&brokerv1beta1.ActiveMQArtemisSecurity{}).SetupWebhookWithManager(mgr); err != nil {
-			log.Error(err, "unable to create webhook", "webhook", "ActiveMQArtemisSecurity")
+			setupLog.Error(err, "unable to create webhook", "webhook", "ActiveMQArtemisSecurity")
 			os.Exit(1)
 		}
 		if err = (&brokerv1beta1.ActiveMQArtemisAddress{}).SetupWebhookWithManager(mgr); err != nil {
-			log.Error(err, "unable to create webhook", "webhook", "ActiveMQArtemisAddress")
+			setupLog.Error(err, "unable to create webhook", "webhook", "ActiveMQArtemisAddress")
 			os.Exit(1)
 		}
 	} else {
-		log.Info("NOT Setting up webhook functions", "ENABLE_WEBHOOKS", enableWebhooks)
+		setupLog.Info("NOT Setting up webhook functions", "ENABLE_WEBHOOKS", enableWebhooks)
 	}
 
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-		log.Error(err, "unable to set up health check")
+		setupLog.Error(err, "unable to set up health check")
 		os.Exit(1)
 	}
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-		log.Error(err, "unable to set up ready check")
+		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
 
@@ -268,12 +271,12 @@ func main() {
 	// Create Service object to expose the metrics port.
 	//_, err = metrics.ExposeMetricsPort(ctx, metricsPort)
 	//if err != nil {
-	//	log.Info(err.Error())
+	//	setupLog.Info(err.Error())
 	//}
 
-	log.Info("starting the Cmd.")
+	setupLog.Info("starting the Cmd.")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		log.Error(err, "problem running manager")
+		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
 }
@@ -314,12 +317,12 @@ func setupAccountName(clnt client.Client, ctx context.Context, ns, podname strin
 	key := client.ObjectKey{Namespace: ns, Name: podname}
 	err := clnt.Get(ctx, key, pod)
 	if err != nil {
-		log.Error(err, "failed to get pod", "namespace", ns, "pod name", podname)
+		setupLog.Error(err, "failed to get pod", "namespace", ns, "pod name", podname)
 	} else {
-		log.Info("service account name: " + pod.Spec.ServiceAccountName)
+		setupLog.Info("service account name: " + pod.Spec.ServiceAccountName)
 		err = os.Setenv("SERVICE_ACCOUNT", pod.Spec.ServiceAccountName)
 		if err != nil {
-			log.Error(err, "failed to set env variable")
+			setupLog.Error(err, "failed to set env variable")
 		}
 	}
 }

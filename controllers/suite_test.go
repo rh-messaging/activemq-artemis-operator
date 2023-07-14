@@ -122,7 +122,7 @@ var (
 	}
 	managerChannel chan struct{}
 
-	logBuffer *bytes.Buffer
+	testWriter = common.BufferWriter{}
 
 	artemisGvk = schema.GroupVersionKind{Group: "broker", Version: "v1beta1", Kind: "ActiveMQArtemis"}
 
@@ -593,8 +593,6 @@ var _ = BeforeSuite(func() {
 		GinkgoWriter.TeeTo(os.Stderr)
 	}
 
-	testWriter := TestLogWriter{}
-
 	GinkgoWriter.TeeTo(testWriter)
 
 	ctx, cancel = context.WithCancel(context.TODO())
@@ -657,35 +655,24 @@ var _ = AfterSuite(func() {
 
 })
 
-type TestLogWriter struct {
-}
-
-func (e TestLogWriter) Write(p []byte) (int, error) {
-	if logBuffer != nil {
-		return logBuffer.Write(p)
-	} else {
-		return len(p), nil
-	}
-}
-
 func StartCapturingLog() {
-	logBuffer = bytes.NewBuffer(nil)
+	testWriter.Buffer = bytes.NewBuffer(nil)
 }
 
 func MatchCapturedLog(pattern string) (matched bool, err error) {
-	return regexp.Match(pattern, logBuffer.Bytes())
+	return regexp.Match(pattern, testWriter.Buffer.Bytes())
 }
 
 func FindAllFromCapturedLog(pattern string) []string {
 	re, err := regexp.Compile(pattern)
 	if err == nil {
-		return re.FindAllString(logBuffer.String(), -1)
+		return re.FindAllString(testWriter.Buffer.String(), -1)
 	}
 	return nil
 }
 
 func StopCapturingLog() {
-	logBuffer = nil
+	testWriter.Buffer = nil
 }
 
 func BeforeEachSpec() {
