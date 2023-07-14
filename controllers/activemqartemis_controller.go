@@ -84,7 +84,7 @@ func (r *ActiveMQArtemisReconciler) AddBrokerConfigHandler(namespacedName types.
 		clog.V(1).Info("There is an old config handler, it'll be replaced")
 	}
 	namespaceToConfigHandler[namespacedName] = handler
-	clog.V(1).Info("A new config handler has been added", "handler", handler)
+	clog.V(2).Info("A new config handler has been added for security " + namespacedName.Namespace + "/" + namespacedName.Name)
 	if toReconcile {
 		clog.V(1).Info("Updating broker security")
 		return r.UpdatePodForSecurity(namespacedName, handler)
@@ -206,7 +206,7 @@ type StatefulSetInfo struct {
 	Labels         map[string]string
 }
 
-//only test uses this
+// only test uses this
 func NewReconcileActiveMQArtemis(c client.Client, s *runtime.Scheme) ActiveMQArtemisReconciler {
 	return ActiveMQArtemisReconciler{
 		Client: c,
