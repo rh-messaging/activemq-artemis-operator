@@ -663,6 +663,7 @@ const (
 	DeployedConditionNotReadyReason         = "PodsNotReady"
 	DeployedConditionZeroSizeReason         = "ZeroSizeDeployment"
 	DeployedConditionValidationFailedReason = "ValidationFailed"
+	DeployedConditionCrudKindErrorReason    = "ResourceError"
 
 	ValidConditionType                   = "Valid"
 	ValidConditionSuccessReason          = "ValidationSucceded"

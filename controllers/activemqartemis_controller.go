@@ -160,12 +160,12 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 
 	if valid, result = validate(customResource, r.Client, r.Scheme, *namer); valid {
 
-		reconciler.Process(customResource, *namer, r.Client, r.Scheme)
+		err = reconciler.Process(customResource, *namer, r.Client, r.Scheme)
 
 		result = UpdateBrokerPropertiesStatus(customResource, r.Client, r.Scheme)
 	}
 
-	UpdateStatus(customResource, r.Client, request.NamespacedName, *namer)
+	UpdateStatus(customResource, r.Client, request.NamespacedName, *namer, err)
 
 	err = UpdateCRStatus(customResource, r.Client, request.NamespacedName)
 

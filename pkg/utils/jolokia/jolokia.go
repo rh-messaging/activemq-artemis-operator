@@ -117,6 +117,13 @@ func (j *Jolokia) Read(_path string) (*ResponseData, error) {
 		}
 		defer res.Body.Close()
 
+		if !isResponseSuccessful(res.StatusCode) {
+			return nil, &JolokiaError{
+				HttpCode: res.StatusCode,
+				Message:  "error: " + res.Status,
+			}
+		}
+
 		//decoding
 		result, _, err := decodeResponseData(res)
 		if err != nil {

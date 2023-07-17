@@ -539,6 +539,92 @@ var _ = Describe("artemis controller", func() {
 		})
 	})
 
+	Context("broker status on resource error", func() {
+		It("two acceptors with names too long for kube", func() {
+			By("deploy a broker")
+			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				candidate.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+					{
+						Name:   "my-extra-long-acceptor",
+						Port:   61626,
+						Expose: true,
+					},
+					{
+						Name:   "my-clashing-acceptor",
+						Port:   61627,
+						Expose: true,
+					},
+				}
+			})
+
+			isOpenshift, err := environments.DetectOpenshift()
+			Expect(err).To(BeNil())
+
+			By("checking the CR gets status updated")
+			brokerKey := types.NamespacedName{Name: createdBrokerCr.Name, Namespace: createdBrokerCr.Namespace}
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdBrokerCr)).Should(Succeed())
+				condition := meta.FindStatusCondition(createdBrokerCr.Status.Conditions, brokerv1beta1.DeployedConditionType)
+				g.Expect(condition).NotTo(BeNil())
+				if isOpenshift {
+					// no limit like kube
+					g.Expect(condition.Status).To(Equal(metav1.ConditionTrue))
+				} else {
+					g.Expect(condition.Status).To(Equal(metav1.ConditionUnknown))
+					g.Expect(condition.Reason).To(Equal(brokerv1beta1.DeployedConditionCrudKindErrorReason))
+					g.Expect(condition.Message).To(ContainSubstring("my-clashing-acceptor"))
+					g.Expect(condition.Message).To(ContainSubstring("failed"))
+
+					condition = meta.FindStatusCondition(createdBrokerCr.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType)
+					g.Expect(condition).NotTo(BeNil())
+					g.Expect(condition.Message).ShouldNot(ContainSubstring("invalid character"))
+				}
+
+			}, timeout, interval).Should(Succeed())
+
+			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
+		})
+
+		It("two acceptors with port clash", func() {
+			// candidate for validation to trap
+			By("deploy a broker")
+			samePort := int32(61636)
+			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				candidate.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+					{
+						Name:   "first",
+						Port:   samePort,
+						Expose: true,
+					},
+					{
+						Name:   "second",
+						Port:   samePort,
+						Expose: true,
+					},
+				}
+			})
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+				By("checking the CR gets status updated as not ready, it has crash loop on bind address in use")
+				brokerKey := types.NamespacedName{Name: createdBrokerCr.Name, Namespace: createdBrokerCr.Namespace}
+				Eventually(func(g Gomega) {
+
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdBrokerCr)).Should(Succeed())
+
+					condition := meta.FindStatusCondition(createdBrokerCr.Status.Conditions, brokerv1beta1.DeployedConditionType)
+					g.Expect(condition).NotTo(BeNil())
+					g.Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+					g.Expect(condition.Reason).To(Equal(brokerv1beta1.DeployedConditionNotReadyReason))
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
+
+			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
+		})
+
+	})
+
 	Context("broker versions map", func() {
 		versionList := []string{
 			"7.8.1",

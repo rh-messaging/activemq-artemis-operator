@@ -2,6 +2,7 @@ package resources
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"reflect"
 
@@ -18,10 +19,9 @@ var log = ctrl.Log.WithName("package k8s_actions")
 
 func Create(owner v1.Object, client client.Client, scheme *runtime.Scheme, clientObject client.Object) error {
 
-	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", clientObject.GetName(), "Namespace", clientObject.GetNamespace())
 	objectTypeString := reflect.TypeOf(clientObject.(runtime.Object)).String()
-	reqLogger.Info("Creating new " + objectTypeString)
+	reqLogger.V(1).Info("Creating new " + objectTypeString)
 
 	SetOwnerAndController(owner, clientObject)
 
@@ -30,9 +30,12 @@ func Create(owner v1.Object, client client.Client, scheme *runtime.Scheme, clien
 		// Add error detail for use later
 		reqLogger.Error(err, "Failed to create new "+objectTypeString)
 	} else {
-		reqLogger.Info("Created new " + objectTypeString)
+		reqLogger.V(1).Info("Created new " + objectTypeString)
 	}
 
+	if err != nil {
+		err = fmt.Errorf("failed to create new %s, %v", objectTypeString, err)
+	}
 	return err
 }
 
@@ -117,6 +120,9 @@ func Update(client client.Client, clientObject client.Object) error {
 		}
 	}
 
+	if err != nil {
+		err = fmt.Errorf("failed to update %s, %v", objectTypeString, err)
+	}
 	return err
 }
 
@@ -145,6 +151,10 @@ func Delete(client client.Client, clientObject client.Object) error {
 	var err error = nil
 	if err = client.Delete(context.TODO(), clientObject); err != nil {
 		reqLogger.Error(err, "Failed to delete "+objectTypeString)
+	}
+
+	if err != nil {
+		err = fmt.Errorf("failed to delete %s, %v", objectTypeString, err)
 	}
 
 	return err

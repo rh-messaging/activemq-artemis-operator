@@ -138,7 +138,7 @@ test-v test-mk-v test-mk-do-v test-mk-do-fast-v: TEST_ARGS += -v
 test-v test-mk test-mk-v test-mk-do test-mk-do-v test-mk-do-fast test-mk-do-fast-v: TEST_ARGS += -ginkgo.slow-spec-threshold=30s -ginkgo.fail-fast -coverprofile cover-mk.out
 
 test test-v test-mk test-mk-v test-mk-do test-mk-do-v test-mk-do-fast test-mk-do-fast-v: manifests generate fmt vet envtest 
-	$(TEST_VARS) go test ./... -p 1 $(TEST_ARGS)
+	$(TEST_VARS) go test ./... -p 1 $(TEST_ARGS) $(TEST_EXTRA_ARGS)
 
 ##@ Build
 

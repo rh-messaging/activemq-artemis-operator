@@ -122,7 +122,7 @@ type ActiveMQArtemisIReconciler interface {
 	ProcessResources(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint8
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) Process(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) Process(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme) error {
 
 	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
 	log.Info("Reconciler Processing...", "Operator version", version.Version, "ActiveMQArtemis release", customResource.Spec.Version)
@@ -137,7 +137,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) Process(customResource *brokerv
 	desiredStatefulSet, err := reconciler.ProcessStatefulSet(customResource, namer, client, log)
 	if err != nil {
 		log.Error(err, "Error processing stafulset")
-		return
+		return err
 	}
 
 	reconciler.ProcessDeploymentPlan(customResource, namer, client, scheme, desiredStatefulSet)
@@ -155,11 +155,12 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) Process(customResource *brokerv
 	reconciler.trackDesired(desiredStatefulSet)
 
 	// this should apply any deltas/updates
-	reconciler.ProcessResources(customResource, client, scheme)
+	err = reconciler.ProcessResources(customResource, client, scheme)
 
 	log.Info("Reconciler Processing... complete", "CRD ver:", customResource.ObjectMeta.ResourceVersion, "CRD Gen:", customResource.ObjectMeta.Generation)
 
 	// we dont't requeue
+	return err
 }
 
 func trackSecretCheckSumInEnvVar(requestedResources []rtclient.Object, container []corev1.Container) {
@@ -1122,6 +1123,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(customResource
 		return isEqual
 	})
 
+	var compositeError []error
 	deltas := comparator.Compare(reconciler.deployed, requested)
 	for _, resourceType := range getOrderedTypeList() {
 		delta, ok := deltas[resourceType]
@@ -1133,22 +1135,37 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(customResource
 
 		for index := range delta.Added {
 			resourceToAdd := delta.Added[index]
-			reconciler.createResource(customResource, client, scheme, resourceToAdd, resourceType, reqLogger)
+			trackError(&compositeError, reconciler.createResource(customResource, client, scheme, resourceToAdd, resourceType, reqLogger))
 		}
 		for index := range delta.Updated {
 			resourceToUpdate := delta.Updated[index]
-			reconciler.updateResource(customResource, client, scheme, resourceToUpdate, resourceType, reqLogger)
+			trackError(&compositeError, reconciler.updateResource(customResource, client, scheme, resourceToUpdate, resourceType, reqLogger))
 		}
 		for index := range delta.Removed {
 			resourceToRemove := delta.Removed[index]
-			reconciler.deleteResource(customResource, client, scheme, resourceToRemove, resourceType, reqLogger)
+			trackError(&compositeError, reconciler.deleteResource(customResource, client, scheme, resourceToRemove, resourceType, reqLogger))
 		}
 	}
 
 	//empty the collected objects
 	reconciler.requestedResources = nil
 
-	return nil
+	if len(compositeError) == 0 {
+		return nil
+	} else {
+		// maybe errors.Join in go1.20
+		// using %q(uote) to keep errors separate
+		return fmt.Errorf("%q", compositeError)
+	}
+}
+
+func trackError(compositeError *[]error, err error) {
+	if err != nil {
+		if *compositeError == nil {
+			*compositeError = make([]error, 0, 1)
+		}
+		*compositeError = append(*compositeError, err)
+	}
 }
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) createResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, kind reflect.Type, reqLogger logr.Logger) error {
@@ -2336,7 +2353,7 @@ func NewPersistentVolumeClaimArrayForCR(customResource *brokerv1beta1.ActiveMQAr
 	return &pvcArray
 }
 
-func UpdateStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namespacedName types.NamespacedName, namer Namers) {
+func UpdateStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namespacedName types.NamespacedName, namer Namers, reconcileError error) {
 
 	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", cr.Name)
 
@@ -2355,7 +2372,7 @@ func UpdateStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, nam
 
 	ValidCondition := getValidCondition(cr)
 	meta.SetStatusCondition(&cr.Status.Conditions, ValidCondition)
-	meta.SetStatusCondition(&cr.Status.Conditions, getDeploymentCondition(cr, podStatus, ValidCondition.Status != metav1.ConditionFalse))
+	meta.SetStatusCondition(&cr.Status.Conditions, getDeploymentCondition(cr, podStatus, ValidCondition.Status != metav1.ConditionFalse, reconcileError))
 
 	if !reflect.DeepEqual(podStatus, cr.Status.PodStatus) {
 		reqLogger.V(1).Info("Pods status updated")
@@ -2439,13 +2456,22 @@ func getValidCondition(cr *brokerv1beta1.ActiveMQArtemis) metav1.Condition {
 	}
 }
 
-func getDeploymentCondition(cr *brokerv1beta1.ActiveMQArtemis, podStatus olm.DeploymentStatus, valid bool) metav1.Condition {
+func getDeploymentCondition(cr *brokerv1beta1.ActiveMQArtemis, podStatus olm.DeploymentStatus, valid bool, reconcileError error) metav1.Condition {
 
 	if !valid {
 		return metav1.Condition{
 			Type:   brokerv1beta1.DeployedConditionType,
 			Status: metav1.ConditionFalse,
 			Reason: brokerv1beta1.DeployedConditionValidationFailedReason,
+		}
+	}
+
+	if reconcileError != nil {
+		return metav1.Condition{
+			Type:    brokerv1beta1.DeployedConditionType,
+			Status:  metav1.ConditionUnknown,
+			Reason:  brokerv1beta1.DeployedConditionCrudKindErrorReason,
+			Message: reconcileError.Error(),
 		}
 	}
 
@@ -2739,7 +2765,7 @@ func AssertBrokersAvailable(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.C
 	DeployedCondition := meta.FindStatusCondition(cr.Status.Conditions, brokerv1beta1.DeployedConditionType)
 	if DeployedCondition == nil || DeployedCondition.Status == metav1.ConditionFalse {
 		reqLogger.Info("There are no available brokers from DeployedCondition", "condition", DeployedCondition)
-		return NewUnknownJolokiaError(errors.New("no available brokers"))
+		return NewUnknownJolokiaError(errors.New("no available brokers from deployed condition"))
 	}
 	return nil
 }
