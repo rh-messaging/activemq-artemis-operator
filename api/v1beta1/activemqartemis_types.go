@@ -674,9 +674,10 @@ const (
 	ValidConditionMissingResourcesReason = "MissingDependentResources"
 	ValidConditionInvalidVersionReason   = "SpecVersionInvalid"
 
-	ValidConditionPDBNonNilSelectorReason   = "PodDisruptionBudgetNonNilSelector"
-	ValidConditionFailedReservedLabelReason = "ReservedLabelReference"
-	ValidConditionFailedExtraMountReason    = "InvalidExtraMount"
+	ValidConditionPDBNonNilSelectorReason     = "PodDisruptionBudgetNonNilSelector"
+	ValidConditionFailedReservedLabelReason   = "ReservedLabelReference"
+	ValidConditionFailedExtraMountReason      = "InvalidExtraMount"
+	ValidConditionFailedDuplicateAcceptorPort = "DuplicateAcceptorPort"
 
 	ReadyConditionType      = "Ready"
 	ReadyConditionReason    = "ResourceReady"

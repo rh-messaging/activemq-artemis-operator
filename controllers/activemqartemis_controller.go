@@ -207,6 +207,13 @@ func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Cli
 	}
 
 	if validationCondition.Status == metav1.ConditionTrue {
+		condition, retry = validateAcceptorPorts(customResource, client, scheme, namer)
+		if condition != nil {
+			validationCondition = *condition
+		}
+	}
+
+	if validationCondition.Status == metav1.ConditionTrue {
 		condition, retry = validateSSLEnabledSecrets(customResource, client, scheme, namer)
 		if condition != nil {
 			validationCondition = *condition
@@ -224,6 +231,25 @@ func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Cli
 	meta.SetStatusCondition(&customResource.Status.Conditions, validationCondition)
 
 	return validationCondition.Status != metav1.ConditionFalse, retry
+}
+
+func validateAcceptorPorts(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, namer Namers) (*metav1.Condition, bool) {
+	portMap := map[int32]string{}
+
+	for _, acceptor := range customResource.Spec.Acceptors {
+		if acceptor.Port > 0 { // port == 0 is server chooses free port
+			if existingName, duplicate := portMap[acceptor.Port]; duplicate {
+				return &metav1.Condition{
+					Type:    brokerv1beta1.ValidConditionType,
+					Status:  metav1.ConditionFalse,
+					Reason:  brokerv1beta1.ValidConditionFailedDuplicateAcceptorPort,
+					Message: fmt.Sprintf(".Spec.Acceptors %q and %q contain a duplicate port %v", acceptor.Name, existingName, acceptor.Port),
+				}, false
+			}
+			portMap[acceptor.Port] = acceptor.Name
+		}
+	}
+	return nil, false
 }
 
 func validateSSLEnabledSecrets(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, namer Namers) (*metav1.Condition, bool) {

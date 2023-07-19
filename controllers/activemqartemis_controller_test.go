@@ -587,7 +587,6 @@ var _ = Describe("artemis controller", func() {
 		})
 
 		It("two acceptors with port clash", func() {
-			// candidate for validation to trap
 			By("deploy a broker")
 			samePort := int32(61636)
 			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
@@ -605,20 +604,20 @@ var _ = Describe("artemis controller", func() {
 				}
 			})
 
-			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
-				By("checking the CR gets status updated as not ready, it has crash loop on bind address in use")
-				brokerKey := types.NamespacedName{Name: createdBrokerCr.Name, Namespace: createdBrokerCr.Namespace}
-				Eventually(func(g Gomega) {
+			By("checking the CR gets status updated as invalid")
+			brokerKey := types.NamespacedName{Name: createdBrokerCr.Name, Namespace: createdBrokerCr.Namespace}
+			Eventually(func(g Gomega) {
 
-					g.Expect(k8sClient.Get(ctx, brokerKey, createdBrokerCr)).Should(Succeed())
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdBrokerCr)).Should(Succeed())
 
-					condition := meta.FindStatusCondition(createdBrokerCr.Status.Conditions, brokerv1beta1.DeployedConditionType)
-					g.Expect(condition).NotTo(BeNil())
-					g.Expect(condition.Status).To(Equal(metav1.ConditionFalse))
-					g.Expect(condition.Reason).To(Equal(brokerv1beta1.DeployedConditionNotReadyReason))
+				fmt.Printf("\nSTatus:%v\n", createdBrokerCr.Status)
 
-				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
-			}
+				condition := meta.FindStatusCondition(createdBrokerCr.Status.Conditions, brokerv1beta1.ValidConditionType)
+				g.Expect(condition).NotTo(BeNil())
+				g.Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+				g.Expect(condition.Reason).To(Equal(brokerv1beta1.ValidConditionFailedDuplicateAcceptorPort))
+
+			}, timeout, interval).Should(Succeed())
 
 			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
 		})
