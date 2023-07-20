@@ -137,61 +137,56 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 
 	customResource := &brokerv1beta1.ActiveMQArtemis{}
 
-	// Fetch the ActiveMQArtemis instance
-	// When first creating this will have err == nil
-	// When deleting after creation this will have err NotFound
-	// When deleting before creation reconcile won't be called
-	err := r.Get(context.TODO(), request.NamespacedName, customResource)
+	result := ctrl.Result{}
 
+	err := r.Get(context.TODO(), request.NamespacedName, customResource)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			reqLogger.V(1).Info("ActiveMQArtemis Controller Reconcile encountered a IsNotFound, for request NamespacedName " + request.NamespacedName.String())
-			return ctrl.Result{}, nil
+			return result, nil
 		}
-		reqLogger.Error(err, "unable to retrieve the ActiveMQArtemis for request "+request.Namespace+"/"+request.Name)
-		return ctrl.Result{}, err
+		reqLogger.Error(err, "unable to retrieve the ActiveMQArtemis")
+		return result, err
 	}
 
 	namer := MakeNamers(customResource)
 	reconciler := ActiveMQArtemisReconcilerImpl{}
 
-	result := ctrl.Result{}
-	var valid = true
-
-	if valid, result = validate(customResource, r.Client, r.Scheme, *namer); valid {
+	var requeueRequest bool = false
+	var valid bool = false
+	if valid, requeueRequest = validate(customResource, r.Client, r.Scheme, *namer); valid {
 
 		err = reconciler.Process(customResource, *namer, r.Client, r.Scheme)
 
-		result = UpdateBrokerPropertiesStatus(customResource, r.Client, r.Scheme)
-	}
-
-	UpdateStatus(customResource, r.Client, request.NamespacedName, *namer, err)
-
-	err = UpdateCRStatus(customResource, r.Client, request.NamespacedName)
-
-	if err != nil {
-		if apierrors.IsConflict(err) {
-			reqLogger.V(1).Info("unable to update ActiveMQArtemis status", "Request Namespace", request.Namespace, "Request Name", request.Name, "error", err)
-			err = nil // we don't want the controller event loop reporting this as an error
-		} else {
-			reqLogger.V(1).Error(err, "unable to update ActiveMQArtemis status", "Request Namespace", request.Namespace, "Request Name", request.Name)
+		if ProcessBrokerStatus(customResource, r.Client, r.Scheme) {
+			requeueRequest = true
 		}
-		return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, err
 	}
 
-	if result.IsZero() {
+	ProcessStatus(customResource, r.Client, request.NamespacedName, *namer, err)
+
+	crStatusUpdateErr := UpdateCRStatus(customResource, r.Client, request.NamespacedName)
+	if crStatusUpdateErr != nil {
+		requeueRequest = true
+	}
+
+	if !requeueRequest {
 		reqLogger.Info("resource successfully reconciled")
 		if hasExtraMounts(customResource) {
-			reqLogger.V(1).Info("resource has extraMounts, requeuing for periodic sync")
-			result = ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}
+			reqLogger.V(1).Info("resource has extraMounts, requeuing")
+			requeueRequest = true
 		}
-	} else {
-		reqLogger.V(1).Info("requeue resource")
 	}
+
+	if requeueRequest {
+		reqLogger.V(1).Info("requeue reconcile")
+		result = ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}
+	}
+
 	return result, err
 }
 
-func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, namer Namers) (bool, ctrl.Result) {
+func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, namer Namers) (bool, retry bool) {
 	// Do additional validation here
 	validationCondition := metav1.Condition{
 		Type:   brokerv1beta1.ValidConditionType,
@@ -228,11 +223,7 @@ func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Cli
 	validationCondition.ObservedGeneration = customResource.Generation
 	meta.SetStatusCondition(&customResource.Status.Conditions, validationCondition)
 
-	if retry {
-		return validationCondition.Status != metav1.ConditionFalse, ctrl.Result{Requeue: retry, RequeueAfter: common.GetReconcileResyncPeriod()}
-	} else {
-		return validationCondition.Status != metav1.ConditionFalse, ctrl.Result{}
-	}
+	return validationCondition.Status != metav1.ConditionFalse, retry
 }
 
 func validateSSLEnabledSecrets(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, namer Namers) (*metav1.Condition, bool) {

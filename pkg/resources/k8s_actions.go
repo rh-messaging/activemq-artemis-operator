@@ -113,7 +113,7 @@ func Update(client client.Client, clientObject client.Object) error {
 				reqLogger.V(1).Info("Deleting on failed updating "+objectTypeString, "obj", clientObject, "Forbidden", err)
 				err = Delete(client, clientObject)
 			} else {
-				reqLogger.Error(err, "Got status error")
+				reqLogger.Error(err, "got error on update", "resourceVersion", clientObject.GetResourceVersion())
 			}
 		default:
 			reqLogger.Error(err, "Failed to update "+objectTypeString)

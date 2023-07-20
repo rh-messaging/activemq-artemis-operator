@@ -2353,7 +2353,7 @@ func NewPersistentVolumeClaimArrayForCR(customResource *brokerv1beta1.ActiveMQAr
 	return &pvcArray
 }
 
-func UpdateStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namespacedName types.NamespacedName, namer Namers, reconcileError error) {
+func ProcessStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namespacedName types.NamespacedName, namer Namers, reconcileError error) {
 
 	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", cr.Name)
 
@@ -2655,18 +2655,14 @@ type applyError struct {
 	Reason       string `json:"reason"`
 }
 
-func UpdateBrokerPropertiesStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme) ctrl.Result {
-	result := ctrl.Result{}
+func ProcessBrokerStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme) (retry bool) {
 	var condition metav1.Condition
 
 	err := AssertBrokersAvailable(cr, client, scheme)
 	if err != nil {
 		condition = trapErrorAsCondition(err, brokerv1beta1.ConfigAppliedConditionType)
-		if err.Requeue() {
-			result = ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}
-		}
 		meta.SetStatusCondition(&cr.Status.Conditions, condition)
-		return result
+		return err.Requeue()
 	}
 
 	err = AssertBrokerPropertiesStatus(cr, client, scheme)
@@ -2678,9 +2674,7 @@ func UpdateBrokerPropertiesStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtcl
 		}
 	} else {
 		condition = trapErrorAsCondition(err, brokerv1beta1.ConfigAppliedConditionType)
-		if err.Requeue() {
-			result = ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}
-		}
+		retry = err.Requeue()
 	}
 	meta.SetStatusCondition(&cr.Status.Conditions, condition)
 
@@ -2694,14 +2688,12 @@ func UpdateBrokerPropertiesStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtcl
 			}
 		} else {
 			condition = trapErrorAsCondition(err, brokerv1beta1.JaasConfigAppliedConditionType)
-			if err.Requeue() {
-				result = ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}
-			}
+			retry = retry || err.Requeue()
 		}
 
 		meta.SetStatusCondition(&cr.Status.Conditions, condition)
 	}
-	return result
+	return retry
 }
 
 func trapErrorAsCondition(err ArtemisError, conditionType string) metav1.Condition {

@@ -20,6 +20,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 
@@ -27,6 +28,7 @@ import (
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/types"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
@@ -72,8 +74,14 @@ var _ = Describe("Scale down controller", func() {
 				Eventually(func(g Gomega) {
 
 					getPersistedVersionedCrd(brokerCrd.ObjectMeta.Name, defaultNamespace, createdBrokerCrd)
+					if verbose {
+						fmt.Printf("\nSTATUS:%v\n", createdBrokerCrd.Status)
+					}
+
 					By("Check ready status")
 					g.Expect(len(createdBrokerCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(2))
+					g.Expect(meta.IsStatusConditionTrue(createdBrokerCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(createdBrokerCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 
 				}, existingClusterTimeout, interval).Should(Succeed())
 
