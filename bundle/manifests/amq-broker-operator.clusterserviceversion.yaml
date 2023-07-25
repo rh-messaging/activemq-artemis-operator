@@ -2127,15 +2127,15 @@ spec:
                 - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7102_s390x
                   value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:c9eba0d1f9fba588711774f4db75221f057578407065127ed60c33eef564f499
                 - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7110
-                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:e6c050867f05c97cf5bf518982210ce2e3983525293cb542a7ef044ac28ccee8
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:b9f93c243ead118651083880786a81c624f390fcc3596c7ec5ebd55f34f95ea3
                 - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7110
                   value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:25c3732e945b4bc3e9aca721ce709d0217339b065d9dac9afdb6202e9fd8a799
                 - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7110_ppc64le
-                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:e6c050867f05c97cf5bf518982210ce2e3983525293cb542a7ef044ac28ccee8
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:b9f93c243ead118651083880786a81c624f390fcc3596c7ec5ebd55f34f95ea3
                 - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7110_ppc64le
                   value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:25c3732e945b4bc3e9aca721ce709d0217339b065d9dac9afdb6202e9fd8a799
                 - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7110_s390x
-                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:e6c050867f05c97cf5bf518982210ce2e3983525293cb542a7ef044ac28ccee8
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:b9f93c243ead118651083880786a81c624f390fcc3596c7ec5ebd55f34f95ea3
                 - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7110_s390x
                   value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:25c3732e945b4bc3e9aca721ce709d0217339b065d9dac9afdb6202e9fd8a799
                 - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7111
