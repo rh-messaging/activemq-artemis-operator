@@ -29,7 +29,7 @@ spec:
         name: amq-broker-operator
         com.company: Red_Hat
         rht.prod_name: Red_Hat_Integration
-        rht.prod_ver: 2023.Q2
+        rht.prod_ver: 
         rht.comp: Broker_AMQ
         rht.comp_ver: 7.10.3
         rht.subcomp: broker-amq-operator
