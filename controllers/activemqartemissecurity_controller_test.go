@@ -65,6 +65,43 @@ var _ = Describe("security controller", func() {
 
 	Context("broker with security custom resources", Label("broker-security-res"), func() {
 
+		It("no password in security log test", func() {
+			By("deploy a security cr")
+			StartCapturingLog()
+			defer StopCapturingLog()
+			_, createdSecurityCr := DeploySecurity(NextSpecResourceName(), defaultNamespace, nil)
+			By("deploy a broker cr")
+			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, nil)
+			createdSs := &appsv1.StatefulSet{}
+			ssKey := types.NamespacedName{Name: namer.CrToSS(brokerCr.Name), Namespace: defaultNamespace}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, ssKey, createdSs)).Should(Succeed())
+
+				initContainer := createdSs.Spec.Template.Spec.InitContainers[0]
+				secApplied := false
+				for _, arg := range initContainer.Args {
+					if strings.Contains(arg, "mkdir -p /init_cfg_root/security/security") {
+						secApplied = true
+						break
+					}
+				}
+				g.Expect(secApplied).To(BeTrue())
+			}, timeout, interval).Should(Succeed())
+
+			By("checking the log")
+			Eventually(func(g Gomega) {
+				isMatch, err := MatchPattern(TestLogWrapper.unbufferedWriter.String(), "resource successfully reconciled")
+				g.Expect(err).To(BeNil())
+				g.Expect(isMatch).To(BeTrue())
+			}, timeout, interval).Should(Succeed())
+			hasMatch, matchErr := MatchPattern(TestLogWrapper.unbufferedWriter.String(), okDefaultPwd)
+			Expect(matchErr).To(BeNil())
+			Expect(hasMatch).To(BeFalse(), TestLogWrapper.unbufferedWriter.String())
+
+			CleanResource(createdBrokerCr, createdBrokerCr.Name, defaultNamespace)
+			CleanResource(createdSecurityCr, createdSecurityCr.Name, defaultNamespace)
+		})
+
 		It("security after recreating broker cr", func() {
 
 			By("deploy a security cr")
@@ -767,13 +804,11 @@ var _ = Describe("security controller", func() {
 				return secApplied
 			}, timeout, interval).Should(BeTrue())
 
-			By("Checking security doesn't gets applied to broker2 " + broker2Cr.Name)
-			Eventually(func() bool {
+			By("Checking security doesn't get applied to broker2 " + broker2Cr.Name)
+			Eventually(func(g Gomega) {
 				key := types.NamespacedName{Name: namer.CrToSS(createdBroker2Cr.Name), Namespace: defaultNamespace}
-				err := k8sClient.Get(ctx, key, requestedSs)
-				if err != nil {
-					return false
-				}
+				g.Expect(k8sClient.Get(ctx, key, requestedSs)).Should(Succeed())
+
 				initContainer := requestedSs.Spec.Template.Spec.InitContainers[0]
 				secApplied := false
 				for _, arg := range initContainer.Args {
@@ -782,9 +817,9 @@ var _ = Describe("security controller", func() {
 						break
 					}
 				}
-				return secApplied
+				g.Expect(secApplied).To(BeFalse())
 
-			}, timeout, interval).Should(BeFalse())
+			}, timeout, interval).Should(Succeed())
 
 			By("Checking security gets applied to broker3 " + broker3Cr.Name)
 			Eventually(func() bool {

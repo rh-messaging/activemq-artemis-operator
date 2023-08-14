@@ -151,7 +151,7 @@ func (r *ActiveMQArtemisSecurityConfigHandler) IsApplicableFor(brokerNamespacedN
 	reqLogger := ctrl.Log.WithValues("IsApplicableFor", brokerNamespacedName)
 
 	applyTo := r.SecurityCR.Spec.ApplyToCrNames
-	reqLogger.V(1).Info("applyTo", "len", len(applyTo), "sec", r.SecurityCR.Spec)
+	reqLogger.V(1).Info("applyTo", "len", len(applyTo), "sec", r.SecurityCR.Name)
 
 	//currently security doesnt apply to other namespaces than its own
 	if r.NamespacedName.Namespace != brokerNamespacedName.Namespace {
@@ -265,13 +265,13 @@ func (r *ActiveMQArtemisSecurityConfigHandler) getPassword(secretName string, ke
 }
 
 func (r *ActiveMQArtemisSecurityConfigHandler) Config(initContainers []corev1.Container, outputDirRoot string, yacfgProfileVersion string, yacfgProfileName string) (value []string) {
-	ctrl.Log.Info("Reconciling ActiveMQArtemisSecurity", "cr", r.SecurityCR)
+	ctrl.Log.V(1).Info("Reconciling ActiveMQArtemisSecurity", "cr", r.SecurityCR.Name)
 	outputDir := outputDirRoot + "/security"
 	var configCmds = []string{"echo \"making dir " + outputDir + "\"", "mkdir -p " + outputDir}
 	filePath := outputDir + "/security-config.yaml"
 	securitySecretVolumeName := "secret-security-" + r.SecurityCR.Name + "-volume"
 	cmdPersistCRAsYaml := "cp /etc/" + securitySecretVolumeName + "/Data " + filePath
-	slog.Info("get the command", "value", cmdPersistCRAsYaml)
+	ctrl.Log.Info("get the command", "value", cmdPersistCRAsYaml)
 	configCmds = append(configCmds, cmdPersistCRAsYaml)
 	configCmds = append(configCmds, "/opt/amq-broker/script/cfg/config-security.sh")
 	envVarName := "SECURITY_CFG_YAML"
