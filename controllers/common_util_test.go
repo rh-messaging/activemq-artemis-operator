@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -51,6 +52,34 @@ func NextSpecResourceName() string {
 	resCount++
 
 	return name
+}
+
+var okDefaultPwd = "okdefaultpassword"
+
+type TestLogWriter struct {
+	unbufferedWriter bytes.Buffer
+}
+
+func (w *TestLogWriter) Write(p []byte) (n int, err error) {
+	num, err := w.unbufferedWriter.Write(p)
+	if err != nil {
+		return num, err
+	}
+	return GinkgoWriter.Write(p)
+}
+
+func (w *TestLogWriter) StartLogging() {
+	w.unbufferedWriter = *bytes.NewBuffer(nil)
+}
+
+func (w *TestLogWriter) StopLogging() {
+	w.unbufferedWriter.Reset()
+}
+
+var TestLogWrapper = TestLogWriter{}
+
+func MatchPattern(content string, pattern string) (matched bool, err error) {
+	return regexp.Match(pattern, []byte(content))
 }
 
 func CurrentSpecShortName() string {

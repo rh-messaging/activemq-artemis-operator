@@ -80,7 +80,7 @@ var _ = Describe("artemis controller", func() {
 	wis := list.New()
 	BeforeEach(func() {
 
-		if verobse {
+		if verbose {
 			fmt.Println("Time with MicroSeconds: ", time.Now().Format("2006-01-02 15:04:05.000000"), " test:", CurrentGinkgoTestDescription())
 		}
 
@@ -101,7 +101,7 @@ var _ = Describe("artemis controller", func() {
 
 			go func() {
 				for event := range wi.ResultChan() {
-					if verobse {
+					if verbose {
 						fmt.Printf("%v : Object: %v\n", event.Type, event.Object)
 					}
 				}

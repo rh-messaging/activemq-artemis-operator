@@ -28,6 +28,7 @@ import (
 	"time"
 
 	routev1 "github.com/openshift/api/route/v1"
+	"go.uber.org/zap/zapcore"
 
 	"path/filepath"
 	"testing"
@@ -77,7 +78,7 @@ const (
 	interval                = time.Millisecond * 500
 	existingClusterTimeout  = time.Second * 180
 	existingClusterInterval = time.Second * 2
-	verobse                 = false
+	verbose                 = false
 	namespace1              = "namespace1"
 	namespace2              = "namespace2"
 	namespace3              = "namespace3"
@@ -113,7 +114,7 @@ var (
 	}
 	managerChannel = make(chan struct{}, 1)
 
-	logBuffer *bytes.Buffer
+	testWriter = common.BufferWriter{}
 
 	artemisGvk = schema.GroupVersionKind{Group: "broker", Version: "v1beta1", Kind: "ActiveMQArtemis"}
 )
@@ -513,12 +514,17 @@ func setUpK8sClient() {
 }
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
-	if verobse {
-		GinkgoWriter.TeeTo(os.Stderr)
+	opts := zap.Options{
+		Development: true,
+		DestWriter:  &TestLogWrapper,
+		TimeEncoder: zapcore.ISO8601TimeEncoder,
 	}
 
-	testWriter := TestLogWriter{}
+	logf.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	if verbose {
+		GinkgoWriter.TeeTo(os.Stderr)
+	}
 
 	GinkgoWriter.TeeTo(testWriter)
 
@@ -564,7 +570,6 @@ var _ = AfterSuite(func() {
 		err := uninstallOperator()
 		Expect(err).NotTo(HaveOccurred())
 	} else {
-
 		shutdownControllerManager()
 
 		if stateManager != nil {
@@ -582,25 +587,16 @@ var _ = AfterSuite(func() {
 
 })
 
-type TestLogWriter struct {
-}
-
-func (e TestLogWriter) Write(p []byte) (int, error) {
-	if logBuffer != nil {
-		return logBuffer.Write(p)
-	} else {
-		return len(p), nil
-	}
-}
-
 func StartCapturingLog() {
-	logBuffer = bytes.NewBuffer(nil)
+	testWriter.Buffer = bytes.NewBuffer(nil)
+	TestLogWrapper.StartLogging()
 }
 
 func MatchCapturedLog(pattern string) (matched bool, err error) {
-	return regexp.Match(pattern, logBuffer.Bytes())
+	return regexp.Match(pattern, testWriter.Buffer.Bytes())
 }
 
 func StopCapturingLog() {
-	logBuffer = nil
+	testWriter.Buffer = nil
+	TestLogWrapper.StopLogging()
 }
