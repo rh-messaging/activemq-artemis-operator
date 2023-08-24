@@ -571,7 +571,7 @@ var _ = Describe("artemis controller", func() {
 					// no limit like kube
 					g.Expect(condition.Status).To(Equal(metav1.ConditionTrue))
 				} else {
-					g.Expect(condition.Status).To(Equal(metav1.ConditionUnknown))
+					g.Expect(condition.Status).To(Equal(metav1.ConditionFalse))
 					g.Expect(condition.Reason).To(Equal(brokerv1beta1.DeployedConditionCrudKindErrorReason))
 					g.Expect(condition.Message).To(ContainSubstring("my-clashing-acceptor"))
 					g.Expect(condition.Message).To(ContainSubstring("failed"))
@@ -579,6 +579,10 @@ var _ = Describe("artemis controller", func() {
 					condition = meta.FindStatusCondition(createdBrokerCr.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType)
 					g.Expect(condition).NotTo(BeNil())
 					g.Expect(condition.Message).ShouldNot(ContainSubstring("invalid character"))
+
+					// resource error, deployed false, ready false
+					g.Expect(meta.IsStatusConditionTrue(createdBrokerCr.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeFalse())
+
 				}
 
 			}, timeout, interval).Should(Succeed())

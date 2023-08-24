@@ -2497,7 +2497,7 @@ func getDeploymentCondition(cr *brokerv1beta1.ActiveMQArtemis, podStatus olm.Dep
 	if reconcileError != nil {
 		return metav1.Condition{
 			Type:    brokerv1beta1.DeployedConditionType,
-			Status:  metav1.ConditionUnknown,
+			Status:  metav1.ConditionFalse,
 			Reason:  brokerv1beta1.DeployedConditionCrudKindErrorReason,
 			Message: reconcileError.Error(),
 		}
