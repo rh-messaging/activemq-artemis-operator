@@ -18,15 +18,13 @@ package jolokia_client
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	mgmt "github.com/artemiscloud/activemq-artemis-operator/pkg/utils/artemis"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -41,72 +39,60 @@ type JkInfo struct {
 	Ordinal string
 }
 
-//Get all matching broker pod infos for a give resource
-//parameters:
-//resource: the address CR for which the broker pods are gathered
-//ssInfos: target statefulsets to look for pods in
-//client: the client to access the api server
 func GetBrokers(resource types.NamespacedName, ssInfos []ss.StatefulSetInfo, client rtclient.Client) []*JkInfo {
 	reqLogger := ctrl.Log.WithValues("Request.Namespace", resource.Namespace, "Request.Name", resource.Name)
 
 	var artemisArray []*JkInfo = nil
 
-	for _, info := range ssInfos {
-		jkInfos := GetBrokersFromDNS(namer.SSToCr(info.NamespacedName.Name), info.NamespacedName.Namespace, info.Replicas, client)
-		artemisArray = append(artemisArray, jkInfos...)
-	}
-
-	reqLogger.Info("Gathered some mgmt array", "size", len(artemisArray))
-	return artemisArray
-}
-
-// Get brokers Using DNS names in the namespace
-func GetBrokersFromDNS(crName string, namespace string, size int32, client rtclient.Client) []*JkInfo {
-	reqLogger := ctrl.Log.WithValues("Request.Namespace", namespace, "Request.Name", crName)
-
-	var artemisArray []*JkInfo = nil
-	var i int32 = 0
-
-	clusterDomain := common.GetClusterDomain()
-	for i = 0; i < size; i++ {
-		// from NewHeadlessServiceForCR2 and
-		// https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#a-aaaa-records
-		ordinalFqdn := fmt.Sprintf("%s-ss-%d.%s-hdls-svc.%s.svc.%s", crName, i, crName, namespace, clusterDomain)
-
-		pod := &corev1.Pod{}
-		podNamespacedName := types.NamespacedName{
-			Name:      namer.CrToSS(crName) + "-" + strconv.Itoa(int(i)),
-			Namespace: namespace,
-		}
-
-		reqLogger.V(2).Info("Trying finding pod " + pod.Name)
-		if err := client.Get(context.TODO(), podNamespacedName, pod); err != nil {
-			if errors.IsNotFound(err) {
-				reqLogger.Error(err, "Pod IsNotFound", "Namespace", namespace, "Name", pod.Name)
-			} else {
-				reqLogger.Error(err, "Pod lookup error", "Namespace", namespace, "Name", pod.Name)
-			}
+	for n, info := range ssInfos {
+		reqLogger.Info("Now retrieve ss", "order", n, "ssName", info.NamespacedName)
+		statefulset, err := ss.RetrieveStatefulSet(info.NamespacedName.Name, info.NamespacedName, info.Labels, client)
+		if nil != err {
+			reqLogger.Error(err, "error retriving ss")
+			reqLogger.Info("Statefulset: " + info.NamespacedName.Name + " not found")
 		} else {
-			reqLogger.V(2).Info("Pod found", "Namespace", namespace, "Name", crName)
-			containers := pod.Spec.Containers //get env from this
-			jolokiaSecretName := crName + "-jolokia-secret"
-
-			jolokiaUser, jolokiaPassword, jolokiaProtocol := resolveJolokiaRequestParams(namespace, client, client.Scheme(), jolokiaSecretName, &containers, podNamespacedName)
-
-			reqLogger.V(2).Info("hostname to use for jolokia ", "hostname", ordinalFqdn)
-
-			artemis := mgmt.GetArtemis(ordinalFqdn, "8161", "amq-broker", jolokiaUser, jolokiaPassword, jolokiaProtocol)
-
-			jkInfo := JkInfo{
-				Artemis: artemis,
-				IP:      ordinalFqdn,
-				Ordinal: strconv.FormatInt(int64(i), 10),
+			reqLogger.Info("Statefulset: " + info.NamespacedName.Name + " found")
+			pod := &corev1.Pod{}
+			podNamespacedName := types.NamespacedName{
+				Name:      statefulset.Name + "-0",
+				Namespace: resource.Namespace,
 			}
-			artemisArray = append(artemisArray, &jkInfo)
+
+			// For each of the replicas
+			var i int = 0
+			var replicas int = int(*statefulset.Spec.Replicas)
+			reqLogger.Info("finding pods in ss", "replicas", replicas)
+			for i = 0; i < replicas; i++ {
+				s := statefulset.Name + "-" + strconv.Itoa(i)
+				podNamespacedName.Name = s
+				reqLogger.Info("Trying finding pod " + s)
+				if err = client.Get(context.TODO(), podNamespacedName, pod); err != nil {
+					if errors.IsNotFound(err) {
+						reqLogger.Error(err, "Pod IsNotFound", "Namespace", resource.Namespace, "Name", resource.Name)
+					} else {
+						reqLogger.Error(err, "Pod lookup error", "Namespace", resource.Namespace, "Name", resource.Name)
+					}
+				} else {
+					reqLogger.Info("Pod found", "Namespace", resource.Namespace, "Name", resource.Name)
+					containers := pod.Spec.Containers //get env from this
+					jolokiaSecretName := resource.Name + "-jolokia-secret"
+
+					jolokiaUser, jolokiaPassword, jolokiaProtocol := resolveJolokiaRequestParams(resource.Namespace, client, client.Scheme(), jolokiaSecretName, &containers, podNamespacedName, statefulset, info.Labels)
+
+					reqLogger.Info("New Jolokia with ", "User: ", jolokiaUser, "Protocol: ", jolokiaProtocol, "broker ip", pod.Status.PodIP)
+					artemis := mgmt.GetArtemis(pod.Status.PodIP, "8161", "amq-broker", jolokiaUser, jolokiaPassword, jolokiaProtocol)
+					jkInfo := JkInfo{
+						Artemis: artemis,
+						IP:      pod.Status.PodIP,
+						Ordinal: strconv.Itoa(i),
+					}
+					artemisArray = append(artemisArray, &jkInfo)
+				}
+			}
 		}
 	}
 
-	reqLogger.V(2).Info("got mgmt array", "size", len(artemisArray))
+	reqLogger.Info("Finally we gathered some mgmt array", "size", len(artemisArray))
 	return artemisArray
 }
 
@@ -115,20 +101,22 @@ func resolveJolokiaRequestParams(namespace string,
 	scheme *runtime.Scheme,
 	jolokiaSecretName string,
 	containers *[]corev1.Container,
-	podNamespacedName types.NamespacedName) (string, string, string) {
+	podNamespacedName types.NamespacedName,
+	statefulset *appsv1.StatefulSet,
+	labels map[string]string) (string, string, string) {
 
 	var jolokiaUser string
 	var jolokiaPassword string
 	var jolokiaProtocol string
 
 	userDefined := false
-	jolokiaUserFromSecret := secrets.GetValueFromSecret(namespace, jolokiaSecretName, "jolokiaUser", nil, client, scheme, nil)
+	jolokiaUserFromSecret := secrets.GetValueFromSecret(namespace, jolokiaSecretName, "jolokiaUser", labels, client, scheme, nil)
 	if jolokiaUserFromSecret != nil {
 		userDefined = true
 		jolokiaUser = *jolokiaUserFromSecret
 	}
 	if userDefined {
-		jolokiaPasswordFromSecret := secrets.GetValueFromSecret(namespace, jolokiaSecretName, "jolokiaPassword", nil, client, scheme, nil)
+		jolokiaPasswordFromSecret := secrets.GetValueFromSecret(namespace, jolokiaSecretName, "jolokiaPassword", labels, client, scheme, nil)
 		if jolokiaPasswordFromSecret != nil {
 			jolokiaPassword = *jolokiaPasswordFromSecret
 		}
@@ -137,13 +125,13 @@ func resolveJolokiaRequestParams(namespace string,
 		envVars := (*containers)[0].Env
 		for _, oneVar := range envVars {
 			if !userDefined && oneVar.Name == "AMQ_USER" {
-				jolokiaUser = getEnvVarValue(&oneVar, &podNamespacedName, client, nil)
+				jolokiaUser = getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client, labels)
 			}
 			if !userDefined && oneVar.Name == "AMQ_PASSWORD" {
-				jolokiaPassword = getEnvVarValue(&oneVar, &podNamespacedName, client, nil)
+				jolokiaPassword = getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client, labels)
 			}
 			if oneVar.Name == "AMQ_CONSOLE_ARGS" {
-				jolokiaProtocol = getEnvVarValue(&oneVar, &podNamespacedName, client, nil)
+				jolokiaProtocol = getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client, labels)
 			}
 			if jolokiaUser != "" && jolokiaPassword != "" && jolokiaProtocol != "" {
 				break
@@ -160,19 +148,19 @@ func resolveJolokiaRequestParams(namespace string,
 	return jolokiaUser, jolokiaPassword, jolokiaProtocol
 }
 
-func getEnvVarValue(envVar *corev1.EnvVar, namespace *types.NamespacedName, client rtclient.Client, labels map[string]string) string {
+func getEnvVarValue(envVar *corev1.EnvVar, namespace *types.NamespacedName, statefulset *appsv1.StatefulSet, client rtclient.Client, labels map[string]string) string {
 	var result string
 	if envVar.Value == "" {
-		result = getEnvVarValueFromSecret(envVar.Name, envVar.ValueFrom, namespace, client, labels)
+		result = getEnvVarValueFromSecret(envVar.Name, envVar.ValueFrom, namespace, statefulset, client, labels)
 	} else {
 		result = envVar.Value
 	}
 	return result
 }
 
-func getEnvVarValueFromSecret(envName string, varSource *corev1.EnvVarSource, namespace *types.NamespacedName, client rtclient.Client, labels map[string]string) string {
+func getEnvVarValueFromSecret(envName string, varSource *corev1.EnvVarSource, namespace *types.NamespacedName, statefulset *appsv1.StatefulSet, client rtclient.Client, labels map[string]string) string {
 
-	reqLogger := ctrl.Log.WithValues("Namespace", namespace.Namespace, "Name", namespace.Name)
+	reqLogger := ctrl.Log.WithValues("Namespace", namespace.Name, "StatefulSet", statefulset.Name)
 
 	var result string = ""
 
@@ -181,7 +169,7 @@ func getEnvVarValueFromSecret(envName string, varSource *corev1.EnvVarSource, na
 
 	namespacedName := types.NamespacedName{
 		Name:      secretName,
-		Namespace: namespace.Namespace,
+		Namespace: statefulset.Namespace,
 	}
 	// Attempt to retrieve the secret
 	stringDataMap := map[string]string{

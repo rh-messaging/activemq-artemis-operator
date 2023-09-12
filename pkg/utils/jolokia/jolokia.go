@@ -83,7 +83,6 @@ func (j *Jolokia) getClient() *http.Client {
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
 					InsecureSkipVerify: true,
-					ServerName:         j.ip,
 				},
 			},
 			Timeout: time.Second * 2, //Maximum of 2 seconds

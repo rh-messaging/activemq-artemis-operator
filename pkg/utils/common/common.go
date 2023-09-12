@@ -2,7 +2,6 @@ package common
 
 import (
 	"encoding/json"
-	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -29,8 +28,6 @@ var theManager manager.Manager
 var resyncPeriod time.Duration = DEFAULT_RESYNC_PERIOD
 
 var jaasConfigSyntaxMatchRegEx = JaasConfigSyntaxMatchRegExDefault
-
-var ClusterDomain *string
 
 func init() {
 	if period, defined := os.LookupEnv("RECONCILE_RESYNC_PERIOD"); defined {
@@ -199,22 +196,4 @@ func resolveVersionComponents(desired string) (major, minor, patch *uint64) {
 
 func Int32ToPtr(v int32) *int32 {
 	return &v
-}
-
-func GetClusterDomain() string {
-	if ClusterDomain == nil {
-		apiSvc := "kubernetes.default.svc"
-		cname, err := net.LookupCNAME(apiSvc)
-		if err == nil {
-			clusterDomain := strings.TrimPrefix(cname, apiSvc)
-			clusterDomain = strings.TrimPrefix(clusterDomain, ".")
-			clusterDomain = strings.TrimSuffix(clusterDomain, ".")
-			ClusterDomain = &clusterDomain
-		} else {
-			defaultClusterDomain := "cluster.local"
-			ClusterDomain = &defaultClusterDomain
-		}
-	}
-
-	return *ClusterDomain
 }
