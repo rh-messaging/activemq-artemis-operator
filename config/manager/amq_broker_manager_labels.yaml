@@ -10,6 +10,6 @@ spec:
         rht.prod_name: Red_Hat_Integration
         rht.prod_ver: 
         rht.comp: Broker_AMQ
-        rht.comp_ver: 7.11.1
+        rht.comp_ver: 7.11.2
         rht.subcomp: broker-amq-operator
         rht.subcomp_t: application

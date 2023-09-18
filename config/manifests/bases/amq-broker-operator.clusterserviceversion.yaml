@@ -22,6 +22,7 @@ metadata:
   name: amq-broker-operator.v0.0.0
   namespace: placeholder
 spec:
+  replaces: amq-broker-operator.v7.11.1-opr-2
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
@@ -1760,5 +1761,4 @@ spec:
   provider:
     name: Red Hat
     url: https://www.redhat.com/
-  replaces: amq-broker-operator.v7.11.1-opr-1
   version: 0.0.0
