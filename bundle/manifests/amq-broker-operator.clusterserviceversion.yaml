@@ -2,7 +2,237 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
   annotations:
-    alm-examples: '[]'
+    alm-examples: |-
+      [
+        {
+          "apiVersion": "broker.amq.io/v1alpha1",
+          "kind": "ActiveMQArtemisSecurity",
+          "metadata": {
+            "name": "ex-prop"
+          },
+          "spec": {
+            "loginModules": {
+              "propertiesLoginModules": [
+                {
+                  "name": "prop-module",
+                  "users": [
+                    {
+                      "name": "bob",
+                      "roles": [
+                        "root"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "securityDomains": {
+              "brokerDomain": {
+                "loginModules": [
+                  {
+                    "flag": "sufficient",
+                    "name": "prop-module"
+                  }
+                ],
+                "name": "activemq"
+              }
+            }
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v1beta1",
+          "kind": "ActiveMQArtemis",
+          "metadata": {
+            "application": "ex-aao-app",
+            "name": "ex-aao"
+          },
+          "spec": {
+            "deploymentPlan": {
+              "image": "placeholder",
+              "jolokiaAgentEnabled": false,
+              "journalType": "nio",
+              "managementRBACEnabled": true,
+              "messageMigration": false,
+              "persistenceEnabled": false,
+              "requireLogin": false,
+              "size": 2
+            }
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v1beta1",
+          "kind": "ActiveMQArtemisAddress",
+          "metadata": {
+            "name": "ex-aaoaddress"
+          },
+          "spec": {
+            "addressName": "myAddress0",
+            "queueName": "myQueue0",
+            "routingType": "anycast"
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v1beta1",
+          "kind": "ActiveMQArtemisScaledown",
+          "metadata": {
+            "name": "ex-aaoscaledown"
+          },
+          "spec": {
+            "localOnly": true
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v1beta1",
+          "kind": "ActiveMQArtemisSecurity",
+          "metadata": {
+            "name": "ex-prop"
+          },
+          "spec": {
+            "loginModules": {
+              "propertiesLoginModules": [
+                {
+                  "name": "prop-module",
+                  "users": [
+                    {
+                      "name": "bob",
+                      "roles": [
+                        "root"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "securityDomains": {
+              "brokerDomain": {
+                "loginModules": [
+                  {
+                    "flag": "sufficient",
+                    "name": "prop-module"
+                  }
+                ],
+                "name": "activemq"
+              }
+            }
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v2alpha1",
+          "kind": "ActiveMQArtemis",
+          "metadata": {
+            "application": "ex-aao-app",
+            "name": "ex-aao"
+          },
+          "spec": {
+            "deploymentPlan": {
+              "image": "placeholder",
+              "size": 2
+            }
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v2alpha1",
+          "kind": "ActiveMQArtemisAddress",
+          "metadata": {
+            "name": "ex-aaoaddress"
+          },
+          "spec": {
+            "addressName": "myAddress0",
+            "queueName": "myQueue0",
+            "routingType": "anycast"
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v2alpha1",
+          "kind": "ActiveMQArtemisScaledown",
+          "metadata": {
+            "name": "ex-aaoscaledown"
+          },
+          "spec": {
+            "localOnly": true
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v2alpha2",
+          "kind": "ActiveMQArtemis",
+          "metadata": {
+            "application": "ex-aao-app",
+            "name": "ex-aao"
+          },
+          "spec": {
+            "deploymentPlan": {
+              "image": "placeholder",
+              "size": 2
+            }
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v2alpha2",
+          "kind": "ActiveMQArtemisAddress",
+          "metadata": {
+            "name": "ex-aaoaddress"
+          },
+          "spec": {
+            "addressName": "myAddress0",
+            "queueName": "myQueue0",
+            "routingType": "anycast"
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v2alpha3",
+          "kind": "ActiveMQArtemis",
+          "metadata": {
+            "application": "ex-aao-app",
+            "name": "ex-aao"
+          },
+          "spec": {
+            "deploymentPlan": {
+              "image": "placeholder",
+              "size": 2
+            }
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v2alpha3",
+          "kind": "ActiveMQArtemisAddress",
+          "metadata": {
+            "name": "ex-aaoaddress"
+          },
+          "spec": {
+            "addressName": "myAddress0",
+            "queueName": "myQueue0",
+            "routingType": "anycast"
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v2alpha4",
+          "kind": "ActiveMQArtemis",
+          "metadata": {
+            "application": "ex-aao-app",
+            "name": "ex-aao"
+          },
+          "spec": {
+            "deploymentPlan": {
+              "image": "placeholder",
+              "size": 2
+            }
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v2alpha5",
+          "kind": "ActiveMQArtemis",
+          "metadata": {
+            "application": "ex-aao-app",
+            "name": "ex-aao"
+          },
+          "spec": {
+            "deploymentPlan": {
+              "image": "placeholder",
+              "size": 2
+            }
+          }
+        }
+      ]
     capabilities: Seamless Upgrades
     categories: Streaming & Messaging
     certified: "false"
@@ -10,6 +240,8 @@ metadata:
       deploy and manage stateful AMQ Broker clusters
     operators.openshift.io/valid-subscription: '["Red Hat Runtimes", "Red Hat Integration",
       "Red Hat Process Automation", "Red Hat AMQ"]'
+    operators.operatorframework.io/builder: operator-sdk-v1.14.0+git
+    operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/rh-messaging/activemq-artemis-operator
     support: Red Hat
     tectonic-visibility: ocs
@@ -19,7 +251,7 @@ metadata:
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
     operatorframework.io/os.linux: supported
-  name: amq-broker-operator.v0.0.0
+  name: amq-broker-operator.v7.11.2-opr-1
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -207,7 +439,7 @@ spec:
       displayName: Active MQArtemis Address
       kind: ActiveMQArtemisAddress
       name: activemqartemisaddresses.broker.amq.io
-      version: v2alpha3
+      version: v2alpha1
     - description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses
         API
       displayName: Active MQArtemis Address
@@ -219,7 +451,7 @@ spec:
       displayName: Active MQArtemis Address
       kind: ActiveMQArtemisAddress
       name: activemqartemisaddresses.broker.amq.io
-      version: v2alpha1
+      version: v2alpha3
     - description: A stateful deployment of one or more brokers
       displayName: ActiveMQ Artemis
       kind: ActiveMQArtemis
@@ -1139,17 +1371,7 @@ spec:
       displayName: Active MQArtemis
       kind: ActiveMQArtemis
       name: activemqartemises.broker.amq.io
-      version: v2alpha5
-    - description: ActiveMQArtemis is the Schema for the activemqartemises API
-      displayName: Active MQArtemis
-      kind: ActiveMQArtemis
-      name: activemqartemises.broker.amq.io
-      version: v2alpha4
-    - description: ActiveMQArtemis is the Schema for the activemqartemises API
-      displayName: Active MQArtemis
-      kind: ActiveMQArtemis
-      name: activemqartemises.broker.amq.io
-      version: v2alpha3
+      version: v2alpha1
     - description: ActiveMQArtemis is the Schema for the activemqartemises API
       displayName: Active MQArtemis
       kind: ActiveMQArtemis
@@ -1159,13 +1381,32 @@ spec:
       displayName: Active MQArtemis
       kind: ActiveMQArtemis
       name: activemqartemises.broker.amq.io
-      version: v2alpha1
+      version: v2alpha3
+    - description: ActiveMQArtemis is the Schema for the activemqartemises API
+      displayName: Active MQArtemis
+      kind: ActiveMQArtemis
+      name: activemqartemises.broker.amq.io
+      version: v2alpha4
+    - description: ActiveMQArtemis is the Schema for the activemqartemises API
+      displayName: Active MQArtemis
+      kind: ActiveMQArtemis
+      name: activemqartemises.broker.amq.io
+      version: v2alpha5
+    - kind: ActiveMQArtemisScaledown
+      name: activemqartemisscaledowns.broker.amq.io
+      version: v1beta1
     - description: ActiveMQArtemisScaledown is the Schema for the activemqartemisscaledowns
         API
       displayName: Active MQArtemis Scaledown
       kind: ActiveMQArtemisScaledown
       name: activemqartemisscaledowns.broker.amq.io
       version: v2alpha1
+    - description: ActiveMQArtemisSecurity is the Schema for the activemqartemissecurities
+        API
+      displayName: Active MQArtemis Security
+      kind: ActiveMQArtemisSecurity
+      name: activemqartemissecurities.broker.amq.io
+      version: v1alpha1
     - description: Security configuration for the broker
       displayName: ActiveMQ Artemis Security
       kind: ActiveMQArtemisSecurity
@@ -1682,12 +1923,6 @@ spec:
         displayName: Hawtio Roles
         path: securitySettings.management.hawtioRoles
       version: v1beta1
-    - description: ActiveMQArtemisSecurity is the Schema for the activemqartemissecurities
-        API
-      displayName: Active MQArtemis Security
-      kind: ActiveMQArtemisSecurity
-      name: activemqartemissecurities.broker.amq.io
-      version: v1alpha1
   description: |
     **Red Hat AMQ Broker** is a pure-Java multiprotocol message broker. It’s built on an efficient, asynchronous core with a fast journal for message persistence.
 
@@ -1728,8 +1963,485 @@ spec:
     mediatype: image/png
   install:
     spec:
-      deployments: null
-    strategy: ""
+      deployments:
+      - name: amq-broker-controller-manager
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              control-plane: controller-manager
+          strategy:
+            rollingUpdate:
+              maxSurge: 1
+              maxUnavailable: 1
+            type: RollingUpdate
+          template:
+            metadata:
+              labels:
+                com.company: Red_Hat
+                control-plane: controller-manager
+                name: amq-broker-operator
+                rht.comp: Broker_AMQ
+                rht.comp_ver: 7.11.2
+                rht.prod_name: Red_Hat_Integration
+                rht.subcomp: broker-amq-operator
+                rht.subcomp_t: application
+            spec:
+              containers:
+              - args:
+                - --zap-log-level=info
+                - --zap-encoder=console
+                - --zap-time-encoding=iso8601
+                - --leader-elect
+                command:
+                - /home/amq-broker-operator/bin/entrypoint
+                env:
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_781
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:f58678f03a250dbb296ebeb112c9150340155799ba4dad9e90bf347b9ed0ca7b
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_782
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:61e5a8c1e46f1c18648e0406e2a57c52f911979079020cc57c7a4b06a56940bb
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_783
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:0b2126cfb6054fdf428c1f43b69e36e93a09a49ce15350e9273c98cc08c6598b
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_790
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:e03945756d86bd189e8c33027fa668d2065c168510085dfd06defd9f40d3e0ab
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_791
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:4e09ee3bd8ff3479fdd00e221b7b1505ae04ca6c64fd6bc9e2f1a34b8e98d137
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_792
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:45a5e054546a2c1ee338518f8477f728f5f7108c9dd8b516b4c79d4a7d6f5ba7
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_793
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:b74d03ed852a3731467ffda95266ce49f2065972f1c37bf254f3d52b34c11991
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_794
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:ba21779c29b431a22c824e91820705c9501fb0b7d6f7e1ae22fcd3becc8c8a2f
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7100
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:b575d6eebf44dc9049445e357488efb17a690953852419b534df30e0105b9ca4
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7101
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:869cda365447b0b7b53ed21d2496884c15dc9c07295a9dfa0337c2c9974fe018
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7102
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:34739366153b825dcb113e0ed6115ef5656085cf8d47492789ff17464042b576
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:0d857b95084e39c011651be89482d4dcc77c2d1c3ac3c6a819f3c9d5a57a425f
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_782
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:67ae74e72927557c55611d0248347b2099b117ac1aa245dac05856fe782fb59c
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_783
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:c5f4c08e068b9721967cf7c7cbd9a9e93fb5e39b264dd13b653e99d8f3fa9e0e
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_790
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:5d39f26f06769fe5c989ea0e0ee8f9166120e152ce2c9bc3336fc8d7cab2ff92
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_791
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:6e9e0e3fddc44fbf87591d8904176407f1ec409d578a7d108c13cdd48d85131b
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_792
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:3219f90789690a3c5cfcc86e5f602c443e75f1fdb3a19660f43ee3996bfa8f62
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_793
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:979b59325aa0f34eb05625201beba53fccbb83bd5eb80a89dcb5261ae358138f
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_794
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:ae79b5dab78c4f48993fd8999b09bdcaa918b8e30a9f750bf24d411710f71928
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7100
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:3c00b524722b500ff0922fe7a8722868557512183a8f69248f37a68c45c6a770
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7101
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:86ff145bd68e797a0507495570063b54cbe4186fcb4acd83c900406619ef9524
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7102
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:c9eba0d1f9fba588711774f4db75221f057578407065127ed60c33eef564f499
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_781_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8@sha256:5ff28e3062d3eabb9f52d8271b837fdab06cafbd8b8f732b1bc00de49ad69aad
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_782_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8@sha256:2cb14c917246ffcbd5d861ca6f3d58cb1146a4e55715ee08160e115d3dfc1c3e
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_783_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8@sha256:56282c6a461e945a83bffb13d3f3d8d9621800f0fc9cd755a75d21eacd8f5fbf
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_790_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8@sha256:c3ac4602b48867f3d4f7cc0efd5c9f133098e409626cfb402f80386ff460dbf4
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_791_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8@sha256:1a9f13fd565113055b2aa2022bd0709a63c1dc058a8570e0fd7eba5c7b101334
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_792_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8@sha256:9465e398a55c89c121b3ae50374414190a991839fa5e1018fc02551f6aa3b9aa
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_793_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-init-openjdk-11-rhel8@sha256:d4a9176f49ffd9db6051fbda15d47a1aa32c282fb5010d0caf5b9243e80bf055
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_794_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-init-openjdk-11-rhel8@sha256:aa7af7e038a12b5202108b362c8af243954603e84034a16c0192684c86d5d28b
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7100_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:b575d6eebf44dc9049445e357488efb17a690953852419b534df30e0105b9ca4
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7101_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:869cda365447b0b7b53ed21d2496884c15dc9c07295a9dfa0337c2c9974fe018
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7102_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:34739366153b825dcb113e0ed6115ef5656085cf8d47492789ff17464042b576
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8@sha256:f2651cb097eb631fc6af90e4a8404d36516aa2205c546125bf0c37739ab525fa
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_782_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8@sha256:ba0f5df7da08bc030ff5e0e68ecb52a931c25f6b67c6556aa8a9661c82d69d42
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_783_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8@sha256:34ab1f66d8daa544e3823464383e9788e307665c875499838fbed95f3a74a4dd
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_790_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8@sha256:97c3aa5673610875a53571449f7d5210ae8d675072d044f17b416725ed0dba88
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_791_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8@sha256:d4010af53429502f41d722c39d69a7bb147bb06d19e3d4a69de70dbe88e3990e
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_792_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8@sha256:4440b20349032bb5c0bb2a8deb89832b37767af6f0b3208b067867a85641913e
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_793_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-openjdk-11-rhel8@sha256:967d840b831b310abd3a468a8652d1fa48b2ce28b342bfab53999245deb004f1
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_794_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-openjdk-11-rhel8@sha256:7abfdcfd7b2d3d12b9234f7b057bd199bceefa47bdf02f62236f82a13fdbf5b7
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7100_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:3c00b524722b500ff0922fe7a8722868557512183a8f69248f37a68c45c6a770
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7101_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:86ff145bd68e797a0507495570063b54cbe4186fcb4acd83c900406619ef9524
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7102_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:c9eba0d1f9fba588711774f4db75221f057578407065127ed60c33eef564f499
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_781_s390x
+                  value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8@sha256:5ff28e3062d3eabb9f52d8271b837fdab06cafbd8b8f732b1bc00de49ad69aad
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_782_s390x
+                  value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8@sha256:2cb14c917246ffcbd5d861ca6f3d58cb1146a4e55715ee08160e115d3dfc1c3e
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_783_s390x
+                  value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8@sha256:56282c6a461e945a83bffb13d3f3d8d9621800f0fc9cd755a75d21eacd8f5fbf
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_790_s390x
+                  value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8@sha256:c3ac4602b48867f3d4f7cc0efd5c9f133098e409626cfb402f80386ff460dbf4
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_791_s390x
+                  value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8@sha256:1a9f13fd565113055b2aa2022bd0709a63c1dc058a8570e0fd7eba5c7b101334
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_792_s390x
+                  value: registry.redhat.io/amq7/amq-broker-init-openj9-11-rhel8@sha256:9465e398a55c89c121b3ae50374414190a991839fa5e1018fc02551f6aa3b9aa
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_793_s390x
+                  value: registry.redhat.io/amq7/amq-broker-init-openjdk-11-rhel8@sha256:d4a9176f49ffd9db6051fbda15d47a1aa32c282fb5010d0caf5b9243e80bf055
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_794_s390x
+                  value: registry.redhat.io/amq7/amq-broker-init-openjdk-11-rhel8@sha256:aa7af7e038a12b5202108b362c8af243954603e84034a16c0192684c86d5d28b
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7100_s390x
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:b575d6eebf44dc9049445e357488efb17a690953852419b534df30e0105b9ca4
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7101_s390x
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:869cda365447b0b7b53ed21d2496884c15dc9c07295a9dfa0337c2c9974fe018
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7102_s390x
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:34739366153b825dcb113e0ed6115ef5656085cf8d47492789ff17464042b576
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_781_s390x
+                  value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8@sha256:f2651cb097eb631fc6af90e4a8404d36516aa2205c546125bf0c37739ab525fa
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_782_s390x
+                  value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8@sha256:ba0f5df7da08bc030ff5e0e68ecb52a931c25f6b67c6556aa8a9661c82d69d42
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_783_s390x
+                  value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8@sha256:34ab1f66d8daa544e3823464383e9788e307665c875499838fbed95f3a74a4dd
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_790_s390x
+                  value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8@sha256:97c3aa5673610875a53571449f7d5210ae8d675072d044f17b416725ed0dba88
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_791_s390x
+                  value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8@sha256:d4010af53429502f41d722c39d69a7bb147bb06d19e3d4a69de70dbe88e3990e
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_792_s390x
+                  value: registry.redhat.io/amq7/amq-broker-openj9-11-rhel8@sha256:4440b20349032bb5c0bb2a8deb89832b37767af6f0b3208b067867a85641913e
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_793_s390x
+                  value: registry.redhat.io/amq7/amq-broker-openjdk-11-rhel8@sha256:967d840b831b310abd3a468a8652d1fa48b2ce28b342bfab53999245deb004f1
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_794_s390x
+                  value: registry.redhat.io/amq7/amq-broker-openjdk-11-rhel8@sha256:7abfdcfd7b2d3d12b9234f7b057bd199bceefa47bdf02f62236f82a13fdbf5b7
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7100_s390x
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:3c00b524722b500ff0922fe7a8722868557512183a8f69248f37a68c45c6a770
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7101_s390x
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:86ff145bd68e797a0507495570063b54cbe4186fcb4acd83c900406619ef9524
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7102_s390x
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:c9eba0d1f9fba588711774f4db75221f057578407065127ed60c33eef564f499
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7110
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:b9f93c243ead118651083880786a81c624f390fcc3596c7ec5ebd55f34f95ea3
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7110
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:25c3732e945b4bc3e9aca721ce709d0217339b065d9dac9afdb6202e9fd8a799
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7110_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:b9f93c243ead118651083880786a81c624f390fcc3596c7ec5ebd55f34f95ea3
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7110_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:25c3732e945b4bc3e9aca721ce709d0217339b065d9dac9afdb6202e9fd8a799
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7110_s390x
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:b9f93c243ead118651083880786a81c624f390fcc3596c7ec5ebd55f34f95ea3
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7110_s390x
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:25c3732e945b4bc3e9aca721ce709d0217339b065d9dac9afdb6202e9fd8a799
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7111
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:9c1ac38bf8eec67a3da57c3cc61105513776a749408cb287fe6448a17889de4e
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7111
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:40ccaf2bb2e0f8132f2541b39cb835f17b38050b3ca9232f0861fd5fcaf4324a
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7111_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:9c1ac38bf8eec67a3da57c3cc61105513776a749408cb287fe6448a17889de4e
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7111_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:40ccaf2bb2e0f8132f2541b39cb835f17b38050b3ca9232f0861fd5fcaf4324a
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7111_s390x
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:9c1ac38bf8eec67a3da57c3cc61105513776a749408cb287fe6448a17889de4e
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7111_s390x
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:40ccaf2bb2e0f8132f2541b39cb835f17b38050b3ca9232f0861fd5fcaf4324a
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7103
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:a4c8330523ab24838e4e94c8504e657d4b736c6fa3224919de04aef4afbb48fc
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7103
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:7c504b17c31f4d64d74e8a1d4758d36e98ff99c493606dde9d4dbc143a97bce8
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7103_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:a4c8330523ab24838e4e94c8504e657d4b736c6fa3224919de04aef4afbb48fc
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7103_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:7c504b17c31f4d64d74e8a1d4758d36e98ff99c493606dde9d4dbc143a97bce8
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7103_s390x
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:a4c8330523ab24838e4e94c8504e657d4b736c6fa3224919de04aef4afbb48fc
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7103_s390x
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:7c504b17c31f4d64d74e8a1d4758d36e98ff99c493606dde9d4dbc143a97bce8
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7112
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:f27d8b9f0d7197674ec6ba96f2f50a53685a5928d6a12a7cb3d58d11261232f7
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7112
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:3a3226a4cb6b574cce243b6f69a2f1d61c4327826a98bc81b44ec165d8311a5d
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7112_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:f27d8b9f0d7197674ec6ba96f2f50a53685a5928d6a12a7cb3d58d11261232f7
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7112_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:3a3226a4cb6b574cce243b6f69a2f1d61c4327826a98bc81b44ec165d8311a5d
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7112_s390x
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:f27d8b9f0d7197674ec6ba96f2f50a53685a5928d6a12a7cb3d58d11261232f7
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7112_s390x
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:3a3226a4cb6b574cce243b6f69a2f1d61c4327826a98bc81b44ec165d8311a5d
+                - name: OPERATOR_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.labels['name']
+                - name: POD_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: WATCH_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.annotations['olm.targetNamespaces']
+                - name: ENABLE_WEBHOOKS
+                  value: "false"
+                image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:9804968f348bdcd94ff59075b56e783a57e21b40d47ea3338d82ff54cf2b253b
+                livenessProbe:
+                  httpGet:
+                    path: /healthz
+                    port: 8081
+                  initialDelaySeconds: 15
+                  periodSeconds: 20
+                name: manager
+                readinessProbe:
+                  httpGet:
+                    path: /readyz
+                    port: 8081
+                  initialDelaySeconds: 5
+                  periodSeconds: 10
+                resources: {}
+                securityContext:
+                  allowPrivilegeEscalation: false
+              securityContext:
+                runAsNonRoot: true
+              serviceAccountName: amq-broker-controller-manager
+              terminationGracePeriodSeconds: 10
+      permissions:
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+        - apiGroups:
+          - coordination.k8s.io
+          resources:
+          - leases
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+        - apiGroups:
+          - ""
+          resources:
+          - events
+          verbs:
+          - create
+          - patch
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          - endpoints
+          - events
+          - persistentvolumeclaims
+          - pods
+          - routes
+          - secrets
+          - serviceaccounts
+          - services
+          verbs:
+          - '*'
+        - apiGroups:
+          - ""
+          resources:
+          - namespaces
+          verbs:
+          - get
+        - apiGroups:
+          - apps
+          resources:
+          - daemonsets
+          - deployments
+          - replicasets
+          - statefulsets
+          verbs:
+          - '*'
+        - apiGroups:
+          - apps
+          resources:
+          - deployments/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemisaddresses
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemisaddresses/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemisaddresses/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemises
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemises/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemises/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemisscaledowns
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemisscaledowns/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemisscaledowns/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemissecurities
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemissecurities/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemissecurities/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - pods
+          verbs:
+          - get
+          - list
+        - apiGroups:
+          - monitoring.coreos.com
+          resources:
+          - servicemonitors
+          verbs:
+          - create
+          - get
+        - apiGroups:
+          - networking.k8s.io
+          resources:
+          - ingresses
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - policy
+          resources:
+          - poddisruptionbudgets
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - update
+          - watch
+        - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
+          - rolebindings
+          - roles
+          verbs:
+          - create
+          - delete
+          - get
+        - apiGroups:
+          - route.openshift.io
+          resources:
+          - routes
+          - routes/custom-host
+          - routes/status
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - update
+          - watch
+        serviceAccountName: amq-broker-controller-manager
+    strategy: deployment
   installModes:
   - supported: true
     type: OwnNamespace
@@ -1761,4 +2473,4 @@ spec:
     name: Red Hat
     url: https://www.redhat.com/
   replaces: amq-broker-operator.v7.11.1-opr-2
-  version: 0.0.0
+  version: 7.11.2-opr-1
