@@ -68,7 +68,8 @@ func GetBrokers(resource types.NamespacedName, ssInfos []ss.StatefulSetInfo, cli
 				reqLogger.Info("Trying finding pod " + s)
 				if err = client.Get(context.TODO(), podNamespacedName, pod); err != nil {
 					if errors.IsNotFound(err) {
-						reqLogger.Error(err, "Pod IsNotFound", "Namespace", resource.Namespace, "Name", resource.Name)
+						// The IsNotFound err could point to unrelated pods.
+						reqLogger.Info("Pod IsNotFound", "Namespace", podNamespacedName.Namespace, "Name", podNamespacedName.Name)
 					} else {
 						reqLogger.Error(err, "Pod lookup error", "Namespace", resource.Namespace, "Name", resource.Name)
 					}
