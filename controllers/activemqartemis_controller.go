@@ -599,15 +599,7 @@ func UpdateCRStatus(desired *brokerv1beta1.ActiveMQArtemis, client rtclient.Clie
 		return err
 	}
 
-	if current.Status.DeploymentPlanSize != desired.Status.DeploymentPlanSize ||
-		current.Status.ScaleLabelSelector != desired.Status.ScaleLabelSelector ||
-		!reflect.DeepEqual(current.Status.Version, desired.Status.Version) ||
-		len(desired.Status.ExternalConfigs) != len(current.Status.ExternalConfigs) ||
-		externalConfigsModified(desired, current) ||
-		!reflect.DeepEqual(current.Status.PodStatus, desired.Status.PodStatus) ||
-		len(current.Status.Conditions) != len(desired.Status.Conditions) ||
-		conditionsModified(desired, current) {
-
+	if !EqualCRStatus(&desired.Status, &current.Status) {
 		clog.Info("CR.status update", "Namespace", desired.Namespace, "Name", desired.Name, "Observed status", desired.Status)
 		return resources.UpdateStatus(client, desired)
 	}
@@ -615,19 +607,35 @@ func UpdateCRStatus(desired *brokerv1beta1.ActiveMQArtemis, client rtclient.Clie
 	return nil
 }
 
-func conditionsModified(desired *brokerv1beta1.ActiveMQArtemis, current *brokerv1beta1.ActiveMQArtemis) bool {
-	for _, c := range desired.Status.Conditions {
-		if !common.IsConditionPresentAndEqual(current.Status.Conditions, c) {
+func EqualCRStatus(s1, s2 *brokerv1beta1.ActiveMQArtemisStatus) bool {
+	if s1.DeploymentPlanSize != s2.DeploymentPlanSize ||
+		s1.ScaleLabelSelector != s2.ScaleLabelSelector ||
+		!reflect.DeepEqual(s1.Version, s2.Version) ||
+		len(s2.ExternalConfigs) != len(s1.ExternalConfigs) ||
+		externalConfigsModified(s2.ExternalConfigs, s1.ExternalConfigs) ||
+		!reflect.DeepEqual(s1.PodStatus, s2.PodStatus) ||
+		len(s1.Conditions) != len(s2.Conditions) ||
+		conditionsModified(s2.Conditions, s1.Conditions) {
+
+		return false
+	}
+
+	return true
+}
+
+func conditionsModified(desiredConditions []metav1.Condition, currentConditions []metav1.Condition) bool {
+	for _, c := range desiredConditions {
+		if !common.IsConditionPresentAndEqual(currentConditions, c) {
 			return true
 		}
 	}
 	return false
 }
 
-func externalConfigsModified(desired *brokerv1beta1.ActiveMQArtemis, current *brokerv1beta1.ActiveMQArtemis) bool {
-	if len(desired.Status.ExternalConfigs) >= 0 {
-		for _, cfg := range desired.Status.ExternalConfigs {
-			for _, curCfg := range current.Status.ExternalConfigs {
+func externalConfigsModified(desiredExternalConfigs []brokerv1beta1.ExternalConfigStatus, currentExternalConfigs []brokerv1beta1.ExternalConfigStatus) bool {
+	if len(desiredExternalConfigs) >= 0 {
+		for _, cfg := range desiredExternalConfigs {
+			for _, curCfg := range currentExternalConfigs {
 				if curCfg.Name == cfg.Name && curCfg.ResourceVersion != cfg.ResourceVersion {
 					return true
 				}
