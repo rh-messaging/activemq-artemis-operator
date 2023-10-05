@@ -2421,24 +2421,15 @@ func ProcessStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, na
 }
 
 func updateScaleStatus(cr *brokerv1beta1.ActiveMQArtemis, namer Namers) {
-	Selector := new(bytes.Buffer)
-
-	var needsSep bool = false
+	labels := make([]string, 0, len(namer.LabelBuilder.Labels())+len(cr.Spec.DeploymentPlan.Labels))
 	for k, v := range namer.LabelBuilder.Labels() {
-		if needsSep {
-			fmt.Fprintf(Selector, ",")
-		}
-		fmt.Fprintf(Selector, "%s=%s", k, v)
-		needsSep = true
+		labels = append(labels, fmt.Sprintf("%s=%s", k, v))
 	}
 	for k, v := range cr.Spec.DeploymentPlan.Labels {
-		if needsSep {
-			fmt.Fprintf(Selector, ",")
-		}
-		fmt.Fprintf(Selector, "%s=%s", k, v)
-		needsSep = true
+		labels = append(labels, fmt.Sprintf("%s=%s", k, v))
 	}
-	cr.Status.ScaleLabelSelector = Selector.String()
+	sort.Strings(labels)
+	cr.Status.ScaleLabelSelector = strings.Join(labels[:], ",")
 }
 
 func updateVersionStatus(cr *brokerv1beta1.ActiveMQArtemis) {

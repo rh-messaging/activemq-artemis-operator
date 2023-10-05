@@ -29,6 +29,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -4015,6 +4016,37 @@ var _ = Describe("artemis controller", func() {
 			By("check it has gone")
 			Expect(k8sClient.Delete(ctx, createdCrd))
 
+		})
+
+		It("passing in 8 labels", func() {
+			By("Creating a crd with 8 labels")
+			crd := generateArtemisSpec(defaultNamespace)
+			crd.Spec.DeploymentPlan.Labels = make(map[string]string)
+			crd.Spec.DeploymentPlan.Labels["key1"] = "val1"
+			crd.Spec.DeploymentPlan.Labels["key2"] = "val2"
+			crd.Spec.DeploymentPlan.Labels["key3"] = "val3"
+			crd.Spec.DeploymentPlan.Labels["key4"] = "val4"
+			crd.Spec.DeploymentPlan.Labels["key5"] = "val5"
+			crd.Spec.DeploymentPlan.Labels["key6"] = "val6"
+			crd.Spec.DeploymentPlan.Labels["key7"] = "val7"
+			crd.Spec.DeploymentPlan.Labels["key8"] = "val8"
+
+			namer := MakeNamers(&crd)
+			namespacedName := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
+
+			crd0 := crd.DeepCopy()
+			By("Processing status 0")
+			ProcessStatus(crd0, k8sClient, namespacedName, *namer, nil)
+			Expect(crd0.Status.ScaleLabelSelector).ShouldNot(BeEmpty())
+			Expect(sort.StringsAreSorted(strings.Split(crd0.Status.ScaleLabelSelector, ","))).Should(BeTrue())
+
+			crd1 := crd.DeepCopy()
+			By("Processing status 1")
+			ProcessStatus(crd1, k8sClient, namespacedName, *namer, nil)
+			Expect(crd1.Status.ScaleLabelSelector).ShouldNot(BeEmpty())
+			Expect(sort.StringsAreSorted(strings.Split(crd1.Status.ScaleLabelSelector, ","))).Should(BeTrue())
+
+			Expect(EqualCRStatus(&crd0.Status, &crd1.Status)).Should(BeTrue())
 		})
 	})
 
