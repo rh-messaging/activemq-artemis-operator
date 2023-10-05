@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	Version = "7.12.0.OPR.1"
+	Version = "1.0.15"
 
 	//Vars injected at build-time
 	BuildTimestamp = ""
@@ -15,11 +15,11 @@ var (
 
 const (
 	// LatestVersion product version supported
-	LatestVersion        = "7.12.0"
-	CompactLatestVersion = "7120"
+	LatestVersion        = "2.30.0"
+	CompactLatestVersion = "2300"
 
-	LatestKubeImage = "registry.redhat.io/amq7/amq-broker-rhel8:7.12.0" + LatestVersion
-	LatestInitImage = "registry.redhat.io/amq7/amq-broker-init-rhel8:7.12.0" + LatestVersion
+	LatestKubeImage = "quay.io/artemiscloud/activemq-artemis-broker-kubernetes:artemis." + LatestVersion
+	LatestInitImage = "quay.io/artemiscloud/activemq-artemis-broker-init:artemis." + LatestVersion
 )
 
 func DefaultImageName(archSpecificRelatedImageEnvVarName string) string {
@@ -31,25 +31,46 @@ func DefaultImageName(archSpecificRelatedImageEnvVarName string) string {
 }
 
 var FullVersionFromCompactVersion map[string]string = map[string]string{
-	"7110": "7.11.0",
-	"7111": "7.11.1",
-	"7120": "7.12.0",
+	"2210": "2.21.0",
+	"2220": "2.22.0",
+	"2230": "2.23.0",
+	"2250": "2.25.0",
+	"2260": "2.26.0",
+	"2270": "2.27.0",
+	"2271": "2.27.1",
+	"2280": "2.28.0",
+	"2290": "2.29.0",
+	"2300": "2.30.0",
 }
 
 // The yacfg profile to use for a given full version of broker
 var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
-	"7.11.0": "7.10.0",
-	"7.11.1": "7.10.0",
-	"7.12.0": "",
+	"2.21.0": "2.21.0",
+	"2.22.0": "2.21.0",
+	"2.23.0": "2.21.0",
+	"2.25.0": "2.21.0",
+	"2.26.0": "2.21.0",
+	"2.27.0": "2.21.0",
+	"2.27.1": "2.21.0",
+	"2.28.0": "2.21.0",
+	"2.29.0": "2.21.0",
+	"2.30.0": "2.21.0",
 }
 
-var YacfgProfileName string = "amq_broker"
+var YacfgProfileName string = "artemis"
 
 // Sorted array of supported ActiveMQ Artemis versions
 var SupportedActiveMQArtemisVersions = []string{
-	"7.11.0",
-	"7.11.1",
-	"7.12.0",
+	"2.21.0",
+	"2.22.0",
+	"2.23.0",
+	"2.25.0",
+	"2.26.0",
+	"2.27.0",
+	"2.27.1",
+	"2.28.0",
+	"2.29.0",
+	"2.30.0",
 }
 
 func CompactActiveMQArtemisVersion(version string) string {
