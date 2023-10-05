@@ -22,6 +22,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/artemiscloud/activemq-artemis-operator/version"
 
@@ -99,6 +100,9 @@ func init() {
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
+	var leaseDurationSeconds int64
+	var renewDeadlineSeconds int64
+	var retryPeriodSeconds int64
 	var probeAddr string
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
@@ -106,6 +110,9 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.Int64Var(&leaseDurationSeconds, "lease-duration", 15, "LeaseDuration is the duration that non-leader candidates will wait to force acquire leadership. This is measured against time of last observed ack. Default is 15 seconds.")
+	flag.Int64Var(&renewDeadlineSeconds, "renew-deadline", 10, "RenewDeadline is the duration that the acting controlplane will retry refreshing leadership before giving up. Default is 10 seconds.")
+	flag.Int64Var(&retryPeriodSeconds, "retry-period", 2, "RetryPeriod is the duration the LeaderElector clients should wait between tries of actions. Default is 2 seconds.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -148,6 +155,10 @@ func main() {
 		setupLog.Error(err, "failed to set operator's watch namespace to env")
 	}
 
+	leaseDuration := time.Duration(leaseDurationSeconds) * time.Second
+	renewDeadline := time.Duration(renewDeadlineSeconds) * time.Second
+	retryPeriod := time.Duration(retryPeriodSeconds) * time.Second
+
 	mgrOptions := ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
@@ -156,6 +167,9 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "d864aab0.amq.io",
+		LeaseDuration:          &leaseDuration,
+		RenewDeadline:          &renewDeadline,
+		RetryPeriod:            &retryPeriod,
 	}
 
 	isLocal, watchList := common.ResolveWatchNamespaceForManager(oprNamespace, watchNamespace)
@@ -171,6 +185,17 @@ func main() {
 			setupLog.Info("setting up operator to watch all namespaces")
 		}
 	}
+
+	setupLog.Info("Manager options",
+		"Namespace", mgrOptions.Namespace,
+		"MetricsBindAddress", mgrOptions.MetricsBindAddress,
+		"Port", mgrOptions.Port,
+		"HealthProbeBindAddress", mgrOptions.HealthProbeBindAddress,
+		"LeaderElection", mgrOptions.LeaderElection,
+		"LeaderElectionID", mgrOptions.LeaderElectionID,
+		"LeaseDuration", mgrOptions.LeaseDuration,
+		"RenewDeadline", mgrOptions.RenewDeadline,
+		"RetryPeriod", mgrOptions.RetryPeriod)
 
 	mgr, err := ctrl.NewManager(cfg, mgrOptions)
 	if err != nil {
