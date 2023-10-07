@@ -1173,6 +1173,13 @@ func (in *DeploymentPlanType) DeepCopyInto(out *DeploymentPlanType) {
 	}
 	in.Resources.DeepCopyInto(&out.Resources)
 	out.Storage = in.Storage
+	if in.TopologySpreadConstraints != nil {
+		in, out := &in.TopologySpreadConstraints, &out.TopologySpreadConstraints
+		*out = make([]v1.TopologySpreadConstraint, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	in.ExtraMounts.DeepCopyInto(&out.ExtraMounts)
 	if in.Clustered != nil {
 		in, out := &in.Clustered, &out.Clustered

@@ -38,7 +38,7 @@ jobs:
           go-version: '1.19.8'
 
       - name: Checkout the repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up the repo
         run: |

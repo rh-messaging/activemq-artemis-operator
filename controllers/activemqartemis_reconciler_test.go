@@ -571,6 +571,45 @@ func TestNewPodTemplateSpecForCR_IncludesImagePullSecret(t *testing.T) {
 	assert.Equal(t, newSpec.Spec.ImagePullSecrets, expectedPullSecret)
 }
 
+func TestNewPodTemplateSpecForCR_IncludesTopologySpreadConstraints(t *testing.T) {
+	reconciler := &ActiveMQArtemisReconcilerImpl{}
+	matchLabels := make(map[string]string)
+	matchLabels["my-label"] = "my-value"
+
+	mySelector := &metav1.LabelSelector{
+		MatchLabels: matchLabels,
+	}
+
+	cr := &brokerv1beta1.ActiveMQArtemis{
+		Spec: brokerv1beta1.ActiveMQArtemisSpec{
+			DeploymentPlan: brokerv1beta1.DeploymentPlanType{
+				TopologySpreadConstraints: []v1.TopologySpreadConstraint{
+					{
+						MaxSkew:           int32(1),
+						TopologyKey:       string("topology.kubernetes.io/zone"),
+						WhenUnsatisfiable: v1.ScheduleAnyway,
+						LabelSelector:     mySelector,
+					},
+				},
+			},
+		},
+	}
+
+	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, Namers{}, &v1.PodTemplateSpec{}, k8sClient)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, newSpec)
+	expectedTopologySpreadConstraints := []v1.TopologySpreadConstraint{
+		{
+			MaxSkew:           int32(1),
+			TopologyKey:       string("topology.kubernetes.io/zone"),
+			WhenUnsatisfiable: v1.ScheduleAnyway,
+			LabelSelector:     mySelector,
+		},
+	}
+	assert.Equal(t, newSpec.Spec.TopologySpreadConstraints, expectedTopologySpreadConstraints)
+}
+
 func TestLoginConfigSyntaxCheck(t *testing.T) {
 	good := map[string][]byte{
 		"simple": []byte(`a {

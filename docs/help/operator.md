@@ -962,3 +962,34 @@ When deploying the above custom resource the operator will create a PodDisruptio
 object with the **minAvailable** set to 1. The operator also sets the proper selector
 so that the PodDisruptionBudget matches the broker statefulset.
 
+## Configuring TopologySpreadConstraints for broker deployment
+
+The ActiveMQArtemis custom resource offers a TopologySpreadConstraints option
+for the broker pods deployed by the operator. When it is specified the operator
+will deploy a TopologySpreadConstraints for the broker deployment.
+
+For example
+
+```yaml
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: broker
+  namespace: activemq-artemis-operator
+spec:
+spec:
+  deploymentPlan:
+    topologySpreadConstraints:
+    - maxSkew: 2
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - test-app
+```
+
+When deploying the above custom resource the operator will spread matching pods among the given topology
+

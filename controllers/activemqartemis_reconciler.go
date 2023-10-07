@@ -1655,6 +1655,9 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	volumeForCfg := volumes.MakeVolumeForCfg(cfgVolumeName)
 	podSpec.Volumes = append(podSpec.Volumes, volumeForCfg)
 
+	// add TopologySpreadConstraints config
+	podSpec.TopologySpreadConstraints = customResource.Spec.DeploymentPlan.TopologySpreadConstraints
+
 	volumeMountForCfg := volumes.MakeRwVolumeMountForCfg(cfgVolumeName, brokerConfigRoot)
 	podSpec.Containers[0].VolumeMounts = append(podSpec.Containers[0].VolumeMounts, volumeMountForCfg)
 

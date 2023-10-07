@@ -1309,6 +1309,9 @@ spec:
       - description: Specifies the tolerations
         displayName: Tolerations
         path: deploymentPlan.tolerations
+      - description: Specifies the topology spread constraints
+        displayName: Topology Spread Constraints
+        path: deploymentPlan.topologySpreadConstraints
       - description: Optional list of environment variables to apply to the container(s),
           not exclusive
         displayName: Environment Variables

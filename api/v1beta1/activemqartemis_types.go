@@ -316,6 +316,9 @@ type DeploymentPlanType struct {
 	// Specifies the storage configurations
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Storage Configurations"
 	Storage StorageType `json:"storage,omitempty"`
+	// Specifies the topology spread constraints
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Topology Spread Constraints"
+	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
 	// If true enable the Jolokia JVM Agent
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Jolokia Agent Enabled",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:booleanSwitch"}
 	JolokiaAgentEnabled bool `json:"jolokiaAgentEnabled,omitempty"`
