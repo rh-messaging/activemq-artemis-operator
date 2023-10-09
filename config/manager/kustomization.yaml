@@ -21,4 +21,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: quay.io/artemiscloud/activemq-artemis-operator
-  newTag: amq-broker-7.12-openshift-rhel-8-containers-candidate-95594-20231008002440
+  newTag: amq-broker-7.12-openshift-rhel-8-containers-candidate-83074-20231009002305
