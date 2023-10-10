@@ -12,6 +12,16 @@ metadata:
   annotations:
     operators.openshift.io/valid-subscription: '["Red Hat Runtimes", "Red Hat Integration", "Red Hat Process Automation", "Red Hat AMQ"]'
     categories: "Streaming & Messaging"
+    features.operators.openshift.io/cnf: "false"
+    features.operators.openshift.io/cni: "false"
+    features.operators.openshift.io/csi: "false"
+    features.operators.openshift.io/disconnected: "true"
+    features.operators.openshift.io/fips-compliant: "false"
+    features.operators.openshift.io/proxy-aware: "false"
+    features.operators.openshift.io/tls-profiles: "false"
+    features.operators.openshift.io/token-auth-aws: "false"
+    features.operators.openshift.io/token-auth-azure: "false"
+    features.operators.openshift.io/token-auth-gcp: "false"
     certified: "false"
     description: AMQ Broker Operator for RHEL 8 (Multiarch) provides the ability to deploy and manage stateful AMQ Broker clusters
     #containerImage: registry.redhat.io/amq7/amq-broker-rhel8-operator:7.10.5-1
