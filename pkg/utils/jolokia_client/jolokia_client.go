@@ -79,10 +79,11 @@ func GetBrokersFromDNS(crName string, namespace string, size int32, client rtcli
 			Namespace: namespace,
 		}
 
-		reqLogger.V(2).Info("Trying finding pod " + pod.Name)
+		reqLogger.V(2).Info("Trying finding pod " + podNamespacedName.Name)
 		if err := client.Get(context.TODO(), podNamespacedName, pod); err != nil {
 			if errors.IsNotFound(err) {
-				reqLogger.Error(err, "Pod IsNotFound", "Namespace", namespace, "Name", pod.Name)
+				// The IsNotFound err could point to unrelated pods.
+				reqLogger.Info("Pod IsNotFound", "Namespace", podNamespacedName.Namespace, "Name", podNamespacedName.Name)
 			} else {
 				reqLogger.Error(err, "Pod lookup error", "Namespace", namespace, "Name", pod.Name)
 			}
