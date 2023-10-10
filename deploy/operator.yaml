@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     control-plane: controller-manager
-  name: activemq-artemis-controller-manager
+  name: amq-broker-controller-manager
 spec:
   replicas: 1
   selector:
@@ -17,8 +17,14 @@ spec:
   template:
     metadata:
       labels:
+        com.company: Red_Hat
         control-plane: controller-manager
-        name: activemq-artemis-operator
+        name: amq-broker-operator
+        rht.comp: Broker_AMQ
+        rht.comp_ver: 7.x.x
+        rht.prod_name: Red_Hat_Integration
+        rht.subcomp: broker-amq-operator
+        rht.subcomp_t: application
     spec:
       containers:
       - args:
@@ -28,78 +34,7 @@ spec:
         - --leader-elect
         command:
         - /home/activemq-artemis-operator/bin/entrypoint
-        env:
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2150
-          value: quay.io/artemiscloud/activemq-artemis-broker-init:0.2.2
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2160
-          value: quay.io/artemiscloud/activemq-artemis-broker-init:0.2.4
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2180
-          value: quay.io/artemiscloud/activemq-artemis-broker-init:0.2.10
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2200
-          value: quay.io/artemiscloud/activemq-artemis-broker-init:1.0.0
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2210
-          value: quay.io/artemiscloud/activemq-artemis-broker-init:1.0.2
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2220
-          value: quay.io/artemiscloud/activemq-artemis-broker-init:1.0.5
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2230
-          value: quay.io/artemiscloud/activemq-artemis-broker-init:1.0.7
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2250
-          value: quay.io/artemiscloud/activemq-artemis-broker-init@sha256:e2438670831bad39bb08147bbebe67ef9465899fb7750f1a5a185569f99d5fb5
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2260
-          value: quay.io/artemiscloud/activemq-artemis-broker-init@sha256:634f3d8fd620607b56e0360a191d23a9cb8a32ba0ba1f24fe20791ec52343586
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2270
-          value: quay.io/artemiscloud/activemq-artemis-broker-init@sha256:9bbb915855f29ea16950a3fd50d0b9bac25f82cba7d197579e04d9c33a5b02c4
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2271
-          value: quay.io/artemiscloud/activemq-artemis-broker-init@sha256:fc9b9a4c7550d84fd90335dd4f9e0d8d39c09136c6034b28490a368368cb11f1
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2280
-          value: quay.io/artemiscloud/activemq-artemis-broker-init@sha256:264b33a9aad90d32a41258904f35092a141d76dcef0c115d414475444100aace
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2150
-          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.0
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2160
-          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.1
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2180
-          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.7
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2200
-          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.0
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2210
-          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.2
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2220
-          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.5
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2230
-          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.7
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2250
-          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:2d155bffd246f26f516a6075ec170babc1373c72bb664cba4e3c58521ffd3558
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2260
-          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:f25db980c3229e66cf48690aa175f6f93e3dce3974c0e70ab23af6462e7d1893
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2270
-          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:a4628c2591ec06caf21a3467f6e3faeaede7fa402b4f137d943b25b4dd4ad343
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2271
-          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:2895b2cf6292c951a0cdde78e755514f5d7cb43ce9f7b6e7dc381d8dfeec31ab
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2280
-          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:42230ce9d11a1949a5bb73b6ee218b1581f585bcd553485ee438e1c5b50fcf8b
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2290
-          value: quay.io/artemiscloud/activemq-artemis-broker-init@sha256:56bae938a6b4cd87f9f5284931f440f9b9d116cda3b63b13f83a4b1c6c641959
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2290
-          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:4be60cfa2a300b2eef9b5f10ea756bd3f55d75fbd8890232d907f8d64080449b
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2300
-          value: quay.io/artemiscloud/activemq-artemis-broker-init@sha256:88a0098a628fe43a9b422f8ebb774086fb65ed389a195e2779482a4a63447e28
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2300
-          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:8fbdd1ba728058d5f437186b9055ca28596140068ebc69ecff4fa52717b19a82
-        - name: OPERATOR_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.labels['name']
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: WATCH_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        - name: ENABLE_WEBHOOKS
-          value: "false"
-        image: quay.io/artemiscloud/activemq-artemis-operator:1.0.15
+        image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         livenessProbe:
           httpGet:
             path: /healthz
@@ -117,5 +52,5 @@ spec:
           allowPrivilegeEscalation: false
       securityContext:
         runAsNonRoot: true
-      serviceAccountName: activemq-artemis-controller-manager
+      serviceAccountName: amq-broker-controller-manager
       terminationGracePeriodSeconds: 10
