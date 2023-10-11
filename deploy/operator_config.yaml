@@ -14,4 +14,4 @@ data:
       resourceName: d864aab0.amq.io
 kind: ConfigMap
 metadata:
-  name: amq-broker-manager-config
+  name: activemq-artemis-manager-config
