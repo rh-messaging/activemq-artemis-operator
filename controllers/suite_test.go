@@ -115,7 +115,6 @@ var (
 		"../deploy/role_binding.yaml",
 		"../deploy/election_role.yaml",
 		"../deploy/election_role_binding.yaml",
-		"../deploy/operator_config.yaml",
 		"../deploy/operator.yaml",
 	}
 	managerChannel chan struct{}

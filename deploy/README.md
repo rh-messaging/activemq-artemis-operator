@@ -32,7 +32,6 @@ kubectl create -f ./deploy/role.yaml
 kubectl create -f ./deploy/role_binding.yaml
 kubectl create -f ./deploy/election_role.yaml
 kubectl create -f ./deploy/election_role_binding.yaml
-kubectl create -f ./deploy/operator_config.yaml
 kubectl create -f ./deploy/operator.yaml
 ```
 
@@ -70,6 +69,5 @@ kubectl create -f ./deploy/cluster_role.yaml
 kubectl create -f ./deploy/cluster_role_binding.yaml
 kubectl create -f ./deploy/election_role.yaml
 kubectl create -f ./deploy/election_role_binding.yaml
-kubectl create -f ./deploy/operator_config.yaml
 kubectl create -f ./deploy/operator.yaml
 ```

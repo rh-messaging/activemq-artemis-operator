@@ -74,10 +74,6 @@ function writeFile() {
       createFile "$destdir/service_account.yaml"
       ;;
 
-    ConfigMap)
-      createFile "$destdir/operator_config.yaml"
-      ;;
-
     Namespace)
       echo "Skipping ${resource_kind}:${resource_name}"
       ;;
