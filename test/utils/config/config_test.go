@@ -1,7 +1,6 @@
 package config_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/artemiscloud/activemq-artemis-operator/api/v2alpha3"
@@ -14,14 +13,6 @@ func TestConfigUtils(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Config Utils Suite")
 }
-
-var _ = BeforeSuite(func() {
-	fmt.Println("=======Before Config Suite========")
-})
-
-var _ = AfterSuite(func() {
-	fmt.Println("=======After Config Suite========")
-})
 
 var _ = Describe("Config Util Test", func() {
 	Context("TestAddressSettingsEqual", func() {

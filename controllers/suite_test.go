@@ -45,7 +45,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -58,7 +57,6 @@ import (
 
 	//+kubebuilder:scaffold:imports
 
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -315,15 +313,15 @@ func createControllerManager(disableMetrics bool, watchNamespace string) {
 
 	isLocal, watchList := common.ResolveWatchNamespaceForManager(defaultNamespace, watchNamespace)
 	if isLocal {
-		logf.Log.Info("setting up operator to watch local namespace")
+		ctrl.Log.Info("setting up operator to watch local namespace")
 		mgrOptions.Namespace = defaultNamespace
 	} else {
 		mgrOptions.Namespace = ""
 		if watchList != nil {
-			logf.Log.Info("setting up operator to watch multiple namespaces", "namespace(s)", watchList)
+			ctrl.Log.Info("setting up operator to watch multiple namespaces", "namespace(s)", watchList)
 			mgrOptions.NewCache = cache.MultiNamespacedCacheBuilder(watchList)
 		} else {
-			logf.Log.Info("setting up operator to watch all namespaces")
+			ctrl.Log.Info("setting up operator to watch all namespaces")
 		}
 	}
 
@@ -344,26 +342,28 @@ func createControllerManager(disableMetrics bool, watchNamespace string) {
 	// Create and start a new auto detect process for this operator
 	autodetect, err := common.NewAutoDetect(k8Manager)
 	if err != nil {
-		logf.Log.Error(err, "failed to start the background process to auto-detect the operator capabilities")
+		ctrl.Log.Error(err, "failed to start the background process to auto-detect the operator capabilities")
 	} else {
 		autodetect.DetectOpenshift()
 	}
 
-	isOpenshift, _ = environments.DetectOpenshift()
+	isOpenshift, _ = common.DetectOpenshift()
 
 	brokerReconciler = &ActiveMQArtemisReconciler{
 		Client: k8Manager.GetClient(),
 		Scheme: k8Manager.GetScheme(),
+		log:    ctrl.Log,
 	}
 
 	if err = brokerReconciler.SetupWithManager(k8Manager); err != nil {
-		logf.Log.Error(err, "unable to create controller", "controller", "ActiveMQArtemisReconciler")
+		ctrl.Log.Error(err, "unable to create controller", "controller", "ActiveMQArtemisReconciler")
 	}
 
 	securityReconciler = &ActiveMQArtemisSecurityReconciler{
 		Client:           k8Manager.GetClient(),
 		Scheme:           k8Manager.GetScheme(),
 		BrokerReconciler: brokerReconciler,
+		log:              ctrl.Log,
 	}
 
 	err = securityReconciler.SetupWithManager(k8Manager)
@@ -372,6 +372,7 @@ func createControllerManager(disableMetrics bool, watchNamespace string) {
 	addressReconciler := &ActiveMQArtemisAddressReconciler{
 		Client: k8Manager.GetClient(),
 		Scheme: k8Manager.GetScheme(),
+		log:    ctrl.Log,
 	}
 
 	err = addressReconciler.SetupWithManager(k8Manager, managerCtx)
@@ -381,6 +382,7 @@ func createControllerManager(disableMetrics bool, watchNamespace string) {
 		Client: k8Manager.GetClient(),
 		Scheme: k8Manager.GetScheme(),
 		Config: k8Manager.GetConfig(),
+		log:    ctrl.Log,
 	}
 
 	err = scaleDownRconciler.SetupWithManager(k8Manager)
@@ -408,7 +410,7 @@ func setUpRealOperator() {
 
 	setUpK8sClient()
 
-	logf.Log.Info("Installing CRDs")
+	ctrl.Log.Info("Installing CRDs")
 	crds := []string{"../deploy/crds"}
 	options := envtest.CRDInstallOptions{
 		Paths:              crds,
@@ -424,7 +426,7 @@ func setUpRealOperator() {
 // Deploy operator resources
 // TODO: provide 'watch all namespaces' option
 func installOperator(envMap map[string]string) error {
-	logf.Log.Info("#### Installing Operator ####")
+	ctrl.Log.Info("#### Installing Operator ####")
 	for _, res := range oprRes {
 		if err := installYamlResource(res, envMap); err != nil {
 			return err
@@ -435,7 +437,7 @@ func installOperator(envMap map[string]string) error {
 }
 
 func uninstallOperator(deleteCrds bool) error {
-	logf.Log.Info("#### Uninstalling Operator ####")
+	ctrl.Log.Info("#### Uninstalling Operator ####")
 	for _, res := range oprRes {
 		if err := uninstallYamlResource(res); err != nil {
 			return err
@@ -444,7 +446,7 @@ func uninstallOperator(deleteCrds bool) error {
 
 	if deleteCrds {
 		//uninstall CRDs
-		logf.Log.Info("Uninstalling CRDs")
+		ctrl.Log.Info("Uninstalling CRDs")
 		crds := []string{"../deploy/crds"}
 		options := envtest.CRDInstallOptions{
 			Paths:              crds,
@@ -491,12 +493,12 @@ func loadYamlResource(yamlFile string) (runtime.Object, *schema.GroupVersionKind
 
 	decode := scheme.Codecs.UniversalDeserializer().Decode
 	robj, gKV, _ := decode(b, nil, nil)
-	logf.Log.Info("Loaded resource", "kind", gKV.Kind)
+	ctrl.Log.Info("Loaded resource", "kind", gKV.Kind)
 	return robj, gKV, nil
 }
 
 func uninstallYamlResource(resPath string) error {
-	logf.Log.Info("Uninstalling yaml resource", "yaml", resPath)
+	ctrl.Log.Info("Uninstalling yaml resource", "yaml", resPath)
 	robj, _, err := loadYamlResource(resPath)
 	if err != nil {
 		return err
@@ -509,12 +511,12 @@ func uninstallYamlResource(resPath string) error {
 		return err
 	}
 
-	logf.Log.Info("Successfully uninstalled", "yaml", resPath)
+	ctrl.Log.Info("Successfully uninstalled", "yaml", resPath)
 	return nil
 }
 
 func installYamlResource(resPath string, envMap map[string]string) error {
-	logf.Log.Info("Installing yaml resource", "yaml", resPath)
+	ctrl.Log.Info("Installing yaml resource", "yaml", resPath)
 	robj, gkv, err := loadYamlResource(resPath)
 	if err != nil {
 		return err
@@ -525,11 +527,11 @@ func installYamlResource(resPath string, envMap map[string]string) error {
 	if gkv.Kind == "Deployment" {
 		oprObj := cobj.(*appsv1.Deployment)
 		if oprImg := os.Getenv("IMG"); oprImg != "" {
-			logf.Log.Info("Using custom operator image", "url", oprImg)
+			ctrl.Log.Info("Using custom operator image", "url", oprImg)
 			oprObj.Spec.Template.Spec.Containers[0].Image = oprImg
 		}
 		for k, v := range envMap {
-			logf.Log.Info("Adding new env var into operator", "name", k, "value", v)
+			ctrl.Log.Info("Adding new env var into operator", "name", k, "value", v)
 			newEnv := corev1.EnvVar{
 				Name:  k,
 				Value: v,
@@ -550,13 +552,13 @@ func installYamlResource(resPath string, envMap map[string]string) error {
 		return err == nil
 	}, timeout, interval).Should(Equal(true))
 
-	logf.Log.Info("Successfully installed", "yaml", resPath)
+	ctrl.Log.Info("Successfully installed", "yaml", resPath)
 	return nil
 }
 
 func setUpK8sClient() {
 
-	logf.Log.Info("Setting up k8s client")
+	ctrl.Log.Info("Setting up k8s client")
 
 	err := routev1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
@@ -593,7 +595,7 @@ var _ = BeforeSuite(func() {
 		TimeEncoder: zapcore.ISO8601TimeEncoder,
 	}
 
-	logf.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	if verbose {
 		GinkgoWriter.TeeTo(os.Stderr)
@@ -610,12 +612,12 @@ var _ = BeforeSuite(func() {
 	var err error
 	currentDir, err = os.Getwd()
 	Expect(err).To(Succeed())
-	logf.Log.Info("#### Starting test ####", "working dir", currentDir)
+	ctrl.Log.Info("#### Starting test ####", "working dir", currentDir)
 	if os.Getenv("DEPLOY_OPERATOR") == "true" {
-		logf.Log.Info("#### Setting up a real operator ####")
+		ctrl.Log.Info("#### Setting up a real operator ####")
 		setUpRealOperator()
 	} else {
-		logf.Log.Info("#### Setting up EnvTest ####")
+		ctrl.Log.Info("#### Setting up EnvTest ####")
 		setUpEnvTest()
 	}
 })
@@ -625,7 +627,7 @@ func cleanUpPVC() {
 	opts := []client.ListOption{}
 	k8sClient.List(context.TODO(), pvcs, opts...)
 	for _, pvc := range pvcs.Items {
-		logf.Log.Info("Deleting/GC PVC: " + pvc.Name)
+		ctrl.Log.Info("Deleting/GC PVC: " + pvc.Name)
 		k8sClient.Delete(context.TODO(), &pvc, &client.DeleteOptions{})
 	}
 }

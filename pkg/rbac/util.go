@@ -23,16 +23,15 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	logf "sigs.k8s.io/controller-runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-var log = logf.Log.WithName("util_rbac")
-
 func CreateServiceAccount(name string, namespace string, kubeclientset kubernetes.Interface) (*corev1.ServiceAccount, error) {
+	log := ctrl.Log.WithName("rbac")
 	getOps := metav1.GetOptions{}
 	result, err := kubeclientset.CoreV1().ServiceAccounts(namespace).Get(context.TODO(), name, getOps)
 	if err == nil {
-		log.Info("Service account already exist", "name", name, "namespace", namespace)
+		log.V(1).Info("Service account already exist", "name", name, "namespace", namespace)
 		return result, nil
 	}
 	if !errors.IsNotFound(err) {
@@ -48,7 +47,7 @@ func CreateServiceAccount(name string, namespace string, kubeclientset kubernete
 		},
 	}
 
-	log.Info("Creating service account", "name", name, "namespace", namespace)
+	log.V(1).Info("Creating service account", "name", name, "namespace", namespace)
 	result, err = kubeclientset.CoreV1().ServiceAccounts(namespace).Create(context.TODO(), serviceAccount, metav1.CreateOptions{})
 	if err != nil {
 		log.Error(err, "Failed to create service account", "name", name, "namespace", namespace)
@@ -58,11 +57,12 @@ func CreateServiceAccount(name string, namespace string, kubeclientset kubernete
 }
 
 func DeleteServiceAccount(name string, namespace string, kubeclientset kubernetes.Interface) error {
+	log := ctrl.Log.WithName("rbac")
 	getOps := metav1.GetOptions{}
 	_, err := kubeclientset.CoreV1().ServiceAccounts(namespace).Get(context.TODO(), name, getOps)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.Info("No such service account")
+			log.V(1).Info("No such service account")
 			return nil
 		}
 		log.Error(err, "Error in finding service account")
@@ -80,10 +80,11 @@ func DeleteServiceAccount(name string, namespace string, kubeclientset kubernete
 }
 
 func CreateRole(name string, namespace string, rules []rbacv1.PolicyRule, kubeclientset kubernetes.Interface) (*rbacv1.Role, error) {
+	log := ctrl.Log.WithName("rbac")
 	getOps := metav1.GetOptions{}
 	result, err := kubeclientset.RbacV1().Roles(namespace).Get(context.TODO(), name, getOps)
 	if err == nil {
-		log.Info("Role already exist", "name", name, "namespace", namespace)
+		log.V(1).Info("Role already exist", "name", name, "namespace", namespace)
 		return result, nil
 	}
 	if !errors.IsNotFound(err) {
@@ -100,7 +101,7 @@ func CreateRole(name string, namespace string, rules []rbacv1.PolicyRule, kubecl
 		},
 		Rules: rules,
 	}
-	log.Info("Creating role", "name", name, "namespace", namespace)
+	log.V(1).Info("Creating role", "name", name, "namespace", namespace)
 	result, err = kubeclientset.RbacV1().Roles(namespace).Create(context.TODO(), role, metav1.CreateOptions{})
 	if err != nil {
 		log.Error(err, "Failed to create role", "role", name, "namespace", namespace)
@@ -110,11 +111,12 @@ func CreateRole(name string, namespace string, rules []rbacv1.PolicyRule, kubecl
 }
 
 func DeleteRole(name string, namespace string, kubeclientset kubernetes.Interface) error {
+	log := ctrl.Log.WithName("rbac")
 	getOps := metav1.GetOptions{}
 	_, err := kubeclientset.RbacV1().Roles(namespace).Get(context.TODO(), name, getOps)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.Info("No such role", "role", name, "namespace", namespace)
+			log.V(1).Info("No such role", "role", name, "namespace", namespace)
 			return nil
 		}
 		log.Error(err, "Error in role", "role", name, "namespace", namespace)
@@ -132,10 +134,11 @@ func DeleteRole(name string, namespace string, kubeclientset kubernetes.Interfac
 }
 
 func CreateServiceAccountRoleBinding(serviceAccountName string, roleName string, name string, namespace string, kubeclientset kubernetes.Interface) (*rbacv1.RoleBinding, error) {
+	log := ctrl.Log.WithName("rbac")
 	getOps := metav1.GetOptions{}
 	result, err := kubeclientset.RbacV1().RoleBindings(namespace).Get(context.TODO(), name, getOps)
 	if err == nil {
-		log.Info("RoleBinding already exist", "name", name, "namespace", namespace)
+		log.V(1).Info("RoleBinding already exist", "name", name, "namespace", namespace)
 		return result, nil
 	}
 	if !errors.IsNotFound(err) {
@@ -161,7 +164,7 @@ func CreateServiceAccountRoleBinding(serviceAccountName string, roleName string,
 			APIGroup: "rbac.authorization.k8s.io",
 		},
 	}
-	log.Info("Creating role binding", "name", name, "namespace", namespace)
+	log.V(1).Info("Creating role binding", "name", name, "namespace", namespace)
 	result, err = kubeclientset.RbacV1().RoleBindings(namespace).Create(context.TODO(), roleBinding, metav1.CreateOptions{})
 	if err != nil {
 		log.Error(err, "Failed to create rolebinding", "name", name, "namespace", namespace)
@@ -171,11 +174,12 @@ func CreateServiceAccountRoleBinding(serviceAccountName string, roleName string,
 }
 
 func DeleteRoleBinding(name string, namespace string, kubeclientset kubernetes.Interface) error {
+	log := ctrl.Log.WithName("rbac")
 	getOps := metav1.GetOptions{}
 	_, err := kubeclientset.RbacV1().RoleBindings(namespace).Get(context.TODO(), name, getOps)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.Info("No such rolebinding to delete", "name", name, "namespace", namespace)
+			log.V(1).Info("No such rolebinding to delete", "name", name, "namespace", namespace)
 			return nil
 		}
 		log.Error(err, "Error in getting rolebinding", "name", name, "namespace", namespace)

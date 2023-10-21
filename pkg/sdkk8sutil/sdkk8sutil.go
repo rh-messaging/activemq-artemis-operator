@@ -5,11 +5,10 @@ package sdkk8sutil
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
-	logf "sigs.k8s.io/controller-runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 const (
@@ -31,8 +30,6 @@ const (
 	PodNameEnvVar = "POD_NAME"
 )
 
-var log = logf.Log.WithName("sdkk8sutil")
-
 // GetWatchNamespace returns the namespace the operator should be watching for changes
 func GetWatchNamespace() (string, error) {
 	ns, found := os.LookupEnv(WatchNamespaceEnvVar)
@@ -48,7 +45,8 @@ var ErrNoNamespace = fmt.Errorf("namespace not found for current environment")
 
 // GetOperatorNamespace returns the namespace the operator should be running in.
 func GetOperatorNamespace() (string, error) {
-	nsBytes, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+	log := ctrl.Log.WithName("sdkk8sutil")
+	nsBytes, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
 	if err != nil {
 		if os.IsNotExist(err) {
 			return "", ErrNoNamespace

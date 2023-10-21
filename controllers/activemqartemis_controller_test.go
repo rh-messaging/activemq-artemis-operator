@@ -37,7 +37,6 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/api/v2alpha5"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/configmaps"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
@@ -70,6 +69,7 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	netv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 //Uncomment this and the "test" import if you want to debug this set of tests
@@ -131,7 +131,7 @@ var _ = Describe("artemis controller", func() {
 		It("console and acceptor share one secret", func() {
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 
-				isOpenshift, err := environments.DetectOpenshift()
+				isOpenshift, err := common.DetectOpenshift()
 				Expect(err).To(BeNil())
 
 				commonSecretName := "common-amq-tls-secret"
@@ -559,7 +559,7 @@ var _ = Describe("artemis controller", func() {
 				}
 			})
 
-			isOpenshift, err := environments.DetectOpenshift()
+			isOpenshift, err := common.DetectOpenshift()
 			Expect(err).To(BeNil())
 
 			By("checking the CR gets status updated")
@@ -1631,13 +1631,13 @@ var _ = Describe("artemis controller", func() {
 	Context("Versions Test", func() {
 		It("default image to use latest", func() {
 			crd := generateArtemisSpec(defaultNamespace)
-			imageToUse := determineImageToUse(&crd, "Kubernetes")
+			imageToUse := common.DetermineImageToUse(&crd, "Kubernetes")
 			Expect(imageToUse).To(Equal(version.LatestKubeImage), "actual", imageToUse)
 
-			imageToUse = determineImageToUse(&crd, "Init")
+			imageToUse = common.DetermineImageToUse(&crd, "Init")
 			Expect(imageToUse).To(Equal(version.LatestInitImage), "actual", imageToUse)
 			brokerCr := generateArtemisSpec(defaultNamespace)
-			compactVersionToUse, verr := determineCompactVersionToUse(&brokerCr)
+			compactVersionToUse, verr := common.DetermineCompactVersionToUse(&brokerCr)
 			Expect(verr).To(BeNil())
 			Expect(compactVersionToUse).To(Equal(version.CompactLatestVersion), "actual", compactVersionToUse)
 		})
@@ -1829,7 +1829,7 @@ var _ = Describe("artemis controller", func() {
 				crd.Spec.Console.SSLEnabled = true
 				crd.Spec.IngressDomain = "tests.artemiscloud.io"
 
-				isOpenshift, err := environments.DetectOpenshift()
+				isOpenshift, err := common.DetectOpenshift()
 				Expect(err).To(BeNil())
 
 				By("deploying well known secret name that the operator will look for")
@@ -1951,7 +1951,7 @@ var _ = Describe("artemis controller", func() {
 
 				crd := generateArtemisSpec(defaultNamespace)
 
-				isOpenshift, err := environments.DetectOpenshift()
+				isOpenshift, err := common.DetectOpenshift()
 				Expect(err).To(BeNil())
 
 				By("deploying ssl secret")
@@ -2171,7 +2171,7 @@ var _ = Describe("artemis controller", func() {
 				crd.Spec.Console.SSLEnabled = true
 				crd.Spec.Console.SSLSecret = "my-secret"
 
-				isOpenshift, err := environments.DetectOpenshift()
+				isOpenshift, err := common.DetectOpenshift()
 				Expect(err).To(BeNil())
 
 				By("deploying user specified secret")
@@ -3083,7 +3083,7 @@ var _ = Describe("artemis controller", func() {
 			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
 
 			// some required services on crc get evicted which invalidates this test of taints
-			isOpenshift, err := environments.DetectOpenshift()
+			isOpenshift, err := common.DetectOpenshift()
 			Expect(err).Should(BeNil())
 			if !isOpenshift && os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 
@@ -3283,7 +3283,7 @@ var _ = Describe("artemis controller", func() {
 			crd.Spec.Console.Expose = true
 			crd.Spec.Console.SSLEnabled = true
 
-			reconcilerImpl := &ActiveMQArtemisReconcilerImpl{}
+			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(ctrl.Log)
 
 			defaultConsoleSecretName := crd.Name + "-console-secret"
 			currentSS := &appsv1.StatefulSet{}
@@ -3363,7 +3363,7 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(createdCrd.ResourceVersion).ShouldNot(BeEmpty())
 			}, timeout, interval).Should(Succeed())
 
-			reconcilerImpl := &ActiveMQArtemisReconcilerImpl{}
+			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(ctrl.Log)
 			namer := MakeNamers(&crd)
 			defaultConsoleSecretName := crd.Name + "-console-secret"
 			internalSecretName := defaultConsoleSecretName + "-internal"
@@ -3461,7 +3461,7 @@ var _ = Describe("artemis controller", func() {
 
 			}, timeout, interval).Should(Succeed())
 
-			reconcilerImpl := &ActiveMQArtemisReconcilerImpl{}
+			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(ctrl.Log)
 			reconcilerImpl.deployed = make(map[reflect.Type][]client.Object)
 
 			namer := MakeNamers(&crd)
@@ -4036,13 +4036,13 @@ var _ = Describe("artemis controller", func() {
 
 			crd0 := crd.DeepCopy()
 			By("Processing status 0")
-			ProcessStatus(crd0, k8sClient, namespacedName, *namer, nil)
+			common.ProcessStatus(crd0, k8sClient, namespacedName, *namer, nil)
 			Expect(crd0.Status.ScaleLabelSelector).ShouldNot(BeEmpty())
 			Expect(sort.StringsAreSorted(strings.Split(crd0.Status.ScaleLabelSelector, ","))).Should(BeTrue())
 
 			crd1 := crd.DeepCopy()
 			By("Processing status 1")
-			ProcessStatus(crd1, k8sClient, namespacedName, *namer, nil)
+			common.ProcessStatus(crd1, k8sClient, namespacedName, *namer, nil)
 			Expect(crd1.Status.ScaleLabelSelector).ShouldNot(BeEmpty())
 			Expect(sort.StringsAreSorted(strings.Split(crd1.Status.ScaleLabelSelector, ","))).Should(BeTrue())
 
@@ -4760,7 +4760,7 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(Succeed())
 
 			By("checking deployed resources of valid CR")
-			deployedResources, err = getDeployedResources(&validCrd, k8sClient)
+			deployedResources, err = common.GetDeployedResources(&validCrd, k8sClient)
 			Expect(err).Should(Succeed())
 			Expect(deployedResources).ShouldNot(BeEmpty())
 
@@ -4775,7 +4775,7 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(deployedCrd.Name).Should(Equal(invalidCrd.ObjectMeta.Name))
 			}, timeout, interval).Should(Succeed())
 
-			deployedResources, err = getDeployedResources(&invalidCrd, k8sClient)
+			deployedResources, err = common.GetDeployedResources(&invalidCrd, k8sClient)
 			Expect(err).Should(Succeed())
 			Expect(deployedResources).Should(BeEmpty())
 
@@ -4810,7 +4810,7 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(Succeed())
 
 			By("checking deployed resources of updated invalid CR")
-			deployedResources, err = getDeployedResources(&validCrd, k8sClient)
+			deployedResources, err = common.GetDeployedResources(&validCrd, k8sClient)
 			Expect(err).Should(Succeed())
 			Expect(deployedResources).ShouldNot(BeEmpty())
 
@@ -4940,9 +4940,9 @@ var _ = Describe("artemis controller", func() {
 				}
 
 				found := false
-				for _, container := range createdSs.Spec.Template.Spec.InitContainers {
+				for _, container := range createdSs.Spec.Template.Spec.Containers {
 					for _, env := range container.Env {
-						if env.Name == "JAVA_OPTS" {
+						if env.Name == "JDK_JAVA_OPTIONS" {
 							if strings.Contains(env.Value, brokerPropertiesMatchString) {
 								found = true
 							}
@@ -5148,6 +5148,48 @@ var _ = Describe("artemis controller", func() {
 
 			// cleanup
 			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
+		})
+
+		It("Respect JAVA_OPTS config map", func() {
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+			// this will mimic an existing deployment using JAVA_OPTS
+			crd.Spec.Env = []corev1.EnvVar{{Name: "JAVA_OPTS", Value: "-Da=b"}}
+
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			By("By checking the container stateful set for java opts referencing brokerProperties")
+			Eventually(func(g Gomega) {
+				key := types.NamespacedName{Name: namer.CrToSS(crd.Name), Namespace: defaultNamespace}
+				createdSs := &appsv1.StatefulSet{}
+
+				g.Expect(k8sClient.Get(ctx, key, createdSs)).To(Succeed())
+
+				found := false
+				for _, container := range createdSs.Spec.Template.Spec.InitContainers {
+					for _, env := range container.Env {
+						if env.Name == "JAVA_OPTS" {
+							if strings.Contains(env.Value, brokerPropertiesMatchString) {
+								found = true
+							}
+						}
+					}
+				}
+				g.Expect(found).To(BeTrue())
+
+				found_JDK_JAVA_OPTIONS := false
+				for _, container := range createdSs.Spec.Template.Spec.Containers {
+					for _, env := range container.Env {
+						if env.Name == "JDK_JAVA_OPTIONS" {
+							found_JDK_JAVA_OPTIONS = true
+						}
+					}
+				}
+				g.Expect(found_JDK_JAVA_OPTIONS).To(BeFalse())
+
+			}, duration, interval).Should(Succeed())
+
+			CleanResource(&crd, crd.Name, defaultNamespace)
 		})
 
 		It("Expect two crs to coexist", func() {
@@ -5770,11 +5812,11 @@ var _ = Describe("artemis controller", func() {
 			previousCompactVersion := version.CompactActiveMQArtemisVersion(previousVersion.String())
 			Expect(previousCompactVersion).ShouldNot(Equal(version.CompactLatestVersion))
 
-			previousImageEnvVar := ImageNamePrefix + "Kubernetes_" + previousCompactVersion
+			previousImageEnvVar := common.ImageNamePrefix + "Kubernetes_" + previousCompactVersion
 			os.Setenv(previousImageEnvVar, strings.Replace(version.LatestKubeImage, version.LatestVersion, previousVersion.String(), 1))
 			defer os.Unsetenv(previousImageEnvVar)
 
-			perviousInitImageEnvVar := ImageNamePrefix + "Init_" + previousCompactVersion
+			perviousInitImageEnvVar := common.ImageNamePrefix + "Init_" + previousCompactVersion
 			os.Setenv(perviousInitImageEnvVar, strings.Replace(version.LatestInitImage, version.LatestVersion, previousVersion.String(), 1))
 			defer os.Unsetenv(perviousInitImageEnvVar)
 
@@ -5991,7 +6033,7 @@ var _ = Describe("artemis controller", func() {
 
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 
-				isOpenshift, _ := environments.DetectOpenshift()
+				isOpenshift, _ := common.DetectOpenshift()
 
 				By("By creating a new crd")
 				ctx := context.Background()
@@ -7771,6 +7813,21 @@ var _ = Describe("artemis controller", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
 				g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
+			}, timeout, interval).Should(Succeed())
+
+			By("Invalidating again to verify status update to false")
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, secretName, createdSecret)).Should(Succeed())
+				createdSecret.Data[JaasConfigKey] = []byte(`a_realm { a_login_module_missing_val sufficient noOp=; };`)
+				g.Expect(k8sClient.Update(ctx, createdSecret)).Should(Succeed())
+
+			}, timeout, interval).Should(Succeed())
+
+			By("verifying now in valid again")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+				g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeFalse())
 			}, timeout, interval).Should(Succeed())
 
 			Expect(k8sClient.Delete(ctx, secret)).To(Succeed())

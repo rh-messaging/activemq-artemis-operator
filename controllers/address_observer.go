@@ -7,6 +7,7 @@ import (
 
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
+	"github.com/go-logr/logr"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 
@@ -17,11 +18,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-var olog = ctrl.Log.WithName("addressobserver_activemqartemisaddress")
 
 const AnnotationStatefulSet = "statefulsets.kubernetes.io/drainer-pod-owner"
 const AnnotationDrainerPodTemplate = "statefulsets.kubernetes.io/drainer-pod-template"
@@ -31,17 +29,20 @@ type AddressObserver struct {
 	kubeclientset kubernetes.Interface
 	opclient      client.Client
 	opscheme      *runtime.Scheme
+	log           logr.Logger
 }
 
 func NewAddressObserver(
 	kubeclientset kubernetes.Interface,
 	client client.Client,
-	scheme *runtime.Scheme) *AddressObserver {
+	scheme *runtime.Scheme,
+	logger logr.Logger) *AddressObserver {
 
 	observer := &AddressObserver{
 		kubeclientset: kubeclientset,
 		opclient:      client,
 		opscheme:      scheme,
+		log:           logger,
 	}
 
 	return observer
@@ -49,19 +50,19 @@ func NewAddressObserver(
 
 func (c *AddressObserver) Run(C chan types.NamespacedName, ctx context.Context) error {
 
-	olog.Info("#### Started workers")
+	c.log.V(1).Info("#### Started workers")
 
 	for {
 		select {
 		case ready := <-C:
-			olog.Info("address_observer received", "pod", ready)
+			c.log.V(1).Info("address_observer received", "pod", ready)
 			go c.newPodReady(&ready)
 		case <-ctx.Done():
-			olog.Info("address_observer received done on ctx, exiting event loop")
+			c.log.V(1).Info("address_observer received done on ctx, exiting event loop")
 			return nil
 
 		default:
-			//log.Info("address_observer selected default, waiting a second")
+			//log.V(1).Info("address_observer selected default, waiting a second")
 			// NOTE: Sender will be blocked if this select is sleeping, might need decreased time here
 			time.Sleep(500 * time.Millisecond)
 		}
@@ -79,13 +80,13 @@ func (c *AddressObserver) Run(C chan types.NamespacedName, ctx context.Context) 
 // is not specified, apply to all pods)
 func (c *AddressObserver) newPodReady(ready *types.NamespacedName) {
 
-	olog.Info("New pod ready.", "Pod", ready)
+	c.log.V(1).Info("New pod ready.", "Pod", ready)
 
 	//find out real name of the pod basename-(num - 1)
 	//podBaseNames is our interested statefulsets name
-	podBaseName, podSerial, labels := GetStatefulSetNameForPod(c.opclient, ready)
+	podBaseName, podSerial, labels := GetStatefulSetNameForPod(c.opclient, ready, c.log)
 	if podBaseName == "" {
-		olog.Info("Pod is not a candidate")
+		c.log.V(1).Info("Pod is not a candidate")
 		return
 	}
 
@@ -96,13 +97,13 @@ func (c *AddressObserver) newPodReady(ready *types.NamespacedName) {
 
 	err1 := c.opclient.Get(context.TODO(), podNamespacedName, pod)
 	if err1 != nil {
-		olog.Error(err1, "Can't find the pod, abort", "pod", podNamespacedName)
+		c.log.V(1).Error(err1, "Can't find the pod, abort", "pod", podNamespacedName)
 		return
 	}
 
 	stsNameFromAnnotation := pod.Annotations[AnnotationStatefulSet]
 	if stsNameFromAnnotation != "" {
-		olog.Info("Ignoring drainer pod", "pod", realPodName)
+		c.log.V(1).Info("Ignoring drainer pod", "pod", realPodName)
 		return
 	}
 
@@ -113,28 +114,28 @@ func (c *AddressObserver) checkCRsForNewPod(newPod *corev1.Pod, labels map[strin
 	//get the address cr instances
 	addressInstances, err := c.getAddressInstances(newPod)
 	if err != nil || len(addressInstances.Items) == 0 {
-		olog.Info("No available address CRs")
+		c.log.V(1).Info("No available address CRs")
 		return
 	}
 
 	// go over each address instance for the new pod
 	for _, a := range addressInstances.Items {
 		//get the target namespaces
-		targetCrNamespacedNames := createTargetCrNamespacedNames(newPod.Namespace, a.Spec.ApplyToCrNames)
+		targetCrNamespacedNames := createTargetCrNamespacedNames(newPod.Namespace, a.Spec.ApplyToCrNames, c.log)
 		//e.g. ex-aao-ss
 		podSSName, _ := c.getSSNameForPod(newPod)
 		if podSSName == nil {
-			olog.Info("Can't find pod's statefulset name", "pod", newPod.Name)
+			c.log.V(1).Info("Can't find pod's statefulset name", "pod", newPod.Name)
 			continue
 		}
-		olog.Info("Got pod's ss name", "value", *podSSName)
+		c.log.V(1).Info("Got pod's ss name", "value", *podSSName)
 
 		podCrName := namer.SSToCr(*podSSName)
-		olog.Info("got pod's CR name", "value", podCrName)
+		c.log.V(1).Info("got pod's CR name", "value", podCrName)
 		//if the new pod is a target for this address cr, create
 		isTargetPod := false
 		if targetCrNamespacedNames == nil {
-			olog.Info("The new pod is the target as the address CR doesn't have applyToCrNames specified.")
+			c.log.V(1).Info("The new pod is the target as the address CR doesn't have applyToCrNames specified.")
 			isTargetPod = true
 		} else {
 
@@ -144,7 +145,7 @@ func (c *AddressObserver) checkCRsForNewPod(newPod *corev1.Pod, labels map[strin
 			}
 			for _, ns := range targetCrNamespacedNames {
 				if ns == newPodSSNamespacedName {
-					olog.Info("The new pod is the target", "namespace", ns)
+					c.log.V(1).Info("The new pod is the target", "namespace", ns)
 					isTargetPod = true
 					break
 				}
@@ -160,7 +161,7 @@ func (c *AddressObserver) checkCRsForNewPod(newPod *corev1.Pod, labels map[strin
 			jks := jc.GetBrokers(podNamespacedName, ssInfos, c.opclient)
 
 			for _, jk := range jks {
-				createAddressResource(jk, &a)
+				createAddressResource(jk, &a, c.log)
 			}
 		}
 	}
@@ -172,7 +173,7 @@ func (c *AddressObserver) getSSNameForPod(newPod *corev1.Pod) (*string, *appsv1.
 		sts := &appsv1.StatefulSet{}
 		err := c.opclient.Get(context.TODO(), types.NamespacedName{Namespace: newPod.Namespace, Name: ownerRef.Name}, sts)
 		if err != nil {
-			olog.Error(err, "Error finding the statefulset")
+			c.log.Error(err, "Error finding the statefulset")
 			return nil, nil
 		}
 		return &ownerRef.Name, sts
@@ -187,7 +188,7 @@ func (c *AddressObserver) getAddressInstances(newPod *corev1.Pod) (*brokerv1beta
 		client.InNamespace(newPod.Namespace),
 	}
 	if err := c.opclient.List(context.TODO(), addrList, opts...); err != nil {
-		olog.Error(err, "failed to list address")
+		c.log.V(1).Error(err, "failed to list address")
 		return nil, err
 	}
 

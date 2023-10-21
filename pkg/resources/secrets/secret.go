@@ -13,7 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var log = ctrl.Log.WithName("package secrets")
 var CredentialsNameBuilder namer.NamerData
 var ConsoleNameBuilder namer.NamerData
 var NettyNameBuilder namer.NamerData
@@ -62,7 +61,7 @@ func NewSecret(namespacedName types.NamespacedName, secretName string, stringDat
 }
 
 func CreateOrUpdate(owner metav1.Object, namespacedName types.NamespacedName, stringDataMap map[string]string, labels map[string]string, client client.Client, scheme *runtime.Scheme) error {
-
+	log := ctrl.Log.WithName("util_secrets")
 	var err error = nil
 	secretDefinition := NewSecret(namespacedName, namespacedName.Name, stringDataMap, labels)
 
@@ -87,6 +86,7 @@ func CreateOrUpdate(owner metav1.Object, namespacedName types.NamespacedName, st
 }
 
 func Create(owner metav1.Object, namespacedName types.NamespacedName, stringDataMap map[string]string, labels map[string]string, client client.Client, scheme *runtime.Scheme) *corev1.Secret {
+	log := ctrl.Log.WithName("util_secrets")
 
 	var err error = nil
 	secretDefinition := NewSecret(namespacedName, namespacedName.Name, stringDataMap, labels)
@@ -119,6 +119,8 @@ func RetriveSecret(namespacedName types.NamespacedName, secretName string, label
 
 func GetValueFromSecret(namespace string,
 	secretName string, key string, labels map[string]string, client client.Client, scheme *runtime.Scheme, owner metav1.Object) *string {
+	log := ctrl.Log.WithName("util_secrets")
+
 	//check if the secret exists.
 	namespacedName := types.NamespacedName{
 		Name:      secretName,

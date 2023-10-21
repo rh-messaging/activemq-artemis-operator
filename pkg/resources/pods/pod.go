@@ -5,10 +5,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	logf "sigs.k8s.io/controller-runtime"
 )
 
-var log = logf.Log.WithName("package pods")
 var NameBuilder namer.NamerData
 
 func MakePodTemplateSpec(current *corev1.PodTemplateSpec, namespacedName types.NamespacedName, labels map[string]string, annotations map[string]string) *corev1.PodTemplateSpec {

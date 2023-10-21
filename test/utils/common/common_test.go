@@ -3,8 +3,6 @@ package common_test
 import (
 	"testing"
 
-	"fmt"
-
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -17,14 +15,6 @@ func TestConfigUtils(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Common Utils Suite")
 }
-
-var _ = BeforeSuite(func() {
-	fmt.Println("=======Before Common Suite========")
-})
-
-var _ = AfterSuite(func() {
-	fmt.Println("=======After Common Suite========")
-})
 
 var _ = Describe("Common Util Test", func() {
 	Context("TestCompareResources: Equals", func() {

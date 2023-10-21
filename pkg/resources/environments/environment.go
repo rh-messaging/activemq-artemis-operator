@@ -1,19 +1,11 @@
 package environments
 
 import (
-	"errors"
-	"os"
 	"strconv"
-	"strings"
 
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/random"
 	corev1 "k8s.io/api/core/v1"
-
-	logf "sigs.k8s.io/controller-runtime"
 )
-
-var log = logf.Log.WithName("package environments")
 
 // TODO: Remove this blatant hack
 var GLOBAL_AMQ_CLUSTER_USER string = ""
@@ -45,30 +37,6 @@ func init() {
 		// TODO: remove this hack
 		GLOBAL_AMQ_CLUSTER_PASSWORD = Defaults.AMQ_CLUSTER_PASSWORD
 	}
-}
-
-func DetectOpenshift() (bool, error) {
-
-	value, ok := os.LookupEnv("OPERATOR_OPENSHIFT")
-	if ok {
-		log.Info("Set by env-var 'OPERATOR_OPENSHIFT': " + value)
-		return strings.ToLower(value) == "true", nil
-	}
-
-	// Find out if we're on OpenShift or Kubernetes
-	stateManager := common.GetStateManager()
-	isOpenshift, keyExists := stateManager.GetState(common.OpenShiftAPIServerKind).(bool)
-
-	if keyExists {
-		if isOpenshift {
-			log.Info("environment is openshift")
-		} else {
-			log.Info("environment is not openshift")
-		}
-
-		return isOpenshift, nil
-	}
-	return false, errors.New("environment not yet determined")
 }
 
 func AddEnvVarForBasic(requireLogin string, journalType string, svcPingName string) []corev1.EnvVar {

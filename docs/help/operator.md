@@ -329,7 +329,6 @@ apiVersion: broker.amq.io/v1beta1
 kind: ActiveMQArtemis
 metadata:
   name: ex-aao
-  application: ex-aao-app
 spec:
   deploymentPlan:
     image: placeholder
@@ -340,8 +339,7 @@ spec:
 Observe that the sample CR uses a naming convention of **ex-aao**. This naming convention denotes that the CR is an example 
 resource for the ArtemisCloud (based on the ActiveMQ Artemis project) Operator. When you deploy this sample CR, the resulting 
 Stateful Set uses the name **ex-aao-ss**. Furthermore, broker Pods in the deployment are directly based on the Stateful Set name, 
-for example, **ex-aao-ss-0**, **ex-aao-ss-1**, and so on. The application name in the CR appears in the deployment as a label on the Stateful Set. 
-You might use this label in a Pod selector, for example.
+for example, **ex-aao-ss-0**, **ex-aao-ss-1**, and so on. 
 
 The size value specifies the number of brokers to deploy. The default value of 2 specifies a clustered broker deployment 
 of two brokers. However, to deploy a single broker instance, change the value to 1.
@@ -438,7 +436,6 @@ apiVersion: broker.amq.io/v1beta1
 kind: ActiveMQArtemis
 metadata:
   name: ex-aao
-  application: ex-aao-app
 spec:
     deploymentPlan:
         size: 4
@@ -977,7 +974,6 @@ metadata:
   name: broker
   namespace: activemq-artemis-operator
 spec:
-spec:
   deploymentPlan:
     topologySpreadConstraints:
     - maxSkew: 2
@@ -993,3 +989,43 @@ spec:
 
 When deploying the above custom resource the operator will spread matching pods among the given topology
 
+## Configuring Jolokia Access
+
+The operator uses jolokia endpoints to get broker status and also create queue/address resources using the address CRs.
+
+To gain access to jolokia the operator need to have proper credentials (username/password).
+
+By default the operator gets the username and password from the broker container's environment variables AMQ_USER and AMQ_PASSWORD. The operator exposes the environment variables with the values defined in the broker CR's **spec.adminUser** and **spec.adminPassword** fields.
+
+If you configure **adminUser** and **adminPassword** in the broker CR the values will be populated into the environment variables AMQ_USER and AMQ_PASSWORD respectively.
+
+Alternatively you can provide a secret called **[broker cr name]-credential-secret** within which contains 2 entries whose keys are `AMQ_USER` and `AMQ_PASSWORD` respectively, with corresponding values for each.
+
+However when you use security CRs, jass login module configs, or init container to configure security login modules,
+The above adminUser and adminPassword may be overridden and jolokia client in the operator won't be able to get the correct credentials to connect to the broker. In that case the user should provide a secret called **[broker cr name]-jolokia-secret**, in which you put 2 entries for username and password for jolokia credential to use. The 2 entries should have keys named **jolokiaUser** and **jolokiaPassword** respectively, the value for **jolokiaUser** is the user name and the value for **jolokiaPassword** is the password.
+
+For example when you have a broker cr named **amq** like this:
+
+```yaml
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: amq
+  namespace: default
+spec:
+  requireLogin: true
+  deploymentPlan:
+    size: 1
+```
+And you use init container to configure security to have a username **alice** with password **password1** for jolikia access. To enable operator to use client to have access jolokia, create a secret named **amq-jolokia-secret** in the same namespace, like this:
+```yaml
+apiVersion: v1
+metadata:
+  name: amq-jolokia-secret
+  namespace: default
+kind: Secret
+type: Opaque
+stringData:
+  jolokiaUser: alice
+  jolokiaPassword: password1
+```

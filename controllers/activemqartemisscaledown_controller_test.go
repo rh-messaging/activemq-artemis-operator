@@ -32,7 +32,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	corev1 "k8s.io/api/core/v1"
@@ -177,7 +176,7 @@ var _ = Describe("Scale down controller", func() {
 	It("Toleration ok, verify scaledown", func() {
 
 		// some required services on crc get evicted which invalidates this test of taints
-		isOpenshift, err := environments.DetectOpenshift()
+		isOpenshift, err := common.DetectOpenshift()
 		Expect(err).Should(BeNil())
 
 		if !isOpenshift && os.Getenv("USE_EXISTING_CLUSTER") == "true" {

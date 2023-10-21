@@ -13,10 +13,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 func TestHexShaHashOfMap(t *testing.T) {
@@ -200,7 +202,7 @@ func TestGetSingleStatefulSetStatus(t *testing.T) {
 	ss.Status.ReadyReplicas = 1
 
 	cr := &brokerv1beta1.ActiveMQArtemis{}
-	statusRunning := getSingleStatefulSetStatus(ss, cr)
+	statusRunning := common.GetSingleStatefulSetStatus(ss, cr)
 	if statusRunning.Ready[0] != "joe-0" {
 		t.Errorf("not good!, expect correct 0 ordinal" + statusRunning.Ready[0])
 	}
@@ -208,7 +210,7 @@ func TestGetSingleStatefulSetStatus(t *testing.T) {
 	ss.Status.Replicas = 0
 	ss.Status.ReadyReplicas = 0
 
-	statusRunning = getSingleStatefulSetStatus(ss, cr)
+	statusRunning = common.GetSingleStatefulSetStatus(ss, cr)
 	if statusRunning.Stopped[0] != "joe" {
 		t.Errorf("not good!, expect ss name in stopped" + statusRunning.Stopped[0])
 	}
@@ -218,7 +220,7 @@ func TestGetSingleStatefulSetStatus(t *testing.T) {
 	ss.Status.Replicas = 2
 	ss.Status.ReadyReplicas = 1
 
-	statusRunning = getSingleStatefulSetStatus(ss, cr)
+	statusRunning = common.GetSingleStatefulSetStatus(ss, cr)
 	if statusRunning.Ready[0] != "joe-0" {
 		t.Errorf("not good!, expect correct 0 ordinal ready" + statusRunning.Ready[0])
 	}
@@ -477,7 +479,9 @@ func TestGetJaasConfigExtraMountPathNotPresent(t *testing.T) {
 
 func TestNewPodTemplateSpecForCR_IncludesDebugArgs(t *testing.T) {
 	// client := fake.NewClientBuilder().Build()
-	reconciler := &ActiveMQArtemisReconcilerImpl{}
+	reconciler := &ActiveMQArtemisReconcilerImpl{
+		log: ctrl.Log.WithName("test"),
+	}
 
 	cr := &brokerv1beta1.ActiveMQArtemis{
 		Spec: brokerv1beta1.ActiveMQArtemisSpec{
@@ -495,7 +499,7 @@ func TestNewPodTemplateSpecForCR_IncludesDebugArgs(t *testing.T) {
 		},
 	}
 
-	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, Namers{}, &v1.PodTemplateSpec{}, k8sClient)
+	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, newSpec)
@@ -508,7 +512,9 @@ func TestNewPodTemplateSpecForCR_IncludesDebugArgs(t *testing.T) {
 
 func TestNewPodTemplateSpecForCR_AppendsDebugArgs(t *testing.T) {
 	// client := fake.NewClientBuilder().Build()
-	reconciler := &ActiveMQArtemisReconcilerImpl{}
+	reconciler := &ActiveMQArtemisReconcilerImpl{
+		log: ctrl.Log.WithName("test"),
+	}
 
 	cr := &brokerv1beta1.ActiveMQArtemis{
 		Spec: brokerv1beta1.ActiveMQArtemisSpec{
@@ -532,7 +538,7 @@ func TestNewPodTemplateSpecForCR_AppendsDebugArgs(t *testing.T) {
 		},
 	}
 
-	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, Namers{}, &v1.PodTemplateSpec{}, k8sClient)
+	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, newSpec)
@@ -545,7 +551,9 @@ func TestNewPodTemplateSpecForCR_AppendsDebugArgs(t *testing.T) {
 
 func TestNewPodTemplateSpecForCR_IncludesImagePullSecret(t *testing.T) {
 	// client := fake.NewClientBuilder().Build()
-	reconciler := &ActiveMQArtemisReconcilerImpl{}
+	reconciler := &ActiveMQArtemisReconcilerImpl{
+		log: ctrl.Log.WithName("test"),
+	}
 
 	cr := &brokerv1beta1.ActiveMQArtemis{
 		Spec: brokerv1beta1.ActiveMQArtemisSpec{
@@ -559,7 +567,7 @@ func TestNewPodTemplateSpecForCR_IncludesImagePullSecret(t *testing.T) {
 		},
 	}
 
-	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, Namers{}, &v1.PodTemplateSpec{}, k8sClient)
+	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, newSpec)
@@ -572,7 +580,7 @@ func TestNewPodTemplateSpecForCR_IncludesImagePullSecret(t *testing.T) {
 }
 
 func TestNewPodTemplateSpecForCR_IncludesTopologySpreadConstraints(t *testing.T) {
-	reconciler := &ActiveMQArtemisReconcilerImpl{}
+	reconciler := NewActiveMQArtemisReconcilerImpl(ctrl.Log)
 	matchLabels := make(map[string]string)
 	matchLabels["my-label"] = "my-value"
 
@@ -595,7 +603,7 @@ func TestNewPodTemplateSpecForCR_IncludesTopologySpreadConstraints(t *testing.T)
 		},
 	}
 
-	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, Namers{}, &v1.PodTemplateSpec{}, k8sClient)
+	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, newSpec)
@@ -618,6 +626,15 @@ func TestLoginConfigSyntaxCheck(t *testing.T) {
 		SampleLoginModule requisite;
 		SampleLoginModule sufficient;
 	   };`),
+		"equalsSpace": []byte(`a {
+		SampleLoginModule Required  a = b b= d c = 4;
+		SampleLoginModule Optional
+		a =2
+		b= 3
+		c = 4
+		;
+	   };`),
+
 		"quotex": []byte(` aaa {
 		SampleLoginModule Required  a=b b=d;
 		SampleLoginModule Required
@@ -690,6 +707,23 @@ func TestLoginConfigSyntaxCheck(t *testing.T) {
 			 baseDir="/home/jboss/amq-broker/etc";
 
 	 };`),
+
+		"full-ldap-quoted-val": []byte(`
+	 activemq	{ org.apache.activemq.artemis.spi.core.security.jaas.LDAPLoginModule sufficient 
+		debug=true 
+		initialContextFactory=com.sun.jndi.ldap.LdapCtxFactory 
+		connectionURL="ldap://blabla"
+		connectionTimeout="5000"
+		connectionProtocol="simple"
+		readTimeout="5000"
+		authentication="simple"
+		userBase="DC=aa,DC=aaa,DC=aaaaa,DC=aa,DC=aa"
+		userSearchMatching="(&(objectCategory=user)(SAMAccountName=\\{0}))"
+		roleBase="DC=aa,DC=aaa,DC=aaaaa,DC=aa,DC=aa"
+		roleName=sAMAccountName
+		roleSearchMatching="(&(objectCategory=group)(groupType:1.1.111.111111.1.1.111:=1111111111)(member:1.1.111.111111.1.1.1111:=\{0})(sAMAccountName=AAA AAA AAA*))"
+		referral=follow;	
+	 };`),
 	}
 
 	for k, v := range good {
@@ -713,6 +747,21 @@ func TestLoginConfigSyntaxCheck(t *testing.T) {
 		"no_flags": []byte(`aa 
 	 {
 	     SampleLoginModule a=b b=d;
+	 };`),
+
+		"dual_munged_opt": []byte(`aa 
+	 {
+	     SampleLoginModule sufficientRequired a=b;
+	 };`),
+
+		"dual_or_opt": []byte(`aa 
+	 {
+	     SampleLoginModule Sufficient|Required a=b;
+	 };`),
+
+		"dual_space_opt": []byte(`aa 
+	 {
+	     SampleLoginModule Sufficient Required a=b;
 	 };`),
 
 		"no_semi_on_module": []byte(`aa 

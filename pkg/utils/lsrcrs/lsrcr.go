@@ -13,8 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var log = ctrl.Log.WithName("LSRCR")
-
 type StoredCR struct {
 	Owner        v1.Object
 	Name         string
@@ -37,6 +35,7 @@ type LastSuccessfulReconciledCR struct {
 func StoreLastSuccessfulReconciledCR(owner v1.Object,
 	name string, namespace string, crType string, cr string, data string, checksum string,
 	labels map[string]string, client client.Client, scheme *runtime.Scheme) error {
+	log := ctrl.Log.WithName("lsrcr")
 
 	secretName := "secret-" + crType + "-" + name
 	secretNn := types.NamespacedName{
@@ -71,14 +70,14 @@ func deleteLastSuccessfulReconciledCR(scr *StoredCR, labels map[string]string) {
 }
 
 func retrieveLastSuccessfulReconciledCR(scr *StoredCR, labels map[string]string) *LastSuccessfulReconciledCR {
-
+	log := ctrl.Log.WithName("lsrcr").WithValues("cr", *scr)
 	var lsrcr *LastSuccessfulReconciledCR = nil
 	secretName := "secret-" + scr.CRType + "-" + scr.Name
 	secretNn := types.NamespacedName{
 		Name:      secretName,
 		Namespace: scr.Namespace,
 	}
-	log.Info("trying retriving lsrcr", "ns", secretNn, "sec name", secretName, "client", scr.UpdateClient)
+	log.V(2).Info("trying retriving lsrcr", "ns", secretNn, "sec name", secretName, "client", scr.UpdateClient)
 	theSecret, err := secrets.RetriveSecret(secretNn, secretName, labels, scr.UpdateClient)
 	if err != nil {
 		if !errors.IsNotFound(err) {

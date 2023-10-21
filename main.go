@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/artemiscloud/activemq-artemis-operator/version"
+	"github.com/go-logr/logr"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -72,8 +73,9 @@ var (
 	//hard coded because the sdk version pkg is moved in internal package
 	sdkVersion = "1.28.0"
 	scheme     = runtime.NewScheme()
-	setupLog   = ctrl.Log.WithName("setup")
 )
+
+var setupLog logr.Logger
 
 func printVersion() {
 	setupLog.Info(fmt.Sprintf("Go Version: %s", goruntime.Version()))
@@ -128,6 +130,8 @@ func main() {
 	filteredLogSink := log.NewFilteredLogSink(logger.GetSink(), []string{"comparator"})
 
 	ctrl.SetLogger(logger.WithSink(filteredLogSink))
+
+	setupLog = ctrl.Log.WithName("setup")
 
 	printVersion()
 
@@ -228,35 +232,44 @@ func main() {
 		setupAccountName(clnt, context.TODO(), oprNamespace, name)
 	}
 
-	brokerReconciler := &controllers.ActiveMQArtemisReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}
+	brokerReconciler := controllers.NewActiveMQArtemisReconciler(
+		mgr.GetClient(),
+		mgr.GetScheme(),
+		ctrl.Log.WithName("ActiveMQArtemisReconciler"))
+
 	if err = brokerReconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ActiveMQArtemis")
 		os.Exit(1)
 	}
 
-	if err = (&controllers.ActiveMQArtemisAddressReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr, context.TODO()); err != nil {
+	addressReconciler := controllers.NewActiveMQArtemisAddressReconciler(
+		mgr.GetClient(),
+		mgr.GetScheme(),
+		ctrl.Log.WithName("ActiveMQArtemisAddressReconciler"))
+
+	if err = addressReconciler.SetupWithManager(mgr, context.TODO()); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ActiveMQArtemisAddress")
 		os.Exit(1)
 	}
-	if err = (&controllers.ActiveMQArtemisScaledownReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Config: mgr.GetConfig(),
-	}).SetupWithManager(mgr); err != nil {
+
+	scaledownReconciler := controllers.NewActiveMQArtemisScaledownReconciler(
+		mgr.GetClient(),
+		mgr.GetScheme(),
+		mgr.GetConfig(),
+		ctrl.Log.WithName("ActiveMQArtemisScaledownReconciler"))
+
+	if err = scaledownReconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ActiveMQArtemisScaledown")
 		os.Exit(1)
 	}
-	if err = (&controllers.ActiveMQArtemisSecurityReconciler{
-		Client:           mgr.GetClient(),
-		Scheme:           mgr.GetScheme(),
-		BrokerReconciler: brokerReconciler,
-	}).SetupWithManager(mgr); err != nil {
+
+	securityReconciler := controllers.NewActiveMQArtemisSecurityReconciler(
+		mgr.GetClient(),
+		mgr.GetScheme(),
+		brokerReconciler,
+		ctrl.Log.WithName("ActiveMQArtemisSecurityReconciler"))
+
+	if err = securityReconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ActiveMQArtemisSecurity")
 		os.Exit(1)
 	}
@@ -291,15 +304,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// again this is moved to sdk's internal package.
-	// but we may not need it
-	// Create Service object to expose the metrics port.
-	//_, err = metrics.ExposeMetricsPort(ctx, metricsPort)
-	//if err != nil {
-	//	setupLog.Info(err.Error())
-	//}
+	setupLog.Info("Starting the manager")
 
-	setupLog.Info("starting the Cmd.")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)

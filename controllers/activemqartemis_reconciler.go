@@ -8,15 +8,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/adler32"
-	osruntime "runtime"
 	"sort"
 	"unicode"
 
-	"github.com/blang/semver/v4"
-
-	"github.com/RHsyseng/operator-utils/pkg/olm"
 	"github.com/RHsyseng/operator-utils/pkg/resource/compare"
-	"github.com/RHsyseng/operator-utils/pkg/resource/read"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/containers"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/ingresses"
@@ -26,7 +21,6 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/serviceports"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/channels"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/cr2jinja2"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/jolokia_client"
@@ -69,9 +63,6 @@ import (
 )
 
 const (
-	ImageNamePrefix                  = "RELATED_IMAGE_ActiveMQ_Artemis_Broker_"
-	BrokerImageKey                   = "Kubernetes"
-	InitImageKey                     = "Init"
 	defaultLivenessProbeInitialDelay = 5
 	TCPLivenessPort                  = 8161
 	jaasConfigSuffix                 = "-jaas-config"
@@ -80,16 +71,14 @@ const (
 	cfgMapPathBase = "/amq/extra/configmaps/"
 	secretPathBase = "/amq/extra/secrets/"
 
-	OrdinalPrefix         = "broker-"
-	OrdinalPrefixSep      = "."
-	BrokerPropertiesName  = "broker.properties"
-	JaasConfigKey         = "login.config"
-	LoggingConfigKey      = "logging.properties"
-	DefaultDeploymentSize = int32(1)
+	OrdinalPrefix        = "broker-"
+	OrdinalPrefixSep     = "."
+	BrokerPropertiesName = "broker.properties"
+	JaasConfigKey        = "login.config"
+	LoggingConfigKey     = "logging.properties"
 )
 
 var defaultMessageMigration bool = true
-var lastStatusMap map[types.NamespacedName]olm.DeploymentStatus = make(map[types.NamespacedName]olm.DeploymentStatus)
 
 // the helper script looks for "/amq/scripts/post-config.sh"
 // and run it if exists.
@@ -104,6 +93,13 @@ var yacfgProfileVersion = version.YacfgProfileVersionFromFullVersion[version.Lat
 type ActiveMQArtemisReconcilerImpl struct {
 	requestedResources []rtclient.Object
 	deployed           map[reflect.Type][]rtclient.Object
+	log                logr.Logger
+}
+
+func NewActiveMQArtemisReconcilerImpl(logger logr.Logger) *ActiveMQArtemisReconcilerImpl {
+	return &ActiveMQArtemisReconcilerImpl{
+		log: logger,
+	}
 }
 
 type ValueInfo struct {
@@ -122,11 +118,10 @@ type ActiveMQArtemisIReconciler interface {
 	ProcessResources(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint8
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) Process(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme) error {
+func (reconciler *ActiveMQArtemisReconcilerImpl) Process(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, client rtclient.Client, scheme *runtime.Scheme) error {
 
-	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
-	log.Info("Reconciler Processing...", "Operator version", version.Version, "ActiveMQArtemis release", customResource.Spec.Version)
-	log.Info("Reconciler Processing...", "CRD.Name", customResource.Name, "CRD ver", customResource.ObjectMeta.ResourceVersion, "CRD Gen", customResource.ObjectMeta.Generation)
+	reconciler.log.V(1).Info("Reconciler Processing...", "Operator version", version.Version, "ActiveMQArtemis release", customResource.Spec.Version)
+	reconciler.log.V(2).Info("Reconciler Processing...", "CRD.Name", customResource.Name, "CRD ver", customResource.ObjectMeta.ResourceVersion, "CRD Gen", customResource.ObjectMeta.Generation)
 
 	reconciler.CurrentDeployedResources(customResource, client)
 
@@ -134,9 +129,9 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) Process(customResource *brokerv
 	// what follows should transform the resources using the crd
 	// if the transformation results in some change, process resources will respect that
 	// comparisons should not be necessary, leave that to process resources
-	desiredStatefulSet, err := reconciler.ProcessStatefulSet(customResource, namer, client, log)
+	desiredStatefulSet, err := reconciler.ProcessStatefulSet(customResource, namer, client)
 	if err != nil {
-		log.Error(err, "Error processing stafulset")
+		reconciler.log.Error(err, "Error processing stafulset")
 		return err
 	}
 
@@ -157,7 +152,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) Process(customResource *brokerv
 	// this should apply any deltas/updates
 	err = reconciler.ProcessResources(customResource, client, scheme)
 
-	log.Info("Reconciler Processing... complete", "CRD ver:", customResource.ObjectMeta.ResourceVersion, "CRD Gen:", customResource.ObjectMeta.Generation)
+	reconciler.log.V(1).Info("Reconciler Processing... complete", "CRD ver:", customResource.ObjectMeta.ResourceVersion, "CRD Gen:", customResource.ObjectMeta.Generation)
 
 	// we dont't requeue
 	return err
@@ -208,9 +203,9 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) addToDeployed(kind reflect.Type
 	reconciler.deployed[kind] = append(reconciler.deployed[kind], obj)
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, log logr.Logger) (*appsv1.StatefulSet, error) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, client rtclient.Client) (*appsv1.StatefulSet, error) {
 
-	reqLogger := ctrl.Log.WithName(customResource.Name)
+	reqLogger := reconciler.log.WithName(customResource.Name)
 
 	ssNamespacedName := types.NamespacedName{
 		Namespace: customResource.Namespace,
@@ -224,7 +219,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(customResour
 		currentStatefulSet = obj.(*appsv1.StatefulSet)
 	}
 
-	log.V(3).Info("Reconciling desired statefulset", "name", ssNamespacedName, "current", currentStatefulSet)
+	reqLogger.V(2).Info("Reconciling desired statefulset", "name", ssNamespacedName, "current", currentStatefulSet)
 	currentStatefulSet, err = reconciler.NewStatefulSetForCR(customResource, namer, currentStatefulSet, client)
 	if err != nil {
 		reqLogger.Error(err, "Error creating new stafulset")
@@ -252,10 +247,9 @@ func isClustered(customResource *brokerv1beta1.ActiveMQArtemis) bool {
 	return true
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessCredentials(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessCredentials(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) {
 
-	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
-	log.V(1).Info("ProcessCredentials")
+	reconciler.log.V(1).Info("ProcessCredentials")
 
 	envVars := make(map[string]ValueInfo)
 
@@ -305,17 +299,17 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessCredentials(customResour
 	reconciler.sourceEnvVarFromSecret(customResource, namer, currentStatefulSet, &envVars, secretName, client, scheme)
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessDeploymentPlan(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessDeploymentPlan(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) {
 
 	deploymentPlan := &customResource.Spec.DeploymentPlan
 
-	clog.V(3).Info("Processing deployment plan", "plan", deploymentPlan, "broker cr", customResource.Name)
+	reconciler.log.V(2).Info("Processing deployment plan", "plan", deploymentPlan, "broker cr", customResource.Name)
 	// Ensure the StatefulSet size is the same as the spec
-	replicas := getDeploymentSize(customResource)
+	replicas := common.GetDeploymentSize(customResource)
 	currentStatefulSet.Spec.Replicas = &replicas
 
-	clog.V(3).Info("Now sync Message migration", "for cr", customResource.Name)
-	syncMessageMigration(customResource, namer, client, scheme)
+	reconciler.log.V(2).Info("Now sync Message migration", "for cr", customResource.Name)
+	reconciler.syncMessageMigration(customResource, namer, client, scheme)
 
 	if customResource.Spec.DeploymentPlan.PodDisruptionBudget != nil {
 		reconciler.applyPodDisruptionBudget(customResource, client, currentStatefulSet)
@@ -351,7 +345,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) applyPodDisruptionBudget(custom
 	reconciler.trackDesired(desired)
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAcceptorsAndConnectors(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAcceptorsAndConnectors(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) {
 
 	acceptorEntry := generateAcceptorsString(customResource, namer, client)
 	connectorEntry := generateConnectorsString(customResource, namer, client)
@@ -375,7 +369,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAcceptorsAndConnectors(c
 	reconciler.sourceEnvVarFromSecret(customResource, namer, currentStatefulSet, &envVars, secretName, client, scheme)
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessConsole(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessConsole(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) {
 
 	reconciler.configureConsoleExposure(customResource, namer, client, scheme)
 	if !customResource.Spec.Console.SSLEnabled {
@@ -393,7 +387,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessConsole(customResource *
 	reconciler.sourceEnvVarFromSecret(customResource, namer, currentStatefulSet, &envVars, secretName, client, scheme)
 }
 
-func syncMessageMigration(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme) {
+func (r *ActiveMQArtemisReconcilerImpl) syncMessageMigration(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, client rtclient.Client, scheme *runtime.Scheme) {
 
 	var err error = nil
 	var retrieveError error = nil
@@ -440,17 +434,17 @@ func syncMessageMigration(customResource *brokerv1beta1.ActiveMQArtemis, namer N
 
 	if *customResource.Spec.DeploymentPlan.MessageMigration && clustered {
 		if !customResource.Spec.DeploymentPlan.PersistenceEnabled {
-			clog.V(2).Info("Won't set up scaledown for non persistent deployment")
+			r.log.V(2).Info("Won't set up scaledown for non persistent deployment")
 			return
 		}
-		clog.V(3).Info("we need scaledown for this cr", "crName", customResource.Name, "scheme", scheme)
+		r.log.V(2).Info("we need scaledown for this cr", "crName", customResource.Name, "scheme", scheme)
 		if err = resources.Retrieve(namespacedName, client, scaledown); err != nil {
 			// err means not found so create
-			clog.V(2).Info("Creating builtin drainer CR ", "scaledown", scaledown)
+			r.log.V(2).Info("Creating builtin drainer CR ", "scaledown", scaledown)
 			if retrieveError = resources.Create(customResource, client, scheme, scaledown); retrieveError == nil {
-				clog.Info("drainer created successfully", "drainer", scaledown)
+				r.log.V(2).Info("drainer created successfully", "drainer", scaledown)
 			} else {
-				clog.Error(retrieveError, "we have error retrieving drainer", "drainer", scaledown, "scheme", scheme)
+				r.log.Error(retrieveError, "we have error retrieving drainer", "drainer", scaledown, "scheme", scheme)
 			}
 		}
 	} else {
@@ -468,9 +462,9 @@ func isLocalOnly() bool {
 	return oprNamespace == watchNamespace
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, currentStatefulSet *appsv1.StatefulSet, envVars *map[string]ValueInfo, secretName string, client rtclient.Client, scheme *runtime.Scheme) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, currentStatefulSet *appsv1.StatefulSet, envVars *map[string]ValueInfo, secretName string, client rtclient.Client, scheme *runtime.Scheme) {
 
-	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis").WithName("sourceEnvVarFromSecret")
+	var log = reconciler.log.WithName("controller_v1beta1activemqartemis").WithName("sourceEnvVarFromSecret")
 
 	namespacedName := types.NamespacedName{
 		Name:      secretName,
@@ -493,7 +487,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customRe
 	desired := false
 	if err := resources.Retrieve(namespacedName, client, secretDefinition); err != nil {
 		if k8serrors.IsNotFound(err) {
-			log.V(2).Info("Did not find secret", "key", namespacedName)
+			log.V(1).Info("Did not find secret", "key", namespacedName)
 		} else {
 			log.Error(err, "Error while retrieving secret", "key", namespacedName)
 		}
@@ -502,7 +496,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customRe
 			desired = true
 		}
 	} else {
-		log.V(1).Info("updating from " + secretName)
+		log.V(2).Info("updating from " + secretName)
 		for k, envVar := range *envVars {
 			if envVar.Internal {
 				// goes in internal secret
@@ -582,22 +576,21 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customRe
 			ValueFrom: envVarSource,
 		}
 		if retrievedEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, envVarName); nil == retrievedEnvVar {
-			log.V(3).Info("containers: failed to retrieve " + envVarName + " creating")
+			log.V(2).Info("containers: failed to retrieve " + envVarName + " creating")
 			environments.Create(currentStatefulSet.Spec.Template.Spec.Containers, envVarDefinition)
 		}
 
 		//custom init container
 		if len(currentStatefulSet.Spec.Template.Spec.InitContainers) > 0 {
 			if retrievedEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.InitContainers, envVarName); nil == retrievedEnvVar {
-				log.V(3).Info("init_containers: failed to retrieve " + envVarName + " creating")
+				log.V(2).Info("init_containers: failed to retrieve " + envVarName + " creating")
 				environments.Create(currentStatefulSet.Spec.Template.Spec.InitContainers, envVarDefinition)
 			}
 		}
 	}
-
 }
 
-func generateAcceptorsString(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client) string {
+func generateAcceptorsString(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, client rtclient.Client) string {
 
 	// TODO: Optimize for the single broker configuration
 	ensureCOREOn61616Exists := true // as clustered is no longer an option but true by default
@@ -688,7 +681,7 @@ func generateAcceptorsString(customResource *brokerv1beta1.ActiveMQArtemis, name
 	return acceptorEntry
 }
 
-func generateConnectorsString(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client) string {
+func generateConnectorsString(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, client rtclient.Client) string {
 
 	connectorEntry := ""
 	connectors := customResource.Spec.Connectors
@@ -717,13 +710,13 @@ func generateConnectorsString(customResource *brokerv1beta1.ActiveMQArtemis, nam
 	return connectorEntry
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) configureAcceptorsExposure(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) configureAcceptorsExposure(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, client rtclient.Client, scheme *runtime.Scheme) {
 	originalLabels := namer.LabelBuilder.Labels()
 	namespacedName := types.NamespacedName{
 		Name:      customResource.Name,
 		Namespace: customResource.Namespace,
 	}
-	deploymentSize := getDeploymentSize(customResource)
+	deploymentSize := common.GetDeploymentSize(customResource)
 	for i := int32(0); i < deploymentSize; i++ {
 		ordinalString := strconv.Itoa(int(i))
 		var serviceRoutelabels = make(map[string]string)
@@ -751,8 +744,8 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ExposureDefinitionForCR(customR
 	targetPortName := itemName + "-" + ordinalString
 	targetServiceName := customResource.Name + "-" + targetPortName + "-svc"
 
-	if isOpenshift, err := environments.DetectOpenshift(); isOpenshift && err == nil {
-		clog.Info("creating route for "+targetPortName, "service", targetServiceName)
+	if isOpenshift, err := common.DetectOpenshift(); isOpenshift && err == nil {
+		reconciler.log.V(1).Info("creating route for "+targetPortName, "service", targetServiceName)
 
 		var existing *routev1.Route = nil
 		obj := reconciler.cloneOfDeployed(reflect.TypeOf(routev1.Route{}), targetServiceName+"-rte")
@@ -762,7 +755,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ExposureDefinitionForCR(customR
 		brokerHost := formatIngressHost(customResource, ingressHost, ordinalString, itemName, "rte")
 		return routes.NewRouteDefinitionForCR(existing, namespacedName, labels, targetServiceName, targetPortName, passthroughTLS, customResource.Spec.IngressDomain, brokerHost)
 	} else {
-		clog.Info("creating ingress for "+targetPortName, "service", targetServiceName)
+		reconciler.log.V(1).Info("creating ingress for "+targetPortName, "service", targetServiceName)
 
 		var existing *netv1.Ingress = nil
 		obj := reconciler.cloneOfDeployed(reflect.TypeOf(netv1.Ingress{}), targetServiceName+"-ing")
@@ -778,13 +771,13 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) trackDesired(desired rtclient.O
 	reconciler.requestedResources = append(reconciler.requestedResources, desired)
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) configureConnectorsExposure(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) configureConnectorsExposure(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, client rtclient.Client, scheme *runtime.Scheme) {
 	originalLabels := namer.LabelBuilder.Labels()
 	namespacedName := types.NamespacedName{
 		Name:      customResource.Name,
 		Namespace: customResource.Namespace,
 	}
-	deploymentSize := getDeploymentSize(customResource)
+	deploymentSize := common.GetDeploymentSize(customResource)
 	for i := int32(0); i < deploymentSize; i++ {
 		ordinalString := strconv.Itoa(int(i))
 		var serviceRoutelabels = make(map[string]string)
@@ -808,7 +801,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureConnectorsExposure(cus
 	}
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) configureConsoleExposure(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) configureConsoleExposure(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, client rtclient.Client, scheme *runtime.Scheme) {
 	console := customResource.Spec.Console
 	consoleName := customResource.Spec.Console.Name
 
@@ -823,7 +816,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureConsoleExposure(custom
 	}
 	targetPort := int32(8161)
 	portNumber := int32(8162)
-	deploymentSize := getDeploymentSize(customResource)
+	deploymentSize := common.GetDeploymentSize(customResource)
 	for i := int32(0); i < deploymentSize; i++ {
 		ordinalString := strconv.Itoa(int(i))
 		var serviceRoutelabels = make(map[string]string)
@@ -848,9 +841,9 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureConsoleExposure(custom
 			reconciler.trackDesired(serviceDefinition)
 
 			isOpenshift := false
-			isOpenshift, _ = environments.DetectOpenshift()
+			isOpenshift, _ = common.DetectOpenshift()
 			if isOpenshift {
-				clog.V(2).Info("routeDefinition for " + targetPortName)
+				reconciler.log.V(2).Info("routeDefinition for " + targetPortName)
 				var existing *routev1.Route = nil
 				obj := reconciler.cloneOfDeployed(reflect.TypeOf(routev1.Route{}), targetServiceName+"-rte")
 				if obj != nil {
@@ -861,7 +854,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureConsoleExposure(custom
 				reconciler.trackDesired(routeDefinition)
 
 			} else {
-				clog.V(2).Info("ingress for " + targetPortName)
+				reconciler.log.V(2).Info("ingress for " + targetPortName)
 				var existing *netv1.Ingress = nil
 				obj := reconciler.cloneOfDeployed(reflect.TypeOf(netv1.Ingress{}), targetServiceName+"-ing")
 				if obj != nil {
@@ -901,7 +894,7 @@ func formatIngressHost(customResource *brokerv1beta1.ActiveMQArtemis, ingressHos
 	return ingressHost
 }
 
-func generateConsoleSSLFlags(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, secretName string) string {
+func generateConsoleSSLFlags(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, client rtclient.Client, secretName string) string {
 
 	sslFlags := ""
 	secretNamespacedName := types.NamespacedName{
@@ -945,7 +938,7 @@ func generateConsoleSSLFlags(customResource *brokerv1beta1.ActiveMQArtemis, name
 	return sslFlags
 }
 
-func generateAcceptorConnectorSSLArguments(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, secretName string) string {
+func generateAcceptorConnectorSSLArguments(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, client rtclient.Client, secretName string) string {
 
 	sslArguments := "sslEnabled=true"
 	secretNamespacedName := types.NamespacedName{
@@ -1072,14 +1065,14 @@ func generateConnectorSSLOptionalArguments(connector brokerv1beta1.ConnectorType
 }
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) CurrentDeployedResources(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) {
-	reqLogger := clog.WithValues("ActiveMQArtemis Name", customResource.Name)
-	reqLogger.Info("currentDeployedResources")
+	reqLogger := reconciler.log.WithValues("ActiveMQArtemis Name", customResource.Name)
+	reqLogger.V(1).Info("currentDeployedResources")
 
 	var err error
 	if customResource.Spec.DeploymentPlan.PersistenceEnabled {
-		checkExistingPersistentVolumes(customResource, client)
+		reconciler.checkExistingPersistentVolumes(customResource, client)
 	}
-	reconciler.deployed, err = getDeployedResources(customResource, client)
+	reconciler.deployed, err = common.GetDeployedResources(customResource, client)
 	if err != nil {
 		reqLogger.Error(err, "error getting deployed resources")
 		return
@@ -1095,14 +1088,14 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) CurrentDeployedResources(custom
 
 	for t, objs := range reconciler.deployed {
 		for _, obj := range objs {
-			reqLogger.V(3).Info("Deployed ", "Type", t, "Name", obj.GetName())
+			reqLogger.V(2).Info("Deployed ", "Type", t, "Name", obj.GetName())
 		}
 	}
 }
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme) error {
 
-	reqLogger := clog.WithValues("ActiveMQArtemis Name", customResource.Name)
+	reqLogger := reconciler.log.WithValues("ActiveMQArtemis Name", customResource.Name)
 
 	for index := range reconciler.requestedResources {
 		reconciler.requestedResources[index].SetNamespace(customResource.Namespace)
@@ -1112,7 +1105,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(customResource
 	for index := range reconciler.deployed {
 		currenCount += len(reconciler.deployed[index])
 	}
-	reqLogger.Info("Processing resources", "num requested", len(reconciler.requestedResources), "num current", currenCount)
+	reqLogger.V(1).Info("Processing resources", "num requested", len(reconciler.requestedResources), "num current", currenCount)
 
 	requested := compare.NewMapBuilder().Add(reconciler.requestedResources...).ResourceMap()
 	comparator := compare.NewMapComparator()
@@ -1123,7 +1116,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(customResource
 		isEqual := equality.Semantic.DeepEqual(ss1.Spec, ss2.Spec)
 
 		if !isEqual {
-			reqLogger.V(3).Info("Unequal", "depoyed", ss1.Spec, "requested", ss2.Spec)
+			reqLogger.V(2).Info("Unequal", "depoyed", ss1.Spec, "requested", ss2.Spec)
 		}
 		return isEqual
 	})
@@ -1137,7 +1130,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(customResource
 		pdb2 := requested.(*policyv1.PodDisruptionBudget)
 		isEqual := equality.Semantic.DeepEqual(pdb1.Spec, pdb2.Spec)
 		if !isEqual {
-			reqLogger.V(3).Info("Unequal", "depoyed", pdb1.Spec, "requested", pdb2.Spec)
+			reqLogger.V(2).Info("Unequal", "depoyed", pdb1.Spec, "requested", pdb2.Spec)
 		}
 		return isEqual
 	})
@@ -1150,19 +1143,19 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(customResource
 			// not all types will have deltas
 			continue
 		}
-		reqLogger.Info("", "instances of ", resourceType, "Will create ", len(delta.Added), "update ", len(delta.Updated), "and delete", len(delta.Removed))
+		reqLogger.V(1).Info("", "instances of ", resourceType, "Will create ", len(delta.Added), "update ", len(delta.Updated), "and delete", len(delta.Removed))
 
 		for index := range delta.Added {
 			resourceToAdd := delta.Added[index]
-			trackError(&compositeError, reconciler.createResource(customResource, client, scheme, resourceToAdd, resourceType, reqLogger))
+			trackError(&compositeError, reconciler.createResource(customResource, client, scheme, resourceToAdd, resourceType))
 		}
 		for index := range delta.Updated {
 			resourceToUpdate := delta.Updated[index]
-			trackError(&compositeError, reconciler.updateResource(customResource, client, scheme, resourceToUpdate, resourceType, reqLogger))
+			trackError(&compositeError, reconciler.updateResource(customResource, client, scheme, resourceToUpdate, resourceType))
 		}
 		for index := range delta.Removed {
 			resourceToRemove := delta.Removed[index]
-			trackError(&compositeError, reconciler.deleteResource(customResource, client, scheme, resourceToRemove, resourceType, reqLogger))
+			trackError(&compositeError, reconciler.deleteResource(customResource, client, scheme, resourceToRemove, resourceType))
 		}
 	}
 
@@ -1187,53 +1180,51 @@ func trackError(compositeError *[]error, err error) {
 	}
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) createResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, kind reflect.Type, reqLogger logr.Logger) error {
-	reqLogger.V(1).Info("Adding delta resources, i.e. creating ", "name ", requested.GetName(), "of kind ", kind)
-	return reconciler.createRequestedResource(customResource, client, scheme, requested, reqLogger, kind)
+func (reconciler *ActiveMQArtemisReconcilerImpl) createResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, kind reflect.Type) error {
+	reconciler.log.V(1).Info("Adding delta resources, i.e. creating ", "name ", requested.GetName(), "of kind ", kind)
+	return reconciler.createRequestedResource(customResource, client, scheme, requested, kind)
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) updateResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, kind reflect.Type, reqLogger logr.Logger) error {
-	reqLogger.V(1).Info("Updating delta resources, i.e. updating ", "name ", requested.GetName(), "of kind ", kind)
-	return reconciler.updateRequestedResource(customResource, client, scheme, requested, reqLogger, kind)
+func (reconciler *ActiveMQArtemisReconcilerImpl) updateResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, kind reflect.Type) error {
+	reconciler.log.V(1).Info("Updating delta resources, i.e. updating ", "name ", requested.GetName(), "of kind ", kind)
+	return reconciler.updateRequestedResource(customResource, client, scheme, requested, kind)
 
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) deleteResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, kind reflect.Type, reqLogger logr.Logger) error {
-	reqLogger.V(1).Info("Deleting delta resources, i.e. removing ", "name ", requested.GetName(), "of kind ", kind)
-	return reconciler.deleteRequestedResource(customResource, client, scheme, requested, reqLogger, kind)
+func (reconciler *ActiveMQArtemisReconcilerImpl) deleteResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, kind reflect.Type) error {
+	reconciler.log.V(1).Info("Deleting delta resources, i.e. removing ", "name ", requested.GetName(), "of kind ", kind)
+	return reconciler.deleteRequestedResource(customResource, client, scheme, requested, kind)
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) createRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, reqLogger logr.Logger, kind reflect.Type) error {
-	reqLogger.Info("Creating ", "kind ", kind, "named ", requested.GetName())
-
+func (reconciler *ActiveMQArtemisReconcilerImpl) createRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, kind reflect.Type) error {
+	reconciler.log.V(1).Info("Creating ", "kind ", kind, "named ", requested.GetName())
 	return resources.Create(customResource, client, scheme, requested)
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) updateRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, reqLogger logr.Logger, kind reflect.Type) error {
-
+func (reconciler *ActiveMQArtemisReconcilerImpl) updateRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, kind reflect.Type) error {
 	var updateError error
 	if updateError = resources.Update(client, requested); updateError == nil {
-		reqLogger.Info("updated", "kind ", kind, "named ", requested.GetName())
+		reconciler.log.V(1).Info("updated", "kind ", kind, "named ", requested.GetName())
 	} else {
-		reqLogger.Error(updateError, "updated Failed", "kind ", kind, "named ", requested.GetName())
+
+		reconciler.log.Error(updateError, "updated Failed", "kind ", kind, "named ", requested.GetName())
 	}
 	return updateError
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) deleteRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, reqLogger logr.Logger, kind reflect.Type) error {
+func (reconciler *ActiveMQArtemisReconcilerImpl) deleteRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, kind reflect.Type) error {
 
 	var deleteError error
 	if deleteError := resources.Delete(client, requested); deleteError == nil {
-		reqLogger.V(2).Info("deleted", "kind", kind, " named ", requested.GetName())
+		reconciler.log.V(2).Info("deleted", "kind", kind, " named ", requested.GetName())
 	} else {
-		reqLogger.Error(deleteError, "delete Failed", "kind", kind, " named ", requested.GetName())
+		reconciler.log.Error(deleteError, "delete Failed", "kind", kind, " named ", requested.GetName())
 	}
 	return deleteError
 }
 
 // older version of the operator would drop the owner reference, we need to adopt such secrets and update them
 func (reconciler *ActiveMQArtemisReconcilerImpl) adoptExistingSecretWithNoOwnerRefForUpdate(cr *brokerv1beta1.ActiveMQArtemis, candidate *corev1.Secret, client rtclient.Client) {
-	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
 
 	key := types.NamespacedName{Name: candidate.Name, Namespace: candidate.Namespace}
 	existingSecret := &corev1.Secret{}
@@ -1242,7 +1233,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) adoptExistingSecretWithNoOwnerR
 		if len(existingSecret.OwnerReferences) == 0 {
 			reconciler.updateOwnerReferencesAndMatchVersion(cr, existingSecret, candidate)
 			reconciler.addToDeployed(reflect.TypeOf(corev1.Secret{}), existingSecret)
-			log.Info("found matching secret without owner reference, reclaiming", "Name", key)
+			reconciler.log.V(1).Info("found matching secret without owner reference, reclaiming", "Name", key)
 		}
 	}
 }
@@ -1257,8 +1248,6 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) updateOwnerReferencesAndMatchVe
 }
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) checkExistingService(cr *brokerv1beta1.ActiveMQArtemis, candidate *corev1.Service, client rtclient.Client) {
-	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
-
 	serviceType := reflect.TypeOf(corev1.Service{})
 	obj := reconciler.getFromDeployed(serviceType, candidate.Name)
 	if obj != nil {
@@ -1274,19 +1263,17 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) checkExistingService(cr *broker
 			if len(existingService.OwnerReferences) == 0 {
 				reconciler.updateOwnerReferencesAndMatchVersion(cr, existingService, candidate)
 				reconciler.addToDeployed(serviceType, existingService)
-				log.Info("found matching service without owner reference, reclaiming", "Name", key)
+				reconciler.log.V(2).Info("found matching service without owner reference, reclaiming", "Name", key)
 			} else {
-				log.Info("found matching service with unexpected owner reference, it may need manual removal", "Name", key)
+				reconciler.log.V(2).Info("found matching service with unexpected owner reference, it may need manual removal", "Name", key)
 			}
 		}
 	}
 }
 
-func checkExistingPersistentVolumes(instance *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) {
-	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
-
+func (r *ActiveMQArtemisReconcilerImpl) checkExistingPersistentVolumes(instance *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) {
 	var i int32
-	for i = 0; i < getDeploymentSize(instance); i++ {
+	for i = 0; i < common.GetDeploymentSize(instance); i++ {
 		ordinalString := strconv.Itoa(int(i))
 		pvcKey := types.NamespacedName{Namespace: instance.Namespace, Name: instance.Name + "-" + namer.CrToSS(instance.Name) + "-" + ordinalString}
 		pvc := &corev1.PersistentVolumeClaim{}
@@ -1304,16 +1291,16 @@ func checkExistingPersistentVolumes(instance *brokerv1beta1.ActiveMQArtemis, cli
 					}
 				}
 				if found {
-					log.Info("removing owner ref from pvc to avoid potential data loss")
+					r.log.V(1).Info("removing owner ref from pvc to avoid potential data loss")
 					pvc.OwnerReferences = newOwnerReferences
 					if er := client.Update(context.TODO(), pvc); er != nil {
-						log.Error(er, "failed to remove ownerReference from pvc", "pvc", *pvc)
+						r.log.Error(er, "failed to remove ownerReference from pvc", "pvc", *pvc)
 					}
 				}
 			}
 		} else {
 			if !k8serrors.IsNotFound(err) {
-				log.Error(err, "got error in getting pvc")
+				r.log.Error(err, "got error in getting pvc")
 			}
 		}
 	}
@@ -1328,7 +1315,7 @@ func getOrderedTypeList() []reflect.Type {
 func genOrderedTypesLists() []reflect.Type {
 
 	if orderedTypes == nil {
-		isOpenshift, _ := environments.DetectOpenshift()
+		isOpenshift, _ := common.DetectOpenshift()
 		types := make([]reflect.Type, 6)
 
 		// we want to create/update in this order
@@ -1348,40 +1335,6 @@ func genOrderedTypesLists() []reflect.Type {
 	return *orderedTypes
 }
 
-func getDeployedResources(instance *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) (map[reflect.Type][]rtclient.Object, error) {
-
-	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
-
-	reader := read.New(client).WithNamespace(instance.Namespace).WithOwnerObject(instance)
-	var resourceMap map[reflect.Type][]rtclient.Object
-	var err error
-	if isOpenshift, _ := environments.DetectOpenshift(); isOpenshift {
-		resourceMap, err = reader.ListAll(
-			&corev1.ServiceList{},
-			&appsv1.StatefulSetList{},
-			&routev1.RouteList{},
-			&corev1.SecretList{},
-			&corev1.ConfigMapList{},
-			&policyv1.PodDisruptionBudgetList{},
-		)
-	} else {
-		resourceMap, err = reader.ListAll(
-			&corev1.ServiceList{},
-			&appsv1.StatefulSetList{},
-			&netv1.IngressList{},
-			&corev1.SecretList{},
-			&corev1.ConfigMapList{},
-			&policyv1.PodDisruptionBudgetList{},
-		)
-	}
-	if err != nil {
-		log.Error(err, "Failed to list deployed objects.")
-		return nil, err
-	}
-
-	return resourceMap, nil
-}
-
 func addNewVolumes(existingNames map[string]string, existing *[]corev1.Volume, newVolumeName *string) {
 	if _, ok := existingNames[*newVolumeName]; !ok {
 		volume := volumes.MakeVolume(*newVolumeName)
@@ -1390,7 +1343,7 @@ func addNewVolumes(existingNames map[string]string, existing *[]corev1.Volume, n
 	}
 }
 
-func MakeVolumes(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers) []corev1.Volume {
+func (r *ActiveMQArtemisReconcilerImpl) MakeVolumes(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers) []corev1.Volume {
 
 	volumeDefinitions := []corev1.Volume{}
 	if customResource.Spec.DeploymentPlan.PersistenceEnabled {
@@ -1424,7 +1377,7 @@ func MakeVolumes(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers) []
 	}
 
 	if customResource.Spec.Console.SSLEnabled {
-		clog.V(1).Info("Make volumes for ssl console exposure on k8s")
+		r.log.V(1).Info("Make volumes for ssl console exposure on k8s")
 		secretName := namer.SecretsConsoleNameBuilder.Name()
 		if customResource.Spec.Console.SSLSecret != "" {
 			secretName = customResource.Spec.Console.SSLSecret
@@ -1443,7 +1396,7 @@ func addNewVolumeMounts(existingNames map[string]string, existing *[]corev1.Volu
 	}
 }
 
-func MakeVolumeMounts(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers) []corev1.VolumeMount {
+func (r *ActiveMQArtemisReconcilerImpl) MakeVolumeMounts(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers) []corev1.VolumeMount {
 
 	volumeMounts := []corev1.VolumeMount{}
 	if customResource.Spec.DeploymentPlan.PersistenceEnabled {
@@ -1477,7 +1430,7 @@ func MakeVolumeMounts(customResource *brokerv1beta1.ActiveMQArtemis, namer Namer
 	}
 
 	if customResource.Spec.Console.SSLEnabled {
-		clog.V(1).Info("Make volume mounts for ssl console exposure on k8s")
+		r.log.V(1).Info("Make volume mounts for ssl console exposure on k8s")
 		volumeMountName := namer.SecretsConsoleNameBuilder.Name() + "-volume"
 		if customResource.Spec.Console.SSLSecret != "" {
 			volumeMountName = customResource.Spec.Console.SSLSecret + "-volume"
@@ -1509,9 +1462,9 @@ func MakeContainerPorts(cr *brokerv1beta1.ActiveMQArtemis) []corev1.ContainerPor
 	return containerPorts
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, current *corev1.PodTemplateSpec, client rtclient.Client) (*corev1.PodTemplateSpec, error) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, current *corev1.PodTemplateSpec, client rtclient.Client) (*corev1.PodTemplateSpec, error) {
 
-	reqLogger := ctrl.Log.WithName(customResource.Name)
+	reqLogger := reconciler.log.WithName(customResource.Name)
 
 	namespacedName := types.NamespacedName{
 		Name:      customResource.Name,
@@ -1563,7 +1516,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 
 	podSpec.ImagePullSecrets = customResource.Spec.DeploymentPlan.ImagePullSecrets
 
-	container := containers.MakeContainer(podSpec, customResource.Name, resolveImage(customResource, BrokerImageKey), MakeEnvVarArrayForCR(customResource, namer))
+	container := containers.MakeContainer(podSpec, customResource.Name, common.ResolveImage(customResource, common.BrokerImageKey), MakeEnvVarArrayForCR(customResource, namer))
 
 	container.Resources = customResource.Spec.DeploymentPlan.Resources
 
@@ -1573,7 +1526,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 		container.Ports = containerPorts
 	}
 
-	reqLogger.Info("Checking out extraMounts", "extra config", customResource.Spec.DeploymentPlan.ExtraMounts)
+	reqLogger.V(2).Info("Checking out extraMounts", "extra config", customResource.Spec.DeploymentPlan.ExtraMounts)
 
 	configMapsToCreate := customResource.Spec.DeploymentPlan.ExtraMounts.ConfigMaps
 	secretsToCreate := customResource.Spec.DeploymentPlan.ExtraMounts.Secrets
@@ -1583,25 +1536,25 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	} else {
 		configMapsToCreate = append(configMapsToCreate, brokerPropertiesResourceName)
 	}
-	extraVolumes, extraVolumeMounts := createExtraConfigmapsAndSecretsVolumeMounts(container, configMapsToCreate, secretsToCreate, brokerPropertiesResourceName, brokerPropertiesMapData)
+	extraVolumes, extraVolumeMounts := reconciler.createExtraConfigmapsAndSecretsVolumeMounts(container, configMapsToCreate, secretsToCreate, brokerPropertiesResourceName, brokerPropertiesMapData)
 
-	reqLogger.Info("Extra volumes", "volumes", extraVolumes)
-	reqLogger.Info("Extra mounts", "mounts", extraVolumeMounts)
-	container.VolumeMounts = MakeVolumeMounts(customResource, namer)
+	reqLogger.V(2).Info("Extra volumes", "volumes", extraVolumes)
+	reqLogger.V(2).Info("Extra mounts", "mounts", extraVolumeMounts)
+	container.VolumeMounts = reconciler.MakeVolumeMounts(customResource, namer)
 	if len(extraVolumeMounts) > 0 {
 		container.VolumeMounts = append(container.VolumeMounts, extraVolumeMounts...)
 	}
 
-	container.StartupProbe = configureStartupProbe(container, customResource.Spec.DeploymentPlan.StartupProbe)
-	container.LivenessProbe = configureLivenessProbe(container, customResource.Spec.DeploymentPlan.LivenessProbe)
-	container.ReadinessProbe = configureReadinessProbe(container, customResource.Spec.DeploymentPlan.ReadinessProbe)
+	container.StartupProbe = reconciler.configureStartupProbe(container, customResource.Spec.DeploymentPlan.StartupProbe)
+	container.LivenessProbe = reconciler.configureLivenessProbe(container, customResource.Spec.DeploymentPlan.LivenessProbe)
+	container.ReadinessProbe = reconciler.configureReadinessProbe(container, customResource.Spec.DeploymentPlan.ReadinessProbe)
 
 	if len(customResource.Spec.DeploymentPlan.NodeSelector) > 0 {
 		reqLogger.V(1).Info("Adding Node Selectors", "len", len(customResource.Spec.DeploymentPlan.NodeSelector))
 		podSpec.NodeSelector = customResource.Spec.DeploymentPlan.NodeSelector
 	}
 
-	configureAffinity(podSpec, &customResource.Spec.DeploymentPlan.Affinity)
+	reconciler.configureAffinity(podSpec, &customResource.Spec.DeploymentPlan.Affinity)
 
 	if len(customResource.Spec.DeploymentPlan.Tolerations) > 0 {
 		reqLogger.V(1).Info("Adding Tolerations", "len", len(customResource.Spec.DeploymentPlan.Tolerations))
@@ -1610,7 +1563,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 
 	newContainersArray := []corev1.Container{}
 	podSpec.Containers = append(newContainersArray, *container)
-	brokerVolumes := MakeVolumes(customResource, namer)
+	brokerVolumes := reconciler.MakeVolumes(customResource, namer)
 	if len(extraVolumes) > 0 {
 		brokerVolumes = append(brokerVolumes, extraVolumes...)
 	}
@@ -1661,14 +1614,14 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	volumeMountForCfg := volumes.MakeRwVolumeMountForCfg(cfgVolumeName, brokerConfigRoot)
 	podSpec.Containers[0].VolumeMounts = append(podSpec.Containers[0].VolumeMounts, volumeMountForCfg)
 
-	clog.Info("Creating init container for broker configuration")
-	initContainer := containers.MakeInitContainer(podSpec, customResource.Name, resolveImage(customResource, InitImageKey), MakeEnvVarArrayForCR(customResource, namer))
+	reqLogger.V(2).Info("Creating init container for broker configuration")
+	initContainer := containers.MakeInitContainer(podSpec, customResource.Name, common.ResolveImage(customResource, common.InitImageKey), MakeEnvVarArrayForCR(customResource, namer))
 	initContainer.Resources = customResource.Spec.DeploymentPlan.Resources
 
 	var initCmds []string
 	var initCfgRootDir = "/init_cfg_root"
 
-	compactVersionToUse, verr := determineCompactVersionToUse(customResource)
+	compactVersionToUse, verr := common.DetermineCompactVersionToUse(customResource)
 	if verr != nil {
 		reqLogger.Error(verr, "failed to get compact version", "Spec.Version", customResource.Spec.Version)
 		return nil, verr
@@ -1679,7 +1632,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	//address settings
 	addressSettings := customResource.Spec.AddressSettings.AddressSetting
 	if len(addressSettings) > 0 {
-		reqLogger.Info("processing address-settings")
+		reqLogger.V(1).Info("processing address-settings")
 
 		var configYaml strings.Builder
 		var configSpecials map[string]string = make(map[string]string)
@@ -1694,7 +1647,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 
 		byteArray, err := json.Marshal(configSpecials)
 		if err != nil {
-			clog.Error(err, "failed to marshal specials")
+			reqLogger.Error(err, "failed to marshal specials")
 		}
 		jsonSpecials := string(byteArray)
 
@@ -1706,7 +1659,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 			yacfgProfileVersion + "/default_with_user_address_settings.yaml.jinja2  --tune " +
 			outputDir + "/broker.yaml --extra-properties '" + jsonSpecials + "' --output " + outputDir
 
-		clog.V(1).Info("initCmd: " + initCmd)
+		reqLogger.V(2).Info("initCmd: " + initCmd)
 		initCmds = append(initCmds, initCmd)
 
 		//populate args of init container
@@ -1762,19 +1715,31 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	volumeForCfg = volumes.MakeVolumeForCfg("tool-dir")
 	podSpec.Volumes = append(podSpec.Volumes, volumeForCfg)
 
-	clog.V(1).Info("Total volumes ", "volumes", podSpec.Volumes)
+	reqLogger.V(2).Info("Total volumes ", "volumes", podSpec.Volumes)
 
-	// this depends on init container passing --java-opts to artemis create via launch.sh *and* it
-	// not getting munged on the way. We CreateOrAppend to any value from spec.Env
 	var mountPoint = secretPathBase
 	if !isSecret {
 		mountPoint = cfgMapPathBase
 	}
-	javaOpts := corev1.EnvVar{
-		Name:  "JAVA_OPTS",
-		Value: brokerPropertiesConfigSystemPropValue(mountPoint, brokerPropertiesResourceName, brokerPropertiesMapData),
+	brokerPropsValue := brokerPropertiesConfigSystemPropValue(mountPoint, brokerPropertiesResourceName, brokerPropertiesMapData)
+
+	// only use init container JAVA_OPTS on existing deployments and migrate to JDK_JAVA_OPTIONS for independence
+	// from init containers and broker run scripts
+	if environments.Retrieve(podSpec.InitContainers, "JAVA_OPTS") != nil {
+		// this depends on init container passing --java-opts to artemis create via launch.sh *and* it
+		// not getting munged on the way. We CreateOrAppend to any value from spec.Env
+		javaOpts := corev1.EnvVar{
+			Name:  "JAVA_OPTS",
+			Value: brokerPropsValue,
+		}
+		environments.CreateOrAppend(podSpec.InitContainers, &javaOpts)
+	} else {
+		jdkJavaOpts := corev1.EnvVar{
+			Name:  "JDK_JAVA_OPTIONS",
+			Value: brokerPropsValue,
+		}
+		environments.CreateOrAppend(podSpec.Containers, &jdkJavaOpts)
 	}
-	environments.CreateOrAppend(podSpec.InitContainers, &javaOpts)
 
 	var initArgs []string = []string{"-c"}
 
@@ -1782,11 +1747,11 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	var brokerHandlerCmds []string = []string{}
 	brokerConfigHandler := GetBrokerConfigHandler(namespacedName)
 	if brokerConfigHandler != nil {
-		clog.Info("there is a config handler")
+		reqLogger.V(1).Info("there is a config handler")
 		handlerCmds := brokerConfigHandler.Config(podSpec.InitContainers, initCfgRootDir+"/security", yacfgProfileVersion, yacfgProfileName)
-		clog.Info("Getting back some init commands", "handlerCmds", handlerCmds)
+		reqLogger.V(2).Info("Getting back some init commands", "handlerCmds", handlerCmds)
 		if len(handlerCmds) > 0 {
-			clog.Info("appending to initCmd array...")
+			reqLogger.V(2).Info("appending to initCmd array...")
 			brokerHandlerCmds = append(brokerHandlerCmds, handlerCmds...)
 
 			securitySecretVolumeName := "secret-security-" + brokerConfigHandler.GetCRName()
@@ -1816,13 +1781,13 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	}
 	initArgs = append(initArgs, strBuilder.String())
 
-	clog.V(2).Info("The final init cmds to init ", "the cmd array", initArgs)
+	reqLogger.V(2).Info("The final init cmds to init ", "the cmd array", initArgs)
 
 	podSpec.InitContainers[0].Args = initArgs
 
 	if len(extraVolumeMounts) > 0 {
 		podSpec.InitContainers[0].VolumeMounts = append(podSpec.InitContainers[0].VolumeMounts, extraVolumeMounts...)
-		clog.V(1).Info("Added some extra mounts to init", "total mounts: ", podSpec.InitContainers[0].VolumeMounts)
+		reqLogger.V(2).Info("Added some extra mounts to init", "total mounts: ", podSpec.InitContainers[0].VolumeMounts)
 	}
 
 	dontRun := corev1.EnvVar{
@@ -1838,31 +1803,14 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	environments.Create(podSpec.InitContainers, &envBrokerCustomInstanceDir)
 
 	// NOTE: PodSecurity contains a RunAsUser that will be overridden by that in the provided PodSecurityContext if any
-	configPodSecurity(podSpec, &customResource.Spec.DeploymentPlan.PodSecurity)
-	configurePodSecurityContext(podSpec, customResource.Spec.DeploymentPlan.PodSecurityContext)
+	reconciler.configPodSecurity(podSpec, &customResource.Spec.DeploymentPlan.PodSecurity)
+	reconciler.configurePodSecurityContext(podSpec, customResource.Spec.DeploymentPlan.PodSecurityContext)
 
-	clog.V(3).Info("Final Init spec", "Detail", podSpec.InitContainers)
+	reqLogger.V(2).Info("Final Init spec", "Detail", podSpec.InitContainers)
 
 	pts.Spec = *podSpec
 
 	return pts, nil
-}
-
-func resolveImage(customResource *brokerv1beta1.ActiveMQArtemis, key string) string {
-	var imageName string
-
-	if key == InitImageKey && isLockedDown(customResource.Spec.DeploymentPlan.InitImage) {
-		imageName = customResource.Spec.DeploymentPlan.InitImage
-	} else if key == BrokerImageKey && isLockedDown(customResource.Spec.DeploymentPlan.Image) {
-		imageName = customResource.Spec.DeploymentPlan.Image
-	} else {
-		imageName = determineImageToUse(customResource, key)
-	}
-	return imageName
-}
-
-func isLockedDown(imageAttribute string) bool {
-	return imageAttribute != "placeholder" && imageAttribute != ""
 }
 
 func brokerPropertiesConfigSystemPropValue(mountPoint, resourceName string, brokerPropertiesData map[string]string) string {
@@ -1903,10 +1851,10 @@ func getConfigExtraMount(customResource *brokerv1beta1.ActiveMQArtemis, suffix s
 	return "", "", false
 }
 
-func configureStartupProbe(container *corev1.Container, probeFromCr *corev1.Probe) *corev1.Probe {
+func (r *ActiveMQArtemisReconcilerImpl) configureStartupProbe(container *corev1.Container, probeFromCr *corev1.Probe) *corev1.Probe {
 
 	var startupProbe *corev1.Probe = container.StartupProbe
-	clog.V(1).Info("Configuring Startup Probe", "existing", startupProbe)
+	r.log.V(1).Info("Configuring Startup Probe", "existing", startupProbe)
 
 	if probeFromCr != nil {
 		if startupProbe == nil {
@@ -1922,9 +1870,9 @@ func configureStartupProbe(container *corev1.Container, probeFromCr *corev1.Prob
 	return startupProbe
 }
 
-func configureLivenessProbe(container *corev1.Container, probeFromCr *corev1.Probe) *corev1.Probe {
+func (r *ActiveMQArtemisReconcilerImpl) configureLivenessProbe(container *corev1.Container, probeFromCr *corev1.Probe) *corev1.Probe {
 	var livenessProbe *corev1.Probe = container.LivenessProbe
-	clog.V(1).Info("Configuring Liveness Probe", "existing", livenessProbe)
+	r.log.V(1).Info("Configuring Liveness Probe", "existing", livenessProbe)
 
 	if livenessProbe == nil {
 		livenessProbe = &corev1.Probe{}
@@ -1935,23 +1883,23 @@ func configureLivenessProbe(container *corev1.Container, probeFromCr *corev1.Pro
 
 		// not complete in this case!
 		if probeFromCr.Exec == nil && probeFromCr.HTTPGet == nil && probeFromCr.TCPSocket == nil {
-			clog.V(1).Info("Adding default TCP check")
+			r.log.V(1).Info("Adding default TCP check")
 			livenessProbe.ProbeHandler = corev1.ProbeHandler{
 				TCPSocket: &corev1.TCPSocketAction{
 					Port: intstr.FromInt(TCPLivenessPort),
 				},
 			}
 		} else if probeFromCr.TCPSocket != nil {
-			clog.V(1).Info("Using user specified TCPSocket")
+			r.log.V(1).Info("Using user specified TCPSocket")
 			livenessProbe.ProbeHandler = corev1.ProbeHandler{
 				TCPSocket: probeFromCr.TCPSocket,
 			}
 		} else {
-			clog.V(1).Info("Using user provided Liveness Probe Exec " + probeFromCr.Exec.String())
+			r.log.V(1).Info("Using user provided Liveness Probe Exec " + probeFromCr.Exec.String())
 			livenessProbe.Exec = probeFromCr.Exec
 		}
 	} else {
-		clog.V(1).Info("Creating Default Liveness Probe")
+		r.log.V(1).Info("Creating Default Liveness Probe")
 
 		livenessProbe.InitialDelaySeconds = defaultLivenessProbeInitialDelay
 		livenessProbe.TimeoutSeconds = 5
@@ -1978,10 +1926,10 @@ var betterCommand = []string{
 	// "1", sleep seconds not applicable with 1 retry
 }
 
-func configureReadinessProbe(container *corev1.Container, probeFromCr *corev1.Probe) *corev1.Probe {
+func (r *ActiveMQArtemisReconcilerImpl) configureReadinessProbe(container *corev1.Container, probeFromCr *corev1.Probe) *corev1.Probe {
 
 	var readinessProbe *corev1.Probe = container.ReadinessProbe
-	clog.V(1).Info("Configuring Readyness Probe", "existing", readinessProbe)
+	r.log.V(1).Info("Configuring Readyness Probe", "existing", readinessProbe)
 
 	if readinessProbe == nil {
 		readinessProbe = &corev1.Probe{}
@@ -1990,7 +1938,7 @@ func configureReadinessProbe(container *corev1.Container, probeFromCr *corev1.Pr
 	if probeFromCr != nil {
 		applyNonDefaultedValues(readinessProbe, probeFromCr)
 		if probeFromCr.Exec == nil && probeFromCr.HTTPGet == nil && probeFromCr.TCPSocket == nil {
-			clog.V(1).Info("adding default handler to user provided readiness Probe")
+			r.log.V(2).Info("adding default handler to user provided readiness Probe")
 
 			// respect existing command where already deployed
 			if readinessProbe.ProbeHandler.Exec != nil && reflect.DeepEqual(readinessProbe.ProbeHandler.Exec.Command, command) {
@@ -2007,7 +1955,7 @@ func configureReadinessProbe(container *corev1.Container, probeFromCr *corev1.Pr
 			readinessProbe.ProbeHandler = probeFromCr.ProbeHandler
 		}
 	} else {
-		clog.V(1).Info("vreating default readiness Probe")
+		r.log.V(1).Info("creating default readiness Probe")
 		readinessProbe.InitialDelaySeconds = defaultLivenessProbeInitialDelay
 		readinessProbe.TimeoutSeconds = 5
 
@@ -2056,7 +2004,7 @@ func getConfigAppliedConfigMapName(artemis *brokerv1beta1.ActiveMQArtemis) types
 	}
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) addResourceForBrokerProperties(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers) (string, bool, map[string]string) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) addResourceForBrokerProperties(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers) (string, bool, map[string]string) {
 
 	// fetch and do idempotent transform based on CR
 
@@ -2072,7 +2020,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) addResourceForBrokerProperties(
 	if obj != nil {
 		existing := obj.(*corev1.ConfigMap)
 		// found existing (immuable) map with sha in the name
-		clog.V(1).Info("Requesting configMap for broker properties", "name", resourceName.Name)
+		reconciler.log.V(1).Info("Requesting configMap for broker properties", "name", resourceName.Name)
 		reconciler.trackDesired(existing)
 
 		return resourceName.Name, false, existing.Data
@@ -2094,10 +2042,10 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) addResourceForBrokerProperties(
 		desired.StringData = data
 	}
 
-	clog.V(1).Info("Requesting secret for broker properties", "name", resourceName.Name)
+	reconciler.log.V(1).Info("Requesting secret for broker properties", "name", resourceName.Name)
 	reconciler.trackDesired(desired)
 
-	clog.V(1).Info("Requesting mount for broker properties secret")
+	reconciler.log.V(1).Info("Requesting mount for broker properties secret")
 	return resourceName.Name, true, data
 }
 
@@ -2153,32 +2101,32 @@ func brokerPropertiesData(props []string) map[string]string {
 	return contents
 }
 
-func configureAffinity(podSpec *corev1.PodSpec, affinity *brokerv1beta1.AffinityConfig) {
+func (r *ActiveMQArtemisReconcilerImpl) configureAffinity(podSpec *corev1.PodSpec, affinity *brokerv1beta1.AffinityConfig) {
 	if affinity != nil {
 		podSpec.Affinity = &corev1.Affinity{}
 		if affinity.PodAffinity != nil {
-			clog.V(1).Info("Adding Pod Affinity")
+			r.log.V(1).Info("Adding Pod Affinity")
 			podSpec.Affinity.PodAffinity = affinity.PodAffinity
 		}
 		if affinity.PodAntiAffinity != nil {
-			clog.V(1).Info("Adding Pod AntiAffinity")
+			r.log.V(1).Info("Adding Pod AntiAffinity")
 			podSpec.Affinity.PodAntiAffinity = affinity.PodAntiAffinity
 		}
 		if affinity.NodeAffinity != nil {
-			clog.V(1).Info("Adding Node Affinity")
+			r.log.V(1).Info("Adding Node Affinity")
 			podSpec.Affinity.NodeAffinity = affinity.NodeAffinity
 		}
 	}
 }
 
-func configurePodSecurityContext(podSpec *corev1.PodSpec, podSecurityContext *corev1.PodSecurityContext) {
-	clog.V(1).Info("Configuring PodSecurityContext")
+func (r *ActiveMQArtemisReconcilerImpl) configurePodSecurityContext(podSpec *corev1.PodSpec, podSecurityContext *corev1.PodSecurityContext) {
+	r.log.V(1).Info("Configuring PodSecurityContext")
 
 	if nil != podSecurityContext {
-		clog.V(5).Info("Incoming podSecurityContext is NOT nil, assigning")
+		r.log.V(2).Info("Incoming podSecurityContext is NOT nil, assigning")
 		podSpec.SecurityContext = podSecurityContext
 	} else {
-		clog.V(5).Info("Incoming podSecurityContext is nil, creating with default values")
+		r.log.V(2).Info("Incoming podSecurityContext is nil, creating with default values")
 		podSpec.SecurityContext = &corev1.PodSecurityContext{}
 	}
 }
@@ -2202,13 +2150,13 @@ func sortedKeysStringKeyByteValue(props map[string][]byte) []string {
 	return sortedKeys
 }
 
-func configPodSecurity(podSpec *corev1.PodSpec, podSecurity *brokerv1beta1.PodSecurityType) {
+func (r *ActiveMQArtemisReconcilerImpl) configPodSecurity(podSpec *corev1.PodSpec, podSecurity *brokerv1beta1.PodSecurityType) {
 	if podSecurity.ServiceAccountName != nil {
-		clog.Info("Pod serviceAccountName specified", "existing", podSpec.ServiceAccountName, "new", *podSecurity.ServiceAccountName)
+		r.log.V(2).Info("Pod serviceAccountName specified", "existing", podSpec.ServiceAccountName, "new", *podSecurity.ServiceAccountName)
 		podSpec.ServiceAccountName = *podSecurity.ServiceAccountName
 	}
 	if podSecurity.RunAsUser != nil {
-		clog.Info("Pod runAsUser specified", "runAsUser", *podSecurity.RunAsUser)
+		r.log.V(2).Info("Pod runAsUser specified", "runAsUser", *podSecurity.RunAsUser)
 		if podSpec.SecurityContext == nil {
 			secCtxt := corev1.PodSecurityContext{
 				RunAsUser: podSecurity.RunAsUser,
@@ -2220,65 +2168,7 @@ func configPodSecurity(podSpec *corev1.PodSpec, podSecurity *brokerv1beta1.PodSe
 	}
 }
 
-func determineImageToUse(customResource *brokerv1beta1.ActiveMQArtemis, imageTypeKey string) string {
-
-	found := false
-	imageName := ""
-	compactVersionToUse, _ := determineCompactVersionToUse(customResource)
-
-	genericRelatedImageEnvVarName := ImageNamePrefix + imageTypeKey + "_" + compactVersionToUse
-	// Default case of x86_64/amd64 covered here
-	archSpecificRelatedImageEnvVarName := genericRelatedImageEnvVarName
-	if osruntime.GOARCH == "arm64" || osruntime.GOARCH == "s390x" || osruntime.GOARCH == "ppc64le" {
-		archSpecificRelatedImageEnvVarName = genericRelatedImageEnvVarName + "_" + osruntime.GOARCH
-	}
-	imageName, found = os.LookupEnv(archSpecificRelatedImageEnvVarName)
-	clog.V(1).Info("DetermineImageToUse", "env", archSpecificRelatedImageEnvVarName, "imageName", imageName)
-
-	// Use genericRelatedImageEnvVarName if archSpecificRelatedImageEnvVarName is not found
-	if !found {
-		imageName, found = os.LookupEnv(genericRelatedImageEnvVarName)
-		clog.V(1).Info("DetermineImageToUse - from generic", "env", genericRelatedImageEnvVarName, "imageName", imageName)
-	}
-
-	// Use latest images if archSpecificRelatedImageEnvVarName and genericRelatedImageEnvVarName are not found
-	if !found {
-		imageName = version.DefaultImageName(archSpecificRelatedImageEnvVarName)
-		clog.V(1).Info("DetermineImageToUse - from default", "env", archSpecificRelatedImageEnvVarName, "imageName", imageName)
-	}
-
-	return imageName
-}
-
-func resolveBrokerVersion(cr *brokerv1beta1.ActiveMQArtemis) (string, error) {
-
-	if cr.Spec.Version != "" {
-		_, verr := semver.ParseTolerant(cr.Spec.Version)
-		if verr != nil {
-			return "", verr
-		}
-	}
-
-	result := common.ResolveBrokerVersion(version.SupportedActiveMQArtemisSemanticVersions(), cr.Spec.Version)
-	if result == nil {
-		return "", errors.Errorf("did not find a matching broker in the supported list for %v", cr.Spec.Version)
-	}
-	return result.String(), nil
-}
-
-func determineCompactVersionToUse(customResource *brokerv1beta1.ActiveMQArtemis) (string, error) {
-
-	resolvedFullVersion, err := resolveBrokerVersion(customResource)
-	if err != nil {
-		clog.V(1).Error(err, "failed to determine broker version from cr")
-		return "", err
-	}
-	compactVersionToUse := version.CompactActiveMQArtemisVersion(resolvedFullVersion)
-
-	return compactVersionToUse, nil
-}
-
-func createExtraConfigmapsAndSecretsVolumeMounts(brokerContainer *corev1.Container, configMaps []string, secrets []string, brokePropertiesResourceName string, brokerPropsData map[string]string) ([]corev1.Volume, []corev1.VolumeMount) {
+func (r *ActiveMQArtemisReconcilerImpl) createExtraConfigmapsAndSecretsVolumeMounts(brokerContainer *corev1.Container, configMaps []string, secrets []string, brokePropertiesResourceName string, brokerPropsData map[string]string) ([]corev1.Volume, []corev1.VolumeMount) {
 
 	var extraVolumes []corev1.Volume
 	var extraVolumeMounts []corev1.VolumeMount
@@ -2286,11 +2176,11 @@ func createExtraConfigmapsAndSecretsVolumeMounts(brokerContainer *corev1.Contain
 	if len(configMaps) > 0 {
 		for _, cfgmap := range configMaps {
 			if cfgmap == "" {
-				clog.Info("No ConfigMap name specified, ignore", "configMap", cfgmap)
+				r.log.V(1).Info("No ConfigMap name specified, ignore", "configMap", cfgmap)
 				continue
 			}
 			cfgmapPath := cfgMapPathBase + cfgmap
-			clog.Info("Resolved configMap path", "path", cfgmapPath)
+			r.log.V(2).Info("Resolved configMap path", "path", cfgmapPath)
 			//now we have a config map. First create a volume
 			cfgmapVol := volumes.MakeVolumeForConfigMap(cfgmap)
 			cfgmapVolumeMount := volumes.MakeVolumeMountForCfg(cfgmapVol.Name, cfgmapPath, true)
@@ -2302,7 +2192,7 @@ func createExtraConfigmapsAndSecretsVolumeMounts(brokerContainer *corev1.Contain
 	if len(secrets) > 0 {
 		for _, secret := range secrets {
 			if secret == "" {
-				clog.Info("No Secret name specified, ignore", "Secret", secret)
+				r.log.V(2).Info("No Secret name specified, ignore", "Secret", secret)
 				continue
 			}
 			secretPath := secretPathBase + secret
@@ -2340,15 +2230,15 @@ func extractOrdinalPrefixSeperatorIndex(key string) (bool, int) {
 	return false, -1
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) NewStatefulSetForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, currentStateFullSet *appsv1.StatefulSet, client rtclient.Client) (*appsv1.StatefulSet, error) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) NewStatefulSetForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, currentStateFullSet *appsv1.StatefulSet, client rtclient.Client) (*appsv1.StatefulSet, error) {
 
-	reqLogger := ctrl.Log.WithName(customResource.Name)
+	reqLogger := reconciler.log.WithName(customResource.Name)
 
 	namespacedName := types.NamespacedName{
 		Name:      customResource.Name,
 		Namespace: customResource.Namespace,
 	}
-	replicas := getDeploymentSize(customResource)
+	replicas := common.GetDeploymentSize(customResource)
 	currentStateFullSet = ss.MakeStatefulSet(currentStateFullSet, namer.SsNameBuilder.Name(), namer.SvcHeadlessNameBuilder.Name(), namespacedName, customResource.Annotations, namer.LabelBuilder.Labels(), &replicas)
 
 	podTemplateSpec, err := reconciler.NewPodTemplateSpecForCR(customResource, namer, &currentStateFullSet.Spec.Template, client)
@@ -2365,7 +2255,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewStatefulSetForCR(customResou
 	return currentStateFullSet, nil
 }
 
-func NewPersistentVolumeClaimArrayForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, arrayLength int) *[]corev1.PersistentVolumeClaim {
+func NewPersistentVolumeClaimArrayForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, arrayLength int) *[]corev1.PersistentVolumeClaim {
 
 	var pvc *corev1.PersistentVolumeClaim = nil
 	capacity := "2Gi"
@@ -2393,211 +2283,7 @@ func NewPersistentVolumeClaimArrayForCR(customResource *brokerv1beta1.ActiveMQAr
 	return &pvcArray
 }
 
-func ProcessStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namespacedName types.NamespacedName, namer Namers, reconcileError error) {
-
-	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", cr.Name)
-
-	updateVersionStatus(cr)
-
-	updateScaleStatus(cr, namer)
-
-	reqLogger.V(1).Info("Updating status for pods")
-
-	podStatus := updatePodStatus(cr, client, namespacedName)
-
-	reqLogger.V(1).Info("PodStatus current..................", "info:", podStatus)
-	reqLogger.V(1).Info("Ready Count........................", "info:", len(podStatus.Ready))
-	reqLogger.V(1).Info("Stopped Count......................", "info:", len(podStatus.Stopped))
-	reqLogger.V(1).Info("Starting Count.....................", "info:", len(podStatus.Starting))
-
-	ValidCondition := getValidCondition(cr)
-	meta.SetStatusCondition(&cr.Status.Conditions, ValidCondition)
-	meta.SetStatusCondition(&cr.Status.Conditions, getDeploymentCondition(cr, podStatus, ValidCondition.Status != metav1.ConditionFalse, reconcileError))
-
-	if !reflect.DeepEqual(podStatus, cr.Status.PodStatus) {
-		reqLogger.V(1).Info("Pods status updated")
-		cr.Status.PodStatus = podStatus
-	} else {
-		// could leave this to kube, it will do a []byte comparison
-		reqLogger.V(1).Info("Pods status unchanged")
-	}
-}
-
-func updateScaleStatus(cr *brokerv1beta1.ActiveMQArtemis, namer Namers) {
-	labels := make([]string, 0, len(namer.LabelBuilder.Labels())+len(cr.Spec.DeploymentPlan.Labels))
-	for k, v := range namer.LabelBuilder.Labels() {
-		labels = append(labels, fmt.Sprintf("%s=%s", k, v))
-	}
-	for k, v := range cr.Spec.DeploymentPlan.Labels {
-		labels = append(labels, fmt.Sprintf("%s=%s", k, v))
-	}
-	sort.Strings(labels)
-	cr.Status.ScaleLabelSelector = strings.Join(labels[:], ",")
-}
-
-func updateVersionStatus(cr *brokerv1beta1.ActiveMQArtemis) {
-	cr.Status.Version.Image = resolveImage(cr, BrokerImageKey)
-	cr.Status.Version.InitImage = resolveImage(cr, InitImageKey)
-
-	if isLockedDown(cr.Spec.DeploymentPlan.Image) || isLockedDown(cr.Spec.DeploymentPlan.InitImage) {
-		cr.Status.Version.BrokerVersion = ""
-		cr.Status.Upgrade.SecurityUpdates = false
-		cr.Status.Upgrade.MajorUpdates = false
-		cr.Status.Upgrade.MinorUpdates = false
-		cr.Status.Upgrade.PatchUpdates = false
-
-	} else {
-		cr.Status.Version.BrokerVersion, _ = resolveBrokerVersion(cr)
-		cr.Status.Upgrade.SecurityUpdates = true
-
-		if cr.Spec.Version == "" {
-			cr.Status.Upgrade.MajorUpdates = true
-			cr.Status.Upgrade.MinorUpdates = true
-			cr.Status.Upgrade.PatchUpdates = true
-		} else {
-
-			cr.Status.Upgrade.MajorUpdates = false
-			cr.Status.Upgrade.MinorUpdates = false
-			cr.Status.Upgrade.PatchUpdates = false
-
-			// flip defaults based on specificity of Version
-			switch len(strings.Split(cr.Spec.Version, ".")) {
-			case 1:
-				cr.Status.Upgrade.MinorUpdates = true
-				fallthrough
-			case 2:
-				cr.Status.Upgrade.PatchUpdates = true
-			}
-		}
-	}
-
-}
-
-func getValidCondition(cr *brokerv1beta1.ActiveMQArtemis) metav1.Condition {
-	// add valid true if none exists
-	for _, c := range cr.Status.Conditions {
-		if c.Type == brokerv1beta1.ValidConditionType {
-			return c
-		}
-	}
-	return metav1.Condition{
-		Type:   brokerv1beta1.ValidConditionType,
-		Reason: brokerv1beta1.ValidConditionSuccessReason,
-		Status: metav1.ConditionTrue,
-	}
-}
-
-func getDeploymentCondition(cr *brokerv1beta1.ActiveMQArtemis, podStatus olm.DeploymentStatus, valid bool, reconcileError error) metav1.Condition {
-
-	if !valid {
-		return metav1.Condition{
-			Type:   brokerv1beta1.DeployedConditionType,
-			Status: metav1.ConditionFalse,
-			Reason: brokerv1beta1.DeployedConditionValidationFailedReason,
-		}
-	}
-
-	if reconcileError != nil {
-		return metav1.Condition{
-			Type:    brokerv1beta1.DeployedConditionType,
-			Status:  metav1.ConditionFalse,
-			Reason:  brokerv1beta1.DeployedConditionCrudKindErrorReason,
-			Message: reconcileError.Error(),
-		}
-	}
-
-	deploymentSize := getDeploymentSize(cr)
-	if deploymentSize == 0 {
-		return metav1.Condition{
-			Type:    brokerv1beta1.DeployedConditionType,
-			Status:  metav1.ConditionFalse,
-			Reason:  brokerv1beta1.DeployedConditionZeroSizeReason,
-			Message: common.DeployedConditionZeroSizeMessage,
-		}
-	}
-	if len(podStatus.Ready) != int(deploymentSize) {
-		return metav1.Condition{
-			Type:    brokerv1beta1.DeployedConditionType,
-			Status:  metav1.ConditionFalse,
-			Reason:  brokerv1beta1.DeployedConditionNotReadyReason,
-			Message: fmt.Sprintf("%d/%d pods ready", len(podStatus.Ready), deploymentSize),
-		}
-	}
-	return metav1.Condition{
-		Type:   brokerv1beta1.DeployedConditionType,
-		Reason: brokerv1beta1.DeployedConditionReadyReason,
-		Status: metav1.ConditionTrue,
-	}
-}
-
-func updatePodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namespacedName types.NamespacedName) olm.DeploymentStatus {
-
-	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
-	reqLogger.V(1).Info("Getting status for pods")
-
-	var status olm.DeploymentStatus
-	var lastStatus olm.DeploymentStatus
-
-	lastStatusExist := false
-	if lastStatus, lastStatusExist = lastStatusMap[namespacedName]; !lastStatusExist {
-		ctrl.Log.Info("Creating lastStatus for new CR", "name", namespacedName)
-		lastStatus = olm.DeploymentStatus{}
-		lastStatusMap[namespacedName] = lastStatus
-	}
-
-	ssNamespacedName := types.NamespacedName{Name: namer.CrToSS(namespacedName.Name), Namespace: namespacedName.Namespace}
-	sfsFound := &appsv1.StatefulSet{}
-	err := client.Get(context.TODO(), ssNamespacedName, sfsFound)
-	if err == nil {
-		status = getSingleStatefulSetStatus(sfsFound, cr)
-	}
-
-	// TODO: Remove global usage
-	reqLogger.V(1).Info("lastStatus.Ready len is " + fmt.Sprint(len(lastStatus.Ready)))
-	reqLogger.V(1).Info("status.Ready len is " + fmt.Sprint(len(status.Ready)))
-	if len(status.Ready) > len(lastStatus.Ready) {
-		// More pods ready, let the address controller know
-		for i := len(lastStatus.Ready); i < len(status.Ready); i++ {
-			reqLogger.V(1).Info("Notifying address controller", "new ready", i)
-			channels.AddressListeningCh <- types.NamespacedName{Namespace: namespacedName.Namespace, Name: status.Ready[i]}
-		}
-	}
-	lastStatusMap[namespacedName] = status
-
-	return status
-}
-
-func getSingleStatefulSetStatus(ss *appsv1.StatefulSet, cr *brokerv1beta1.ActiveMQArtemis) olm.DeploymentStatus {
-	var ready, starting, stopped []string
-	var requestedCount = int32(0)
-	if ss.Spec.Replicas != nil {
-		requestedCount = *ss.Spec.Replicas
-	}
-	cr.Status.DeploymentPlanSize = requestedCount
-
-	targetCount := ss.Status.Replicas
-	readyCount := ss.Status.ReadyReplicas
-
-	if requestedCount == 0 || targetCount == 0 {
-		stopped = append(stopped, ss.Name)
-	} else {
-		for i := int32(0); i < targetCount; i++ {
-			instanceName := fmt.Sprintf("%s-%d", ss.Name, i)
-			if i < readyCount {
-				ready = append(ready, instanceName)
-			} else {
-				starting = append(starting, instanceName)
-			}
-		}
-	}
-	return olm.DeploymentStatus{
-		Stopped:  stopped,
-		Starting: starting,
-		Ready:    ready,
-	}
-}
-
-func MakeEnvVarArrayForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers) []corev1.EnvVar {
+func MakeEnvVarArrayForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers) []corev1.EnvVar {
 
 	requireLogin := "false"
 	if customResource.Spec.DeploymentPlan.RequireLogin {
@@ -2787,7 +2473,7 @@ func AssertBrokersAvailable(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.C
 	// pre-condition, we must be deployed, avoid broker status roundtrip till ready
 	DeployedCondition := meta.FindStatusCondition(cr.Status.Conditions, brokerv1beta1.DeployedConditionType)
 	if DeployedCondition == nil || DeployedCondition.Status == metav1.ConditionFalse {
-		reqLogger.Info("There are no available brokers from DeployedCondition", "condition", DeployedCondition)
+		reqLogger.V(2).Info("There are no available brokers from DeployedCondition", "condition", DeployedCondition)
 		return NewUnknownJolokiaError(errors.New("no available brokers from deployed condition"))
 	}
 	return nil
@@ -2798,7 +2484,7 @@ func AssertBrokerPropertiesStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtcl
 
 	Projection, err := getConfigMappedBrokerProperties(cr, client)
 	if err != nil {
-		reqLogger.Info("error retrieving config resources. requeing")
+		reqLogger.V(2).Info("error retrieving config resources. requeing")
 		return NewUnknownJolokiaError(err)
 	}
 
@@ -2813,7 +2499,7 @@ func AssertJaasPropertiesStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclie
 
 	Projection, err := getConfigMappedJaasProperties(cr, client)
 	if err != nil {
-		reqLogger.Info("error retrieving config resources. requeing")
+		reqLogger.V(2).Info("error retrieving config resources. requeing")
 		return NewUnknownJolokiaError(err)
 	}
 
@@ -2842,7 +2528,7 @@ func checkStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, Proj
 	jks := jolokia_client.GetBrokers(resource, ssInfos, client)
 
 	if len(jks) == 0 {
-		reqLogger.Info("not found Jolokia Clients available. requeing")
+		reqLogger.V(1).Info("not found Jolokia Clients available. requeing")
 		return NewJolokiaClientsNotFoundError(errors.New("Waiting for Jolokia Clients to become available"))
 	}
 
@@ -2852,7 +2538,7 @@ func checkStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, Proj
 		currentJson, err := jk.Artemis.GetStatus()
 
 		if err != nil {
-			reqLogger.Info("unknown status reported from Jolokia.", "IP", jk.IP, "Ordinal", jk.Ordinal, "error", err)
+			reqLogger.V(2).Info("unknown status reported from Jolokia.", "IP", jk.IP, "Ordinal", jk.Ordinal, "error", err)
 			return NewUnknownJolokiaError(err)
 		}
 
@@ -2886,14 +2572,14 @@ func checkStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, Proj
 			if current.Alder32 == "" {
 				err = errors.Errorf("out of sync on pod %s-%s, property file %s has an empty checksum",
 					namer.CrToSS(cr.Name), jk.Ordinal, name)
-				reqLogger.Info(err.Error(), "status", brokerStatus, "tracked", Projection)
+				reqLogger.V(1).Info(err.Error(), "status", brokerStatus, "tracked", Projection)
 				return NewStatusOutOfSyncError(err)
 			}
 
 			if file.Alder32 != current.Alder32 {
 				err = errors.Errorf("out of sync on pod %s-%s, mismatched checksum on property file %s, expected: %s, current: %s. A delay can occur before a volume mount projection is refreshed.",
 					namer.CrToSS(cr.Name), jk.Ordinal, name, file.Alder32, current.Alder32)
-				reqLogger.Info(err.Error(), "status", brokerStatus, "tracked", Projection)
+				reqLogger.V(1).Info(err.Error(), "status", brokerStatus, "tracked", Projection)
 				return NewStatusOutOfSyncError(err)
 			}
 		}
@@ -2906,7 +2592,7 @@ func checkStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, Proj
 				err = errors.Errorf("out of sync on pod %s-%s, configuration property files are not visible on the broker: %v. A delay can occur before a volume mount projection is refreshed.",
 					namer.CrToSS(cr.Name), jk.Ordinal, missingKeys)
 			}
-			reqLogger.Info(err.Error(), "status", brokerStatus, "tracked", Projection)
+			reqLogger.V(1).Info(err.Error(), "status", brokerStatus, "tracked", Projection)
 			return NewStatusOutOfSyncMissingKeyError(err)
 		}
 
@@ -2922,7 +2608,7 @@ func checkStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, Proj
 			}
 		}
 		if applyError != nil {
-			reqLogger.Info("in sync with apply error", "error", applyError)
+			reqLogger.V(1).Info("in sync with apply error", "error", applyError)
 			return *applyError
 		}
 
@@ -2930,7 +2616,7 @@ func checkStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, Proj
 		Projection.Ordinals = append(Projection.Ordinals, jk.Ordinal)
 	}
 
-	reqLogger.Info("successfully synced with broker", "status", statusMessageFromProjection(Projection))
+	reqLogger.V(1).Info("successfully synced with broker", "status", statusMessageFromProjection(Projection))
 	return nil
 }
 
@@ -3042,11 +2728,4 @@ func unmarshallStatus(jsonStatus string) (brokerStatus, error) {
 func marshallApplyErrors(applyErrors []applyError) string {
 	val, _ := json.Marshal(applyErrors)
 	return string(val)
-}
-
-func getDeploymentSize(cr *brokerv1beta1.ActiveMQArtemis) int32 {
-	if cr.Spec.DeploymentPlan.Size == nil {
-		return DefaultDeploymentSize
-	}
-	return *cr.Spec.DeploymentPlan.Size
 }

@@ -23,6 +23,7 @@ import (
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/draincontroller"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,8 +33,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-var slog = ctrl.Log.WithName("controller_v1beta1activemqartemisscaledown")
 
 var StopCh chan struct{}
 
@@ -46,6 +45,16 @@ type ActiveMQArtemisScaledownReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 	Config *rest.Config
+	log    logr.Logger
+}
+
+func NewActiveMQArtemisScaledownReconciler(client client.Client, scheme *runtime.Scheme, config *rest.Config, logger logr.Logger) *ActiveMQArtemisScaledownReconciler {
+	return &ActiveMQArtemisScaledownReconciler{
+		Client: client,
+		Scheme: scheme,
+		Config: config,
+		log:    logger,
+	}
 }
 
 //+kubebuilder:rbac:groups=broker.amq.io,namespace=activemq-artemis-operator,resources=activemqartemisscaledowns,verbs=get;list;watch;create;update;patch;delete
@@ -62,7 +71,7 @@ type ActiveMQArtemisScaledownReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.10.0/pkg/reconcile
 func (r *ActiveMQArtemisScaledownReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	reqLogger := ctrl.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name, "Reconciling", "ActiveMQArtemisScaledown")
+	reqLogger := r.log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name, "Reconciling", "ActiveMQArtemisScaledown")
 
 	// Fetch the ActiveMQArtemisScaledown instance
 	instance := &brokerv1beta1.ActiveMQArtemisScaledown{}
@@ -78,7 +87,7 @@ func (r *ActiveMQArtemisScaledownReconciler) Reconcile(ctx context.Context, requ
 		return ctrl.Result{}, err
 	}
 
-	reqLogger.Info("scaling down", "localOnly:", instance.Spec.LocalOnly)
+	reqLogger.V(2).Info("scaling down", "localOnly:", instance.Spec.LocalOnly)
 
 	kubeClient, err = kubernetes.NewForConfig(r.Config)
 	if err != nil {
@@ -88,14 +97,14 @@ func (r *ActiveMQArtemisScaledownReconciler) Reconcile(ctx context.Context, requ
 	kubeInformerFactory, drainControllerInstance, isNewController := r.getDrainController(instance.Spec.LocalOnly, request.Namespace, kubeClient, instance)
 
 	if isNewController {
-		reqLogger.Info("Starting async factory...")
+		reqLogger.V(2).Info("Starting async factory...")
 		go kubeInformerFactory.Start(*drainControllerInstance.GetStopCh())
 
-		reqLogger.Info("Running drain controller async so multiple controllers can run...")
-		go runDrainController(drainControllerInstance)
+		reqLogger.V(2).Info("Running drain controller async so multiple controllers can run...")
+		go r.runDrainController(drainControllerInstance)
 	}
 
-	reqLogger.Info("OK, return result")
+	reqLogger.V(1).Info("OK, return result")
 	return ctrl.Result{}, nil
 }
 
@@ -107,47 +116,43 @@ func (r *ActiveMQArtemisScaledownReconciler) getDrainController(localOnly bool, 
 		if namespace == "" {
 			bytes, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
 			if err != nil {
-				slog.Error(err, "Using --localOnly without --namespace, but unable to determine namespace")
+				r.log.Error(err, "Using --localOnly without --namespace, but unable to determine namespace")
 			}
 			namespace = string(bytes)
-			slog.Info("reading ns from file", "namespace", namespace)
+			r.log.V(2).Info("reading ns from file", "namespace", namespace)
 		}
 		controllerKey = namespace
 	}
 	if inst, ok := controllers[controllerKey]; ok {
-		slog.Info("Drain controller already exists", "namespace", namespace)
+		r.log.V(2).Info("Drain controller already exists", "namespace", namespace)
 		inst.AddInstance(instance)
 		return nil, nil, false
 	}
 
 	if localOnly {
 		// localOnly means there is only one target namespace and it is the same as operator's
-		slog.Info("getting localOnly informer factory", "namespace", controllerKey)
-		slog.Info("Configured to only operate on StatefulSets in namespace " + namespace)
+		r.log.V(2).Info("getting localOnly informer factory", "namespace", controllerKey)
+		r.log.V(2).Info("Configured to only operate on StatefulSets", "namespace", namespace)
 		kubeInformerFactory = kubeinformers.NewFilteredSharedInformerFactory(kubeClient, time.Second*30, namespace, nil)
 	} else {
-		slog.Info("getting global informer factory")
-		slog.Info("Creating informer factory to operate on StatefulSets across all namespaces")
+		r.log.V(2).Info("Creating informer factory to operate on StatefulSets across all namespaces")
 		kubeInformerFactory = kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
 	}
 
-	slog.Info("new drain controller...", "labels", instance.Labels)
-	controllerInstance = draincontroller.NewController(controllerKey, kubeClient, kubeInformerFactory, namespace, r.Client, instance)
+	r.log.V(2).Info("new drain controller...", "labels", instance.Labels)
+	controllerInstance = draincontroller.NewController(controllerKey, kubeClient, kubeInformerFactory, namespace, r.Client, instance, r.log)
 	controllers[controllerKey] = controllerInstance
 
-	slog.Info("Adding scaledown instance to controller", "controller", controllerInstance, "scaledown", instance)
+	r.log.V(2).Info("Adding scaledown instance to controller", "controller", controllerInstance, "scaledown", instance)
 	controllerInstance.AddInstance(instance)
 
 	return kubeInformerFactory, controllerInstance, true
 }
 
-func runDrainController(controller *draincontroller.Controller) {
+func (r *ActiveMQArtemisScaledownReconciler) runDrainController(controller *draincontroller.Controller) {
 	if err := controller.Run(1); err != nil {
-		slog.Error(err, "Error running controller")
+		r.log.Error(err, "Error running controller")
 	}
-}
-
-func ReleaseController(brokerCRName string) {
 }
 
 // SetupWithManager sets up the controller with the Manager.

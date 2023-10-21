@@ -47,7 +47,7 @@ type JkInfo struct {
 // ssInfos: target statefulsets to look for pods in
 // client: the client to access the api server
 func GetBrokers(resource types.NamespacedName, ssInfos []ss.StatefulSetInfo, client rtclient.Client) []*JkInfo {
-	reqLogger := ctrl.Log.WithValues("Request.Namespace", resource.Namespace, "Request.Name", resource.Name)
+	reqLogger := ctrl.Log.WithName("jolokia").WithValues("Request.Namespace", resource.Namespace, "Request.Name", resource.Name)
 
 	var artemisArray []*JkInfo = nil
 
@@ -56,13 +56,13 @@ func GetBrokers(resource types.NamespacedName, ssInfos []ss.StatefulSetInfo, cli
 		artemisArray = append(artemisArray, jkInfos...)
 	}
 
-	reqLogger.Info("Gathered some mgmt array", "size", len(artemisArray))
+	reqLogger.V(1).Info("Gathered some mgmt array", "size", len(artemisArray))
 	return artemisArray
 }
 
 // Get brokers Using DNS names in the namespace
 func GetBrokersFromDNS(crName string, namespace string, size int32, client rtclient.Client) []*JkInfo {
-	reqLogger := ctrl.Log.WithValues("Request.Namespace", namespace, "Request.Name", crName)
+	reqLogger := ctrl.Log.WithName("jolokia").WithValues("Request.Namespace", namespace, "Request.Name", crName)
 
 	var artemisArray []*JkInfo = nil
 	var i int32 = 0
@@ -83,7 +83,7 @@ func GetBrokersFromDNS(crName string, namespace string, size int32, client rtcli
 		if err := client.Get(context.TODO(), podNamespacedName, pod); err != nil {
 			if errors.IsNotFound(err) {
 				// The IsNotFound err could point to unrelated pods.
-				reqLogger.Info("Pod IsNotFound", "Namespace", podNamespacedName.Namespace, "Name", podNamespacedName.Name)
+				reqLogger.V(1).Info("Pod IsNotFound", "Namespace", podNamespacedName.Namespace, "Name", podNamespacedName.Name)
 			} else {
 				reqLogger.Error(err, "Pod lookup error", "Namespace", namespace, "Name", pod.Name)
 			}
@@ -192,7 +192,7 @@ func getEnvVarValueFromSecret(envName string, varSource *corev1.EnvVarSource, na
 	var err error = nil
 	if err = resources.Retrieve(namespacedName, client, theSecret); err != nil {
 		if errors.IsNotFound(err) {
-			reqLogger.Info("Secret IsNotFound.", "Secret Name", secretName, "Key", secretKey)
+			reqLogger.V(1).Info("Secret IsNotFound.", "Secret Name", secretName, "Key", secretKey)
 		}
 	} else {
 		elem, ok := theSecret.Data[envName]

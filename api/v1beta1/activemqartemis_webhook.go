@@ -60,7 +60,7 @@ func (r *ActiveMQArtemis) ValidateCreate() error {
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *ActiveMQArtemis) ValidateUpdate(old runtime.Object) error {
-	activemqartemislog.Info("validate update", "name", r.Name)
+	activemqartemislog.V(1).Info("validate update", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object update.
 	return nil
@@ -68,7 +68,7 @@ func (r *ActiveMQArtemis) ValidateUpdate(old runtime.Object) error {
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *ActiveMQArtemis) ValidateDelete() error {
-	activemqartemislog.Info("validate delete", "name", r.Name)
+	activemqartemislog.V(1).Info("validate delete", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil

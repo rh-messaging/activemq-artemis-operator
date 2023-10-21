@@ -715,7 +715,7 @@ var _ = Describe("security controller", func() {
 					Name:      crd.Name,
 					Namespace: defaultNamespace,
 				},
-				owner: nil,
+				owner: NewActiveMQArtemisSecurityReconciler(k8sClient, nil, nil, ctrl.Log),
 			}
 
 			By("Default security applies to all in the same namespace but none in others")

@@ -2,7 +2,6 @@ apiVersion: broker.amq.io/v1beta1
 kind: ActiveMQArtemis
 metadata:
   name: ex-aao
-  application: ex-aao-app
 spec:
   deploymentPlan:
     size: 1

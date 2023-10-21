@@ -19,7 +19,11 @@ As usual, we start with the necessary imports. We also define some utility varia
 package controllers
 
 import (
+	"bytes"
 	"os"
+	"strings"
+
+	"bufio"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
@@ -130,8 +134,29 @@ var _ = Describe("artemis controller", Label("do"), func() {
 				By("check no INFO/DEBUG in the log")
 				oprLog, err := GetOperatorLog(defaultNamespace)
 				Expect(err).To(BeNil())
-				Expect(*oprLog).NotTo(ContainSubstring("INFO"))
 				Expect(*oprLog).NotTo(ContainSubstring("DEBUG"))
+				// every info line should have setup logger name
+				buffer := bytes.NewBufferString(*oprLog)
+				scanner := bufio.NewScanner(buffer)
+				for scanner.Scan() {
+					line := scanner.Text()
+					if strings.Contains(line, "INFO") {
+						words := strings.Fields(line)
+						index := 0
+						foundSetupLogger := false
+						for index < len(words) {
+							if words[index] == "setup" {
+								foundSetupLogger = true
+								break
+							}
+							index++
+						}
+						Expect(foundSetupLogger).To(BeTrue())
+						Expect(words[index-1]).To(Equal("INFO"))
+					}
+				}
+
+				Expect(scanner.Err()).To(BeNil())
 
 				//clean up all resources
 				Expect(k8sClient.Delete(ctx, createdCr)).Should(Succeed())

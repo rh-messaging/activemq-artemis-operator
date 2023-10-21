@@ -3,8 +3,6 @@ package namer_test
 import (
 	"testing"
 
-	"fmt"
-
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -15,14 +13,6 @@ func TestConfigUtils(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Namer Utils Suite")
 }
-
-var _ = BeforeSuite(func() {
-	fmt.Println("=======Before Config Suite========")
-})
-
-var _ = AfterSuite(func() {
-	fmt.Println("=======After Config Suite========")
-})
 
 var _ = Describe("Namer Util Test", func() {
 	Context("TestMatchPodNameAndStatefulSetName: match", func() {

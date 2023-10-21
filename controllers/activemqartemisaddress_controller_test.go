@@ -240,7 +240,7 @@ var _ = Describe("Address controller tests", func() {
 				}
 				restClient, err := apiutil.RESTClientForGVK(gvk, false, restConfig, serializer.NewCodecFactory(scheme.Scheme))
 				Expect(err).To(BeNil())
-				deploymentSize := getDeploymentSize(&brokerCrd)
+				deploymentSize := common.GetDeploymentSize(&brokerCrd)
 				for ipod := deploymentSize - 1; ipod >= 0; ipod-- {
 					podOrdinal := strconv.FormatInt(int64(ipod), 10)
 					podName := namer.CrToSS(brokerCrd.Name) + "-" + podOrdinal
@@ -280,7 +280,7 @@ var _ = Describe("Address controller tests", func() {
 						By("Checking for output on " + podName)
 						g.Expect(capturedOut.Len() > 0)
 						content := capturedOut.String()
-						deploymentSize := getDeploymentSize(&brokerCrd)
+						deploymentSize := common.GetDeploymentSize(&brokerCrd)
 						for ipod := deploymentSize - 1; ipod >= 0; ipod-- {
 							queueName := fmt.Sprintf("myQueue%d", ipod)
 							By("finding Q " + queueName)
@@ -564,7 +564,7 @@ var _ = Describe("Address controller tests", func() {
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("Verfying address is present")
-				deploymentSize := getDeploymentSize(&crd)
+				deploymentSize := common.GetDeploymentSize(&crd)
 				for i := int32(0); i < deploymentSize; i++ {
 					Eventually(func(g Gomega) {
 						pod := &corev1.Pod{}

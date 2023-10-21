@@ -38,14 +38,13 @@ import (
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
+	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 )
-
-var clog = ctrl.Log.WithName("controller_v1beta1activemqartemis")
 
 var namespaceToConfigHandler = make(map[types.NamespacedName]common.ActiveMQArtemisConfigHandler)
 
@@ -69,7 +68,7 @@ func (r *ActiveMQArtemisReconciler) UpdatePodForSecurity(securityHandlerNamespac
 			candidate.Name = artemis.Name
 			candidate.Namespace = artemis.Namespace
 			if handler.IsApplicableFor(candidate) {
-				clog.V(1).Info("force reconcile for security", "handler", securityHandlerNamespacedName, "CR", candidate)
+				r.log.V(1).Info("force reconcile for security", "handler", securityHandlerNamespacedName, "CR", candidate)
 				r.events <- event.GenericEvent{Object: &existingCrs.Items[index]}
 			}
 		}
@@ -78,23 +77,23 @@ func (r *ActiveMQArtemisReconciler) UpdatePodForSecurity(securityHandlerNamespac
 }
 
 func (r *ActiveMQArtemisReconciler) RemoveBrokerConfigHandler(namespacedName types.NamespacedName) {
-	clog.V(1).Info("Removing config handler", "name", namespacedName)
+	r.log.V(2).Info("Removing config handler", "name", namespacedName)
 	oldHandler, ok := namespaceToConfigHandler[namespacedName]
 	if ok {
 		delete(namespaceToConfigHandler, namespacedName)
-		clog.V(2).Info("Handler removed", "name", namespacedName)
+		r.log.V(1).Info("Handler removed", "name", namespacedName)
 		r.UpdatePodForSecurity(namespacedName, oldHandler)
 	}
 }
 
 func (r *ActiveMQArtemisReconciler) AddBrokerConfigHandler(namespacedName types.NamespacedName, handler common.ActiveMQArtemisConfigHandler, toReconcile bool) error {
 	if _, ok := namespaceToConfigHandler[namespacedName]; ok {
-		clog.V(2).Info("There is an old config handler, it'll be replaced")
+		r.log.V(2).Info("There is an old config handler, it'll be replaced")
 	}
 	namespaceToConfigHandler[namespacedName] = handler
-	clog.V(2).Info("A new config handler has been added for security " + namespacedName.Namespace + "/" + namespacedName.Name)
+	r.log.V(2).Info("A new config handler has been added for security " + namespacedName.Namespace + "/" + namespacedName.Name)
 	if toReconcile {
-		clog.V(1).Info("Updating broker security")
+		r.log.V(1).Info("Updating broker security")
 		return r.UpdatePodForSecurity(namespacedName, handler)
 	}
 	return nil
@@ -105,6 +104,15 @@ type ActiveMQArtemisReconciler struct {
 	rtclient.Client
 	Scheme *runtime.Scheme
 	events chan event.GenericEvent
+	log    logr.Logger
+}
+
+func NewActiveMQArtemisReconciler(client rtclient.Client, scheme *runtime.Scheme, logger logr.Logger) *ActiveMQArtemisReconciler {
+	return &ActiveMQArtemisReconciler{
+		Client: client,
+		Scheme: scheme,
+		log:    logger,
+	}
 }
 
 //run 'make manifests' after changing the following rbac markers
@@ -133,7 +141,7 @@ type ActiveMQArtemisReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.10.0/pkg/reconcile
 func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	reqLogger := ctrl.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name, "Reconciling", "ActiveMQArtemis")
+	reqLogger := r.log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name, "Reconciling", "ActiveMQArtemis")
 
 	customResource := &brokerv1beta1.ActiveMQArtemis{}
 
@@ -150,7 +158,7 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 	}
 
 	namer := MakeNamers(customResource)
-	reconciler := ActiveMQArtemisReconcilerImpl{}
+	reconciler := NewActiveMQArtemisReconcilerImpl(r.log)
 
 	var requeueRequest bool = false
 	var valid bool = false
@@ -163,15 +171,15 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 		}
 	}
 
-	ProcessStatus(customResource, r.Client, request.NamespacedName, *namer, err)
+	common.ProcessStatus(customResource, r.Client, request.NamespacedName, *namer, err)
 
-	crStatusUpdateErr := UpdateCRStatus(customResource, r.Client, request.NamespacedName)
+	crStatusUpdateErr := r.UpdateCRStatus(customResource, r.Client, request.NamespacedName)
 	if crStatusUpdateErr != nil {
 		requeueRequest = true
 	}
 
 	if !requeueRequest {
-		reqLogger.Info("resource successfully reconciled")
+		reqLogger.V(1).Info("resource successfully reconciled")
 		if hasExtraMounts(customResource) {
 			reqLogger.V(1).Info("resource has extraMounts, requeuing")
 			requeueRequest = true
@@ -186,7 +194,7 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 	return result, err
 }
 
-func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, namer Namers) (bool, retry bool) {
+func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, namer common.Namers) (bool, retry bool) {
 	// Do additional validation here
 	validationCondition := metav1.Condition{
 		Type:   brokerv1beta1.ValidConditionType,
@@ -221,7 +229,7 @@ func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Cli
 	}
 
 	if validationCondition.Status == metav1.ConditionTrue {
-		condition := validateBrokerVersion(customResource)
+		condition := common.ValidateBrokerVersion(customResource)
 		if condition != nil {
 			validationCondition = *condition
 		}
@@ -233,7 +241,7 @@ func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Cli
 	return validationCondition.Status != metav1.ConditionFalse, retry
 }
 
-func validateAcceptorPorts(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, namer Namers) (*metav1.Condition, bool) {
+func validateAcceptorPorts(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, namer common.Namers) (*metav1.Condition, bool) {
 	portMap := map[int32]string{}
 
 	for _, acceptor := range customResource.Spec.Acceptors {
@@ -252,7 +260,7 @@ func validateAcceptorPorts(customResource *brokerv1beta1.ActiveMQArtemis, client
 	return nil, false
 }
 
-func validateSSLEnabledSecrets(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, namer Namers) (*metav1.Condition, bool) {
+func validateSSLEnabledSecrets(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, namer common.Namers) (*metav1.Condition, bool) {
 
 	var retry = true
 	if customResource.Spec.Console.SSLEnabled {
@@ -309,41 +317,6 @@ func validatePodDisruption(customResource *brokerv1beta1.ActiveMQArtemis) *metav
 		}
 	}
 	return nil
-}
-
-func validateBrokerVersion(customResource *brokerv1beta1.ActiveMQArtemis) *metav1.Condition {
-
-	var result *metav1.Condition = nil
-	if customResource.Spec.Version != "" {
-		if isLockedDown(customResource.Spec.DeploymentPlan.Image) || isLockedDown(customResource.Spec.DeploymentPlan.InitImage) {
-			result = &metav1.Condition{
-				Type:    brokerv1beta1.ValidConditionType,
-				Status:  metav1.ConditionUnknown,
-				Reason:  brokerv1beta1.ValidConditionUnknownReason,
-				Message: common.ImageVersionConflictMessage,
-			}
-		}
-
-		_, err := resolveBrokerVersion(customResource)
-		if err != nil {
-			result = &metav1.Condition{
-				Type:    brokerv1beta1.ValidConditionType,
-				Status:  metav1.ConditionFalse,
-				Reason:  brokerv1beta1.ValidConditionInvalidVersionReason,
-				Message: fmt.Sprintf(".Spec.Version does not resolve to a supported broker version, reason %v", err),
-			}
-		}
-
-	} else if (isLockedDown(customResource.Spec.DeploymentPlan.Image) && !isLockedDown(customResource.Spec.DeploymentPlan.InitImage)) || (isLockedDown(customResource.Spec.DeploymentPlan.InitImage) && !isLockedDown(customResource.Spec.DeploymentPlan.Image)) {
-		result = &metav1.Condition{
-			Type:    brokerv1beta1.ValidConditionType,
-			Status:  metav1.ConditionUnknown,
-			Reason:  brokerv1beta1.ValidConditionUnknownReason,
-			Message: common.ImageDependentPairMessage,
-		}
-	}
-
-	return result
 }
 
 func validateExtraMounts(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme) (*metav1.Condition, bool) {
@@ -512,21 +485,8 @@ func hasExtraMounts(cr *brokerv1beta1.ActiveMQArtemis) bool {
 	return len(cr.Spec.DeploymentPlan.ExtraMounts.Secrets) > 0
 }
 
-type Namers struct {
-	SsGlobalName                  string
-	SsNameBuilder                 namer.NamerData
-	SvcHeadlessNameBuilder        namer.NamerData
-	SvcPingNameBuilder            namer.NamerData
-	PodsNameBuilder               namer.NamerData
-	SecretsCredentialsNameBuilder namer.NamerData
-	SecretsConsoleNameBuilder     namer.NamerData
-	SecretsNettyNameBuilder       namer.NamerData
-	LabelBuilder                  selectors.LabelerData
-	GLOBAL_DATA_PATH              string
-}
-
-func MakeNamers(customResource *brokerv1beta1.ActiveMQArtemis) *Namers {
-	newNamers := Namers{
+func MakeNamers(customResource *brokerv1beta1.ActiveMQArtemis) *common.Namers {
+	newNamers := common.Namers{
 		SsGlobalName:                  "",
 		SsNameBuilder:                 namer.NamerData{},
 		SvcHeadlessNameBuilder:        namer.NamerData{},
@@ -587,7 +547,7 @@ func (r *ActiveMQArtemisReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return err
 }
 
-func UpdateCRStatus(desired *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namespacedName types.NamespacedName) error {
+func (r *ActiveMQArtemisReconciler) UpdateCRStatus(desired *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namespacedName types.NamespacedName) error {
 
 	common.SetReadyCondition(&desired.Status.Conditions)
 
@@ -595,12 +555,12 @@ func UpdateCRStatus(desired *brokerv1beta1.ActiveMQArtemis, client rtclient.Clie
 
 	err := client.Get(context.TODO(), namespacedName, current)
 	if err != nil {
-		clog.V(1).Error(err, "unable to retrieve current resource", "ActiveMQArtemis", namespacedName)
+		r.log.Error(err, "unable to retrieve current resource", "ActiveMQArtemis", namespacedName)
 		return err
 	}
 
 	if !EqualCRStatus(&desired.Status, &current.Status) {
-		clog.Info("CR.status update", "Namespace", desired.Namespace, "Name", desired.Name, "Observed status", desired.Status)
+		r.log.V(2).Info("CR.status update", "Namespace", desired.Namespace, "Name", desired.Name, "Observed status", desired.Status)
 		return resources.UpdateStatus(client, desired)
 	}
 

@@ -24,10 +24,12 @@ import (
 	mgmt "github.com/artemiscloud/activemq-artemis-operator/pkg/utils/artemis"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/channels"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/jolokia"
 	jc "github.com/artemiscloud/activemq-artemis-operator/pkg/utils/jolokia_client"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/lsrcrs"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -35,11 +37,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
-
-var glog = ctrl.Log.WithName("controller_v1beta1activemqartemisaddress")
 
 type AddressDeployment struct {
 	AddressResource brokerv1beta1.ActiveMQArtemisAddress
@@ -53,6 +52,15 @@ var namespacedNameToAddressName = make(map[types.NamespacedName]AddressDeploymen
 type ActiveMQArtemisAddressReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	log    logr.Logger
+}
+
+func NewActiveMQArtemisAddressReconciler(client client.Client, scheme *runtime.Scheme, logger logr.Logger) *ActiveMQArtemisAddressReconciler {
+	return &ActiveMQArtemisAddressReconciler{
+		Client: client,
+		Scheme: scheme,
+		log:    logger,
+	}
 }
 
 //+kubebuilder:rbac:groups=broker.amq.io,namespace=activemq-artemis-operator,resources=activemqartemisaddresses,verbs=get;list;watch;create;update;patch;delete
@@ -69,7 +77,7 @@ type ActiveMQArtemisAddressReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.10.0/pkg/reconcile
 func (r *ActiveMQArtemisAddressReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	reqLogger := log.FromContext(ctx).WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name, "Reconciling", "ActiveMQArtemisAddress")
+	reqLogger := r.log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 
 	addressInstance, lookupSucceeded := namespacedNameToAddressName[request.NamespacedName]
 	// Fetch the ActiveMQArtemisAddress instance
@@ -80,13 +88,14 @@ func (r *ActiveMQArtemisAddressReconciler) Reconcile(ctx context.Context, reques
 			// Delete action
 			if lookupSucceeded {
 				if addressInstance.AddressResource.Spec.RemoveFromBrokerOnDelete {
-					err = deleteQueue(&addressInstance, request, r.Client, r.Scheme)
+					err = r.deleteQueue(&addressInstance, request, r.Client, r.Scheme)
 					return ctrl.Result{}, err
 				} else {
-					reqLogger.Info("Not to delete address " + instance.Namespace + "/" + instance.Name)
+					reqLogger.V(1).Info("Not to delete address as RemoveFromBrokerOnDelete is false")
 				}
 				delete(namespacedNameToAddressName, request.NamespacedName)
 				lsrcrs.DeleteLastSuccessfulReconciledCR(request.NamespacedName, "address", getAddressLabels(&addressInstance.AddressResource), r.Client)
+				reqLogger.V(1).Info("Address resource deleted")
 			}
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
@@ -99,7 +108,7 @@ func (r *ActiveMQArtemisAddressReconciler) Reconcile(ctx context.Context, reques
 
 	addressDeployment := AddressDeployment{
 		AddressResource:      *instance,
-		SsTargetNameBuilders: createNameBuilders(instance),
+		SsTargetNameBuilders: r.createNameBuilders(instance),
 	}
 
 	if !lookupSucceeded {
@@ -115,7 +124,7 @@ func (r *ActiveMQArtemisAddressReconciler) Reconcile(ctx context.Context, reques
 		}
 	}
 
-	err = createQueue(&addressDeployment, request, r.Client, r.Scheme)
+	err = r.createQueue(&addressDeployment, request, r.Client, r.Scheme)
 	if nil == err {
 		namespacedNameToAddressName[request.NamespacedName] = addressDeployment
 		crstr, merr := common.ToJson(instance)
@@ -129,6 +138,7 @@ func (r *ActiveMQArtemisAddressReconciler) Reconcile(ctx context.Context, reques
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+
 	return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
 }
 
@@ -155,25 +165,25 @@ func createStatefulSetNameBuilder(crName string) SSInfoData {
 	}
 }
 
-func createNameBuilders(instance *brokerv1beta1.ActiveMQArtemisAddress) []SSInfoData {
+func (r *ActiveMQArtemisAddressReconciler) createNameBuilders(instance *brokerv1beta1.ActiveMQArtemisAddress) []SSInfoData {
 	var nameBuilders []SSInfoData = nil
 	for _, crName := range instance.Spec.ApplyToCrNames {
 		if crName != "*" {
 			builder := createStatefulSetNameBuilder(crName)
-			glog.Info("created a new name builder", "builder", builder, "buldername", builder.NameBuilder.Name())
+			r.log.V(2).Info("created a new name builder", "builder", builder, "buldername", builder.NameBuilder.Name())
 			nameBuilders = append(nameBuilders, builder)
-			glog.Info("added one builder for "+crName, "builders", nameBuilders, "len", len(nameBuilders))
+			r.log.V(2).Info("added one builder for "+crName, "builders", nameBuilders, "len", len(nameBuilders))
 		} else {
 			return nil
 		}
 	}
-	glog.Info("Created ss name builders for address "+instance.Namespace+"/"+instance.Name, "builders", nameBuilders)
+	r.log.V(1).Info("Created ss name builders for address "+instance.Namespace+"/"+instance.Name, "builders", nameBuilders)
 	return nameBuilders
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ActiveMQArtemisAddressReconciler) SetupWithManager(mgr ctrl.Manager, ctx context.Context) error {
-	go setupAddressObserver(mgr, channels.AddressListeningCh, ctx)
+	go r.setupAddressObserver(mgr, channels.AddressListeningCh, ctx)
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&brokerv1beta1.ActiveMQArtemisAddress{}).
 		Owns(&corev1.Pod{}).
@@ -181,56 +191,55 @@ func (r *ActiveMQArtemisAddressReconciler) SetupWithManager(mgr ctrl.Manager, ct
 }
 
 // This method deals with creating queues and addresses.
-func createQueue(instance *AddressDeployment, request ctrl.Request, client client.Client, scheme *runtime.Scheme) error {
+func (r *ActiveMQArtemisAddressReconciler) createQueue(instance *AddressDeployment, request ctrl.Request, client client.Client, scheme *runtime.Scheme) error {
 
-	reqLogger := ctrl.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Creating ActiveMQArtemisAddress")
+	r.log.V(1).Info("Creating ActiveMQArtemisAddress")
 
 	var err error = nil
-	artemisArray := getPodBrokers(instance, request, client, scheme)
+	artemisArray := r.getPodBrokers(instance, request, client, scheme)
 	if nil != artemisArray {
 		for _, a := range artemisArray {
 			if nil == a {
-				reqLogger.Info("Creating ActiveMQArtemisAddress artemisArray had a nil!")
+				r.log.V(1).Info("Creating ActiveMQArtemisAddress artemisArray had a nil!")
 				continue
 			}
-			err = createAddressResource(a, &instance.AddressResource)
+			err = createAddressResource(a, &instance.AddressResource, r.log)
 			if err != nil {
-				reqLogger.V(1).Info("Failed to create address resource", "failed broker", a)
+				r.log.V(1).Info("Failed to create address resource", "failed broker", a)
 				continue
 			}
 		}
 	}
 
 	if err == nil {
-		reqLogger.V(1).Info("Successfully created resources on all brokers", "size", len(artemisArray))
+		r.log.V(1).Info("Successfully created resources on all brokers", "size", len(artemisArray))
 	}
 
 	return err
 }
 
-func createAddressResource(a *jc.JkInfo, addressRes *brokerv1beta1.ActiveMQArtemisAddress) error {
+func createAddressResource(a *jc.JkInfo, addressRes *brokerv1beta1.ActiveMQArtemisAddress, log logr.Logger) error {
 	//Now checking if create queue or address
 	if addressRes.Spec.QueueName == nil || *addressRes.Spec.QueueName == "" {
 		//create address
 		response, err := a.Artemis.CreateAddress(addressRes.Spec.AddressName, *addressRes.Spec.RoutingType)
 		if nil != err {
 			if mgmt.GetCreationError(response) == mgmt.ADDRESS_ALREADY_EXISTS {
-				glog.Info("Address already exists, no retry", "address", addressRes.Spec.AddressName)
+				log.V(1).Info("Address already exists, no retry", "address", addressRes.Spec.AddressName)
 				return nil
 			} else {
-				glog.Error(err, "Error creating ActiveMQArtemisAddress", "address", addressRes.Spec.AddressName)
+				log.Error(err, "Error creating ActiveMQArtemisAddress", "address", addressRes.Spec.AddressName)
 				return err
 			}
 		} else {
-			glog.Info("Created ActiveMQArtemisAddress for address " + addressRes.Spec.AddressName)
+			log.V(1).Info("Created ActiveMQArtemisAddress for address " + addressRes.Spec.AddressName)
 		}
 	} else {
-		glog.Info("Queue name is not empty so create queue", "name", *addressRes.Spec.QueueName, "broker", a.IP)
+		log.V(1).Info("Queue name is not empty so create queue", "name", *addressRes.Spec.QueueName, "broker", a.IP)
 		//first make sure address exists
 		response, err := a.Artemis.CreateAddress(addressRes.Spec.AddressName, *addressRes.Spec.RoutingType)
 		if nil != err && mgmt.GetCreationError(response) != mgmt.ADDRESS_ALREADY_EXISTS {
-			glog.Error(err, "Error creating ActiveMQArtemisAddress", "address", addressRes.Spec.AddressName)
+			log.Error(err, "Error creating ActiveMQArtemisAddress", "address", addressRes.Spec.AddressName)
 			return err
 		}
 
@@ -251,26 +260,25 @@ func createAddressResource(a *jc.JkInfo, addressRes *brokerv1beta1.ActiveMQArtem
 		//create queue using queueconfig
 		queueCfg, ignoreIfExists, err := GetQueueConfig(addressRes)
 		if err != nil {
-			glog.Error(err, "Failed to get queue config json string")
+			log.Error(err, "Failed to get queue config json string")
 			//here we return nil as no point to requeue reconcile again
 			return nil
 		}
 		respData, err := a.Artemis.CreateQueueFromConfig(queueCfg, ignoreIfExists)
 		if nil != err {
 			if mgmt.GetCreationError(respData) == mgmt.QUEUE_ALREADY_EXISTS {
-				glog.Info("The queue already exists, updating", "queue", queueCfg)
+				log.V(2).Info("The queue already exists, updating", "queue", queueCfg)
 				respData, err := a.Artemis.UpdateQueue(queueCfg)
 				if err != nil {
-					glog.Error(err, "Failed to update queue", "details", respData)
+					log.Error(err, "Failed to update queue", "details", respData)
 				}
 				return err
 			}
-			glog.Error(err, "Creating ActiveMQArtemisAddress error for "+*addressRes.Spec.QueueName)
+			log.Error(err, "Creating ActiveMQArtemisAddress error for "+*addressRes.Spec.QueueName)
 			return err
 		} else {
-			glog.Info("Created ActiveMQArtemisAddress for " + *addressRes.Spec.QueueName)
+			log.V(1).Info("Created ActiveMQArtemisAddress for " + *addressRes.Spec.QueueName)
 		}
-
 	}
 	return nil
 }
@@ -278,6 +286,15 @@ func createAddressResource(a *jc.JkInfo, addressRes *brokerv1beta1.ActiveMQArtem
 type AddressRetry struct {
 	address string
 	artemis []*mgmt.Artemis
+	log     logr.Logger
+}
+
+func NewAddressRetry(addr string, a []*mgmt.Artemis, logger logr.Logger) *AddressRetry {
+	return &AddressRetry{
+		address: addr,
+		artemis: a,
+		log:     logger,
+	}
 }
 
 func (ar *AddressRetry) addToDelete(a *mgmt.Artemis) {
@@ -286,25 +303,25 @@ func (ar *AddressRetry) addToDelete(a *mgmt.Artemis) {
 
 func (ar *AddressRetry) safeDelete() {
 	for _, a := range ar.artemis {
-		glog.Info("Checking parent address for bindings " + ar.address)
+		ar.log.V(2).Info("Checking parent address for bindings " + ar.address)
 		bindingsData, err := a.ListBindingsForAddress(ar.address)
 		if nil == err {
 			if bindingsData.Value == "" {
-				glog.Info("No bindings found, removing " + ar.address)
+				ar.log.V(2).Info("No bindings found, removing " + ar.address)
 				a.DeleteAddress(ar.address)
 			} else {
-				glog.Info("Bindings found, not removing", "address", ar.address, "bindings", bindingsData.Value)
+				ar.log.V(2).Info("Bindings found, not removing", "address", ar.address, "bindings", bindingsData.Value)
 			}
 		} else {
-			glog.Error(err, "failed to list bindings", "address", ar.address)
+			ar.log.Error(err, "failed to list bindings", "address", ar.address)
 		}
 	}
 }
 
 // This method deals with deleting queues and addresses.
-func deleteQueue(instance *AddressDeployment, request ctrl.Request, client client.Client, scheme *runtime.Scheme) error {
+func (r *ActiveMQArtemisAddressReconciler) deleteQueue(instance *AddressDeployment, request ctrl.Request, client client.Client, scheme *runtime.Scheme) error {
 
-	reqLogger := ctrl.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	reqLogger := r.log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 
 	addressName := instance.AddressResource.Spec.AddressName
 
@@ -313,15 +330,12 @@ func deleteQueue(instance *AddressDeployment, request ctrl.Request, client clien
 		queueName = *instance.AddressResource.Spec.QueueName
 	}
 
-	reqLogger.Info("Deleting ActiveMQArtemisAddress for queue " + addressName + "/" + queueName)
+	reqLogger.V(1).Info("Deleting ActiveMQArtemisAddress for queue " + addressName + "/" + queueName)
 
 	var err error = nil
-	artemisArray := getPodBrokers(instance, request, client, scheme)
+	artemisArray := r.getPodBrokers(instance, request, client, scheme)
 	if nil != artemisArray {
-		addressRetry := &AddressRetry{
-			address: addressName,
-			artemis: make([]*mgmt.Artemis, 0),
-		}
+		addressRetry := NewAddressRetry(addressName, make([]*mgmt.Artemis, 0), r.log.WithName("retry"))
 		for _, a := range artemisArray {
 			if queueName == "" {
 				//delete address
@@ -330,12 +344,19 @@ func deleteQueue(instance *AddressDeployment, request ctrl.Request, client clien
 					reqLogger.Error(err, "Deleting ActiveMQArtemisAddress error", "address", addressName)
 					break
 				}
-				reqLogger.Info("Deleted ActiveMQArtemisAddress for address " + addressName)
+				reqLogger.V(1).Info("Deleted ActiveMQArtemisAddress for address " + addressName)
 			} else {
 				//delete queues
-				_, err = a.Artemis.DeleteQueue(queueName)
+				var response *jolokia.ResponseData
+				response, err = a.Artemis.DeleteQueue(queueName)
 				if nil != err {
-					reqLogger.Error(err, "Deleting ActiveMQArtemisAddress error for queue "+queueName)
+					if mgmt.GetCreationError(response) == mgmt.QUEUE_NOT_EXISTS {
+						reqLogger.V(1).Info("Queue is already gone", "queue", queueName)
+						err = nil
+					} else {
+						reqLogger.V(1).Info("Error deleting queue", "err msg", response.Error)
+						reqLogger.Error(err, "Deleting ActiveMQArtemisAddress error for queue "+queueName)
+					}
 					break
 				} else {
 					addressRetry.addToDelete(a.Artemis)
@@ -344,23 +365,23 @@ func deleteQueue(instance *AddressDeployment, request ctrl.Request, client clien
 		}
 		// we delete address after all queues are deleted
 		addressRetry.safeDelete()
-		reqLogger.Info("Deleted ActiveMQArtemisAddress for queue " + addressName + "/" + queueName)
+		reqLogger.V(1).Info("Deleted ActiveMQArtemisAddress for queue " + addressName + "/" + queueName)
 	}
 
 	return err
 }
 
-func getPodBrokers(instance *AddressDeployment, request ctrl.Request, client client.Client, scheme *runtime.Scheme) []*jc.JkInfo {
-	reqLogger := ctrl.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Getting Pod Brokers for address " + instance.AddressResource.Namespace + "/" + instance.AddressResource.Name)
-	targetCrNamespacedNames := createTargetCrNamespacedNames(request.Namespace, instance.AddressResource.Spec.ApplyToCrNames)
-	reqLogger.Info("target Cr names", "result", targetCrNamespacedNames)
+func (r *ActiveMQArtemisAddressReconciler) getPodBrokers(instance *AddressDeployment, request ctrl.Request, client client.Client, scheme *runtime.Scheme) []*jc.JkInfo {
+	reqLogger := r.log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	reqLogger.V(2).Info("Getting Pod Brokers for address " + instance.AddressResource.Namespace + "/" + instance.AddressResource.Name)
+	targetCrNamespacedNames := createTargetCrNamespacedNames(request.Namespace, instance.AddressResource.Spec.ApplyToCrNames, reqLogger)
+	reqLogger.V(2).Info("target Cr names", "result", targetCrNamespacedNames)
 	ssInfos := ss.GetDeployedStatefulSetNames(client, request.Namespace, targetCrNamespacedNames)
 
 	return jc.GetBrokers(request.NamespacedName, ssInfos, client)
 }
 
-func createTargetCrNamespacedNames(namespace string, targetCrNames []string) []types.NamespacedName {
+func createTargetCrNamespacedNames(namespace string, targetCrNames []string, log logr.Logger) []types.NamespacedName {
 	var result []types.NamespacedName = nil
 	for _, crName := range targetCrNames {
 		result = append(result, types.NamespacedName{
@@ -368,72 +389,70 @@ func createTargetCrNamespacedNames(namespace string, targetCrNames []string) []t
 			Name:      crName,
 		})
 		if crName == "" || crName == "*" {
-			glog.Info("Found empty or * in target crName, return nil for all")
+			log.V(2).Info("Found empty or * in target crName, return nil for all")
 			return nil
 		}
 	}
 	return result
 }
 
-func GetStatefulSetNameForPod(client client.Client, pod *types.NamespacedName) (string, int, map[string]string) {
-	glog.Info("Trying to find SS name for pod", "pod name", pod.Name, "pod ns", pod.Namespace)
+func GetStatefulSetNameForPod(client client.Client, pod *types.NamespacedName, log logr.Logger) (string, int, map[string]string) {
+	log.V(1).Info("Trying to find SS name for pod", "pod name", pod.Name, "pod ns", pod.Namespace)
 	for crName, addressDeployment := range namespacedNameToAddressName {
-		glog.Info("checking address cr in stock", "cr", crName)
+		log.V(2).Info("checking address cr in stock", "cr", crName)
 		if crName.Namespace != pod.Namespace {
-			glog.Info("this cr doesn't match pod's namespace", "cr's ns", crName.Namespace)
+			log.V(2).Info("this cr doesn't match pod's namespace", "cr's ns", crName.Namespace)
 			continue
 		}
 		if len(addressDeployment.SsTargetNameBuilders) == 0 {
-			glog.Info("this cr doesn't have target specified, it will be applied to all")
+			log.V(2).Info("this cr doesn't have target specified, it will be applied to all")
 			//deploy to all sts, need get from broker controller
 			ssInfos := ss.GetDeployedStatefulSetNames(client, pod.Namespace, nil)
 			if len(ssInfos) == 0 {
-				glog.Info("No statefulset found")
+				log.V(2).Info("No statefulset found")
 				continue
 			}
 			for _, info := range ssInfos {
-				glog.Info("checking if this ss belong", "ss", info.NamespacedName.Name)
+				log.V(2).Info("checking if this ss belong", "ss", info.NamespacedName.Name)
 				if _, ok, podSerial := namer.PodBelongsToStatefulset(pod, &info.NamespacedName); ok {
-					glog.Info("got a match", "ss", info.NamespacedName.Name, "podSerial", podSerial)
+					log.V(2).Info("got a match", "ss", info.NamespacedName.Name, "podSerial", podSerial)
 					return info.NamespacedName.Name, podSerial, info.Labels
 				}
 			}
-			glog.Info("no match at all")
+			log.V(2).Info("no match at all")
 			continue
 		}
 		//iterate and check the ss name
-		glog.Info("Now processing cr with applyToCrNames")
+		log.V(2).Info("Now processing cr with applyToCrNames")
 		for _, ssNameBuilder := range addressDeployment.SsTargetNameBuilders {
 			ssName := ssNameBuilder.NameBuilder.Name()
-			glog.Info("checking one applyTo", "ss", ssName)
+			log.V(2).Info("checking one applyTo", "ss", ssName)
 			//at this point the ss name space is sure the same
 			ssNameSpace := types.NamespacedName{
 				Name:      ssName,
 				Namespace: pod.Namespace,
 			}
 			if _, ok, podSerial := namer.PodBelongsToStatefulset(pod, &ssNameSpace); ok {
-				glog.Info("yes this ssName match, returning results", "ssName", ssName, "podSerial", podSerial)
+				log.V(2).Info("yes this ssName match, returning results", "ssName", ssName, "podSerial", podSerial)
 				return ssName, podSerial, ssNameBuilder.Labels
 			}
 		}
 	}
-	glog.Info("all through, but none")
+	log.V(1).Info("all through, none found")
 	return "", -1, nil
 }
 
-func setupAddressObserver(mgr manager.Manager, c chan types.NamespacedName, ctx context.Context) {
-	glog.Info("Setting up address observer")
+func (r *ActiveMQArtemisAddressReconciler) setupAddressObserver(mgr manager.Manager, c chan types.NamespacedName, ctx context.Context) {
+	r.log.V(2).Info("Setting up address observer")
 
 	kubeClient, err := kubernetes.NewForConfig(mgr.GetConfig())
 	if err != nil {
-		glog.Error(err, "Error building kubernetes clientset")
+		r.log.Error(err, "Error building kubernetes clientset")
 	}
 
-	observer := NewAddressObserver(kubeClient, mgr.GetClient(), mgr.GetScheme())
+	observer := NewAddressObserver(kubeClient, mgr.GetClient(), mgr.GetScheme(), r.log)
 
 	if err = observer.Run(channels.AddressListeningCh, ctx); err != nil {
-		glog.Error(err, "Error running controller")
+		r.log.Error(err, "Error running controller")
 	}
-
-	glog.Info("Finish address observer")
 }

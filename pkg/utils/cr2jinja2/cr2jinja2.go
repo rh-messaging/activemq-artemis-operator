@@ -13,11 +13,7 @@ import (
 	"io/ioutil"
 	"strconv"
 	"strings"
-
-	ctrl "sigs.k8s.io/controller-runtime"
 )
-
-var cr2jinja2Log = ctrl.Log.WithName("cr2jinja2")
 
 // the following values in string type will be parsed as bool values
 // exception empty string which will be translated to None

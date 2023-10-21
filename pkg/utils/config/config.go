@@ -8,11 +8,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-var log = ctrl.Log.WithName("config-util")
-
 // Todo:  should be a better way to do this.
 func IsEqualV1Beta1(currentAddressSetting []brokerv1beta1.AddressSettingType, newAddressSetting []brokerv1beta1.AddressSettingType) bool {
-	log.Info("Comparing addressSettings...", "current: ", currentAddressSetting, "new: ", newAddressSetting)
+	log := ctrl.Log.WithName("util_config")
+	log.V(1).Info("Comparing addressSettings...", "current: ", currentAddressSetting, "new: ", newAddressSetting)
 
 	for _, curSetting := range currentAddressSetting {
 
@@ -737,7 +736,8 @@ func IsEqualV1Beta1(currentAddressSetting []brokerv1beta1.AddressSettingType, ne
 
 // assuming the lengths of 2 array are equal.
 func IsEqualV2Alpha5(currentAddressSetting []brokerv2alpha5.AddressSettingType, newAddressSetting []brokerv2alpha5.AddressSettingType) bool {
-	log.Info("Comparing addressSettings...", "current: ", currentAddressSetting, "new: ", newAddressSetting)
+	log := ctrl.Log.WithName("util_config")
+	log.V(1).Info("Comparing addressSettings...", "current: ", currentAddressSetting, "new: ", newAddressSetting)
 
 	for _, curSetting := range currentAddressSetting {
 
@@ -1475,8 +1475,8 @@ func IsEqualV2Alpha4(currentAddressSetting []brokerv2alpha4.AddressSettingType, 
 
 // assuming the lengths of 2 array are equal
 func IsEqual(currentAddressSetting []brokerv2alpha3.AddressSettingType, newAddressSetting []brokerv2alpha3.AddressSettingType) bool {
-
-	log.Info("Comparing addressSettings...", "current: ", currentAddressSetting, "new: ", newAddressSetting)
+	log := ctrl.Log.WithName("util_config")
+	log.V(1).Info("Comparing addressSettings...", "current: ", currentAddressSetting, "new: ", newAddressSetting)
 
 	for _, curSetting := range currentAddressSetting {
 

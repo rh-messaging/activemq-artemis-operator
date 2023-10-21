@@ -10,6 +10,7 @@ import (
 const (
 	QUEUE_ALREADY_EXISTS   = "AMQ229019"
 	ADDRESS_ALREADY_EXISTS = "AMQ229204"
+	QUEUE_NOT_EXISTS       = "AMQ229017"
 	UNKNOWN_ERROR          = "AMQ_UNKNOWN"
 )
 
@@ -22,6 +23,9 @@ func GetCreationError(jdata *jolokia.ResponseData) string {
 	}
 	if strings.Contains(jdata.Error, ADDRESS_ALREADY_EXISTS) {
 		return ADDRESS_ALREADY_EXISTS
+	}
+	if strings.Contains(jdata.Error, QUEUE_NOT_EXISTS) {
+		return QUEUE_NOT_EXISTS
 	}
 	return UNKNOWN_ERROR
 }
