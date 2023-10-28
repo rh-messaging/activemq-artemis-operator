@@ -6,7 +6,7 @@
 VERSION ?= 7.12.0-opr-1
 
 KUBE_CLI=kubectl
-OPERATOR_VERSION := amq-broker-7.12-openshift-rhel-8-containers-candidate-67817-20231027003354
+OPERATOR_VERSION := amq-broker-7.12-openshift-rhel-8-containers-candidate-59283-20231028011632
 OPERATOR_ACCOUNT_NAME := activemq-artemis-operator
 OPERATOR_CLUSTER_ROLE_NAME := operator-role
 OPERATOR_IMAGE_REPO := quay.io/artemiscloud/activemq-artemis-operator
