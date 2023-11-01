@@ -6,14 +6,17 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+var appProtocolHTTP = "http"
+
 func GetDefaultPorts() *[]corev1.ServicePort {
 
 	ports := []corev1.ServicePort{
 		{
-			Name:       "console-jolokia",
-			Protocol:   "TCP",
-			Port:       8161,
-			TargetPort: intstr.FromInt(int(8161)),
+			Name:        "console-jolokia",
+			Protocol:    "TCP",
+			Port:        8161,
+			AppProtocol: &appProtocolHTTP,
+			TargetPort:  intstr.FromInt(int(8161)),
 		},
 		{
 			Name:       "all",
@@ -69,10 +72,11 @@ func setBasicPorts() []corev1.ServicePort {
 			TargetPort: intstr.FromInt(int(5672)),
 		},
 		{
-			Name:       "console-jolokia",
-			Protocol:   "TCP",
-			Port:       8161,
-			TargetPort: intstr.FromInt(int(8161)),
+			Name:        "console-jolokia",
+			Protocol:    "TCP",
+			Port:        8161,
+			AppProtocol: &appProtocolHTTP,
+			TargetPort:  intstr.FromInt(int(8161)),
 		},
 		{
 			Name:       "stomp",
