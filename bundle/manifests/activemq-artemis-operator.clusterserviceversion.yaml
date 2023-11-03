@@ -2490,6 +2490,11 @@ spec:
         path: securitySettings.management.connector.keyStoreProvider
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The keystore type for management connector
+        displayName: KeyStore Type
+        path: securitySettings.management.connector.keyStoreType
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
       - description: The JMX object name of management
         displayName: Object Name
         path: securitySettings.management.connector.objectName
@@ -2528,6 +2533,11 @@ spec:
       - description: The truststore provider for management connector
         displayName: TrustStore Provider
         path: securitySettings.management.connector.trustStoreProvider
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The truststore type for management connector
+        displayName: TrustStore Type
+        path: securitySettings.management.connector.trustStoreType
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
       - description: The roles allowed to login hawtio

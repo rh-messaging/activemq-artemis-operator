@@ -842,6 +842,9 @@ spec:
                           keyStoreProvider:
                             description: The keystore provider for management connector
                             type: string
+                          keyStoreType:
+                            description: The keystore type for management connector
+                            type: string
                           objectName:
                             description: The JMX object name of management
                             type: string
@@ -867,6 +870,9 @@ spec:
                             type: string
                           trustStoreProvider:
                             description: The truststore provider for management connector
+                            type: string
+                          trustStoreType:
+                            description: The truststore type for management connector
                             type: string
                         type: object
                       hawtioRoles:

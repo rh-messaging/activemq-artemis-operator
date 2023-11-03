@@ -66,6 +66,83 @@ var _ = Describe("security controller", func() {
 
 	Context("broker with security custom resources", Label("broker-security-res"), func() {
 
+		It("management connector config", Label("mgmt-connector-config"), func() {
+
+			By("deploy a security cr")
+			_, createdSecurityCr := DeploySecurity(NextSpecResourceName(), defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemisSecurity) {
+				candidate.Spec.SecuritySettings.Management.Connector = brokerv1beta1.ConnectorConfigType{
+					Host:               StringToPtr("0.0.0.0"),
+					Port:               common.Int32ToPtr(9091),
+					RmiRegistryPort:    common.Int32ToPtr(1234),
+					JmxRealm:           StringToPtr("activemq"),
+					ObjectName:         StringToPtr("connector:name=rmi"),
+					AuthenticatorType:  StringToPtr("password"),
+					Secured:            &boolFalse,
+					KeyStoreType:       StringToPtr("PKCS12"),
+					KeyStoreProvider:   StringToPtr("SUN"),
+					KeyStorePath:       StringToPtr("/etc/keystore/broker.ks"),
+					KeyStorePassword:   StringToPtr("kspassword"),
+					TrustStoreType:     StringToPtr("JKS"),
+					TrustStoreProvider: StringToPtr("tSUN"),
+					TrustStorePath:     StringToPtr("/etc/truststore/broker.ts"),
+					TrustStorePassword: StringToPtr("tspassword"),
+					PasswordCodec:      StringToPtr("org.apache.activemq.SomeClass"),
+				}
+			})
+
+			By("deploy a broker cr")
+			_, createdBrokerCr := DeployCustomBroker(defaultNamespace, nil)
+
+			By("checking the security gets applied")
+			requestedSs := &appsv1.StatefulSet{}
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(createdBrokerCr.Name), Namespace: defaultNamespace}
+				err := k8sClient.Get(ctx, key, requestedSs)
+				if err != nil {
+					return false
+				}
+
+				initContainer := requestedSs.Spec.Template.Spec.InitContainers[0]
+				secApplied := false
+				for _, arg := range initContainer.Args {
+					if strings.Contains(arg, "mkdir -p /init_cfg_root/security/security") {
+						secApplied = true
+						break
+					}
+				}
+				return secApplied
+			}, timeout, interval).Should(BeTrue())
+
+			expectedSecuritySecret := &corev1.Secret{}
+			expectedSecuritySecretKey := types.NamespacedName{Name: "secret-security-" + createdSecurityCr.Name, Namespace: defaultNamespace}
+
+			By("checking the security secret")
+			Eventually(k8sClient.Get(ctx, expectedSecuritySecretKey, expectedSecuritySecret), timeout, interval).Should(Succeed())
+			crData := expectedSecuritySecret.Data["Data"]
+			Expect(string(crData)).NotTo(BeEmpty())
+
+			Expect(crData).To(ContainSubstring("host: 0.0.0.0"))
+			Expect(crData).To(ContainSubstring("port: 9091"))
+			Expect(crData).To(ContainSubstring("rmiregistryport: 1234"))
+			Expect(crData).To(ContainSubstring("jmxrealm: activemq"))
+			Expect(crData).To(ContainSubstring("objectname: connector:name=rmi"))
+			Expect(crData).To(ContainSubstring("authenticatortype: password"))
+			Expect(crData).To(ContainSubstring("secured: false"))
+			Expect(crData).To(ContainSubstring("keystoretype: PKCS12"))
+			Expect(crData).To(ContainSubstring("keystoreprovider: SUN"))
+			Expect(crData).To(ContainSubstring("keystorepath: /etc/keystore/broker.ks"))
+			Expect(crData).To(ContainSubstring("keystorepassword: kspassword"))
+			Expect(crData).To(ContainSubstring("truststoretype: JKS"))
+			Expect(crData).To(ContainSubstring("truststoreprovider: tSUN"))
+			Expect(crData).To(ContainSubstring("truststorepath: /etc/truststore/broker.ts"))
+			Expect(crData).To(ContainSubstring("truststorepassword: tspassword"))
+			Expect(crData).To(ContainSubstring("passwordcodec: org.apache.activemq.SomeClass"))
+
+			By("delete the broker cr")
+			CleanResource(createdBrokerCr, createdBrokerCr.Name, defaultNamespace)
+			CleanResource(createdSecurityCr, createdSecurityCr.Name, defaultNamespace)
+		})
+
 		It("no password in security log test", func() {
 			By("deploy a security cr")
 			StartCapturingLog()

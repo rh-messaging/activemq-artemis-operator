@@ -306,4 +306,113 @@ var _ = Describe("Scale down controller", func() {
 			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
 		}
 	})
+
+	It("scaledown to the right pod", Label("scale-down-target-selection"), func() {
+
+		if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+			brokerName := NextSpecResourceName()
+
+			brokerCrd, createdBrokerCrd := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				candidate.Name = brokerName
+				candidate.Spec.DeploymentPlan.Size = common.Int32ToPtr(3)
+				candidate.Spec.DeploymentPlan.PersistenceEnabled = true
+
+				candidate.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
+					InitialDelaySeconds: 2,
+					TimeoutSeconds:      2,
+					PeriodSeconds:       5,
+					FailureThreshold:    5,
+				}
+				candidate.Spec.DeploymentPlan.LivenessProbe = &corev1.Probe{
+					InitialDelaySeconds: 2,
+					TimeoutSeconds:      2,
+					PeriodSeconds:       5,
+					FailureThreshold:    5,
+				}
+			})
+
+			By("verifying pods ready")
+			Eventually(func(g Gomega) {
+
+				getPersistedVersionedCrd(brokerCrd.ObjectMeta.Name, defaultNamespace, createdBrokerCrd)
+				By("Check ready status")
+				g.Expect(len(createdBrokerCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(3))
+				g.Expect(meta.IsStatusConditionTrue(createdBrokerCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
+				g.Expect(meta.IsStatusConditionTrue(createdBrokerCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
+
+			}, existingClusterTimeout, interval).Should(Succeed())
+
+			By("send 2 messages to DLQ in the 3rd pod")
+			podWithOrdinal2 := namer.CrToSS(brokerName) + "-2"
+			By("sending a message to Host: " + podWithOrdinal2)
+
+			sendCmd := []string{"amq-broker/bin/artemis", "producer", "--user", "Jay", "--password", "activemq", "--url", "tcp://" + podWithOrdinal2 + ":61616", "--message-count", "2", "--destination", "DLQ"}
+			content, err := RunCommandInPod(podWithOrdinal2, brokerName+"-container", sendCmd)
+
+			Expect(err).To(BeNil())
+			Expect(*content).Should(ContainSubstring("Produced: 2 messages"))
+
+			By("block DLQ on pod0 to prevent scaledown")
+			podWithOrdinal0 := namer.CrToSS(brokerCrd.Name) + "-0"
+			Eventually(func(g Gomega) {
+				curlUrl := "http://" + podWithOrdinal0 + ":8161/console/jolokia/exec/org.apache.activemq.artemis:address=\"DLQ\",broker=\"amq-broker\",component=addresses/block()"
+
+				blockCmd := []string{"curl", "-k", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
+				reply, err := RunCommandInPod(podWithOrdinal0, brokerName+"-container", blockCmd)
+				g.Expect(err).To(BeNil())
+				g.Expect(*reply).To(ContainSubstring("\"value\":true"))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("scale down to 2")
+			brokerKey := types.NamespacedName{Name: brokerName, Namespace: defaultNamespace}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdBrokerCrd)).Should(Succeed())
+				createdBrokerCrd.Spec.DeploymentPlan.Size = common.Int32ToPtr(2)
+				g.Expect(k8sClient.Update(ctx, createdBrokerCrd)).Should(Succeed())
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("checking ready 2")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdBrokerCrd)).Should(Succeed())
+				g.Expect(len(createdBrokerCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(2))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("Checking no messages on pod 0")
+			Eventually(func(g Gomega) {
+				curlUrl := "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:address=\"DLQ\",broker=\"amq-broker\",component=addresses/MessageCount"
+
+				blockCmd := []string{"curl", "-s", "-k", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
+				result, err := RunCommandInPod(podWithOrdinal0, brokerName+"-container", blockCmd)
+				g.Expect(err).To(BeNil())
+
+				g.Expect(*result).To(ContainSubstring("\"value\":0"))
+
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			podWithOrdinal1 := namer.CrToSS(createdBrokerCrd.Name) + "-1"
+			By("Checking 2 messages on pod 1")
+			Eventually(func(g Gomega) {
+				curlUrl := "http://" + podWithOrdinal1 + ":8161/console/jolokia/read/org.apache.activemq.artemis:address=\"DLQ\",broker=\"amq-broker\",component=addresses/MessageCount"
+
+				blockCmd := []string{"curl", "-s", "-k", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
+				result, err := RunCommandInPod(podWithOrdinal1, brokerName+"-container", blockCmd)
+				g.Expect(err).To(BeNil())
+
+				g.Expect(*result).To(ContainSubstring("\"value\":2"))
+
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("Receiving a message from Host: " + podWithOrdinal1)
+			recvCmd := []string{"amq-broker/bin/artemis", "consumer", "--user", "Jay", "--password", "activemq", "--url", "tcp://" + podWithOrdinal1 + ":61616", "--message-count", "2", "--destination", "DLQ", "--receive-timeout", "10000"}
+			content, err = RunCommandInPod(podWithOrdinal1, brokerKey.Name+"-container", recvCmd)
+
+			Expect(err).To(BeNil())
+			Expect(*content).Should(ContainSubstring("Consumed: 2 messages"))
+			Expect(*content).ShouldNot(ContainSubstring("Consumed: 0 messages"))
+
+			CleanResource(createdBrokerCrd, createdBrokerCrd.Name, createdBrokerCrd.Namespace)
+		}
+	})
+
 })

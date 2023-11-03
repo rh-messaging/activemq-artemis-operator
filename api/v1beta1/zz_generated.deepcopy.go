@@ -1051,6 +1051,11 @@ func (in *ConnectorConfigType) DeepCopyInto(out *ConnectorConfigType) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.KeyStoreType != nil {
+		in, out := &in.KeyStoreType, &out.KeyStoreType
+		*out = new(string)
+		**out = **in
+	}
 	if in.KeyStoreProvider != nil {
 		in, out := &in.KeyStoreProvider, &out.KeyStoreProvider
 		*out = new(string)
@@ -1063,6 +1068,11 @@ func (in *ConnectorConfigType) DeepCopyInto(out *ConnectorConfigType) {
 	}
 	if in.KeyStorePassword != nil {
 		in, out := &in.KeyStorePassword, &out.KeyStorePassword
+		*out = new(string)
+		**out = **in
+	}
+	if in.TrustStoreType != nil {
+		in, out := &in.TrustStoreType, &out.TrustStoreType
 		*out = new(string)
 		**out = **in
 	}

@@ -328,6 +328,9 @@ type ConnectorConfigType struct {
 	// Whether management connection is secured
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Secured",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:booleanSwitch"}
 	Secured *bool `json:"secured,omitempty"`
+	// The keystore type for management connector
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="KeyStore Type",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:text"}
+	KeyStoreType *string `json:"keyStoreType,omitempty"`
 	// The keystore provider for management connector
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="KeyStore Provider",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:text"}
 	KeyStoreProvider *string `json:"keyStoreProvider,omitempty"`
@@ -337,6 +340,9 @@ type ConnectorConfigType struct {
 	// The keystore password for management connector
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="KeyStore Password",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:text"}
 	KeyStorePassword *string `json:"keyStorePassword,omitempty"`
+	// The truststore type for management connector
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="TrustStore Type",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:text"}
+	TrustStoreType *string `json:"trustStoreType,omitempty"`
 	// The truststore provider for management connector
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="TrustStore Provider",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:text"}
 	TrustStoreProvider *string `json:"trustStoreProvider,omitempty"`

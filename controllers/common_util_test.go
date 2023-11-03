@@ -735,3 +735,7 @@ func CreateTlsSecret(secretName string, ns string, ksPassword string, nsNames []
 	}
 	return &tlsSecret, nil
 }
+
+func StringToPtr(v string) *string {
+	return &v
+}
