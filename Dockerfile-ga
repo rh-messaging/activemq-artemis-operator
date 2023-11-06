@@ -22,7 +22,7 @@ ENV USER_UID=1000
 ENV USER_NAME=${BROKER_NAME}-operator
 ENV CGO_ENABLED=0
 ENV JBOSS_IMAGE_NAME="amq7/amq-broker-rhel8-operator"
-ENV JBOSS_IMAGE_VERSION="7.10.4.OPR.1.CR1"
+ENV JBOSS_IMAGE_VERSION="7.10.5.OPR.1.CR1"
 
 WORKDIR /
 RUN mkdir -p /home/${BROKER_NAME}-operator/bin
@@ -47,4 +47,4 @@ LABEL io.openshift.tags="messaging,amq,integration,operator,golang"
 LABEL maintainer="Roddie Kieley <rkieley@redhat.com>"
 LABEL name="amq7/amq-broker-rhel8-operator"
 LABEL summary="Red Hat AMQ Broker 7.10 Operator"
-LABEL version="7.10.4"
+LABEL version="7.10.5"
