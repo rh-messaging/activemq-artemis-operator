@@ -600,7 +600,3 @@ func GetOperatorLog(ns string) (*string, error) {
 
 	return &str, nil
 }
-
-func StringToPtr(v string) *string {
-	return &v
-}
