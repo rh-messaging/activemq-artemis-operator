@@ -651,7 +651,8 @@ func generateAcceptorsString(customResource *brokerv1beta1.ActiveMQArtemis, name
 		if acceptor.ConnectionsAllowed > 0 {
 			acceptorEntry = acceptorEntry + ";" + "connectionsAllowed=" + fmt.Sprintf("%d", acceptor.ConnectionsAllowed)
 		}
-		if acceptor.AMQPMinLargeMessageSize > 0 {
+		if (acceptor.AMQPMinLargeMessageSize > 0) ||
+			(acceptor.AMQPMinLargeMessageSize == -1) {
 			acceptorEntry = acceptorEntry + ";" + "amqpMinLargeMessageSize=" + fmt.Sprintf("%d", acceptor.AMQPMinLargeMessageSize)
 		}
 		if acceptor.SupportAdvisory != nil {

@@ -1,7 +1,7 @@
 apiVersion: broker.amq.io/v1beta1
 kind: ActiveMQArtemis
 metadata:
-  name: artemis-broker-tls
+  name: artemis-broker
 spec:
   deploymentPlan:
     size: 2

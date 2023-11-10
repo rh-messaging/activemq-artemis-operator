@@ -1,7 +1,7 @@
 apiVersion: broker.amq.io/v1beta1
 kind: ActiveMQArtemis
 metadata:
-  name: ex-aao
+  name: artemis-broker
 spec:
   deploymentPlan:
     enableMetricsPlugin: true
