@@ -81,17 +81,21 @@ func (r *ActiveMQArtemisAddressReconciler) Reconcile(ctx context.Context, reques
 			if lookupSucceeded {
 				if addressInstance.AddressResource.Spec.RemoveFromBrokerOnDelete {
 					err = deleteQueue(&addressInstance, request, r.Client, r.Scheme)
-					return ctrl.Result{}, err
+					if err != nil {
+						reqLogger.Error(err, "Failed to delete the queue")
+					}
 				} else {
 					reqLogger.Info("Not to delete address " + instance.Namespace + "/" + instance.Name)
 				}
 				delete(namespacedNameToAddressName, request.NamespacedName)
 				lsrcrs.DeleteLastSuccessfulReconciledCR(request.NamespacedName, "address", getAddressLabels(&addressInstance.AddressResource), r.Client)
 			}
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
-			return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
+			if err == nil {
+				// Request object not found, could have been deleted after reconcile request.
+				// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
+				// Return and don't requeue
+				return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
+			}
 		}
 		reqLogger.Error(err, "Requeue the request for error")
 		return ctrl.Result{}, err
