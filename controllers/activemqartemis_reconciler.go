@@ -1098,27 +1098,41 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(customResource
 	requested := compare.NewMapBuilder().Add(reconciler.requestedResources...).ResourceMap()
 	comparator := compare.NewMapComparator()
 
-	comparator.Comparator.SetComparator(reflect.TypeOf(appsv1.StatefulSet{}), func(deployed, requested rtclient.Object) bool {
-		ss1 := deployed.(*appsv1.StatefulSet)
-		ss2 := requested.(*appsv1.StatefulSet)
-		isEqual := equality.Semantic.DeepEqual(ss1.Spec, ss2.Spec)
-
+	comparator.Comparator.SetComparator(reflect.TypeOf(appsv1.StatefulSet{}), func(deployed, requested rtclient.Object) (isEqual bool) {
+		deployedSs := deployed.(*appsv1.StatefulSet)
+		requestedSs := requested.(*appsv1.StatefulSet)
+		isEqual = equality.Semantic.DeepEqual(deployedSs.Spec, requestedSs.Spec)
+		if isEqual {
+			isEqual = equalObjectMeta(&deployedSs.ObjectMeta, &requestedSs.ObjectMeta)
+		}
 		if !isEqual {
-			reqLogger.V(3).Info("Unequal", "depoyed", ss1.Spec, "requested", ss2.Spec)
+			reqLogger.V(2).Info("unequal", "depoyed", deployedSs, "requested", requestedSs)
 		}
 		return isEqual
 	})
 
-	comparator.Comparator.SetComparator(reflect.TypeOf(netv1.Ingress{}), func(deployed, requested rtclient.Object) bool {
-		return equality.Semantic.DeepEqual(deployed.(*netv1.Ingress).Spec, requested.(*netv1.Ingress).Spec)
+	comparator.Comparator.SetComparator(reflect.TypeOf(netv1.Ingress{}), func(deployed, requested rtclient.Object) (isEqual bool) {
+		deployedIngress := deployed.(*netv1.Ingress)
+		requestedIngress := requested.(*netv1.Ingress)
+		isEqual = equality.Semantic.DeepEqual(deployedIngress.Spec, requestedIngress.Spec)
+		if isEqual {
+			isEqual = equalObjectMeta(&deployedIngress.ObjectMeta, &requestedIngress.ObjectMeta)
+		}
+		if !isEqual {
+			reqLogger.V(2).Info("unequal", "depoyed", deployedIngress, "requested", requestedIngress)
+		}
+		return isEqual
 	})
 
-	comparator.Comparator.SetComparator(reflect.TypeOf(policyv1.PodDisruptionBudget{}), func(deployed, requested rtclient.Object) bool {
-		pdb1 := deployed.(*policyv1.PodDisruptionBudget)
-		pdb2 := requested.(*policyv1.PodDisruptionBudget)
-		isEqual := equality.Semantic.DeepEqual(pdb1.Spec, pdb2.Spec)
+	comparator.Comparator.SetComparator(reflect.TypeOf(policyv1.PodDisruptionBudget{}), func(deployed, requested rtclient.Object) (isEqual bool) {
+		deployedPdb := deployed.(*policyv1.PodDisruptionBudget)
+		requestedPdb := requested.(*policyv1.PodDisruptionBudget)
+		isEqual = equality.Semantic.DeepEqual(deployedPdb.Spec, requestedPdb.Spec)
+		if isEqual {
+			isEqual = equalObjectMeta(&deployedPdb.ObjectMeta, &requestedPdb.ObjectMeta)
+		}
 		if !isEqual {
-			reqLogger.V(3).Info("Unequal", "depoyed", pdb1.Spec, "requested", pdb2.Spec)
+			reqLogger.V(2).Info("unequal", "depoyed", deployedPdb, "requested", requestedPdb)
 		}
 		return isEqual
 	})
@@ -1159,6 +1173,16 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(customResource
 	}
 }
 
+// resourceTemplate means we can modify labels and annotatins so we need to
+// respect those in our comparison logic
+func equalObjectMeta(deployed *metav1.ObjectMeta, requested *metav1.ObjectMeta) (isEqual bool) {
+	var pairs [][2]interface{}
+	pairs = append(pairs, [2]interface{}{deployed.Labels, requested.Labels})
+	pairs = append(pairs, [2]interface{}{deployed.Annotations, requested.Annotations})
+	isEqual = compare.EqualPairs(pairs)
+	return isEqual
+}
+
 func trackError(compositeError *[]error, err error) {
 	if err != nil {
 		if *compositeError == nil {
@@ -1196,7 +1220,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) updateRequestedResource(customR
 	if updateError = resources.Update(client, requested); updateError == nil {
 		reqLogger.Info("updated", "kind ", kind, "named ", requested.GetName())
 	} else {
-		reqLogger.Error(updateError, "updated Failed", "kind ", kind, "named ", requested.GetName())
+		reqLogger.V(0).Info("updated Failed", "kind ", kind, "named ", requested.GetName(), "error ", updateError)
 	}
 	return updateError
 }
@@ -2337,7 +2361,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewStatefulSetForCR(customResou
 		Namespace: customResource.Namespace,
 	}
 	replicas := getDeploymentSize(customResource)
-	currentStateFullSet = ss.MakeStatefulSet(currentStateFullSet, namer.SsNameBuilder.Name(), namer.SvcHeadlessNameBuilder.Name(), namespacedName, customResource.Annotations, namer.LabelBuilder.Labels(), &replicas)
+	currentStateFullSet = ss.MakeStatefulSet(currentStateFullSet, namer.SsNameBuilder.Name(), namer.SvcHeadlessNameBuilder.Name(), namespacedName, nil, namer.LabelBuilder.Labels(), &replicas)
 
 	podTemplateSpec, err := reconciler.NewPodTemplateSpecForCR(customResource, namer, &currentStateFullSet.Spec.Template, client)
 	if err != nil {
