@@ -9,6 +9,7 @@ import (
 
 	"github.com/blang/semver/v4"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -196,4 +197,15 @@ func resolveVersionComponents(desired string) (major, minor, patch *uint64) {
 
 func Int32ToPtr(v int32) *int32 {
 	return &v
+}
+
+func ApplyAnnotations(objectMeta *metav1.ObjectMeta, annotations map[string]string) {
+	if annotations != nil {
+		if objectMeta.Annotations == nil {
+			objectMeta.Annotations = map[string]string{}
+		}
+		for k, v := range annotations {
+			objectMeta.Annotations[k] = v
+		}
+	}
 }
