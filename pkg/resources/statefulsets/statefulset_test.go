@@ -18,7 +18,7 @@ var _ = Describe("Statefulset", func() {
 			objs := []client.Object{&appsv1.StatefulSet{}}
 			client := fake.NewClientBuilder().WithObjects(objs...).Build()
 			It("returns an empty collection if the filter is not empty", func() {
-				infos := statefulsets.GetDeployedStatefulSetNames(client, []types.NamespacedName{
+				infos := statefulsets.GetDeployedStatefulSetNames(client, "foo", []types.NamespacedName{
 					{
 						Namespace: "foo",
 						Name:      "bar",
@@ -60,8 +60,8 @@ var _ = Describe("Statefulset", func() {
 			}
 			client := fake.NewClientBuilder().WithObjects(objs...).Build()
 			It("returns the same collection when the filter is empty", func() {
-				infos := statefulsets.GetDeployedStatefulSetNames(client, []types.NamespacedName{})
-				Expect(infos).Should(HaveLen(3))
+				infos := statefulsets.GetDeployedStatefulSetNames(client, "some-ns", []types.NamespacedName{})
+				Expect(infos).Should(HaveLen(2))
 				Expect(infos).Should(ContainElements(statefulsets.StatefulSetInfo{
 					NamespacedName: types.NamespacedName{
 						Name:      "sts-0",
@@ -79,18 +79,10 @@ var _ = Describe("Statefulset", func() {
 						"label1": "value1",
 						"label2": "value2",
 					},
-				}, statefulsets.StatefulSetInfo{
-					NamespacedName: types.NamespacedName{
-						Name:      "sts-0",
-						Namespace: "other-ns",
-					},
-					Labels: map[string]string{
-						"label2": "value2",
-					},
 				}))
 			})
 			It("returns the statefulsets that match the namespace and name", func() {
-				infos := statefulsets.GetDeployedStatefulSetNames(client, []types.NamespacedName{
+				infos := statefulsets.GetDeployedStatefulSetNames(client, "some-ns", []types.NamespacedName{
 					{
 						Namespace: "some-ns",
 						Name:      "sts-0",
@@ -100,7 +92,7 @@ var _ = Describe("Statefulset", func() {
 						Name:      "sts-0",
 					},
 				})
-				Expect(infos).Should(HaveLen(2))
+				Expect(infos).Should(HaveLen(1))
 				Expect(infos).Should(ContainElements(statefulsets.StatefulSetInfo{
 					NamespacedName: types.NamespacedName{
 						Name:      "sts-0",
@@ -109,18 +101,10 @@ var _ = Describe("Statefulset", func() {
 					Labels: map[string]string{
 						"label1": "value1",
 					},
-				}, statefulsets.StatefulSetInfo{
-					NamespacedName: types.NamespacedName{
-						Name:      "sts-0",
-						Namespace: "other-ns",
-					},
-					Labels: map[string]string{
-						"label2": "value2",
-					},
 				}))
 			})
 			It("returns an empty collection if the filter doesn't match any Statefulset", func() {
-				infos := statefulsets.GetDeployedStatefulSetNames(client, []types.NamespacedName{
+				infos := statefulsets.GetDeployedStatefulSetNames(client, "some-ns", []types.NamespacedName{
 					{
 						Namespace: "foo",
 						Name:      "bar",

@@ -25,7 +25,6 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -73,7 +72,7 @@ func MakeStatefulSet(currentStateFulSet *appsv1.StatefulSet, ssName string, svcH
 
 var GLOBAL_CRNAME string = ""
 
-func RetrieveStatefulSet(statefulsetName string, namespacedName types.NamespacedName, labels map[string]string, client client.Client) (*appsv1.StatefulSet, error) {
+func RetrieveStatefulSet(statefulsetName string, namespacedName types.NamespacedName, labels map[string]string, client rtclient.Client) (*appsv1.StatefulSet, error) {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
@@ -105,14 +104,14 @@ func RetrieveStatefulSet(statefulsetName string, namespacedName types.Namespaced
 	return ss, err
 }
 
-func GetDeployedStatefulSetNames(client rtclient.Client, filter []types.NamespacedName) []StatefulSetInfo {
+func GetDeployedStatefulSetNames(client rtclient.Client, ns string, filter []types.NamespacedName) []StatefulSetInfo {
 
 	var result []StatefulSetInfo = nil
 
 	var resourceMap map[reflect.Type][]rtclient.Object
 
 	// may need to lock down list result with labels
-	resourceMap, _ = read.New(client).ListAll(
+	resourceMap, _ = read.New(client).WithNamespace(ns).ListAll(
 		&appsv1.StatefulSetList{},
 	)
 
@@ -131,7 +130,7 @@ func GetDeployedStatefulSetNames(client rtclient.Client, filter []types.Namespac
 	return result
 }
 
-func buildStatefulSetInfo(ssObject client.Object) StatefulSetInfo {
+func buildStatefulSetInfo(ssObject rtclient.Object) StatefulSetInfo {
 	return StatefulSetInfo{
 		NamespacedName: types.NamespacedName{Namespace: ssObject.GetNamespace(), Name: ssObject.GetName()},
 		Labels:         ssObject.GetLabels(),

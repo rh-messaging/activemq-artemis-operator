@@ -156,7 +156,7 @@ func (c *AddressObserver) checkCRsForNewPod(newPod *corev1.Pod, labels map[strin
 				Namespace: newPod.Namespace,
 			}
 
-			ssInfos := ss.GetDeployedStatefulSetNames(c.opclient, []types.NamespacedName{podNamespacedName})
+			ssInfos := ss.GetDeployedStatefulSetNames(c.opclient, podNamespacedName.Namespace, []types.NamespacedName{podNamespacedName})
 			jks := jc.GetBrokers(podNamespacedName, ssInfos, c.opclient)
 
 			for _, jk := range jks {

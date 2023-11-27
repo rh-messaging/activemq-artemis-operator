@@ -615,8 +615,9 @@ var _ = Describe("artemis controller", func() {
 
 				g.Expect(k8sClient.Get(ctx, brokerKey, createdBrokerCr)).Should(Succeed())
 
-				fmt.Printf("\nSTatus:%v\n", createdBrokerCr.Status)
-
+				if verbose {
+					fmt.Printf("\nStatus:%v\n", createdBrokerCr.Status)
+				}
 				condition := meta.FindStatusCondition(createdBrokerCr.Status.Conditions, brokerv1beta1.ValidConditionType)
 				g.Expect(condition).NotTo(BeNil())
 				g.Expect(condition.Status).To(Equal(metav1.ConditionFalse))
@@ -5748,6 +5749,9 @@ var _ = Describe("artemis controller", func() {
 				By("verifying started via Status")
 				Eventually(func(g Gomega) {
 					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					if verbose {
+						fmt.Printf("\nSTATUS: %v\n", createdCrd.Status)
+					}
 					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(deploymentSize))
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType)).Should(BeTrue())
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())

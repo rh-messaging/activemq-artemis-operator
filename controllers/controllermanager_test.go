@@ -17,6 +17,7 @@ package controllers
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
@@ -26,6 +27,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -142,6 +144,71 @@ var _ = Describe("tests regarding controller manager", func() {
 							g.Expect(len(deployedCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
 						}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 					}
+				}
+
+				By("clean up")
+				for _, createdCr := range createdCrs {
+					CleanResource(createdCr, createdCr.Name, createdCr.Namespace)
+				}
+			})
+		})
+
+		It("test watching all namespaces with same cr name and address creation", func() {
+
+			brokerName := "bb-for-many-ns"
+			testWatchNamespace("all", Default, func(g Gomega) {
+				By("deploying same broker cr name to three namespaces")
+				nameSpaces := []string{namespace1, namespace2, namespace3}
+				var createdCrs []*brokerv1beta1.ActiveMQArtemis
+				for _, ns := range nameSpaces {
+					_, createdCr := DeployCustomBroker(ns, func(c *brokerv1beta1.ActiveMQArtemis) {
+						c.Name = brokerName
+					})
+					createdCrs = append(createdCrs, createdCr)
+				}
+
+				By("Deploying Address to BB in ns3")
+				addressName := "AnA"
+				addressCrd := brokerv1beta1.ActiveMQArtemisAddress{}
+				addressCrd.SetName("address-" + randString())
+				addressCrd.SetNamespace(namespace3)
+				addressCrd.Spec.AddressName = addressName
+				addressCrd.Spec.QueueName = &addressName
+				routingTypeShouldBeOptional := "anycast"
+				addressCrd.Spec.RoutingType = &routingTypeShouldBeOptional
+
+				Expect(k8sClient.Create(ctx, &addressCrd)).Should(Succeed())
+
+				By("Verifying Address on BB in ns3")
+
+				if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+					deployedCrd := brokerv1beta1.ActiveMQArtemis{}
+
+					for _, ns := range nameSpaces {
+
+						key := types.NamespacedName{Name: brokerName, Namespace: ns}
+
+						By("asserting brokers ready")
+						Eventually(func(g Gomega) {
+							g.Expect(k8sClient.Get(ctx, key, &deployedCrd)).Should(Succeed())
+
+							g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
+							g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
+
+						}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+					}
+
+					By("asserting address exists on single ns3")
+					podOrdinal := strconv.FormatInt(0, 10)
+					podName := namer.CrToSS(brokerName) + "-" + podOrdinal
+
+					By("checking creation in ns3")
+					CheckQueueExistInPod(brokerName, podName, *addressCrd.Spec.QueueName, namespace3)
+
+					By("checking no creation in ns1 and ns2")
+					CheckQueueNotExistInPod(brokerName, podName, *addressCrd.Spec.QueueName, namespace2)
+					CheckQueueNotExistInPod(brokerName, podName, *addressCrd.Spec.QueueName, namespace1)
 				}
 
 				By("clean up")

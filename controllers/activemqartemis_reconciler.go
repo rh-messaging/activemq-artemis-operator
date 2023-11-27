@@ -2825,7 +2825,7 @@ func checkStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, Proj
 		Namespace: cr.Namespace,
 	}
 
-	ssInfos := ss.GetDeployedStatefulSetNames(client, []types.NamespacedName{resource})
+	ssInfos := ss.GetDeployedStatefulSetNames(client, cr.Namespace, []types.NamespacedName{resource})
 
 	jks := jolokia_client.GetBrokers(resource, ssInfos, client)
 

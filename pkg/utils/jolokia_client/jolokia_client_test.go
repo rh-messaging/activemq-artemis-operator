@@ -25,7 +25,7 @@ var _ = Describe("JolokiaClient", func() {
 					Name:      "broker",
 					Namespace: "some-ns",
 				}
-				ssInfos := ss.GetDeployedStatefulSetNames(client, []types.NamespacedName{brokerRef})
+				ssInfos := ss.GetDeployedStatefulSetNames(client, brokerRef.Namespace, []types.NamespacedName{brokerRef})
 				infos := jolokia_client.GetBrokers(brokerRef, ssInfos, client)
 				Expect(infos).Should(BeEmpty())
 			})
@@ -49,7 +49,7 @@ var _ = Describe("JolokiaClient", func() {
 					Name:      "broker",
 					Namespace: "some-ns",
 				}
-				ssInfos := ss.GetDeployedStatefulSetNames(client, []types.NamespacedName{brokerRef})
+				ssInfos := ss.GetDeployedStatefulSetNames(client, brokerRef.Namespace, []types.NamespacedName{brokerRef})
 				infos := jolokia_client.GetBrokers(brokerRef, ssInfos, client)
 				Expect(infos).Should(BeEmpty())
 			})
@@ -80,7 +80,7 @@ var _ = Describe("JolokiaClient", func() {
 					Name:      "broker",
 					Namespace: "some-ns",
 				}
-				ssInfos := ss.GetDeployedStatefulSetNames(client, []types.NamespacedName{brokerRef})
+				ssInfos := ss.GetDeployedStatefulSetNames(client, brokerRef.Namespace, []types.NamespacedName{brokerRef})
 				infos := jolokia_client.GetBrokers(brokerRef, ssInfos, client)
 				Expect(infos).Should(BeEmpty())
 
@@ -122,7 +122,8 @@ var _ = Describe("JolokiaClient", func() {
 					Name:      "broker",
 					Namespace: "some-ns",
 				}
-				ssInfos := ss.GetDeployedStatefulSetNames(client, []types.NamespacedName{brokerRef})
+				ssInfos := ss.GetDeployedStatefulSetNames(client, brokerRef.Namespace, []types.NamespacedName{brokerRef})
+				Expect(len(ssInfos)).To(Equal(1))
 				infos := jolokia_client.GetBrokers(brokerRef, ssInfos, client)
 				Expect(infos).Should(HaveLen(1))
 				Expect(infos[0].IP).To(Equal("1.2.3.4"))

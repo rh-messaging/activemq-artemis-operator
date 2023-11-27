@@ -355,7 +355,7 @@ func getPodBrokers(instance *AddressDeployment, request ctrl.Request, client cli
 	reqLogger.Info("Getting Pod Brokers for address " + instance.AddressResource.Namespace + "/" + instance.AddressResource.Name)
 	targetCrNamespacedNames := createTargetCrNamespacedNames(request.Namespace, instance.AddressResource.Spec.ApplyToCrNames)
 	reqLogger.Info("target Cr names", "result", targetCrNamespacedNames)
-	ssInfos := ss.GetDeployedStatefulSetNames(client, targetCrNamespacedNames)
+	ssInfos := ss.GetDeployedStatefulSetNames(client, request.Namespace, targetCrNamespacedNames)
 
 	return jc.GetBrokers(request.NamespacedName, ssInfos, client)
 }
@@ -386,7 +386,7 @@ func GetStatefulSetNameForPod(client client.Client, pod *types.NamespacedName) (
 		if len(addressDeployment.SsTargetNameBuilders) == 0 {
 			glog.Info("this cr doesn't have target specified, it will be applied to all")
 			//deploy to all sts, need get from broker controller
-			ssInfos := ss.GetDeployedStatefulSetNames(client, nil)
+			ssInfos := ss.GetDeployedStatefulSetNames(client, pod.Namespace, nil)
 			if len(ssInfos) == 0 {
 				glog.Info("No statefulset found")
 				continue

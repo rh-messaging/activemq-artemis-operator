@@ -27,6 +27,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	gomegaTypes "github.com/onsi/gomega/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -911,6 +912,18 @@ var _ = Describe("Address controller tests", func() {
 })
 
 func CheckQueueExistInPod(brokerCrName string, podName string, queueName string, namespace string) {
+	QueueStatAssertionInPod(brokerCrName, podName, namespace, func(g gomegaTypes.Gomega, content string) {
+		g.Expect(content).Should(ContainSubstring(queueName))
+	})
+}
+
+func CheckQueueNotExistInPod(brokerCrName string, podName string, queueName string, namespace string) {
+	QueueStatAssertionInPod(brokerCrName, podName, namespace, func(g gomegaTypes.Gomega, content string) {
+		g.Expect(content).ShouldNot(ContainSubstring(queueName))
+	})
+}
+
+func QueueStatAssertionInPod(brokerCrName string, podName string, namespace string, customAssert func(g Gomega, content string)) {
 
 	if os.Getenv("USE_EXISTING_CLUSTER") != "true" {
 		Fail("function should be called with an existing cluster")
@@ -967,7 +980,7 @@ func CheckQueueExistInPod(brokerCrName string, podName string, queueName string,
 		By("Checking for output pod")
 		g.Expect(capturedOut.Len() > 0)
 		content := capturedOut.String()
-		g.Expect(content).Should(ContainSubstring(queueName))
+		customAssert(g, content)
 	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 }
 
