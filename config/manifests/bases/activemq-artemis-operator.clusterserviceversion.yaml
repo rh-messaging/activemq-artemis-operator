@@ -951,7 +951,7 @@ spec:
         path: deploymentPlan.affinity.podAntiAffinity
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:podAntiAffinity
-      - description: Custom annotations to be added to broker pod
+      - description: Custom annotations to be added to broker pods
         displayName: Annotations
         path: deploymentPlan.annotations
       - description: Whether broker is clustered
@@ -999,7 +999,7 @@ spec:
         path: deploymentPlan.journalType
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Assign labels to a broker pod, the keys `ActiveMQArtemis` and
+      - description: Assign labels to broker pods, the keys `ActiveMQArtemis` and
           `application` are not allowed
         displayName: Labels
         path: deploymentPlan.labels
@@ -1101,6 +1101,20 @@ spec:
         path: ingressDomain
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Specifies the template for various resources that the operator
+          controls
+        displayName: Resource Templates
+        path: resourceTemplates
+      - description: Custom annotations
+        displayName: Annotations
+        path: resourceTemplates[0].annotations
+      - description: Custom labels
+        displayName: Labels
+        path: resourceTemplates[0].labels
+      - description: Select which resources to match, an empty selector will match
+          all resources
+        displayName: Selector
+        path: resourceTemplates[0].selector
       - description: Specifies the upgrades (deprecated in favour of Version)
         displayName: Upgrades
         path: upgrades

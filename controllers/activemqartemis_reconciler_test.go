@@ -12,10 +12,12 @@ import (
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/stretchr/testify/assert"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -478,10 +480,6 @@ func TestGetJaasConfigExtraMountPathNotPresent(t *testing.T) {
 }
 
 func TestNewPodTemplateSpecForCR_IncludesDebugArgs(t *testing.T) {
-	// client := fake.NewClientBuilder().Build()
-	reconciler := &ActiveMQArtemisReconcilerImpl{
-		log: ctrl.Log.WithName("test"),
-	}
 
 	cr := &brokerv1beta1.ActiveMQArtemis{
 		Spec: brokerv1beta1.ActiveMQArtemisSpec{
@@ -499,6 +497,11 @@ func TestNewPodTemplateSpecForCR_IncludesDebugArgs(t *testing.T) {
 		},
 	}
 
+	reconciler := &ActiveMQArtemisReconcilerImpl{
+		log:            ctrl.Log.WithName("test"),
+		customResource: cr,
+	}
+
 	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
 
 	assert.NoError(t, err)
@@ -510,11 +513,251 @@ func TestNewPodTemplateSpecForCR_IncludesDebugArgs(t *testing.T) {
 	assert.Contains(t, newSpec.Spec.Containers[0].Env, expectedEnv)
 }
 
-func TestNewPodTemplateSpecForCR_AppendsDebugArgs(t *testing.T) {
-	// client := fake.NewClientBuilder().Build()
-	reconciler := &ActiveMQArtemisReconcilerImpl{
-		log: ctrl.Log.WithName("test"),
+func TestProcess_TemplateIncludesLabelsServiceAndSecret(t *testing.T) {
+
+	var kindMatch string = "Secret"
+	cr := &brokerv1beta1.ActiveMQArtemis{
+		Spec: brokerv1beta1.ActiveMQArtemisSpec{
+			DeploymentPlan: brokerv1beta1.DeploymentPlanType{
+				Labels: map[string]string{"myPodKey": "myPodValue"},
+			},
+			ResourceTemplates: []brokerv1beta1.ResourceTemplate{
+				{
+					// match all
+					Labels: map[string]string{"myKey": "myValue"},
+				},
+				{
+					// match just Secrets
+					Selector: &brokerv1beta1.ResourceSelector{
+						Kind: &kindMatch,
+					},
+					Labels: map[string]string{"mySecretKey": "mySecretValue"},
+				}},
+		},
 	}
+
+	reconciler := NewActiveMQArtemisReconcilerImpl(
+		cr,
+		ctrl.Log.WithName("TestProcess_TemplateIncludesLabelsServiceAndSecret"),
+	)
+
+	namer := MakeNamers(cr)
+
+	newSS, err := reconciler.ProcessStatefulSet(cr, *namer, nil)
+
+	reconciler.ProcessDeploymentPlan(cr, *namer, nil, nil, newSS)
+
+	newSpec := newSS.Spec.Template
+	assert.NoError(t, err)
+	assert.NotNil(t, newSpec)
+
+	v, ok := newSpec.Labels["myPodKey"]
+	assert.True(t, ok)
+	assert.Equal(t, "myPodValue", v)
+
+	var secretFound = false
+	var serviceFound = false
+	for _, resource := range reconciler.requestedResources {
+		if secret, ok := resource.(*v1.Secret); ok {
+			assert.True(t, len(secret.Labels) >= 1)
+			assert.Equal(t, secret.Labels["myKey"], "myValue")
+			assert.Equal(t, secret.Labels["mySecretKey"], "mySecretValue")
+			secretFound = true
+		}
+
+		if service, ok := resource.(*v1.Service); ok {
+			assert.True(t, len(service.Labels) >= 1)
+			assert.Equal(t, service.Labels["myKey"], "myValue")
+			_, found := service.Labels["mySecretKey"]
+			assert.False(t, found)
+			serviceFound = true
+		}
+	}
+	assert.True(t, secretFound)
+	assert.True(t, serviceFound)
+}
+
+func TestProcess_TemplateIncludesLabelsSecretRegexp(t *testing.T) {
+
+	var regexpNameMatch string = ".*-props"
+	var exactNameMatch string = "-props"
+
+	cr := &brokerv1beta1.ActiveMQArtemis{
+		Spec: brokerv1beta1.ActiveMQArtemisSpec{
+			ResourceTemplates: []brokerv1beta1.ResourceTemplate{
+				{
+					Selector: &brokerv1beta1.ResourceSelector{
+						// match just -props secrets by name with regex
+						Name: &regexpNameMatch,
+					},
+					Labels: map[string]string{"mySecretKey": "mySecretValue"},
+				},
+				{
+					Selector: &brokerv1beta1.ResourceSelector{
+						// match just -props secrets by name
+						Name: &exactNameMatch,
+					},
+					Labels: map[string]string{"myExactSecretKey": "myExactSecretValue"},
+				}},
+		},
+	}
+
+	reconciler := NewActiveMQArtemisReconcilerImpl(
+		cr,
+		ctrl.Log.WithName("TestProcess_TemplateIncludesLabelsServiceAndSecret"),
+	)
+
+	namer := MakeNamers(cr)
+
+	newSS, _ := reconciler.ProcessStatefulSet(cr, *namer, nil)
+	reconciler.ProcessDeploymentPlan(cr, *namer, nil, nil, newSS)
+
+	var secretFound = false
+	var serviceFound = false
+
+	for _, resource := range reconciler.requestedResources {
+		if secret, ok := resource.(*v1.Secret); ok {
+			assert.True(t, len(secret.Labels) >= 1)
+			assert.Equal(t, secret.Labels["mySecretKey"], "mySecretValue")
+			assert.Equal(t, secret.Labels["myExactSecretKey"], "myExactSecretValue")
+			secretFound = true
+		}
+
+		if service, ok := resource.(*v1.Service); ok {
+			assert.True(t, len(service.Labels) >= 1)
+			_, found := service.Labels["mySecretKey"]
+			assert.False(t, found)
+			_, found = service.Labels["myExactSecretKey"]
+			assert.False(t, found)
+			serviceFound = true
+		}
+
+	}
+	assert.True(t, secretFound)
+	assert.True(t, serviceFound)
+
+}
+
+func TestProcess_TemplateDuplicateKeyReplacesOk(t *testing.T) {
+
+	cr := &brokerv1beta1.ActiveMQArtemis{
+		Spec: brokerv1beta1.ActiveMQArtemisSpec{
+			ResourceTemplates: []brokerv1beta1.ResourceTemplate{
+				{
+					Labels: map[string]string{"mySecretKey": "mySecretValueWillBeReplacedByDuplicate"},
+				},
+				{
+					Labels: map[string]string{"mySecretKey": "mySecretValue"},
+				}},
+		},
+	}
+
+	reconciler := NewActiveMQArtemisReconcilerImpl(
+		cr,
+		ctrl.Log.WithName("TestProcess_TemplateDuplicateKeyReplacesOk"),
+	)
+
+	namer := MakeNamers(cr)
+
+	newSS, _ := reconciler.ProcessStatefulSet(cr, *namer, nil)
+	reconciler.ProcessDeploymentPlan(cr, *namer, nil, nil, newSS)
+
+	var secretFound = false
+	for _, resource := range reconciler.requestedResources {
+		if secret, ok := resource.(*v1.Secret); ok {
+			assert.True(t, len(secret.Labels) >= 1)
+			assert.Equal(t, secret.Labels["mySecretKey"], "mySecretValue")
+			secretFound = true
+		}
+	}
+	assert.True(t, secretFound)
+}
+
+func TestProcess_TemplateKeyValue(t *testing.T) {
+
+	var kindMatch string = "Service"
+	var matchOrdinalServices string = ".+-[0-9]+-svc"
+	var matchGvForIngress string = "networking.k8s.io/v1"
+	cr := &brokerv1beta1.ActiveMQArtemis{
+		ObjectMeta: metav1.ObjectMeta{Name: "cr"},
+		Spec: brokerv1beta1.ActiveMQArtemisSpec{
+			ResourceTemplates: []brokerv1beta1.ResourceTemplate{
+				{
+					// match all
+					Labels: map[string]string{"myKey": "myValue-$(CR_NAME)"},
+				},
+				{
+					// match Acceptor Services with Ordinals
+					Selector: &brokerv1beta1.ResourceSelector{
+						Kind: &kindMatch,
+						Name: &matchOrdinalServices,
+					},
+					Labels: map[string]string{"myKey-$(CR_NAME)": "myValue-$(BROKER_ORDINAL)"},
+				},
+				{
+					// match Ingress
+					Selector: &brokerv1beta1.ResourceSelector{
+						APIGroup: &matchGvForIngress,
+					},
+					Annotations: map[string]string{"myIngressKey-$(CR_NAME)": "myValue-$(BROKER_ORDINAL)"},
+				},
+			},
+			Acceptors: []brokerv1beta1.AcceptorType{{
+				Name:       "aa",
+				Port:       563,
+				Expose:     true,
+				SSLEnabled: true,
+			}},
+		},
+	}
+
+	reconciler := NewActiveMQArtemisReconcilerImpl(
+		cr,
+		ctrl.Log.WithName("test"),
+	)
+
+	namer := MakeNamers(cr)
+
+	newSS, _ := reconciler.ProcessStatefulSet(cr, *namer, nil)
+	reconciler.trackDesired(newSS)
+
+	reconciler.ProcessAcceptorsAndConnectors(cr, *namer,
+		fake.NewClientBuilder().Build(), nil, newSS)
+
+	v, ok := newSS.Labels["myKey"]
+	assert.True(t, ok)
+	assert.Equal(t, "myValue-cr", v)
+
+	var secretFound = false
+	var serviceFound = false
+	for _, resource := range reconciler.requestedResources {
+		if secret, ok := resource.(*v1.Secret); ok {
+			assert.True(t, len(secret.Labels) >= 1)
+			assert.Equal(t, secret.Labels["myKey"], "myValue-cr", resource.GetName())
+			secretFound = true
+		}
+
+		if service, ok := resource.(*v1.Service); ok {
+			assert.True(t, len(service.Labels) >= 1)
+			assert.Equal(t, service.Labels["myKey"], "myValue-cr", resource.GetName())
+
+			if strings.Contains(service.GetName(), "-0-") {
+				assert.Equal(t, service.Labels["myKey-cr"], "myValue-0", resource.GetName())
+				serviceFound = true
+			}
+		}
+
+		if ingress, ok := resource.(*netv1.Ingress); ok {
+			assert.True(t, len(ingress.Annotations) >= 2)
+			assert.Equal(t, ingress.Annotations["myIngressKey-cr"], "myValue-0", resource.GetName())
+		}
+
+	}
+	assert.True(t, secretFound)
+	assert.True(t, serviceFound)
+}
+
+func TestNewPodTemplateSpecForCR_AppendsDebugArgs(t *testing.T) {
 
 	cr := &brokerv1beta1.ActiveMQArtemis{
 		Spec: brokerv1beta1.ActiveMQArtemisSpec{
@@ -538,6 +781,8 @@ func TestNewPodTemplateSpecForCR_AppendsDebugArgs(t *testing.T) {
 		},
 	}
 
+	reconciler := NewActiveMQArtemisReconcilerImpl(cr, ctrl.Log)
+
 	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
 
 	assert.NoError(t, err)
@@ -550,10 +795,6 @@ func TestNewPodTemplateSpecForCR_AppendsDebugArgs(t *testing.T) {
 }
 
 func TestNewPodTemplateSpecForCR_IncludesImagePullSecret(t *testing.T) {
-	// client := fake.NewClientBuilder().Build()
-	reconciler := &ActiveMQArtemisReconcilerImpl{
-		log: ctrl.Log.WithName("test"),
-	}
 
 	cr := &brokerv1beta1.ActiveMQArtemis{
 		Spec: brokerv1beta1.ActiveMQArtemisSpec{
@@ -566,6 +807,7 @@ func TestNewPodTemplateSpecForCR_IncludesImagePullSecret(t *testing.T) {
 			},
 		},
 	}
+	reconciler := NewActiveMQArtemisReconcilerImpl(cr, ctrl.Log)
 
 	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
 
@@ -580,7 +822,6 @@ func TestNewPodTemplateSpecForCR_IncludesImagePullSecret(t *testing.T) {
 }
 
 func TestNewPodTemplateSpecForCR_IncludesTopologySpreadConstraints(t *testing.T) {
-	reconciler := NewActiveMQArtemisReconcilerImpl(ctrl.Log)
 	matchLabels := make(map[string]string)
 	matchLabels["my-label"] = "my-value"
 
@@ -602,6 +843,7 @@ func TestNewPodTemplateSpecForCR_IncludesTopologySpreadConstraints(t *testing.T)
 			},
 		},
 	}
+	reconciler := NewActiveMQArtemisReconcilerImpl(cr, ctrl.Log)
 
 	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
 
@@ -824,12 +1066,12 @@ func TestGetBrokerHost(t *testing.T) {
 	var ingressHost string
 	specIngressHost := "$(CR_NAME)-$(CR_NAMESPACE)-$(ITEM_NAME)-$(BROKER_ORDINAL)-$(RES_TYPE).$(INGRESS_DOMAIN)"
 
-	ingressHost = formatIngressHost(&cr, specIngressHost, "0", "my-acceptor", "ing")
+	ingressHost = formatTemplatedString(&cr, specIngressHost, "0", "my-acceptor", "ing")
 	assert.Equal(t, "test-test-ns-my-acceptor-0-ing.my-domain.com", ingressHost)
 
-	ingressHost = formatIngressHost(&cr, specIngressHost, "1", "my-connector", "rte")
+	ingressHost = formatTemplatedString(&cr, specIngressHost, "1", "my-connector", "rte")
 	assert.Equal(t, "test-test-ns-my-connector-1-rte.my-domain.com", ingressHost)
 
-	ingressHost = formatIngressHost(&cr, specIngressHost, "2", "my-console", "abc")
+	ingressHost = formatTemplatedString(&cr, specIngressHost, "2", "my-console", "abc")
 	assert.Equal(t, "test-test-ns-my-console-2-abc.my-domain.com", ingressHost)
 }

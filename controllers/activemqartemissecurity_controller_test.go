@@ -117,7 +117,9 @@ var _ = Describe("security controller", func() {
 			expectedSecuritySecretKey := types.NamespacedName{Name: "secret-security-" + createdSecurityCr.Name, Namespace: defaultNamespace}
 
 			By("checking the security secret")
-			Eventually(k8sClient.Get(ctx, expectedSecuritySecretKey, expectedSecuritySecret), timeout, interval).Should(Succeed())
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, expectedSecuritySecretKey, expectedSecuritySecret)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
 			crData := expectedSecuritySecret.Data["Data"]
 			Expect(string(crData)).NotTo(BeEmpty())
 

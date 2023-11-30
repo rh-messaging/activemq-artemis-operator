@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/adler32"
+	"regexp"
 	"sort"
 	"unicode"
 
@@ -25,7 +26,6 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/cr2jinja2"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/jolokia_client"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	"github.com/artemiscloud/activemq-artemis-operator/version"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -33,6 +33,7 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -76,6 +77,10 @@ const (
 	BrokerPropertiesName = "broker.properties"
 	JaasConfigKey        = "login.config"
 	LoggingConfigKey     = "logging.properties"
+	PodNameLabelKey      = "statefulset.kubernetes.io/pod-name"
+	ServiceTypePostfix   = "svc"
+	RouteTypePostfix     = "rte"
+	IngressTypePostfix   = "ing"
 )
 
 var defaultMessageMigration bool = true
@@ -94,11 +99,13 @@ type ActiveMQArtemisReconcilerImpl struct {
 	requestedResources []rtclient.Object
 	deployed           map[reflect.Type][]rtclient.Object
 	log                logr.Logger
+	customResource     *brokerv1beta1.ActiveMQArtemis
 }
 
-func NewActiveMQArtemisReconcilerImpl(logger logr.Logger) *ActiveMQArtemisReconcilerImpl {
+func NewActiveMQArtemisReconcilerImpl(customResource *brokerv1beta1.ActiveMQArtemis, logger logr.Logger) *ActiveMQArtemisReconcilerImpl {
 	return &ActiveMQArtemisReconcilerImpl{
-		log: logger,
+		log:            logger,
+		customResource: customResource,
 	}
 }
 
@@ -226,13 +233,27 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(customResour
 		return nil, err
 	}
 
+	var headlessServiceDefinition *corev1.Service
+	headlesServiceName := namer.SvcHeadlessNameBuilder.Name()
+	obj = reconciler.cloneOfDeployed(reflect.TypeOf(corev1.Service{}), headlesServiceName)
+	if obj != nil {
+		headlessServiceDefinition = obj.(*corev1.Service)
+	}
+
 	labels := namer.LabelBuilder.Labels()
-	headlessServiceDefinition := svc.NewHeadlessServiceForCR2(client, namer.SvcHeadlessNameBuilder.Name(), ssNamespacedName.Namespace, serviceports.GetDefaultPorts(), labels)
+	headlessServiceDefinition = svc.NewHeadlessServiceForCR2(client, headlesServiceName, ssNamespacedName.Namespace, serviceports.GetDefaultPorts(), labels, headlessServiceDefinition)
+	reconciler.trackDesired(headlessServiceDefinition)
+
 	if isClustered(customResource) {
-		pingServiceDefinition := svc.NewPingServiceDefinitionForCR2(client, namer.SvcPingNameBuilder.Name(), ssNamespacedName.Namespace, labels, labels)
+		pingServiceName := namer.SvcPingNameBuilder.Name()
+		var pingServiceDefinition *corev1.Service
+		obj = reconciler.cloneOfDeployed(reflect.TypeOf(corev1.Service{}), pingServiceName)
+		if obj != nil {
+			pingServiceDefinition = obj.(*corev1.Service)
+		}
+		pingServiceDefinition = svc.NewPingServiceDefinitionForCR2(client, pingServiceName, ssNamespacedName.Namespace, labels, labels, pingServiceDefinition)
 		reconciler.trackDesired(pingServiceDefinition)
 	}
-	reconciler.trackDesired(headlessServiceDefinition)
 
 	if customResource.Spec.DeploymentPlan.RevisionHistoryLimit != nil {
 		currentStatefulSet.Spec.RevisionHistoryLimit = customResource.Spec.DeploymentPlan.RevisionHistoryLimit
@@ -724,11 +745,12 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureAcceptorsExposure(cust
 		for k, v := range originalLabels {
 			serviceRoutelabels[k] = v
 		}
-		serviceRoutelabels["statefulset.kubernetes.io/pod-name"] = namer.SsNameBuilder.Name() + "-" + ordinalString
+		serviceRoutelabels[PodNameLabelKey] = namer.SsNameBuilder.Name() + "-" + ordinalString
 
 		for _, acceptor := range customResource.Spec.Acceptors {
-			serviceDefinition := svc.NewServiceDefinitionForCR("", client, namespacedName, acceptor.Name+"-"+ordinalString, acceptor.Port, serviceRoutelabels, namer.LabelBuilder.Labels())
-
+			nameSuffix := acceptor.Name + "-" + ordinalString
+			serviceName := types.NamespacedName{Namespace: namespacedName.Namespace, Name: namespacedName.Name + "-" + nameSuffix + "-" + ServiceTypePostfix}
+			serviceDefinition := reconciler.ServiceDefinitionForCR(serviceName, client, nameSuffix, acceptor.Port, serviceRoutelabels, namer.LabelBuilder.Labels())
 			reconciler.checkExistingService(customResource, serviceDefinition, client)
 			reconciler.trackDesired(serviceDefinition)
 
@@ -740,36 +762,182 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureAcceptorsExposure(cust
 	}
 }
 
+func (reconciler *ActiveMQArtemisReconcilerImpl) ServiceDefinitionForCR(serviceName types.NamespacedName, client rtclient.Client, nameSuffix string, portNumber int32, selectorLabels map[string]string, labels map[string]string) *corev1.Service {
+	var serviceDefinition *corev1.Service
+	obj := reconciler.cloneOfDeployed(reflect.TypeOf(corev1.Service{}), serviceName.Name)
+	if obj != nil {
+		serviceDefinition = obj.(*corev1.Service)
+	}
+	return svc.NewServiceDefinitionForCR(serviceName, client, nameSuffix, portNumber, selectorLabels, labels, serviceDefinition)
+}
+
 func (reconciler *ActiveMQArtemisReconcilerImpl) ExposureDefinitionForCR(customResource *brokerv1beta1.ActiveMQArtemis, namespacedName types.NamespacedName, labels map[string]string, passthroughTLS bool, ingressHost string, ordinalString string, itemName string) rtclient.Object {
 
 	targetPortName := itemName + "-" + ordinalString
-	targetServiceName := customResource.Name + "-" + targetPortName + "-svc"
+	targetServiceName := customResource.Name + "-" + targetPortName + "-" + ServiceTypePostfix
 
 	if isOpenshift, err := common.DetectOpenshift(); isOpenshift && err == nil {
 		reconciler.log.V(1).Info("creating route for "+targetPortName, "service", targetServiceName)
 
 		var existing *routev1.Route = nil
-		obj := reconciler.cloneOfDeployed(reflect.TypeOf(routev1.Route{}), targetServiceName+"-rte")
+		obj := reconciler.cloneOfDeployed(reflect.TypeOf(routev1.Route{}), targetServiceName+"-"+RouteTypePostfix)
 		if obj != nil {
 			existing = obj.(*routev1.Route)
 		}
-		brokerHost := formatIngressHost(customResource, ingressHost, ordinalString, itemName, "rte")
+		brokerHost := formatTemplatedString(customResource, ingressHost, ordinalString, itemName, RouteTypePostfix)
 		return routes.NewRouteDefinitionForCR(existing, namespacedName, labels, targetServiceName, targetPortName, passthroughTLS, customResource.Spec.IngressDomain, brokerHost)
 	} else {
 		reconciler.log.V(1).Info("creating ingress for "+targetPortName, "service", targetServiceName)
 
 		var existing *netv1.Ingress = nil
-		obj := reconciler.cloneOfDeployed(reflect.TypeOf(netv1.Ingress{}), targetServiceName+"-ing")
+		obj := reconciler.cloneOfDeployed(reflect.TypeOf(netv1.Ingress{}), targetServiceName+"-"+IngressTypePostfix)
 		if obj != nil {
 			existing = obj.(*netv1.Ingress)
 		}
-		brokerHost := formatIngressHost(customResource, ingressHost, ordinalString, itemName, "ing")
+		brokerHost := formatTemplatedString(customResource, ingressHost, ordinalString, itemName, IngressTypePostfix)
 		return ingresses.NewIngressForCRWithSSL(existing, namespacedName, labels, targetServiceName, targetPortName, passthroughTLS, customResource.Spec.IngressDomain, brokerHost)
 	}
 }
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) trackDesired(desired rtclient.Object) {
+	reconciler.applyTemplates(desired)
 	reconciler.requestedResources = append(reconciler.requestedResources, desired)
+}
+
+func (reconciler *ActiveMQArtemisReconcilerImpl) applyTemplates(desired rtclient.Object) {
+	for _, template := range reconciler.customResource.Spec.ResourceTemplates {
+		reconciler.applyTemplate(template, desired)
+	}
+}
+
+func (reconciler *ActiveMQArtemisReconcilerImpl) applyTemplate(template brokerv1beta1.ResourceTemplate, target rtclient.Object) {
+	if match(template, target) {
+		ordinal := extractOrdinal(target)
+		itemName := extractItemName(target)
+		resType := extractResType(target)
+		if len(template.Annotations) > 0 {
+			modified := make(map[string]string)
+			for key, value := range target.GetAnnotations() {
+				modified[key] = value
+			}
+			for key, value := range template.Annotations {
+				reconciler.addFormattedKeyValue(modified, ordinal, itemName, resType, key, value)
+			}
+			target.SetAnnotations(modified)
+		}
+		if len(template.Labels) > 0 {
+			modified := make(map[string]string)
+			for key, value := range target.GetLabels() {
+				modified[key] = value
+			}
+			for key, value := range template.Labels {
+				reconciler.addFormattedKeyValue(modified, ordinal, itemName, resType, key, value)
+			}
+			target.SetLabels(modified)
+		}
+	}
+}
+
+func (reconciler *ActiveMQArtemisReconcilerImpl) addFormattedKeyValue(collection map[string]string, ordinal string, itemName string, resType string, key string, value string) {
+	formattedKey := formatTemplatedString(reconciler.customResource, key, ordinal, itemName, resType)
+	collection[formattedKey] = formatTemplatedString(reconciler.customResource, value, ordinal, itemName, resType)
+}
+
+func extractItemName(desired rtclient.Object) string {
+	return desired.GetName()
+}
+
+func extractResType(desired rtclient.Object) string {
+	switch desired.(type) {
+	case *corev1.Service:
+		{
+			return ServiceTypePostfix
+		}
+	case *netv1.Ingress:
+		{
+			return IngressTypePostfix
+		}
+
+	case *routev1.Route:
+		{
+			return RouteTypePostfix
+		}
+	}
+	return "undefined-res-type"
+}
+
+func extractOrdinal(desired rtclient.Object) string {
+	var ordinal = "undefined-ordinal"
+	switch desired := desired.(type) {
+	case *corev1.Service:
+		{
+			podName, found := desired.Spec.Selector[PodNameLabelKey]
+			if found {
+				ordinal = ordinalFromPodName(podName)
+			}
+
+		}
+	case *netv1.Ingress, *routev1.Route:
+		{
+			podName, found := desired.GetLabels()[PodNameLabelKey]
+			if found {
+				ordinal = ordinalFromPodName(podName)
+			}
+		}
+	}
+	return ordinal
+}
+
+func ordinalFromPodName(podName string) string {
+	return podName[strings.LastIndex(podName, "-")+1:]
+}
+
+func match(template brokerv1beta1.ResourceTemplate, target rtclient.Object) bool {
+	if template.Selector == nil {
+		return true
+	}
+
+	var groupVersion = ""
+	if template.Selector.APIGroup != nil {
+		groupVersion = *template.Selector.APIGroup
+	}
+
+	templateGv, _ := schema.ParseGroupVersion(groupVersion)
+
+	var kind = ""
+	if template.Selector.Kind != nil {
+		kind = *template.Selector.Kind
+	}
+
+	templateGvk := templateGv.WithKind(kind)
+	targetGvk := target.GetObjectKind().GroupVersionKind()
+
+	if templateGvk.Group != "" {
+		if templateGvk.Group != targetGvk.Group {
+			return false
+		}
+	}
+
+	if templateGvk.Version != "" {
+		if templateGvk.Version != targetGvk.Version {
+			return false
+		}
+	}
+
+	if templateGvk.Kind != "" {
+		if templateGvk.Kind != targetGvk.Kind {
+			return false
+		}
+	}
+
+	if template.Selector.Name != nil {
+		nameMatcher, _ := regexp.Compile(*template.Selector.Name)
+		if !nameMatcher.Match([]byte(target.GetName())) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) configureConnectorsExposure(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, client rtclient.Client, scheme *runtime.Scheme) {
@@ -785,10 +953,13 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureConnectorsExposure(cus
 		for k, v := range originalLabels {
 			serviceRoutelabels[k] = v
 		}
-		serviceRoutelabels["statefulset.kubernetes.io/pod-name"] = namer.SsNameBuilder.Name() + "-" + ordinalString
+		serviceRoutelabels[PodNameLabelKey] = namer.SsNameBuilder.Name() + "-" + ordinalString
 
 		for _, connector := range customResource.Spec.Connectors {
-			serviceDefinition := svc.NewServiceDefinitionForCR("", client, namespacedName, connector.Name+"-"+ordinalString, connector.Port, serviceRoutelabels, namer.LabelBuilder.Labels())
+
+			nameSuffix := connector.Name + "-" + ordinalString
+			serviceName := types.NamespacedName{Namespace: namespacedName.Namespace, Name: namespacedName.Name + "-" + nameSuffix + "-" + ServiceTypePostfix}
+			serviceDefinition := reconciler.ServiceDefinitionForCR(serviceName, client, nameSuffix, connector.Port, serviceRoutelabels, namer.LabelBuilder.Labels())
 			reconciler.checkExistingService(customResource, serviceDefinition, client)
 			reconciler.trackDesired(serviceDefinition)
 
@@ -824,12 +995,12 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureConsoleExposure(custom
 		for k, v := range originalLabels {
 			serviceRoutelabels[k] = v
 		}
-		serviceRoutelabels["statefulset.kubernetes.io/pod-name"] = namer.SsNameBuilder.Name() + "-" + ordinalString
+		serviceRoutelabels[PodNameLabelKey] = namer.SsNameBuilder.Name() + "-" + ordinalString
 
 		targetPortName := consoleName + "-" + ordinalString
-		targetServiceName := customResource.Name + "-" + targetPortName + "-svc"
-
-		serviceDefinition := svc.NewServiceDefinitionForCR(targetServiceName, client, namespacedName, consoleName, targetPort, serviceRoutelabels, namer.LabelBuilder.Labels())
+		targetServiceName := customResource.Name + "-" + targetPortName + "-" + ServiceTypePostfix
+		serviceName := types.NamespacedName{Namespace: namespacedName.Namespace, Name: targetServiceName}
+		serviceDefinition := reconciler.ServiceDefinitionForCR(serviceName, client, consoleName, targetPort, serviceRoutelabels, namer.LabelBuilder.Labels())
 
 		serviceDefinition.Spec.Ports = append(serviceDefinition.Spec.Ports, corev1.ServicePort{
 			Name:       targetPortName,
@@ -846,22 +1017,22 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureConsoleExposure(custom
 			if isOpenshift {
 				reconciler.log.V(2).Info("routeDefinition for " + targetPortName)
 				var existing *routev1.Route = nil
-				obj := reconciler.cloneOfDeployed(reflect.TypeOf(routev1.Route{}), targetServiceName+"-rte")
+				obj := reconciler.cloneOfDeployed(reflect.TypeOf(routev1.Route{}), targetServiceName+"-"+RouteTypePostfix)
 				if obj != nil {
 					existing = obj.(*routev1.Route)
 				}
-				brokerHost := formatIngressHost(customResource, customResource.Spec.Console.IngressHost, ordinalString, consoleName, "rte")
+				brokerHost := formatTemplatedString(customResource, customResource.Spec.Console.IngressHost, ordinalString, consoleName, RouteTypePostfix)
 				routeDefinition := routes.NewRouteDefinitionForCR(existing, namespacedName, serviceRoutelabels, targetServiceName, targetPortName, console.SSLEnabled, customResource.Spec.IngressDomain, brokerHost)
 				reconciler.trackDesired(routeDefinition)
 
 			} else {
 				reconciler.log.V(2).Info("ingress for " + targetPortName)
 				var existing *netv1.Ingress = nil
-				obj := reconciler.cloneOfDeployed(reflect.TypeOf(netv1.Ingress{}), targetServiceName+"-ing")
+				obj := reconciler.cloneOfDeployed(reflect.TypeOf(netv1.Ingress{}), targetServiceName+"-"+IngressTypePostfix)
 				if obj != nil {
 					existing = obj.(*netv1.Ingress)
 				}
-				brokerHost := formatIngressHost(customResource, customResource.Spec.Console.IngressHost, ordinalString, consoleName, "ing")
+				brokerHost := formatTemplatedString(customResource, customResource.Spec.Console.IngressHost, ordinalString, consoleName, IngressTypePostfix)
 				ingressDefinition := ingresses.NewIngressForCRWithSSL(existing, namespacedName, serviceRoutelabels, targetServiceName, targetPortName, console.SSLEnabled, customResource.Spec.IngressDomain, brokerHost)
 				reconciler.trackDesired(ingressDefinition)
 			}
@@ -869,30 +1040,16 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureConsoleExposure(custom
 	}
 }
 
-func formatIngressHost(customResource *brokerv1beta1.ActiveMQArtemis, ingressHost string, brokerOrdinal string, itemName string, resType string) string {
-
-	if ingressHost != "" {
-		if strings.Contains(ingressHost, "$(CR_NAME)") {
-			ingressHost = strings.Replace(ingressHost, "$(CR_NAME)", customResource.Name, -1)
-		}
-		if strings.Contains(ingressHost, "$(CR_NAMESPACE)") {
-			ingressHost = strings.Replace(ingressHost, "$(CR_NAMESPACE)", customResource.Namespace, -1)
-		}
-		if strings.Contains(ingressHost, "$(BROKER_ORDINAL)") {
-			ingressHost = strings.Replace(ingressHost, "$(BROKER_ORDINAL)", brokerOrdinal, -1)
-		}
-		if strings.Contains(ingressHost, "$(ITEM_NAME)") {
-			ingressHost = strings.Replace(ingressHost, "$(ITEM_NAME)", itemName, -1)
-		}
-		if strings.Contains(ingressHost, "$(RES_TYPE)") {
-			ingressHost = strings.Replace(ingressHost, "$(RES_TYPE)", resType, -1)
-		}
-		if strings.Contains(ingressHost, "$(INGRESS_DOMAIN)") {
-			ingressHost = strings.Replace(ingressHost, "$(INGRESS_DOMAIN)", customResource.Spec.IngressDomain, -1)
-		}
+func formatTemplatedString(customResource *brokerv1beta1.ActiveMQArtemis, template string, brokerOrdinal string, itemName string, resType string) string {
+	if template != "" {
+		template = strings.Replace(template, "$(CR_NAME)", customResource.Name, -1)
+		template = strings.Replace(template, "$(CR_NAMESPACE)", customResource.Namespace, -1)
+		template = strings.Replace(template, "$(BROKER_ORDINAL)", brokerOrdinal, -1)
+		template = strings.Replace(template, "$(ITEM_NAME)", itemName, -1)
+		template = strings.Replace(template, "$(RES_TYPE)", resType, -1)
+		template = strings.Replace(template, "$(INGRESS_DOMAIN)", customResource.Spec.IngressDomain, -1)
 	}
-
-	return ingressHost
+	return template
 }
 
 func generateConsoleSSLFlags(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, client rtclient.Client, secretName string) string {
@@ -1482,29 +1639,8 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	}
 	if customResource.Spec.DeploymentPlan.Labels != nil {
 		for key, value := range customResource.Spec.DeploymentPlan.Labels {
-			reqLogger.V(1).Info("Adding CR Label", "key", key, "value", value)
-			if key == selectors.LabelAppKey || key == selectors.LabelResourceKey {
-
-				meta.SetStatusCondition(&customResource.Status.Conditions, metav1.Condition{
-					Type:    brokerv1beta1.ValidConditionType,
-					Status:  metav1.ConditionFalse,
-					Reason:  brokerv1beta1.ValidConditionFailedReservedLabelReason,
-					Message: fmt.Sprintf("'%s' is a reserved label, it is not allowed in Spec.DeploymentPlan.Labels", key),
-				})
-				return nil, fmt.Errorf("label key '%s' not allowed because it is reserved", key)
-			} else {
-				labels[key] = value
-			}
+			labels[key] = value
 		}
-	}
-	// validation success
-	prevCondition := meta.FindStatusCondition(customResource.Status.Conditions, brokerv1beta1.ValidConditionType)
-	if prevCondition == nil {
-		meta.SetStatusCondition(&customResource.Status.Conditions, metav1.Condition{
-			Type:   brokerv1beta1.ValidConditionType,
-			Status: metav1.ConditionTrue,
-			Reason: brokerv1beta1.ValidConditionSuccessReason,
-		})
 	}
 
 	pts := pods.MakePodTemplateSpec(current, namespacedName, labels, customResource.Spec.DeploymentPlan.Annotations)
@@ -2249,14 +2385,14 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewStatefulSetForCR(customResou
 	}
 
 	if customResource.Spec.DeploymentPlan.PersistenceEnabled {
-		currentStateFullSet.Spec.VolumeClaimTemplates = *NewPersistentVolumeClaimArrayForCR(customResource, namer, 1)
+		currentStateFullSet.Spec.VolumeClaimTemplates = *reconciler.NewPersistentVolumeClaimArrayForCR(customResource, namer, 1)
 	}
 	currentStateFullSet.Spec.Template = *podTemplateSpec
 
 	return currentStateFullSet, nil
 }
 
-func NewPersistentVolumeClaimArrayForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, arrayLength int) *[]corev1.PersistentVolumeClaim {
+func (reconciler *ActiveMQArtemisReconcilerImpl) NewPersistentVolumeClaimArrayForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, arrayLength int) *[]corev1.PersistentVolumeClaim {
 
 	var pvc *corev1.PersistentVolumeClaim = nil
 	capacity := "2Gi"
@@ -2278,6 +2414,7 @@ func NewPersistentVolumeClaimArrayForCR(customResource *brokerv1beta1.ActiveMQAr
 
 	for i := 0; i < arrayLength; i++ {
 		pvc = persistentvolumeclaims.NewPersistentVolumeClaimWithCapacityAndStorageClassName(namespacedName, capacity, namer.LabelBuilder.Labels(), storageClassName)
+		reconciler.applyTemplates(pvc)
 		pvcArray = append(pvcArray, *pvc)
 	}
 

@@ -158,7 +158,7 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 	}
 
 	namer := MakeNamers(customResource)
-	reconciler := NewActiveMQArtemisReconcilerImpl(r.log)
+	reconciler := NewActiveMQArtemisReconcilerImpl(customResource, r.log)
 
 	var requeueRequest bool = false
 	var valid bool = false
@@ -235,10 +235,45 @@ func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Cli
 		}
 	}
 
+	if validationCondition.Status == metav1.ConditionTrue {
+		condition := validateReservedLabels(customResource)
+		if condition != nil {
+			validationCondition = *condition
+		}
+	}
+
 	validationCondition.ObservedGeneration = customResource.Generation
 	meta.SetStatusCondition(&customResource.Status.Conditions, validationCondition)
 
 	return validationCondition.Status != metav1.ConditionFalse, retry
+}
+
+func validateReservedLabels(customResource *brokerv1beta1.ActiveMQArtemis) *metav1.Condition {
+	if customResource.Spec.DeploymentPlan.Labels != nil {
+		for key := range customResource.Spec.DeploymentPlan.Labels {
+			if key == selectors.LabelAppKey || key == selectors.LabelResourceKey {
+				return &metav1.Condition{
+					Type:    brokerv1beta1.ValidConditionType,
+					Status:  metav1.ConditionFalse,
+					Reason:  brokerv1beta1.ValidConditionFailedReservedLabelReason,
+					Message: fmt.Sprintf("'%s' is a reserved label, it is not allowed in Spec.DeploymentPlan.Labels", key),
+				}
+			}
+		}
+	}
+	for index, template := range customResource.Spec.ResourceTemplates {
+		for key := range template.Labels {
+			if key == selectors.LabelAppKey || key == selectors.LabelResourceKey {
+				return &metav1.Condition{
+					Type:    brokerv1beta1.ValidConditionType,
+					Status:  metav1.ConditionFalse,
+					Reason:  brokerv1beta1.ValidConditionFailedReservedLabelReason,
+					Message: fmt.Sprintf("'%s' is a reserved label, it is not allowed in Spec.DeploymentPlan.Templates[%d].Labels", key, index),
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func validateAcceptorPorts(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, namer common.Namers) (*metav1.Condition, bool) {

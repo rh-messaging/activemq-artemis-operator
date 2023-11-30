@@ -921,7 +921,7 @@ spec:
                   annotations:
                     additionalProperties:
                       type: string
-                    description: Custom annotations to be added to broker pod
+                    description: Custom annotations to be added to broker pods
                     type: object
                   clustered:
                     description: Whether broker is clustered
@@ -969,7 +969,7 @@ spec:
                   labels:
                     additionalProperties:
                       type: string
-                    description: Assign labels to a broker pod, the keys `ActiveMQArtemis` and `application` are not allowed
+                    description: Assign labels to broker pods, the keys `ActiveMQArtemis` and `application` are not allowed
                     type: object
                   livenessProbe:
                     description: Specifies the liveness probe configuration
@@ -1677,6 +1677,35 @@ spec:
               ingressDomain:
                 description: The ingress domain to expose the application. By default, on Kubernetes it is apps.artemiscloud.io and on OpenShift it is the Ingress Controller domain.
                 type: string
+              resourceTemplates:
+                description: Specifies the template for various resources that the operator controls
+                items:
+                  properties:
+                    annotations:
+                      additionalProperties:
+                        type: string
+                      description: Custom annotations
+                      type: object
+                    labels:
+                      additionalProperties:
+                        type: string
+                      description: Custom labels
+                      type: object
+                    selector:
+                      description: Select which resources to match, an empty selector will match all resources
+                      properties:
+                        apiGroup:
+                          description: APIGroup is the group version string of resources to match
+                          type: string
+                        kind:
+                          description: Kind is the type of resources to match
+                          type: string
+                        name:
+                          description: Name is the pattern matcher for the Name of resources to match
+                          type: string
+                      type: object
+                  type: object
+                type: array
               upgrades:
                 description: Specifies the upgrades (deprecated in favour of Version)
                 properties:

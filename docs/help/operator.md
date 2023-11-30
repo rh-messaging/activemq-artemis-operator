@@ -737,6 +737,27 @@ spec:
       promethes-prop: "somevalue"
 ```
 
+### Custom Labels and Annotations on supporting resources; Services, Ingress, Secrets etc.
+It is possible to configure  ResourceTemplate(s) for resources that are managed by the operator.
+The TemplateType contains Labels and Annotations with an optional Selector. If the selector is empty
+the template matches all resources. Othewise it can be used to restrict what is matched.
+Note: the relevant variables supported by [`ingressHost`](https://github.com/artemiscloud/activemq-artemis-operator/issues/614) in the CRD can be referenced in keys and values for both labels and annotations.
+In the following example, the annotation "someKey=someValue" is added to all Services
+
+```yaml
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: broker
+  namespace: activemq-artemis-operator
+spec:
+  resourceTemplates:
+   - selector:
+       kind: "Service"
+     annotations:
+       someKey: "somevalue"
+```
+
 ### Setting  Environment Variables
 
 As an advanced option, you can set environment variables for containers using a CR.

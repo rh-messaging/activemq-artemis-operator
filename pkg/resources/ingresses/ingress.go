@@ -1,8 +1,6 @@
 package ingresses
 
 import (
-	//"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
-
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -82,7 +80,10 @@ func NewIngressForCRWithSSL(existing *netv1.Ingress, namespacedName types.Namesp
 
 	desired.Spec.Rules[0].Host = host
 	if sslEnabled {
-		desired.Annotations = map[string]string{"nginx.ingress.kubernetes.io/ssl-passthrough": "true"}
+		if desired.Annotations == nil {
+			desired.Annotations = make(map[string]string)
+		}
+		desired.Annotations["nginx.ingress.kubernetes.io/ssl-passthrough"] = "true"
 		desired.Spec.TLS = []netv1.IngressTLS{{Hosts: []string{host}}}
 	}
 	return desired

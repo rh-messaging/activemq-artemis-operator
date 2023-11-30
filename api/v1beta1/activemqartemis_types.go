@@ -67,6 +67,9 @@ type ActiveMQArtemisSpec struct {
 	// The ingress domain to expose the application. By default, on Kubernetes it is apps.artemiscloud.io and on OpenShift it is the Ingress Controller domain.
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Ingress Domain",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:text"}
 	IngressDomain string `json:"ingressDomain,omitempty"`
+	// Specifies the template for various resources that the operator controls
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Resource Templates"
+	ResourceTemplates []ResourceTemplate `json:"resourceTemplates,omitempty"`
 }
 
 type AddressSettingsType struct {
@@ -349,7 +352,7 @@ type DeploymentPlanType struct {
 	// Specifies the tolerations
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Tolerations"
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
-	// Assign labels to a broker pod, the keys `ActiveMQArtemis` and `application` are not allowed
+	// Assign labels to broker pods, the keys `ActiveMQArtemis` and `application` are not allowed
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Labels"
 	Labels map[string]string `json:"labels,omitempty"`
 	// Specifies the node selector
@@ -361,7 +364,7 @@ type DeploymentPlanType struct {
 	// Specifies the pod security context
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Pod Security Context"
 	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
-	// Custom annotations to be added to broker pod
+	// Custom annotations to be added to broker pods
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Annotations"
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// Specifies the pod disruption budget
@@ -370,6 +373,30 @@ type DeploymentPlanType struct {
 	// Specifies the Revision History Limit of the statefulset
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Revision History Limit"
 	RevisionHistoryLimit *int32 `json:"revisionHistoryLimit,omitempty"`
+}
+
+type ResourceTemplate struct {
+	// Select which resources to match, an empty selector will match all resources
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Selector"
+	Selector *ResourceSelector `json:"selector,omitempty"`
+
+	// Custom annotations
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Annotations"
+	Annotations map[string]string `json:"annotations,omitempty"`
+
+	// Custom labels
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Labels"
+	Labels map[string]string `json:"labels,omitempty"`
+}
+
+// match criteria to restrict the selection of resources
+type ResourceSelector struct {
+	// APIGroup is the group version string of resources to match
+	APIGroup *string `json:"apiGroup,omitempty"`
+	// Kind is the type of resources to match
+	Kind *string `json:"kind,omitempty"`
+	// Name is the pattern matcher for the Name of resources to match
+	Name *string `json:"name,omitempty"`
 }
 
 // Affinity is a group of affinity scheduling rules.

@@ -144,23 +144,8 @@ var _ = Describe("Scale down controller", func() {
 
 				Expect(*content).Should(ContainSubstring("JMS Message ID:"))
 
-				By("accessing drain pod")
 				drainPod := &corev1.Pod{}
 				drainPodKey := types.NamespacedName{Name: brokerName + "-ss-1", Namespace: defaultNamespace}
-				By("flipping MessageMigration to release drain pod CR, and PVC")
-				Expect(k8sClient.Get(ctx, drainPodKey, drainPod)).Should(Succeed())
-
-				Eventually(func(g Gomega) {
-
-					getPersistedVersionedCrd(brokerCrd.ObjectMeta.Name, defaultNamespace, createdBrokerCrd)
-					By("flipping message migration state (from default true) on brokerCr")
-					booleanFalse := false
-					createdBrokerCrd.Spec.DeploymentPlan.MessageMigration = &booleanFalse
-					g.Expect(k8sClient.Update(ctx, createdBrokerCrd)).Should(Succeed())
-					By("Unset message migration in broker cr")
-
-				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
-
 				By("verifying drain pod gone")
 				Eventually(func(g Gomega) {
 					g.Expect(k8sClient.Get(ctx, drainPodKey, drainPod)).ShouldNot(Succeed())

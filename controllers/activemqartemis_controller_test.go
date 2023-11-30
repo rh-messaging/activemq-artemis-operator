@@ -3283,7 +3283,7 @@ var _ = Describe("artemis controller", func() {
 			crd.Spec.Console.Expose = true
 			crd.Spec.Console.SSLEnabled = true
 
-			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(ctrl.Log)
+			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(&crd, ctrl.Log)
 
 			defaultConsoleSecretName := crd.Name + "-console-secret"
 			currentSS := &appsv1.StatefulSet{}
@@ -3363,7 +3363,7 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(createdCrd.ResourceVersion).ShouldNot(BeEmpty())
 			}, timeout, interval).Should(Succeed())
 
-			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(ctrl.Log)
+			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(&crd, ctrl.Log)
 			namer := MakeNamers(&crd)
 			defaultConsoleSecretName := crd.Name + "-console-secret"
 			internalSecretName := defaultConsoleSecretName + "-internal"
@@ -3461,7 +3461,7 @@ var _ = Describe("artemis controller", func() {
 
 			}, timeout, interval).Should(Succeed())
 
-			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(ctrl.Log)
+			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(&crd, ctrl.Log)
 			reconcilerImpl.deployed = make(map[reflect.Type][]client.Object)
 
 			namer := MakeNamers(&crd)
