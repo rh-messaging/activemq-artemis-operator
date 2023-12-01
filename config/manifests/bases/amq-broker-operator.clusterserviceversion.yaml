@@ -1780,5 +1780,5 @@ spec:
   provider:
     name: Red Hat
     url: https://www.redhat.com/
-  replaces: amq-broker-operator.v7.11.3-opr-1
+  replaces: amq-broker-operator.v7.11.4-opr-1
   version: 0.0.0
