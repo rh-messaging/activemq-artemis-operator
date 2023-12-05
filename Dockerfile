@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM golang:1.19 as builder
+FROM registry.access.redhat.com/ubi8/go-toolset:1.19 as builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -28,17 +28,16 @@ COPY pkg/ pkg/
 COPY version/ version/
 ### END REMOTE SOURCE
 
-# Set up the workspace
-RUN mkdir -p /workspace
-RUN mv $REMOTE_SOURCE_DIR/app /workspace
-WORKDIR /workspace/app
+# Set up the workdir
+WORKDIR /opt/app-root/src
+RUN cp -r $REMOTE_SOURCE_DIR/app/* .
 
 # Build
 # the GOARCH has not a default value to allow the binary be built according to the host where the command
 # was called. For example, if we call make docker-build in a local env which has the Apple Silicon M1 SO
 # the docker BUILDPLATFORM arg will be linux/arm64 when for Apple x86 it will be linux/amd64. Therefore,
 # by leaving it empty we can ensure that the container and binary shipped on it will have the same platform.
-RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -ldflags="-X '${GO_MODULE}/version.BuildTimestamp=`date '+%Y-%m-%dT%H:%M:%S'`'" -o /workspace/manager main.go
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -ldflags="-X '${GO_MODULE}/version.BuildTimestamp=`date '+%Y-%m-%dT%H:%M:%S'`'" -o manager main.go
 
 FROM registry.access.redhat.com/ubi8:8.6-855 as base-env
 
@@ -54,10 +53,10 @@ WORKDIR /
 RUN mkdir -p ${USER_HOME}/bin
 
 # Copy the manager binary
-COPY --from=builder /workspace/manager ${OPERATOR}
+COPY --from=builder /opt/app-root/src/manager ${OPERATOR}
 
 # Copy the entrypoint script
-COPY --from=builder /workspace/app/entrypoint/entrypoint ${USER_HOME}/bin/entrypoint
+COPY --from=builder /opt/app-root/src/entrypoint/entrypoint ${USER_HOME}/bin/entrypoint
 
 # Set operator bin owner and permissions
 RUN chown -R `id -u`:0 ${USER_HOME}/bin && chmod -R 755 ${USER_HOME}/bin
