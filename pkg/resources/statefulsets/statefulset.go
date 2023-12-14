@@ -20,6 +20,8 @@ import (
 	"context"
 	"reflect"
 
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
+
 	"github.com/RHsyseng/operator-utils/pkg/resource/read"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/pods"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
@@ -62,7 +64,7 @@ func MakeStatefulSet(currentStateFulSet *appsv1.StatefulSet, ssName string, svcH
 	}
 	// these fields we reconcile
 	currentStateFulSet.ObjectMeta.Labels = labels
-	currentStateFulSet.ObjectMeta.Annotations = annotations
+	common.ApplyAnnotations(&currentStateFulSet.ObjectMeta, annotations)
 
 	currentStateFulSet.Spec.Replicas = replicas
 	currentStateFulSet.Spec.Template = *pods.MakePodTemplateSpec(&currentStateFulSet.Spec.Template, namespacedName, labels, nil)

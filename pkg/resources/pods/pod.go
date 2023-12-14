@@ -1,6 +1,7 @@
 package pods
 
 import (
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,7 +23,8 @@ func MakePodTemplateSpec(current *corev1.PodTemplateSpec, namespacedName types.N
 		}
 	}
 	desired.ObjectMeta.Labels = labels
-	desired.ObjectMeta.Annotations = annotations
+
+	common.ApplyAnnotations(&desired.ObjectMeta, annotations)
 
 	return desired
 }

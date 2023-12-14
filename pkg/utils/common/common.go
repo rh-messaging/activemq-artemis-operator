@@ -637,3 +637,14 @@ func DetectOpenshift() (bool, error) {
 	}
 	return false, errors.New("environment not yet determined")
 }
+
+func ApplyAnnotations(objectMeta *metav1.ObjectMeta, annotations map[string]string) {
+	if annotations != nil {
+		if objectMeta.Annotations == nil {
+			objectMeta.Annotations = map[string]string{}
+		}
+		for k, v := range annotations {
+			objectMeta.Annotations[k] = v
+		}
+	}
+}

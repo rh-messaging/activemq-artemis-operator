@@ -67,15 +67,20 @@ func Update(client client.Client, clientObject client.Object) error {
 
 	var err error = nil
 	if err = client.Update(context.TODO(), clientObject); err != nil {
-		switch checkForForbidden := err.(type) {
+		switch statusError := err.(type) {
 		case *errors.StatusError:
-			if checkForForbidden.ErrStatus.Status == v1.StatusFailure &&
-				checkForForbidden.ErrStatus.Code == http.StatusUnprocessableEntity &&
-				checkForForbidden.ErrStatus.Reason == v1.StatusReasonInvalid {
+			if statusError.ErrStatus.Status == v1.StatusFailure &&
+				statusError.ErrStatus.Code == http.StatusUnprocessableEntity &&
+				statusError.ErrStatus.Reason == v1.StatusReasonInvalid {
 
 				// "StatefulSet.apps is invalid: spec: Forbidden: updates to statefulset spec for fields other than 'replicas', 'template', 'updateStrategy' and 'minReadySeconds' are forbidden"}
 				reqLogger.V(1).Info("Deleting on failed updating "+objectTypeString, "obj", clientObject, "Forbidden", err)
 				err = Delete(client, clientObject)
+			} else if statusError.ErrStatus.Status == v1.StatusFailure &&
+				statusError.ErrStatus.Code == http.StatusConflict &&
+				statusError.ErrStatus.Reason == v1.StatusReasonConflict {
+				// we can live with conflict and will retry, no need to log
+				err = fmt.Errorf("failed to update %s due to conflict", objectTypeString)
 			} else {
 				reqLogger.Error(err, "got error on update", "resourceVersion", clientObject.GetResourceVersion())
 			}

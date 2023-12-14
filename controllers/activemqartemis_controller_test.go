@@ -3972,6 +3972,72 @@ var _ = Describe("artemis controller", func() {
 
 			}, timeout, interval).Should(Succeed())
 
+			By("verify external mod to annotation is respected by reconcile")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, key, createdSs)).Should(Succeed())
+				createdSs.Spec.Template.Annotations["externalController"] = "seen it!"
+				g.Expect(createdSs.GetAnnotations()).To(BeNil())
+				createdSs.Annotations = map[string]string{}
+				createdSs.Annotations["externalController"] = "seen it!"
+				g.Expect(k8sClient.Update(ctx, createdSs)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			By("forcing reconcile with further annotation update")
+			Eventually(func(g Gomega) {
+				g.Expect(getPersistedVersionedCrd(brokerCr.Name, defaultNamespace, createdCr)).Should(BeTrue())
+				createdCr.Spec.DeploymentPlan.Annotations["new"] = "true"
+				g.Expect(k8sClient.Update(ctx, createdCr)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			By("verify reconcile and external annotaion present")
+			createdSs = &appsv1.StatefulSet{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, key, createdSs)).Should(Succeed())
+
+				_, ok := createdSs.Spec.Template.Annotations["externalController"]
+				g.Expect(ok).Should(BeTrue())
+
+				_, ok = createdSs.Spec.Template.Annotations["new"]
+				g.Expect(ok).Should(BeTrue())
+
+				_, ok = createdSs.Spec.Template.Annotations["promethes-prop"]
+				g.Expect(ok).Should(BeTrue())
+
+				_, ok = createdSs.Annotations["externalController"]
+				g.Expect(ok).Should(BeTrue())
+
+			}, timeout, interval).Should(Succeed())
+
+			By("verify annotation removal")
+			stateFulSetKindString := "StatefulSet"
+			Eventually(func(g Gomega) {
+				g.Expect(getPersistedVersionedCrd(brokerCr.Name, defaultNamespace, createdCr)).Should(BeTrue())
+				createdCr.Spec.ResourceTemplates = []brokerv1beta1.ResourceTemplate{
+					{
+						Selector: &brokerv1beta1.ResourceSelector{
+							Kind: &stateFulSetKindString,
+						},
+						Annotations: map[string]string{
+							"externalController": "-",
+							"removalDone":        "true"},
+					},
+				}
+				g.Expect(k8sClient.Update(ctx, createdCr)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			By("verify reconcile and external annotaion removed via resource template")
+			createdSs = &appsv1.StatefulSet{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, key, createdSs)).Should(Succeed())
+
+				_, ok := createdSs.Annotations["removalDone"]
+				g.Expect(ok).Should(BeTrue())
+
+				_, ok = createdSs.Annotations["externalController"]
+				g.Expect(ok).Should(BeFalse())
+
+			}, timeout, interval).Should(Succeed())
+
 			CleanResource(createdCr, createdCr.Name, defaultNamespace)
 		})
 	})
