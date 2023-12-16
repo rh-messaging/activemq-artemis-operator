@@ -719,11 +719,11 @@ type inSyncApplyError struct {
 	detail map[string]string
 }
 
-const inSyncWithErrorCause = "some properties resulted in error on pod %s"
+const inSyncWithErrorCause = "some properties from %v resulted in error on pod %s"
 
-func NewInSyncWithError(pod string) *inSyncApplyError {
+func NewInSyncWithError(secretProjection *projection, pod string) *inSyncApplyError {
 	return &inSyncApplyError{
-		cause:  errors.Errorf(inSyncWithErrorCause, pod),
+		cause:  errors.Errorf(inSyncWithErrorCause, secretProjection.Name, pod),
 		detail: map[string]string{},
 	}
 }
