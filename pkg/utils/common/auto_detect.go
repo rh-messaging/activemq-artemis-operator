@@ -16,6 +16,7 @@ limitations under the License.
 package common
 
 import (
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -35,10 +36,13 @@ func NewAutoDetect(mgr manager.Manager) (*AutoDetector, error) {
 }
 
 func (b *AutoDetector) DetectOpenshift() error {
-	apiGroupVersion := "operator.openshift.io/v1"
-	kind := OpenShiftAPIServerKind
 	stateManager := GetStateManager()
-	isOpenshift, err := ResourceExists(b.dc, apiGroupVersion, kind)
+	isOpenshift, err := discovery.IsResourceEnabled(b.dc,
+		schema.GroupVersionResource{
+			Group:    "operator.openshift.io",
+			Version:  "v1",
+			Resource: OpenShiftAPIServerKind,
+		})
 
 	if err != nil {
 		return err
@@ -51,21 +55,4 @@ func (b *AutoDetector) DetectOpenshift() error {
 		stateManager.SetState(OpenShiftAPIServerKind, false)
 	}
 	return nil
-}
-
-func ResourceExists(dc discovery.DiscoveryInterface, apiGroupVersion, kind string) (bool, error) {
-	_, apiLists, err := dc.ServerGroupsAndResources()
-	if err != nil {
-		return false, err
-	}
-	for _, apiList := range apiLists {
-		if apiList.GroupVersion == apiGroupVersion {
-			for _, r := range apiList.APIResources {
-				if r.Kind == kind {
-					return true, nil
-				}
-			}
-		}
-	}
-	return false, nil
 }
