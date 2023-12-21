@@ -38,6 +38,7 @@ import (
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
+	"github.com/artemiscloud/activemq-artemis-operator/version"
 	"github.com/pkg/errors"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
@@ -221,7 +222,7 @@ func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Cli
 	}
 
 	if validationCondition.Status == metav1.ConditionTrue {
-		condition := validateBrokerVersion(customResource)
+		condition := validateBrokerImageVersion(customResource)
 		if condition != nil {
 			validationCondition = *condition
 		}
@@ -311,35 +312,45 @@ func validatePodDisruption(customResource *brokerv1beta1.ActiveMQArtemis) *metav
 	return nil
 }
 
-func validateBrokerVersion(customResource *brokerv1beta1.ActiveMQArtemis) *metav1.Condition {
-
+func validateBrokerImageVersion(customResource *brokerv1beta1.ActiveMQArtemis) *metav1.Condition {
 	var result *metav1.Condition = nil
-	if customResource.Spec.Version != "" {
-		if isLockedDown(customResource.Spec.DeploymentPlan.Image) || isLockedDown(customResource.Spec.DeploymentPlan.InitImage) {
-			result = &metav1.Condition{
-				Type:    brokerv1beta1.ValidConditionType,
-				Status:  metav1.ConditionUnknown,
-				Reason:  brokerv1beta1.ValidConditionUnknownReason,
-				Message: common.ImageVersionConflictMessage,
-			}
-		}
 
-		_, err := resolveBrokerVersion(customResource)
-		if err != nil {
-			result = &metav1.Condition{
-				Type:    brokerv1beta1.ValidConditionType,
-				Status:  metav1.ConditionFalse,
-				Reason:  brokerv1beta1.ValidConditionInvalidVersionReason,
-				Message: fmt.Sprintf(".Spec.Version does not resolve to a supported broker version, reason %v", err),
-			}
-		}
-
-	} else if (isLockedDown(customResource.Spec.DeploymentPlan.Image) && !isLockedDown(customResource.Spec.DeploymentPlan.InitImage)) || (isLockedDown(customResource.Spec.DeploymentPlan.InitImage) && !isLockedDown(customResource.Spec.DeploymentPlan.Image)) {
+	_, err := resolveBrokerVersion(customResource)
+	if err != nil {
 		result = &metav1.Condition{
 			Type:    brokerv1beta1.ValidConditionType,
-			Status:  metav1.ConditionUnknown,
-			Reason:  brokerv1beta1.ValidConditionUnknownReason,
-			Message: common.ImageDependentPairMessage,
+			Status:  metav1.ConditionFalse,
+			Reason:  brokerv1beta1.ValidConditionInvalidVersionReason,
+			Message: fmt.Sprintf(".Spec.Version does not resolve to a supported broker version, reason %v", err),
+		}
+	} else {
+		if isLockedDown(customResource.Spec.DeploymentPlan.Image) || isLockedDown(customResource.Spec.DeploymentPlan.InitImage) {
+			if !isLockedDown(customResource.Spec.DeploymentPlan.InitImage) || !isLockedDown(customResource.Spec.DeploymentPlan.Image) {
+				result = &metav1.Condition{
+					Type:    brokerv1beta1.ValidConditionType,
+					Status:  metav1.ConditionUnknown,
+					Reason:  brokerv1beta1.ValidConditionUnknownReason,
+					Message: common.ImageDependentPairMessage,
+				}
+			} else {
+				if customResource.Spec.Version != "" {
+					if !version.IsSupportedActiveMQArtemisVersion(customResource.Spec.Version) {
+						result = &metav1.Condition{
+							Type:    brokerv1beta1.ValidConditionType,
+							Status:  metav1.ConditionUnknown,
+							Reason:  brokerv1beta1.ValidConditionUnknownReason,
+							Message: common.NotSupportedImageVersionMessage,
+						}
+					}
+				} else {
+					result = &metav1.Condition{
+						Type:    brokerv1beta1.ValidConditionType,
+						Status:  metav1.ConditionUnknown,
+						Reason:  brokerv1beta1.ValidConditionUnknownReason,
+						Message: common.UnkonwonImageVersionMessage,
+					}
+				}
+			}
 		}
 	}
 
@@ -667,6 +678,10 @@ type statusOutOfSyncMissingKeyError struct {
 	cause string
 }
 
+type versionMismatchError struct {
+	cause string
+}
+
 func NewUnknownJolokiaError(err error) unknownJolokiaError {
 	return unknownJolokiaError{
 		err,
@@ -754,4 +769,16 @@ func (e *inSyncApplyError) ErrorApplyDetail(container string, reason string) {
 	} else {
 		e.detail[container] = reason
 	}
+}
+
+func NewVersionMismatchError(err error) versionMismatchError {
+	return versionMismatchError{err.Error()}
+}
+
+func (e versionMismatchError) Error() string {
+	return e.cause
+}
+
+func (e versionMismatchError) Requeue() bool {
+	return false
 }

@@ -692,4 +692,8 @@ const (
 	ConfigAppliedConditionUnknownReason                   = "UnableToRetrieveStatus"
 	ConfigAppliedConditionOutOfSyncReason                 = "OutOfSync"
 	ConfigAppliedConditionNoJolokiaClientsAvailableReason = "NoJolokiaClientsAvailable"
+
+	BrokerVersionAlignedConditionType           = "BrokerVersionAligned"
+	BrokerVersionAlignedConditionMatchReason    = "VersionMatch"
+	BrokerVersionAlignedConditionMismatchReason = "VersionMismatch"
 )

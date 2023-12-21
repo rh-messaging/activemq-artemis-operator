@@ -57,7 +57,7 @@ var FullVersionFromCompactVersion map[string]string = map[string]string{
 	"7115": "7.11.5",
 }
 
-//The yacfg profile to use for a given full version of broker
+// The yacfg profile to use for a given full version of broker
 var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
 	"7.7.0":  "7.7.0",
 	"7.8.0":  "7.8.0",
@@ -101,6 +101,21 @@ var SupportedActiveMQArtemisVersions = []string{
 	"7.11.5",
 }
 
+var ActiveMQArtemisVersionfromFullVersion map[string]string = map[string]string{
+	"7.10.0": "2.21.0.redhat-00025",
+	"7.10.1": "2.21.0.redhat-00030",
+	"7.10.2": "2.21.0.redhat-00041",
+	"7.11.0": "2.28.0.redhat-00003",
+	"7.11.1": "2.28.0.redhat-00004",
+	"7.10.3": "2.21.0.redhat-00044",
+	"7.11.2": "2.28.0.redhat-00009",
+	"7.11.3": "2.28.0.redhat-00011",
+	"7.10.4": "2.21.0.redhat-00045",
+	"7.11.4": "2.28.0.redhat-00012",
+	"7.10.5": "2.21.0.redhat-00046",
+	"7.11.5": "2.28.0.redhat-00015",
+}
+
 func CompactActiveMQArtemisVersion(version string) string {
 	return strings.Replace(version, ".", "", -1)
 }
@@ -117,4 +132,13 @@ func SupportedActiveMQArtemisSemanticVersions() []semver.Version {
 	}
 
 	return supportedActiveMQArtemisSemanticVersions
+}
+
+func IsSupportedActiveMQArtemisVersion(version string) bool {
+	for i := 0; i < len(SupportedActiveMQArtemisVersions); i++ {
+		if SupportedActiveMQArtemisVersions[i] == version {
+			return true
+		}
+	}
+	return false
 }
