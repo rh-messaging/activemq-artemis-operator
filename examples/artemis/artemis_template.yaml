@@ -1,0 +1,19 @@
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: artemis-broker-template
+spec:
+  resourceTemplates:
+  - selector:
+     kind: "StatefulSet"
+    annotations:
+     someKey: "someValue"
+    patch:
+     kind: "StatefulSet"
+     spec:
+      template:
+       spec:
+        containers:
+        - name: "artemis-broker-template-container"
+          securityContext:
+           runAsNonRoot: true

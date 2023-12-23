@@ -20,6 +20,8 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -539,25 +541,38 @@ func TestProcess_TemplateIncludesLabelsServiceAndSecret(t *testing.T) {
 	reconciler := NewActiveMQArtemisReconcilerImpl(
 		cr,
 		ctrl.Log.WithName("TestProcess_TemplateIncludesLabelsServiceAndSecret"),
+		scheme.Scheme,
 	)
 
 	namer := MakeNamers(cr)
 
 	newSS, err := reconciler.ProcessStatefulSet(cr, *namer, nil)
+	reconciler.trackDesired(newSS)
+	assert.NoError(t, err)
 
 	reconciler.ProcessDeploymentPlan(cr, *namer, nil, nil, newSS)
 
-	newSpec := newSS.Spec.Template
+	fakeClient := fake.NewClientBuilder().Build()
+	err = reconciler.ProcessResources(cr, fakeClient, nil)
 	assert.NoError(t, err)
-	assert.NotNil(t, newSpec)
 
-	v, ok := newSpec.Labels["myPodKey"]
-	assert.True(t, ok)
-	assert.Equal(t, "myPodValue", v)
-
+	var ssFound = false
 	var secretFound = false
 	var serviceFound = false
 	for _, resource := range reconciler.requestedResources {
+		if ss, ok := resource.(*appsv1.StatefulSet); ok {
+
+			newSpec := ss.Spec.Template
+			assert.NoError(t, err)
+			assert.NotNil(t, newSpec)
+
+			v, ok := newSpec.Labels["myPodKey"]
+			assert.True(t, ok)
+			assert.Equal(t, "myPodValue", v)
+
+			ssFound = true
+		}
+
 		if secret, ok := resource.(*v1.Secret); ok {
 			assert.True(t, len(secret.Labels) >= 1)
 			assert.Equal(t, secret.Labels["myKey"], "myValue")
@@ -573,6 +588,7 @@ func TestProcess_TemplateIncludesLabelsServiceAndSecret(t *testing.T) {
 			serviceFound = true
 		}
 	}
+	assert.True(t, ssFound)
 	assert.True(t, secretFound)
 	assert.True(t, serviceFound)
 }
@@ -605,12 +621,17 @@ func TestProcess_TemplateIncludesLabelsSecretRegexp(t *testing.T) {
 	reconciler := NewActiveMQArtemisReconcilerImpl(
 		cr,
 		ctrl.Log.WithName("TestProcess_TemplateIncludesLabelsServiceAndSecret"),
+		scheme.Scheme,
 	)
 
 	namer := MakeNamers(cr)
 
 	newSS, _ := reconciler.ProcessStatefulSet(cr, *namer, nil)
 	reconciler.ProcessDeploymentPlan(cr, *namer, nil, nil, newSS)
+
+	fakeClient := fake.NewClientBuilder().Build()
+	err := reconciler.ProcessResources(cr, fakeClient, nil)
+	assert.NoError(t, err)
 
 	var secretFound = false
 	var serviceFound = false
@@ -655,12 +676,17 @@ func TestProcess_TemplateDuplicateKeyReplacesOk(t *testing.T) {
 	reconciler := NewActiveMQArtemisReconcilerImpl(
 		cr,
 		ctrl.Log.WithName("TestProcess_TemplateDuplicateKeyReplacesOk"),
+		scheme.Scheme,
 	)
 
 	namer := MakeNamers(cr)
 
 	newSS, _ := reconciler.ProcessStatefulSet(cr, *namer, nil)
 	reconciler.ProcessDeploymentPlan(cr, *namer, nil, nil, newSS)
+
+	fakeClient := fake.NewClientBuilder().Build()
+	err := reconciler.ProcessResources(cr, fakeClient, nil)
+	assert.NoError(t, err)
 
 	var secretFound = false
 	for _, resource := range reconciler.requestedResources {
@@ -714,6 +740,7 @@ func TestProcess_TemplateKeyValue(t *testing.T) {
 	reconciler := NewActiveMQArtemisReconcilerImpl(
 		cr,
 		ctrl.Log.WithName("test"),
+		scheme.Scheme,
 	)
 
 	namer := MakeNamers(cr)
@@ -721,16 +748,25 @@ func TestProcess_TemplateKeyValue(t *testing.T) {
 	newSS, _ := reconciler.ProcessStatefulSet(cr, *namer, nil)
 	reconciler.trackDesired(newSS)
 
+	fakeClient := fake.NewClientBuilder().Build()
 	reconciler.ProcessAcceptorsAndConnectors(cr, *namer,
-		fake.NewClientBuilder().Build(), nil, newSS)
+		fakeClient, nil, newSS)
 
-	v, ok := newSS.Labels["myKey"]
-	assert.True(t, ok)
-	assert.Equal(t, "myValue-cr", v)
+	err := reconciler.ProcessResources(cr, fakeClient, nil)
+	assert.NoError(t, err)
 
 	var secretFound = false
 	var serviceFound = false
+	var ssFound = false
 	for _, resource := range reconciler.requestedResources {
+		if ss, ok := resource.(*appsv1.StatefulSet); ok {
+
+			v, ok := ss.Labels["myKey"]
+			assert.True(t, ok)
+			assert.Equal(t, "myValue-cr", v)
+			ssFound = true
+		}
+
 		if secret, ok := resource.(*v1.Secret); ok {
 			assert.True(t, len(secret.Labels) >= 1)
 			assert.Equal(t, secret.Labels["myKey"], "myValue-cr", resource.GetName())
@@ -753,8 +789,185 @@ func TestProcess_TemplateKeyValue(t *testing.T) {
 		}
 
 	}
+	assert.True(t, ssFound)
 	assert.True(t, secretFound)
 	assert.True(t, serviceFound)
+}
+
+func TestProcess_TemplateCustomAttributeIngress(t *testing.T) {
+
+	var matchGvForIngress string = "networking.k8s.io/v1"
+	var ingressClassVal = "SomeClass"
+	cr := &brokerv1beta1.ActiveMQArtemis{
+		ObjectMeta: metav1.ObjectMeta{Name: "cr"},
+		Spec: brokerv1beta1.ActiveMQArtemisSpec{
+			ResourceTemplates: []brokerv1beta1.ResourceTemplate{
+				{
+					// match Ingress
+					Selector: &brokerv1beta1.ResourceSelector{
+						APIGroup: &matchGvForIngress,
+					},
+					Annotations: map[string]string{"myIngressKey-$(CR_NAME)": "myValue-$(BROKER_ORDINAL)"},
+					Patch: &unstructured.Unstructured{Object: map[string]interface{}{
+						"spec": map[string]interface{}{
+							"ingressClassName": ingressClassVal,
+						},
+					},
+					},
+				},
+			},
+			Acceptors: []brokerv1beta1.AcceptorType{{
+				Name:       "aa",
+				Port:       563,
+				Expose:     true,
+				SSLEnabled: true,
+			}},
+		},
+	}
+
+	reconciler := NewActiveMQArtemisReconcilerImpl(
+		cr,
+		ctrl.Log.WithName("test"),
+		scheme.Scheme,
+	)
+
+	namer := MakeNamers(cr)
+
+	newSS, _ := reconciler.ProcessStatefulSet(cr, *namer, nil)
+	reconciler.trackDesired(newSS)
+
+	fakeClient := fake.NewClientBuilder().Build()
+	reconciler.ProcessAcceptorsAndConnectors(cr, *namer,
+		fakeClient, nil, newSS)
+
+	err := reconciler.ProcessResources(cr, fakeClient, nil)
+	assert.NoError(t, err)
+
+	var ingressOk = false
+	for _, resource := range reconciler.requestedResources {
+
+		if ingress, ok := resource.(*netv1.Ingress); ok {
+			assert.True(t, len(ingress.Annotations) >= 2)
+			assert.Equal(t, ingress.Annotations["myIngressKey-cr"], "myValue-0", resource.GetName())
+			assert.NotNil(t, ingress.Spec.IngressClassName)
+			assert.Equal(t, *ingress.Spec.IngressClassName, ingressClassVal)
+			ingressOk = true
+		}
+	}
+	assert.True(t, ingressOk)
+}
+
+func TestProcess_TemplateCustomAttributeMisSpellingIngress(t *testing.T) {
+
+	var matchGvForIngress string = "networking.k8s.io/v1"
+	var ingressClassVal = "SomeClass"
+	cr := &brokerv1beta1.ActiveMQArtemis{
+		ObjectMeta: metav1.ObjectMeta{Name: "cr"},
+		Spec: brokerv1beta1.ActiveMQArtemisSpec{
+			ResourceTemplates: []brokerv1beta1.ResourceTemplate{
+				{
+					// match Ingress
+					Selector: &brokerv1beta1.ResourceSelector{
+						APIGroup: &matchGvForIngress,
+					},
+					Annotations: map[string]string{"myIngressKey-$(CR_NAME)": "myValue-$(BROKER_ORDINAL)"},
+					Patch: &unstructured.Unstructured{Object: map[string]interface{}{
+						"spec": map[string]interface{}{
+							"ingressClazzName": ingressClassVal, // wrong attribute
+						},
+					},
+					},
+				},
+			},
+			Acceptors: []brokerv1beta1.AcceptorType{{
+				Name:       "aa",
+				Port:       563,
+				Expose:     true,
+				SSLEnabled: true,
+			}},
+		},
+	}
+
+	reconciler := NewActiveMQArtemisReconcilerImpl(
+		cr,
+		ctrl.Log.WithName("test"),
+		scheme.Scheme,
+	)
+
+	namer := MakeNamers(cr)
+	newSS, err := reconciler.ProcessStatefulSet(cr, *namer, nil)
+	assert.NoError(t, err)
+
+	fakeClient := fake.NewClientBuilder().Build()
+	reconciler.ProcessAcceptorsAndConnectors(cr, *namer,
+		fakeClient, nil, newSS)
+
+	err = reconciler.ProcessResources(cr, fakeClient, nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Clazz")
+}
+
+func TestProcess_TemplateCustomAttributeContainerSecurityContext(t *testing.T) {
+
+	var kindMatchSs string = "StatefulSet"
+
+	cr := &brokerv1beta1.ActiveMQArtemis{
+		ObjectMeta: metav1.ObjectMeta{Name: "cr"},
+		Spec: brokerv1beta1.ActiveMQArtemisSpec{
+			ResourceTemplates: []brokerv1beta1.ResourceTemplate{
+				{
+					Selector: &brokerv1beta1.ResourceSelector{
+						Kind: &kindMatchSs,
+					},
+					Patch: &unstructured.Unstructured{Object: map[string]interface{}{
+						"spec": map[string]interface{}{
+							"template": map[string]interface{}{
+								"spec": map[string]interface{}{
+									"containers": []interface{}{
+										map[string]interface{}{
+											"name": "cr-container", // merge on name key
+											"securityContext": map[string]interface{}{
+												"runAsNonRoot": true,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					},
+				},
+			},
+		},
+	}
+
+	reconciler := NewActiveMQArtemisReconcilerImpl(
+		cr,
+		ctrl.Log.WithName("test"),
+		scheme.Scheme,
+	)
+
+	namer := MakeNamers(cr)
+
+	newSS, _ := reconciler.ProcessStatefulSet(cr, *namer, nil)
+	reconciler.trackDesired(newSS)
+
+	fakeClient := fake.NewClientBuilder().Build()
+	err := reconciler.ProcessResources(cr, fakeClient, nil)
+	assert.NoError(t, err)
+
+	var runAsRootOk = false
+	for _, resource := range reconciler.requestedResources {
+
+		if ss, ok := resource.(*appsv1.StatefulSet); ok {
+			assert.NotNil(t, ss.Spec.Template.Spec.Containers[0].SecurityContext.RunAsNonRoot)
+			assert.True(t, *ss.Spec.Template.Spec.Containers[0].SecurityContext.RunAsNonRoot)
+			assert.NotEqual(t, "", ss.Spec.Template.Spec.Containers[0].Image)
+			runAsRootOk = true
+		}
+
+	}
+	assert.True(t, runAsRootOk)
 }
 
 func TestNewPodTemplateSpecForCR_AppendsDebugArgs(t *testing.T) {
@@ -781,7 +994,7 @@ func TestNewPodTemplateSpecForCR_AppendsDebugArgs(t *testing.T) {
 		},
 	}
 
-	reconciler := NewActiveMQArtemisReconcilerImpl(cr, ctrl.Log)
+	reconciler := NewActiveMQArtemisReconcilerImpl(cr, ctrl.Log, scheme.Scheme)
 
 	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
 
@@ -807,7 +1020,7 @@ func TestNewPodTemplateSpecForCR_IncludesImagePullSecret(t *testing.T) {
 			},
 		},
 	}
-	reconciler := NewActiveMQArtemisReconcilerImpl(cr, ctrl.Log)
+	reconciler := NewActiveMQArtemisReconcilerImpl(cr, ctrl.Log, scheme.Scheme)
 
 	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
 
@@ -843,7 +1056,7 @@ func TestNewPodTemplateSpecForCR_IncludesTopologySpreadConstraints(t *testing.T)
 			},
 		},
 	}
-	reconciler := NewActiveMQArtemisReconcilerImpl(cr, ctrl.Log)
+	reconciler := NewActiveMQArtemisReconcilerImpl(cr, ctrl.Log, scheme.Scheme)
 
 	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
 

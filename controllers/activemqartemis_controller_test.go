@@ -57,6 +57,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -3283,7 +3284,7 @@ var _ = Describe("artemis controller", func() {
 			crd.Spec.Console.Expose = true
 			crd.Spec.Console.SSLEnabled = true
 
-			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(&crd, ctrl.Log)
+			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(&crd, ctrl.Log, k8sClient.Scheme())
 
 			defaultConsoleSecretName := crd.Name + "-console-secret"
 			currentSS := &appsv1.StatefulSet{}
@@ -3363,7 +3364,7 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(createdCrd.ResourceVersion).ShouldNot(BeEmpty())
 			}, timeout, interval).Should(Succeed())
 
-			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(&crd, ctrl.Log)
+			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(&crd, ctrl.Log, k8sClient.Scheme())
 			namer := MakeNamers(&crd)
 			defaultConsoleSecretName := crd.Name + "-console-secret"
 			internalSecretName := defaultConsoleSecretName + "-internal"
@@ -3461,7 +3462,7 @@ var _ = Describe("artemis controller", func() {
 
 			}, timeout, interval).Should(Succeed())
 
-			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(&crd, ctrl.Log)
+			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(&crd, ctrl.Log, k8sClient.Scheme())
 			reconcilerImpl.deployed = make(map[reflect.Type][]client.Object)
 
 			namer := MakeNamers(&crd)
@@ -6013,6 +6014,103 @@ var _ = Describe("artemis controller", func() {
 
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
+			}
+			// cleanup
+			CleanResource(&crd, crd.Name, defaultNamespace)
+		})
+	})
+
+	Context("template tests", func() {
+		It("expect custom service", func() {
+
+			By("By creating a crd with template")
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+			crd.Spec.DeploymentPlan.PersistenceEnabled = true
+
+			var serviceKind = "Service"
+			var ssKind = "StatefulSet"
+
+			crd.Spec.ResourceTemplates = []brokerv1beta1.ResourceTemplate{
+				{
+					Selector:    &brokerv1beta1.ResourceSelector{Kind: &serviceKind},
+					Annotations: map[string]string{"someKey": "someValue"},
+					Patch: &unstructured.Unstructured{
+						Object: map[string]interface{}{
+							"kind": "Service",
+							"spec": map[string]interface{}{
+								"publishNotReadyAddresses": false,
+							},
+						},
+					},
+				},
+				{
+					Selector:    &brokerv1beta1.ResourceSelector{Kind: &ssKind},
+					Annotations: map[string]string{"someSsKey": "someSsValue"},
+					Patch: &unstructured.Unstructured{
+						Object: map[string]interface{}{
+							"kind": "StatefulSet",
+							"spec": map[string]interface{}{
+								"template": map[string]interface{}{
+									"spec": map[string]interface{}{
+										"containers": []interface{}{
+											map[string]interface{}{
+												// support for variable substutition is non trivial (and not done) for an unstuctured type
+												"name": crd.Name + /* "$(CR_NAME) */ "-container", // merge on name key
+												"securityContext": map[string]interface{}{
+													"runAsNonRoot": true,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+				brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
+
+				By("verifying started via Status")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+
+					//if verbose {
+					fmt.Printf("\nSTATUS: %v\n", createdCrd.Status)
+					//}
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("checking customied -hdls-svc")
+				createdService := &corev1.Service{}
+				serviceKey := types.NamespacedName{Name: crd.Name + "-hdls-svc", Namespace: crd.Namespace}
+
+				By("verifying started via Status")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, serviceKey, createdService)).Should(Succeed())
+					g.Expect(createdService.Spec.PublishNotReadyAddresses).Should(BeFalse())
+					g.Expect(createdService.Annotations["someKey"]).Should(Equal("someValue"))
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				createdSs := &appsv1.StatefulSet{}
+				key := types.NamespacedName{Name: namer.CrToSS(crd.Name), Namespace: defaultNamespace}
+
+				By("Making sure that the ss gets customised")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, key, createdSs)).Should(Succeed())
+
+					g.Expect(createdSs.Annotations["someSsKey"]).Should(Equal("someSsValue"))
+					g.Expect(*createdSs.Spec.Template.Spec.Containers[0].SecurityContext.RunAsNonRoot).Should(BeTrue())
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 			}
 			// cleanup
 			CleanResource(&crd, crd.Name, defaultNamespace)

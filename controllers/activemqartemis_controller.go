@@ -158,7 +158,7 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 	}
 
 	namer := MakeNamers(customResource)
-	reconciler := NewActiveMQArtemisReconcilerImpl(customResource, r.log)
+	reconciler := NewActiveMQArtemisReconcilerImpl(customResource, r.log, r.Scheme)
 
 	var requeueRequest bool = false
 	var valid bool = false

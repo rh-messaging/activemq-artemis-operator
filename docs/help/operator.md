@@ -758,6 +758,28 @@ spec:
        someKey: "somevalue"
 ```
 
+## Custom mods via a strategic merge patch
+Occasionally it is necessary to make customisations to the spec of a managed resource. The `resourceTemplate. patch` attribute can be used to apply such customisations. The `patch` is appled by the operator using a [strategic merge](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/update-api-object-kubectl-patch/#notes-on-the-strategic-merge-patch) before submitting to the api server.
+In the following example, a custom security context is added to the internal broker container of the managed StatefulSet by patching just the required attribute. Note: `name` is the mergeKey, it must match that of the managed container with the CR.Name prefix:
+
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: broker
+spec:
+  resourceTemplates:
+  - selector:
+     kind: "StatefulSet"
+    patch:
+     kind: "StatefulSet"
+     spec:
+      template:
+       spec:
+        containers:
+        - name: "broker-container"
+          securityContext:
+           runAsNonRoot: true
+
 ### Setting  Environment Variables
 
 As an advanced option, you can set environment variables for containers using a CR.
