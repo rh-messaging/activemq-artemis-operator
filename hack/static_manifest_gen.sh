@@ -11,6 +11,8 @@ file=()
 resource_kind=""
 resource_name=""
 
+SINGLE_INSTALL_YML="${destdir}/activemq-artemis-operator.yaml"
+
 OPERATOR_NAMESPACE=${2}
 echo "OPERATOR_NAMESPACE:${OPERATOR_NAMESPACE}"
 
@@ -18,9 +20,8 @@ echo "OPERATOR_NAMESPACE:${OPERATOR_NAMESPACE}"
 # it takes one parameter:
 # 1 array that contains total lines of the yaml
 function writeFile() {
-  array_name=$1[@]
-  lines=("${!array_name}")
 
+  true_kind=$resource_kind
   case $resource_kind in
 
     CustomResourceDefinition)
@@ -44,6 +45,7 @@ function writeFile() {
     Role)
       if [[ ${resource_name} =~ (operator) ]]; then
         createFile "$destdir/role.yaml"
+        true_kind="ClusterRole"
         createFile "$destdir/cluster_role.yaml"
         sed -i 's/kind: Role/kind: ClusterRole/' \
           "$destdir/cluster_role.yaml"
@@ -57,6 +59,7 @@ function writeFile() {
     RoleBinding)
       if [[ ${resource_name} =~ (operator) ]]; then
         createFile "$destdir/role_binding.yaml"
+        true_kind="ClusterRoleBinding"
         createFile "$destdir/cluster_role_binding.yaml"
         sed -i -e 's/kind: Role/kind: ClusterRole/' \
           -e 's/kind: RoleBinding/kind: ClusterRoleBinding/' \
@@ -76,6 +79,7 @@ function writeFile() {
 
     Namespace)
       echo "Skipping ${resource_kind}:${resource_name}"
+      makeSingleInstall
       ;;
     
     *)
@@ -90,6 +94,7 @@ function createFile() {
   for value in "${file[@]}"; do
     printf "%s\n" "${value}" >> $1
   done
+  makeSingleInstall
 }
 
 function beginFile() {
@@ -105,9 +110,61 @@ function appendFile() {
   file+=("$1")
 }
 
+function makeSingleInstall() {
+  if [[ "${true_kind}" == "ClusterRole" && ${resource_name} =~ (operator) ]]; then
+    for val in "${singleYaml[@]}"; do
+      if [[ "${val}" == "kind: Role" ]]; then
+        val="kind: ClusterRole"
+      fi
+      printf "%s\n" "${val}" >> ${SINGLE_INSTALL_YML}
+    done
+    singleYaml=()
+  elif [[ "${true_kind}" == "ClusterRoleBinding" && ${resource_name} =~ (operator) ]]; then
+    for val in "${singleYaml[@]}"; do
+      if [[ "${val}" == "kind: RoleBinding" ]]; then
+        val="kind: ClusterRoleBinding"
+      elif [[ "${val}" == "  kind: Role" ]]; then
+        val="  kind: ClusterRole"
+      fi
+      printf "%s\n" "${val}" >> ${SINGLE_INSTALL_YML}
+    done
+    singleYaml=()
+  elif [[ "${true_kind}" == "Role" && ${resource_name} =~ (operator) ]]; then
+    echo "ignore role"
+  elif [[ "${true_kind}" == "RoleBinding" && ${resource_name} =~ (operator) ]]; then
+    echo "ignore rolebinding"
+  elif [[ "${true_kind}" == "Deployment" ]]; then
+    found_watch_ns="false"
+    for val in "${singleYaml[@]}"; do
+      if [[ "${val}" == "        - name: WATCH_NAMESPACE" ]]; then
+        found_watch_ns="true"
+        printf "%s\n" "${val}" >> ${SINGLE_INSTALL_YML}
+      elif [[ "${found_watch_ns}" == "true" ]]; then
+        if [[ "${val}" == "          valueFrom:" ]]; then
+          val="          value: ''"
+          printf "%s\n" "${val}" >> ${SINGLE_INSTALL_YML}
+        elif [[ "${val}" == "              fieldPath: metadata.namespace" ]]; then
+          found_watch_ns=false
+        fi
+      else
+        printf "%s\n" "${val}" >> ${SINGLE_INSTALL_YML}
+      fi
+    done
+    singleYaml=()
+  else
+    for val in "${singleYaml[@]}"; do
+      printf "%s\n" "${val}" >> ${SINGLE_INSTALL_YML}
+    done
+    singleYaml=()
+  fi
+}
+
 IFS=''
+rm -rf ${SINGLE_INSTALL_YML}
+singleYaml=()
 while read -r line
 do
+  singleYaml+=("$line")
   if [[ $line =~ ^---$ ]]
   then
     beginFile
