@@ -2004,7 +2004,7 @@ spec:
                 rht.comp: Broker_AMQ
                 rht.comp_ver: 7.11.5
                 rht.prod_name: Red_Hat_Integration
-                rht.prod_ver: 2023.Q4
+                rht.prod_ver: 2024.Q1
                 rht.subcomp: broker-amq-operator
                 rht.subcomp_t: application
             spec:
