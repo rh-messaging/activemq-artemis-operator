@@ -2559,7 +2559,11 @@ type brokerStatus struct {
 }
 
 type serverStatus struct {
-	Jaas jaasStatus `json:"jaas"`
+	Jaas    jaasStatus `json:"jaas"`
+	State   string     `json:"state"`
+	Version string     `json:"version"`
+	NodeId  string     `json:"nodeId"`
+	Uptime  string     `json:"uptime"`
 }
 
 type jaasStatus struct {
@@ -2590,6 +2594,19 @@ func ProcessBrokerStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Clie
 		meta.SetStatusCondition(&cr.Status.Conditions, condition)
 		return err.Requeue()
 	}
+
+	err = AssertBrokerImageVersion(cr, client, scheme)
+	if err == nil {
+		condition = metav1.Condition{
+			Type:   brokerv1beta1.BrokerVersionAlignedConditionType,
+			Status: metav1.ConditionTrue,
+			Reason: brokerv1beta1.BrokerVersionAlignedConditionMatchReason,
+		}
+	} else {
+		condition = trapErrorAsCondition(err, brokerv1beta1.BrokerVersionAlignedConditionType)
+		retry = err.Requeue()
+	}
+	meta.SetStatusCondition(&cr.Status.Conditions, condition)
 
 	err = AssertBrokerPropertiesStatus(cr, client, scheme)
 	if err == nil {
@@ -2653,6 +2670,13 @@ func trapErrorAsCondition(err ArtemisError, conditionType string) metav1.Conditi
 			Reason:  brokerv1beta1.ConfigAppliedConditionSynchedWithErrorReason,
 			Message: err.Error(),
 		}
+	case versionMismatchError:
+		condition = metav1.Condition{
+			Type:    conditionType,
+			Status:  metav1.ConditionUnknown,
+			Reason:  brokerv1beta1.BrokerVersionAlignedConditionMismatchReason,
+			Message: err.Error(),
+		}
 	default:
 		condition = metav1.Condition{
 			Type:    conditionType,
@@ -2697,7 +2721,7 @@ func AssertBrokerPropertiesStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtcl
 		return NewUnknownJolokiaError(err)
 	}
 
-	errorStatus := checkStatus(cr, client, secretProjection, func(BrokerStatus brokerStatus, FileName string) (propertiesStatus, bool) {
+	errorStatus := checkProjectionStatus(cr, client, secretProjection, func(BrokerStatus *brokerStatus, FileName string) (propertiesStatus, bool) {
 		current, present := BrokerStatus.BrokerConfigStatus.PropertiesStatus[FileName]
 		return current, present
 	})
@@ -2711,7 +2735,7 @@ func AssertBrokerPropertiesStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtcl
 					reqLogger.V(2).Info("error retrieving -bp extra mount resource. requeing")
 					return NewUnknownJolokiaError(err)
 				}
-				errorStatus = checkStatus(cr, client, secretProjection, func(BrokerStatus brokerStatus, FileName string) (propertiesStatus, bool) {
+				errorStatus = checkProjectionStatus(cr, client, secretProjection, func(BrokerStatus *brokerStatus, FileName string) (propertiesStatus, bool) {
 					current, present := BrokerStatus.BrokerConfigStatus.PropertiesStatus[FileName]
 					return current, present
 				})
@@ -2737,7 +2761,7 @@ func AssertJaasPropertiesStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclie
 		return NewUnknownJolokiaError(err)
 	}
 
-	statusError := checkStatus(cr, client, Projection, func(BrokerStatus brokerStatus, FileName string) (propertiesStatus, bool) {
+	statusError := checkProjectionStatus(cr, client, Projection, func(BrokerStatus *brokerStatus, FileName string) (propertiesStatus, bool) {
 		current, present := BrokerStatus.ServerStatus.Jaas.PropertiesStatus[FileName]
 		return current, present
 	})
@@ -2749,7 +2773,28 @@ func AssertJaasPropertiesStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclie
 	return statusError
 }
 
-func checkStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, secretProjection *projection, extractStatus func(BrokerStatus brokerStatus, FileName string) (propertiesStatus, bool)) ArtemisError {
+func AssertBrokerImageVersion(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme) ArtemisError {
+	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", cr.Name)
+
+	// The ResolveBrokerVersionFromCR should never fail because validation succeeded
+	resolvedFullVersion, _ := common.ResolveBrokerVersionFromCR(cr)
+
+	statusError := checkStatus(cr, client, func(brokerStatus *brokerStatus, jk *jolokia_client.JkInfo) ArtemisError {
+
+		if brokerStatus.ServerStatus.Version != resolvedFullVersion {
+			err := errors.Errorf("broker version non aligned on pod %s-%s, the detected version [%s] doesn't match the spec.version [%s] resolved as [%s]",
+				namer.CrToSS(cr.Name), jk.Ordinal, brokerStatus.ServerStatus.Version, cr.Spec.Version, resolvedFullVersion)
+			reqLogger.V(1).Info(err.Error(), "status", brokerStatus, "tracked", cr.Spec.Version)
+			return NewVersionMismatchError(err)
+		}
+
+		return nil
+	})
+
+	return statusError
+}
+
+func checkStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, checkBrokerStatus func(BrokerStatus *brokerStatus, jk *jolokia_client.JkInfo) ArtemisError) ArtemisError {
 	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", cr.Name)
 
 	resource := types.NamespacedName{
@@ -2765,8 +2810,6 @@ func checkStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, secr
 		reqLogger.V(1).Info("not found Jolokia Clients available. requeing")
 		return NewJolokiaClientsNotFoundError(errors.New("Waiting for Jolokia Clients to become available"))
 	}
-
-	reqLogger.V(2).Info("in sync check", "projection", secretProjection)
 
 	for _, jk := range jks {
 		currentJson, err := jk.Artemis.GetStatus()
@@ -2786,8 +2829,25 @@ func checkStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, secr
 
 		reqLogger.V(2).Info("broker status", "ordinal", jk.Ordinal, "status", brokerStatus)
 
+		artemisError := checkBrokerStatus(&brokerStatus, jk)
+		if artemisError != nil {
+			return artemisError
+		}
+	}
+
+	return nil
+}
+
+func checkProjectionStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, secretProjection *projection, extractStatus func(BrokerStatus *brokerStatus, FileName string) (propertiesStatus, bool)) ArtemisError {
+	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", cr.Name)
+
+	reqLogger.V(2).Info("in sync check", "projection", secretProjection)
+
+	checkErr := checkStatus(cr, client, func(brokerStatus *brokerStatus, jk *jolokia_client.JkInfo) ArtemisError {
+
 		var current propertiesStatus
 		var present bool
+		var err error
 		missingKeys := []string{}
 		var applyError *inSyncApplyError = nil
 
@@ -2847,9 +2907,16 @@ func checkStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, secr
 
 		// this oridinal is happy
 		secretProjection.Ordinals = append(secretProjection.Ordinals, jk.Ordinal)
+
+		return nil
+	})
+
+	if checkErr != nil {
+		return checkErr
 	}
 
 	reqLogger.V(1).Info("successfully synced with broker", "status", statusMessageFromProjection(secretProjection))
+
 	return nil
 }
 

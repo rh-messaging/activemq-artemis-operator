@@ -706,12 +706,32 @@ var _ = Describe("artemis controller", func() {
 			Eventually(func(g Gomega) {
 
 				g.Expect(k8sClient.Get(ctx, brokerKey, createdBrokerCr)).Should(Succeed())
+				g.Expect(meta.IsStatusConditionTrue(createdBrokerCr.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
+			}, timeout, interval).Should(Succeed())
+
+			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
+		})
+
+		It("version validation when version is loosly specified and images are explicitly specified", func() {
+			By("deploy a broker with images specified")
+			latestVersion := semver.MustParse(version.LatestVersion)
+			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				candidate.Spec.Version = strconv.FormatUint(latestVersion.Major, 10)
+				candidate.Spec.DeploymentPlan.Image = "myrepo/my-image:1.0"
+				candidate.Spec.DeploymentPlan.InitImage = "myrepo/my-init-image:1.0"
+			})
+
+			By("checking the CR gets status updated")
+			brokerKey := types.NamespacedName{Name: createdBrokerCr.Name, Namespace: createdBrokerCr.Namespace}
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdBrokerCr)).Should(Succeed())
 				g.Expect(meta.IsStatusConditionPresentAndEqual(createdBrokerCr.Status.Conditions, brokerv1beta1.ValidConditionType, metav1.ConditionUnknown)).Should(BeTrue())
 
 				condition := meta.FindStatusCondition(createdBrokerCr.Status.Conditions, brokerv1beta1.ValidConditionType)
 				g.Expect(condition).NotTo(BeNil())
 				g.Expect(condition.Reason).To(Equal(brokerv1beta1.ValidConditionUnknownReason))
-				g.Expect(condition.Message).To(ContainSubstring(common.ImageVersionConflictMessage))
+				g.Expect(condition.Message).To(ContainSubstring(common.NotSupportedImageVersionMessage))
 			}, timeout, interval).Should(Succeed())
 
 			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
@@ -758,7 +778,7 @@ var _ = Describe("artemis controller", func() {
 				By("checking status has useful info on what the operator would deploy")
 				g.Expect(createdBrokerCr.Status.Version.Image).ShouldNot(BeEmpty())
 				g.Expect(createdBrokerCr.Status.Version.InitImage).Should(ContainSubstring("my"))
-				g.Expect(createdBrokerCr.Status.Version.BrokerVersion).Should(BeEmpty())
+				g.Expect(createdBrokerCr.Status.Version.BrokerVersion).ShouldNot(BeEmpty())
 
 				g.Expect(createdBrokerCr.Status.Upgrade.MajorUpdates).Should(BeFalse())
 				g.Expect(createdBrokerCr.Status.Upgrade.MinorUpdates).Should(BeFalse())
@@ -867,11 +887,16 @@ var _ = Describe("artemis controller", func() {
 			Eventually(func(g Gomega) {
 
 				g.Expect(k8sClient.Get(ctx, brokerKey, createdBrokerCr)).Should(Succeed())
-				g.Expect(meta.IsStatusConditionTrue(createdBrokerCr.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
+				g.Expect(meta.IsStatusConditionPresentAndEqual(createdBrokerCr.Status.Conditions, brokerv1beta1.ValidConditionType, metav1.ConditionUnknown)).Should(BeTrue())
+
+				condition := meta.FindStatusCondition(createdBrokerCr.Status.Conditions, brokerv1beta1.ValidConditionType)
+				g.Expect(condition).NotTo(BeNil())
+				g.Expect(condition.Reason).To(Equal(brokerv1beta1.ValidConditionUnknownReason))
+				g.Expect(condition.Message).To(ContainSubstring(common.UnkonwonImageVersionMessage))
 
 				g.Expect(createdBrokerCr.Status.Version.Image).Should(ContainSubstring("my"))
 				g.Expect(createdBrokerCr.Status.Version.InitImage).Should(ContainSubstring("my"))
-				g.Expect(createdBrokerCr.Status.Version.BrokerVersion).Should(BeEmpty())
+				g.Expect(createdBrokerCr.Status.Version.BrokerVersion).ShouldNot(BeEmpty())
 
 				g.Expect(createdBrokerCr.Status.Upgrade.MajorUpdates).Should(BeFalse())
 				g.Expect(createdBrokerCr.Status.Upgrade.MinorUpdates).Should(BeFalse())
@@ -1079,12 +1104,7 @@ var _ = Describe("artemis controller", func() {
 
 					By("verifying unknown validation status but ok")
 
-					g.Expect(meta.IsStatusConditionPresentAndEqual(createdBrokerCr.Status.Conditions, brokerv1beta1.ValidConditionType, metav1.ConditionUnknown)).Should(BeTrue())
-
-					condition := meta.FindStatusCondition(createdBrokerCr.Status.Conditions, brokerv1beta1.ValidConditionType)
-					g.Expect(condition).NotTo(BeNil())
-					g.Expect(condition.Reason).To(Equal(brokerv1beta1.ValidConditionUnknownReason))
-					g.Expect(condition.Message).To(ContainSubstring(common.ImageVersionConflictMessage))
+					g.Expect(meta.IsStatusConditionTrue(createdBrokerCr.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
 
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 			}
@@ -5330,6 +5350,116 @@ var _ = Describe("artemis controller", func() {
 			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
 
 		})
+	})
+
+	Context("BrokerVersion", func() {
+
+		It("expect version match when version is loosly specified", func() {
+			By("By creating a crd with a floating version")
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+
+			latestVersion := semver.MustParse(version.LatestVersion)
+			crd.Spec.Version = strconv.FormatUint(latestVersion.Major, 10)
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			crdRef := types.NamespacedName{
+				Namespace: crd.Namespace,
+				Name:      crd.Name,
+			}
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+				createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, crdRef, createdCrd)).Should(Succeed())
+
+					condition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.BrokerVersionAlignedConditionType)
+					g.Expect(condition).NotTo(BeNil())
+
+					g.Expect(condition.Status).To(Equal(metav1.ConditionTrue))
+
+					g.Expect(condition.Reason).Should(Equal(brokerv1beta1.BrokerVersionAlignedConditionMatchReason))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
+
+			// cleanup
+			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
+		})
+
+		It("expect version match on latest version", func() {
+			By("By creating a crd with latest image and version")
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+
+			crd.Spec.DeploymentPlan.Image = version.LatestKubeImage
+			crd.Spec.Version = version.LatestVersion
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			crdRef := types.NamespacedName{
+				Namespace: crd.Namespace,
+				Name:      crd.Name,
+			}
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+				createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, crdRef, createdCrd)).Should(Succeed())
+
+					condition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.BrokerVersionAlignedConditionType)
+					g.Expect(condition).NotTo(BeNil())
+
+					g.Expect(condition.Status).To(Equal(metav1.ConditionTrue))
+
+					g.Expect(condition.Reason).Should(Equal(brokerv1beta1.BrokerVersionAlignedConditionMatchReason))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
+
+			// cleanup
+			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
+		})
+
+		It("expect error message on wrong image version", func() {
+			By("By creating a crd with latest image and wong version")
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+
+			crd.Spec.DeploymentPlan.Image = version.LatestKubeImage
+			crd.Spec.Version = version.SupportedActiveMQArtemisVersions[0]
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			crdRef := types.NamespacedName{
+				Namespace: crd.Namespace,
+				Name:      crd.Name,
+			}
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+				createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, crdRef, createdCrd)).Should(Succeed())
+
+					brokerVersionAlignedCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.BrokerVersionAlignedConditionType)
+					g.Expect(brokerVersionAlignedCondition).NotTo(BeNil())
+
+					g.Expect(brokerVersionAlignedCondition.Status).To(Equal(metav1.ConditionUnknown))
+
+					g.Expect(brokerVersionAlignedCondition.Reason).Should(Equal(brokerv1beta1.BrokerVersionAlignedConditionMismatchReason))
+					g.Expect(brokerVersionAlignedCondition.Message).Should(ContainSubstring(crd.Spec.Version))
+					g.Expect(brokerVersionAlignedCondition.Message).Should(ContainSubstring(version.LatestVersion))
+
+					readyCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)
+					g.Expect(readyCondition).NotTo(BeNil())
+
+					g.Expect(readyCondition.Status).To(Equal(metav1.ConditionTrue))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
+
+			// cleanup
+			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
+		})
+
 	})
 
 	Context("LoggerProperties", Label("LoggerProperties-test"), func() {

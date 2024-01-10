@@ -96,3 +96,12 @@ func SupportedActiveMQArtemisSemanticVersions() []semver.Version {
 
 	return supportedActiveMQArtemisSemanticVersions
 }
+
+func IsSupportedActiveMQArtemisVersion(version string) bool {
+	for i := 0; i < len(SupportedActiveMQArtemisVersions); i++ {
+		if SupportedActiveMQArtemisVersions[i] == version {
+			return true
+		}
+	}
+	return false
+}

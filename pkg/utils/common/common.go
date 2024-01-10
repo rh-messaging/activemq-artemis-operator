@@ -353,16 +353,15 @@ func ProcessStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, na
 func updateVersionStatus(cr *brokerv1beta1.ActiveMQArtemis) {
 	cr.Status.Version.Image = ResolveImage(cr, BrokerImageKey)
 	cr.Status.Version.InitImage = ResolveImage(cr, InitImageKey)
+	cr.Status.Version.BrokerVersion, _ = ResolveBrokerVersionFromCR(cr)
 
 	if isLockedDown(cr.Spec.DeploymentPlan.Image) || isLockedDown(cr.Spec.DeploymentPlan.InitImage) {
-		cr.Status.Version.BrokerVersion = ""
 		cr.Status.Upgrade.SecurityUpdates = false
 		cr.Status.Upgrade.MajorUpdates = false
 		cr.Status.Upgrade.MinorUpdates = false
 		cr.Status.Upgrade.PatchUpdates = false
 
 	} else {
-		cr.Status.Version.BrokerVersion, _ = ResolveBrokerVersionFromCR(cr)
 		cr.Status.Upgrade.SecurityUpdates = true
 
 		if cr.Spec.Version == "" {
@@ -404,35 +403,45 @@ func isLockedDown(imageAttribute string) bool {
 	return imageAttribute != "placeholder" && imageAttribute != ""
 }
 
-func ValidateBrokerVersion(customResource *brokerv1beta1.ActiveMQArtemis) *metav1.Condition {
-
+func ValidateBrokerImageVersion(customResource *brokerv1beta1.ActiveMQArtemis) *metav1.Condition {
 	var result *metav1.Condition = nil
-	if customResource.Spec.Version != "" {
-		if isLockedDown(customResource.Spec.DeploymentPlan.Image) || isLockedDown(customResource.Spec.DeploymentPlan.InitImage) {
-			result = &metav1.Condition{
-				Type:    brokerv1beta1.ValidConditionType,
-				Status:  metav1.ConditionUnknown,
-				Reason:  brokerv1beta1.ValidConditionUnknownReason,
-				Message: ImageVersionConflictMessage,
-			}
-		}
 
-		_, err := ResolveBrokerVersionFromCR(customResource)
-		if err != nil {
-			result = &metav1.Condition{
-				Type:    brokerv1beta1.ValidConditionType,
-				Status:  metav1.ConditionFalse,
-				Reason:  brokerv1beta1.ValidConditionInvalidVersionReason,
-				Message: fmt.Sprintf(".Spec.Version does not resolve to a supported broker version, reason %v", err),
-			}
-		}
-
-	} else if (isLockedDown(customResource.Spec.DeploymentPlan.Image) && !isLockedDown(customResource.Spec.DeploymentPlan.InitImage)) || (isLockedDown(customResource.Spec.DeploymentPlan.InitImage) && !isLockedDown(customResource.Spec.DeploymentPlan.Image)) {
+	_, err := ResolveBrokerVersionFromCR(customResource)
+	if err != nil {
 		result = &metav1.Condition{
 			Type:    brokerv1beta1.ValidConditionType,
-			Status:  metav1.ConditionUnknown,
-			Reason:  brokerv1beta1.ValidConditionUnknownReason,
-			Message: ImageDependentPairMessage,
+			Status:  metav1.ConditionFalse,
+			Reason:  brokerv1beta1.ValidConditionInvalidVersionReason,
+			Message: fmt.Sprintf(".Spec.Version does not resolve to a supported broker version, reason %v", err),
+		}
+	} else {
+		if isLockedDown(customResource.Spec.DeploymentPlan.Image) || isLockedDown(customResource.Spec.DeploymentPlan.InitImage) {
+			if !isLockedDown(customResource.Spec.DeploymentPlan.InitImage) || !isLockedDown(customResource.Spec.DeploymentPlan.Image) {
+				result = &metav1.Condition{
+					Type:    brokerv1beta1.ValidConditionType,
+					Status:  metav1.ConditionUnknown,
+					Reason:  brokerv1beta1.ValidConditionUnknownReason,
+					Message: ImageDependentPairMessage,
+				}
+			} else {
+				if customResource.Spec.Version != "" {
+					if !version.IsSupportedActiveMQArtemisVersion(customResource.Spec.Version) {
+						result = &metav1.Condition{
+							Type:    brokerv1beta1.ValidConditionType,
+							Status:  metav1.ConditionUnknown,
+							Reason:  brokerv1beta1.ValidConditionUnknownReason,
+							Message: NotSupportedImageVersionMessage,
+						}
+					}
+				} else {
+					result = &metav1.Condition{
+						Type:    brokerv1beta1.ValidConditionType,
+						Status:  metav1.ConditionUnknown,
+						Reason:  brokerv1beta1.ValidConditionUnknownReason,
+						Message: UnkonwonImageVersionMessage,
+					}
+				}
+			}
 		}
 	}
 

@@ -23,7 +23,8 @@ const (
 	DeployedConditionZeroSizeMessage       = "Pods not scheduled. Deployment size is 0"
 	ConfigAppliedConditionOutOfSyncMessage = "Waiting for the Broker to acknowledge changes"
 	NotReadyConditionMessage               = "Some conditions are not met"
-	ImageVersionConflictMessage            = "Version and Images cannot be specified at the same time"
+	UnkonwonImageVersionMessage            = "Unknown image version, set a supported broker version in spec.version when images are specified"
+	NotSupportedImageVersionMessage        = "Invalid image version, set a supported broker version in spec.version when images are specified"
 	ImageDependentPairMessage              = "Init image and broker image must both be configured as an interdependent pair"
 	PDBNonNilSelectorMessage               = "PodDisruptionBudget's selector should not be specified"
 )

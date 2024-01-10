@@ -229,7 +229,7 @@ func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Cli
 	}
 
 	if validationCondition.Status == metav1.ConditionTrue {
-		condition := common.ValidateBrokerVersion(customResource)
+		condition := common.ValidateBrokerImageVersion(customResource)
 		if condition != nil {
 			validationCondition = *condition
 		}
@@ -662,6 +662,10 @@ type statusOutOfSyncMissingKeyError struct {
 	cause string
 }
 
+type versionMismatchError struct {
+	cause string
+}
+
 func NewUnknownJolokiaError(err error) unknownJolokiaError {
 	return unknownJolokiaError{
 		err,
@@ -743,4 +747,16 @@ func (e *inSyncApplyError) ErrorApplyDetail(container string, reason string) {
 	} else {
 		e.detail[container] = reason
 	}
+}
+
+func NewVersionMismatchError(err error) versionMismatchError {
+	return versionMismatchError{err.Error()}
+}
+
+func (e versionMismatchError) Error() string {
+	return e.cause
+}
+
+func (e versionMismatchError) Requeue() bool {
+	return false
 }
