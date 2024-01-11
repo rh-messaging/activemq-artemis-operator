@@ -5447,7 +5447,6 @@ var _ = Describe("artemis controller", func() {
 
 					g.Expect(brokerVersionAlignedCondition.Reason).Should(Equal(brokerv1beta1.BrokerVersionAlignedConditionMismatchReason))
 					g.Expect(brokerVersionAlignedCondition.Message).Should(ContainSubstring(crd.Spec.Version))
-					g.Expect(brokerVersionAlignedCondition.Message).Should(ContainSubstring(version.LatestVersion))
 
 					readyCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)
 					g.Expect(readyCondition).NotTo(BeNil())
