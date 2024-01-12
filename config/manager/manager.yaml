@@ -16,6 +16,7 @@ spec:
   selector:
     matchLabels:
       control-plane: controller-manager
+      name: amq-broker-operator
   replicas: 1
   strategy:
     rollingUpdate:
