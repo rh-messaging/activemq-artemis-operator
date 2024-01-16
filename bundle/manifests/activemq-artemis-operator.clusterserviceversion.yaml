@@ -2578,6 +2578,7 @@ spec:
           selector:
             matchLabels:
               control-plane: controller-manager
+              name: activemq-artemis-operator
           strategy:
             rollingUpdate:
               maxSurge: 1

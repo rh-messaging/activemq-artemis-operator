@@ -252,17 +252,6 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(customResour
 	headlessServiceDefinition = svc.NewHeadlessServiceForCR2(client, headlesServiceName, ssNamespacedName.Namespace, serviceports.GetDefaultPorts(), labels, headlessServiceDefinition)
 	reconciler.trackDesired(headlessServiceDefinition)
 
-	if isClustered(customResource) {
-		pingServiceName := namer.SvcPingNameBuilder.Name()
-		var pingServiceDefinition *corev1.Service
-		obj = reconciler.cloneOfDeployed(reflect.TypeOf(corev1.Service{}), pingServiceName)
-		if obj != nil {
-			pingServiceDefinition = obj.(*corev1.Service)
-		}
-		pingServiceDefinition = svc.NewPingServiceDefinitionForCR2(client, pingServiceName, ssNamespacedName.Namespace, labels, labels, pingServiceDefinition)
-		reconciler.trackDesired(pingServiceDefinition)
-	}
-
 	if customResource.Spec.DeploymentPlan.RevisionHistoryLimit != nil {
 		currentStatefulSet.Spec.RevisionHistoryLimit = customResource.Spec.DeploymentPlan.RevisionHistoryLimit
 	}
@@ -432,7 +421,7 @@ func (r *ActiveMQArtemisReconcilerImpl) syncMessageMigration(customResource *bro
 	ssNames["CLUSTERUSER"] = environments.GLOBAL_AMQ_CLUSTER_USER
 	ssNames["CLUSTERPASS"] = environments.GLOBAL_AMQ_CLUSTER_PASSWORD
 	ssNames["HEADLESSSVCNAMEVALUE"] = namer.SvcHeadlessNameBuilder.Name()
-	ssNames["PINGSVCNAMEVALUE"] = namer.SvcPingNameBuilder.Name()
+	ssNames["PINGSVCNAMEVALUE"] = namer.SvcHeadlessNameBuilder.Name()
 	ssNames["SERVICE_ACCOUNT"] = os.Getenv("SERVICE_ACCOUNT")
 	ssNames["SERVICE_ACCOUNT_NAME"] = os.Getenv("SERVICE_ACCOUNT")
 	ssNames["AMQ_CREDENTIALS_SECRET_NAME"] = namer.SecretsCredentialsNameBuilder.Name()
@@ -2528,7 +2517,7 @@ func MakeEnvVarArrayForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer c
 	}
 
 	envVar := []corev1.EnvVar{}
-	envVarArrayForBasic := environments.AddEnvVarForBasic(requireLogin, journalType, namer.SvcPingNameBuilder.Name())
+	envVarArrayForBasic := environments.AddEnvVarForBasic(requireLogin, journalType, namer.SvcHeadlessNameBuilder.Name())
 	envVar = append(envVar, envVarArrayForBasic...)
 	if customResource.Spec.DeploymentPlan.PersistenceEnabled {
 		envVarArrayForPresistent := environments.AddEnvVarForPersistent(customResource.Name)
