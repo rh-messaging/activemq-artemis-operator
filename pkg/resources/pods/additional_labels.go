@@ -28,6 +28,7 @@ var productVerFromImageVer map[string]string = map[string]string{
 	"7.11.4": "2023.Q4",
 	"7.10.5": "2023.Q4",
 	"7.11.5": "2023.Q4",
+	"7.11.6": "2024.Q1",
 }
 
 // the labels returned will be added to broker pod
