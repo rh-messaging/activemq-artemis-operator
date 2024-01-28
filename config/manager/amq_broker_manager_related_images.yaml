@@ -133,3 +133,23 @@ spec:
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7115_s390x
           #value: registry.redhat.io/amq7/amq-broker-rhel8:7.11.5-6
           value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:7d53744ae8c77aea09c59165486c9ed0eaa131140f6b346042293bce0bd8a745
+
+        # 7.12.0
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7120
+          #value: registry.redhat.io/amq7/amq-broker-init-rhel8:7.12.0-scratch-51494-20240128014236
+          value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:00e3214922f4c4ffb6df61bafc70d863284cd666a7638bfc185bfa4869cb0e28
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7120
+          #value: registry.redhat.io/amq7/amq-broker-rhel8:7.12.0-scratch-56797-20240128013154
+          value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:970d02712c05f8bf621b7326272ca49422d2b5d8afd0262a6a34ba0cf4f9f79d
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7120_ppc64le
+          #value: registry.redhat.io/amq7/amq-broker-init-rhel8:7.12.0-scratch-51494-20240128014236
+          value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:00e3214922f4c4ffb6df61bafc70d863284cd666a7638bfc185bfa4869cb0e28
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7120_ppc64le
+          #value: registry.redhat.io/amq7/amq-broker-rhel8:7.12.0-scratch-56797-20240128013154
+          value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:970d02712c05f8bf621b7326272ca49422d2b5d8afd0262a6a34ba0cf4f9f79d
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7120_s390x
+          #value: registry.redhat.io/amq7/amq-broker-init-rhel8:7.12.0-scratch-51494-20240128014236
+          value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:00e3214922f4c4ffb6df61bafc70d863284cd666a7638bfc185bfa4869cb0e28
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7120_s390x
+          #value: registry.redhat.io/amq7/amq-broker-rhel8:7.12.0-scratch-56797-20240128013154
+          value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:970d02712c05f8bf621b7326272ca49422d2b5d8afd0262a6a34ba0cf4f9f79d
