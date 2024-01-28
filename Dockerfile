@@ -68,11 +68,11 @@ USER ${USER_UID}
 ENTRYPOINT ["${USER_HOME}/bin/entrypoint"]
 
 LABEL name="amq7/amq-broker-rhel8-operator"
-LABEL description="ActiveMQ Artemis Broker Operator"
+LABEL description="Red Hat AMQ Broker 7.12 Operator"
 LABEL maintainer="Roddie Kieley <rkieley@redhat.com>"
-LABEL version="7.x.x"
-LABEL summary="Red Hat AMQ Broker 7.x Operator"
-LABEL amq.broker.version="7.x.x.OPR.1.CR1"
+LABEL version="7.12.0"
+LABEL summary="Red Hat AMQ Broker 7.12 Operator"
+LABEL amq.broker.version="7.12.0.OPR.1.SR1"
 LABEL com.redhat.component="amq-broker-rhel8-operator-container"
-LABEL io.k8s.display-name="Red Hat AMQ Broker 7.x Operator"
+LABEL io.k8s.display-name="Red Hat AMQ Broker 7.12 Operator"
 LABEL io.openshift.tags="messaging,amq,integration,operator,golang"
