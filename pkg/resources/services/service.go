@@ -70,3 +70,38 @@ func NewServiceDefinitionForCR(svcName types.NamespacedName, client client.Clien
 
 	return svc
 }
+
+func NewPingServiceDefinitionForCR2(client client.Client, serviceName string, namespace string, labels map[string]string, selectorLabels map[string]string, svc *corev1.Service) *corev1.Service {
+
+	if svc == nil {
+		svc = &corev1.Service{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Service",
+			},
+			ObjectMeta: metav1.ObjectMeta{},
+			Spec:       corev1.ServiceSpec{},
+		}
+	}
+
+	port := corev1.ServicePort{
+		Protocol:   "TCP",
+		Port:       8888,
+		TargetPort: intstr.FromInt(int(8888)),
+	}
+	ports := []corev1.ServicePort{}
+	ports = append(ports, port)
+
+	// apply desired
+	svc.ObjectMeta.Labels = labels
+	svc.ObjectMeta.Name = serviceName
+	svc.ObjectMeta.Namespace = namespace
+
+	svc.Spec.Type = "ClusterIP"
+	svc.Spec.Ports = ports
+	svc.Spec.Selector = selectorLabels
+	svc.Spec.ClusterIP = "None"
+	svc.Spec.PublishNotReadyAddresses = true
+
+	return svc
+}

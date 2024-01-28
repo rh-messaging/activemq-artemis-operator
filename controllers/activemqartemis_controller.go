@@ -525,6 +525,7 @@ func MakeNamers(customResource *brokerv1beta1.ActiveMQArtemis) *common.Namers {
 		SsGlobalName:                  "",
 		SsNameBuilder:                 namer.NamerData{},
 		SvcHeadlessNameBuilder:        namer.NamerData{},
+		SvcPingNameBuilder:            namer.NamerData{},
 		PodsNameBuilder:               namer.NamerData{},
 		SecretsCredentialsNameBuilder: namer.NamerData{},
 		SecretsConsoleNameBuilder:     namer.NamerData{},
@@ -535,6 +536,7 @@ func MakeNamers(customResource *brokerv1beta1.ActiveMQArtemis) *common.Namers {
 	newNamers.SsNameBuilder.Base(customResource.Name).Suffix("ss").Generate()
 	newNamers.SsGlobalName = customResource.Name
 	newNamers.SvcHeadlessNameBuilder.Prefix(customResource.Name).Base("hdls").Suffix("svc").Generate()
+	newNamers.SvcPingNameBuilder.Prefix(customResource.Name).Base("ping").Suffix("svc").Generate()
 	newNamers.PodsNameBuilder.Base(customResource.Name).Suffix("container").Generate()
 	newNamers.SecretsCredentialsNameBuilder.Prefix(customResource.Name).Base("credentials").Suffix("secret").Generate()
 	if customResource.Spec.Console.SSLSecret != "" {

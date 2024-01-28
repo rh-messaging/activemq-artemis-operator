@@ -65,6 +65,7 @@ type Namers struct {
 	SsGlobalName                  string
 	SsNameBuilder                 namer.NamerData
 	SvcHeadlessNameBuilder        namer.NamerData
+	SvcPingNameBuilder            namer.NamerData
 	PodsNameBuilder               namer.NamerData
 	SecretsCredentialsNameBuilder namer.NamerData
 	SecretsConsoleNameBuilder     namer.NamerData

@@ -7,10 +7,18 @@ import (
 )
 
 var appProtocolHTTP = "http"
+var appProtocolTCP = "tcp"
 
 func GetDefaultPorts() *[]corev1.ServicePort {
 
 	ports := []corev1.ServicePort{
+		{
+			Name:        "jgroups",
+			Protocol:    "TCP",
+			Port:        7800,
+			AppProtocol: &appProtocolTCP,
+			TargetPort:  intstr.FromInt(int(7800)),
+		},
 		{
 			Name:        "console-jolokia",
 			Protocol:    "TCP",
