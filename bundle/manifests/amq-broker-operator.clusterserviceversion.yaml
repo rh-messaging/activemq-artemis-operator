@@ -255,6 +255,7 @@ metadata:
     repository: https://github.com/rh-messaging/activemq-artemis-operator
     support: Red Hat
     tectonic-visibility: ocs
+    olm.skipRange: 7.11.6-opr-1
   labels:
     operator-activemqartemis: "true"
     operatorframework.io/arch.amd64: supported
@@ -2566,5 +2567,4 @@ spec:
     name: Red Hat
     url: https://www.redhat.com/
   replaces: amq-broker-operator.v7.11.5-opr-1
-  olm.skipRange: 7.11.6-opr-1
   version: 7.11.6-opr-2
