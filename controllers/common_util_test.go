@@ -55,6 +55,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
 )
 
@@ -392,7 +393,9 @@ func RunCommandInPod(podName string, containerName string, command []string) (*s
 		Version: "v1",
 		Kind:    "Pod",
 	}
-	restClient, err := apiutil.RESTClientForGVK(gvk, false, testEnv.Config, serializer.NewCodecFactory(testEnv.Scheme))
+	httpClient, err := rest.HTTPClientFor(restConfig)
+	Expect(err).To(BeNil())
+	restClient, err := apiutil.RESTClientForGVK(gvk, false, testEnv.Config, serializer.NewCodecFactory(testEnv.Scheme), httpClient)
 	Expect(err).To(BeNil())
 	execReq := restClient.
 		Post().
@@ -460,7 +463,9 @@ func LogsOfPod(podWithOrdinal string, brokerName string, namespace string, g Gom
 		Version: "v1",
 		Kind:    "Pod",
 	}
-	restClient, err := apiutil.RESTClientForGVK(gvk, false, restConfig, serializer.NewCodecFactory(scheme.Scheme))
+	httpClient, err := rest.HTTPClientFor(restConfig)
+	Expect(err).To(BeNil())
+	restClient, err := apiutil.RESTClientForGVK(gvk, false, restConfig, serializer.NewCodecFactory(scheme.Scheme), httpClient)
 	g.Expect(err).To(BeNil())
 
 	readCloser, err := restClient.
@@ -489,7 +494,9 @@ func ExecOnPod(podWithOrdinal string, brokerName string, namespace string, comma
 		Version: "v1",
 		Kind:    "Pod",
 	}
-	restClient, err := apiutil.RESTClientForGVK(gvk, false, restConfig, serializer.NewCodecFactory(scheme.Scheme))
+	httpClient, err := rest.HTTPClientFor(restConfig)
+	g.Expect(err).To(BeNil())
+	restClient, err := apiutil.RESTClientForGVK(gvk, false, restConfig, serializer.NewCodecFactory(scheme.Scheme), httpClient)
 	g.Expect(err).To(BeNil())
 
 	execReq := restClient.

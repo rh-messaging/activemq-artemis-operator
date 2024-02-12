@@ -37,6 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
@@ -1077,7 +1078,9 @@ var _ = Describe("security controller", func() {
 				Version: "v1",
 				Kind:    "Pod",
 			}
-			restClient, err := apiutil.RESTClientForGVK(gvk, false, restConfig, serializer.NewCodecFactory(scheme.Scheme))
+			httpClient, err := rest.HTTPClientFor(restConfig)
+			Expect(err).To(BeNil())
+			restClient, err := apiutil.RESTClientForGVK(gvk, false, restConfig, serializer.NewCodecFactory(scheme.Scheme), httpClient)
 			Expect(err).To(BeNil())
 
 			podOrdinal := strconv.FormatInt(int64(0), 10)

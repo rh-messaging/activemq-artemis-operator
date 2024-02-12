@@ -124,6 +124,7 @@ var (
 	isOpenshift                    = false
 	isIngressSSLPassthroughEnabled = false
 	verbose                        = false
+	kubeTool                       = "kubectl"
 )
 
 func init() {
@@ -314,12 +315,20 @@ func createControllerManager(disableMetrics bool, watchNamespace string) {
 	isLocal, watchList := common.ResolveWatchNamespaceForManager(defaultNamespace, watchNamespace)
 	if isLocal {
 		ctrl.Log.Info("setting up operator to watch local namespace")
-		mgrOptions.Namespace = defaultNamespace
+		mgrOptions.Cache.DefaultNamespaces = map[string]cache.Config{
+			defaultNamespace: {}}
 	} else {
-		mgrOptions.Namespace = ""
 		if watchList != nil {
-			ctrl.Log.Info("setting up operator to watch multiple namespaces", "namespace(s)", watchList)
-			mgrOptions.NewCache = cache.MultiNamespacedCacheBuilder(watchList)
+			if len(watchList) == 1 {
+				ctrl.Log.Info("setting up operator to watch single namespace")
+			} else {
+				ctrl.Log.Info("setting up operator to watch multiple namespaces", "namespace(s)", watchList)
+			}
+			nsMap := map[string]cache.Config{}
+			for _, ns := range watchList {
+				nsMap[ns] = cache.Config{}
+			}
+			mgrOptions.Cache.DefaultNamespaces = nsMap
 		} else {
 			ctrl.Log.Info("setting up operator to watch all namespaces")
 		}
@@ -327,7 +336,7 @@ func createControllerManager(disableMetrics bool, watchNamespace string) {
 
 	if disableMetrics {
 		// if we can shutdown metrics port, we don't need disable it.
-		mgrOptions.MetricsBindAddress = "0"
+		mgrOptions.Metrics.BindAddress = "0"
 	}
 
 	waitforever := time.Duration(-1)
@@ -347,7 +356,12 @@ func createControllerManager(disableMetrics bool, watchNamespace string) {
 		autodetect.DetectOpenshift()
 	}
 
-	isOpenshift, _ = common.DetectOpenshift()
+	isOpenshift, err = common.DetectOpenshift()
+	Expect(err).NotTo(HaveOccurred())
+
+	if isOpenshift {
+		kubeTool = "oc"
+	}
 
 	brokerReconciler = &ActiveMQArtemisReconciler{
 		Client: k8Manager.GetClient(),

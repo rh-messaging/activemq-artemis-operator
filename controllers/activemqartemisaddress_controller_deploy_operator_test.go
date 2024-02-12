@@ -40,6 +40,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
 )
 
@@ -141,7 +142,9 @@ var _ = Describe("Address controller DO", Label("do"), func() {
 					Version: "v1",
 					Kind:    "Pod",
 				}
-				restClient, err := apiutil.RESTClientForGVK(gvk, false, restConfig, serializer.NewCodecFactory(scheme.Scheme))
+				httpClient, err := rest.HTTPClientFor(restConfig)
+				Expect(err).To(BeNil())
+				restClient, err := apiutil.RESTClientForGVK(gvk, false, restConfig, serializer.NewCodecFactory(scheme.Scheme), httpClient)
 				Expect(err).To(BeNil())
 
 				for ipod := 4; ipod >= 0; ipod-- {

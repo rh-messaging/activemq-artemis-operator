@@ -40,6 +40,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"fmt"
 	goruntime "runtime"
@@ -164,36 +166,51 @@ func main() {
 	retryPeriod := time.Duration(retryPeriodSeconds) * time.Second
 
 	mgrOptions := ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
-		//webhook port
-		Port:                   9443,
+		Scheme: scheme,
+		Metrics: server.Options{
+			BindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
+		},
+		WebhookServer: &webhook.DefaultServer{
+			Options: webhook.Options{
+				Port: 9443,
+			},
+		},
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "d864aab0.amq.io",
 		LeaseDuration:          &leaseDuration,
 		RenewDeadline:          &renewDeadline,
 		RetryPeriod:            &retryPeriod,
+		Logger:                 setupLog,
 	}
 
 	isLocal, watchList := common.ResolveWatchNamespaceForManager(oprNamespace, watchNamespace)
 	if isLocal {
 		setupLog.Info("setting up operator to watch local namespace")
-		mgrOptions.Namespace = oprNamespace
+		mgrOptions.Cache.DefaultNamespaces = map[string]cache.Config{
+			oprNamespace: {}}
+
 	} else {
-		mgrOptions.Namespace = ""
 		if watchList != nil {
-			setupLog.Info("setting up operator to watch multiple namespaces", "namespace(s)", watchList)
-			mgrOptions.NewCache = cache.MultiNamespacedCacheBuilder(watchList)
+			if len(watchList) == 1 {
+				setupLog.Info("setting up operator to watch single namespace")
+			} else {
+				setupLog.Info("setting up operator to watch multiple namespaces", "namespace(s)", watchList)
+			}
+			nsMap := map[string]cache.Config{}
+			for _, ns := range watchList {
+				nsMap[ns] = cache.Config{}
+			}
+			mgrOptions.Cache.DefaultNamespaces = nsMap
 		} else {
 			setupLog.Info("setting up operator to watch all namespaces")
 		}
 	}
 
 	setupLog.Info("Manager options",
-		"Namespace", mgrOptions.Namespace,
-		"MetricsBindAddress", mgrOptions.MetricsBindAddress,
-		"Port", mgrOptions.Port,
+		"Namespaces", mgrOptions.Cache.DefaultNamespaces,
+		"MetricsBindAddress", mgrOptions.Metrics.BindAddress,
+		"Port", mgrOptions.WebhookServer.(*webhook.DefaultServer).Options.Port,
 		"HealthProbeBindAddress", mgrOptions.HealthProbeBindAddress,
 		"LeaderElection", mgrOptions.LeaderElection,
 		"LeaderElectionID", mgrOptions.LeaderElectionID,
