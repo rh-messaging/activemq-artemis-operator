@@ -16,7 +16,7 @@ spec:
   selector:
     matchLabels:
       control-plane: controller-manager
-      name: amq-broker-operator
+      name: activemq-artemis-operator
   replicas: 1
   strategy:
     rollingUpdate:
@@ -27,7 +27,7 @@ spec:
     metadata:
       labels:
         control-plane: controller-manager
-        name: amq-broker-operator
+        name: activemq-artemis-operator
     spec:
       securityContext:
         runAsNonRoot: true
@@ -61,7 +61,7 @@ spec:
               fieldPath: metadata.namespace
         - name: ENABLE_WEBHOOKS
           value: "false"
-        image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:2219671a4167ae288d597cd4c8db18da7a774c270a395ab2514c72be3aa31221
+        image: controller:latest
         # imagePullPolicy: Always
         name: manager
         securityContext:
