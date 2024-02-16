@@ -80,7 +80,7 @@ jobs:
             if ! grep "${ACTIVEMQ_ARTEMIS_VERSION}" ${VERSION_FILE}; then
                 YACFG_BROKER_PROFILE="${ACTIVEMQ_ARTEMIS_VERSION}"
                 ACTIVEMQ_ARTEMIS_BROKER_INIT_VERSION="$(skopeo inspect docker://quay.io/artemiscloud/activemq-artemis-broker-init@${ACTIVEMQ_ARTEMIS_BROKER_INIT_DIGEST} | jq -r '.Labels.version')"
-                INIT_IMAGE_TAG="v${ACTIVEMQ_ARTEMIS_BROKER_INIT_VERSION}"
+                INIT_IMAGE_TAG="$(git ls-remote --tags https://github.com/artemiscloud/activemq-artemis-broker-init-image.git | grep -Po "(?<=refs/tags/)${ACTIVEMQ_ARTEMIS_BROKER_INIT_VERSION}[^^]*$" | head -1)"
                 INIT_IMAGE_DOCKERFILE="$(curl -L https://raw.githubusercontent.com/artemiscloud/activemq-artemis-broker-init-image/${INIT_IMAGE_TAG}/Dockerfile)"
                 REMOTE_SOURCE_REF="$(echo "${INIT_IMAGE_DOCKERFILE}" | grep -Po '(?<=REMOTE_SOURCE_REF=).*')"
                 REMOTE_SOURCE_REP="$(echo "${INIT_IMAGE_DOCKERFILE}" | grep -Po '(?<=REMOTE_SOURCE_REP=https://github.com/).*(?=.git)')"
