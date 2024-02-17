@@ -62,6 +62,16 @@ spec:
                     expose:
                       description: Whether or not to expose this acceptor
                       type: boolean
+                    exposeMode:
+                      description: Mode to expose the acceptor. Currently the supported
+                        modes are `route` and `ingress`. Default is `route` on OpenShift
+                        and `ingress` on Kubernetes. \n\n* `route` mode uses OpenShift
+                        Routes to expose the acceptor.\n* `ingress` mode uses Kubernetes
+                        Nginx Ingress to expose the acceptor with TLS passthrough.\n"
+                      enum:
+                      - ingress
+                      - route
+                      type: string
                     ingressHost:
                       description: 'Host for Ingress and Route resources of the acceptor.
                         It supports the following variables: $(CR_NAME), $(CR_NAMESPACE),
@@ -475,6 +485,16 @@ spec:
                     expose:
                       description: Whether or not to expose this connector
                       type: boolean
+                    exposeMode:
+                      description: Mode to expose the connector. Currently the supported
+                        modes are `route` and `ingress`. Default is `route` on OpenShift
+                        and `ingress` on Kubernetes. \n\n* `route` mode uses OpenShift
+                        Routes to expose the connector.\n* `ingress` mode uses Kubernetes
+                        Nginx Ingress to expose the connector with TLS passthrough.\n"
+                      enum:
+                      - ingress
+                      - route
+                      type: string
                     host:
                       description: Hostname or IP to connect to
                       type: string
@@ -547,6 +567,16 @@ spec:
                   expose:
                     description: Whether or not to expose this port
                     type: boolean
+                  exposeMode:
+                    description: Mode to expose the console. Currently the supported
+                      modes are `route` and `ingress`. Default is `route` on OpenShift
+                      and `ingress` on Kubernetes. \n\n* `route` mode uses OpenShift
+                      Routes to expose the console.\n* `ingress` mode uses Kubernetes
+                      Nginx Ingress to expose the console with TLS passthrough.\n"
+                    enum:
+                    - ingress
+                    - route
+                    type: string
                   ingressHost:
                     description: 'Host for Ingress and Route resources of the acceptor.
                       It supports the following variables: $(CR_NAME), $(CR_NAMESPACE),

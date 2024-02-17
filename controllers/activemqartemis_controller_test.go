@@ -2298,6 +2298,214 @@ var _ = Describe("artemis controller", func() {
 		})
 	})
 
+	Context("Expose mode test", func() {
+		It("expose console with ingress mode", Label("console", "ingress"), func() {
+			By("Deploying a broker with console")
+			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				candidate.Spec.Console.Expose = true
+				candidate.Spec.Console.ExposeMode = &brokerv1beta1.ExposeModes.Ingress
+
+				candidate.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+					{
+						Name:       "acceptor",
+						Port:       61616,
+						Expose:     true,
+						ExposeMode: &brokerv1beta1.ExposeModes.Ingress,
+					},
+				}
+
+				candidate.Spec.Connectors = []brokerv1beta1.ConnectorType{
+					{
+						Name:       "connector",
+						Port:       61616,
+						Expose:     true,
+						ExposeMode: &brokerv1beta1.ExposeModes.Ingress,
+					},
+				}
+			})
+
+			By("check ingress is created for console")
+			ingKey := types.NamespacedName{
+				Name:      brokerCr.Name + "-wconsj-0-svc-ing",
+				Namespace: defaultNamespace,
+			}
+			ingress := netv1.Ingress{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, ingKey, &ingress)).To(Succeed())
+
+				g.Expect(len(ingress.Spec.Rules)).To(Equal(1))
+				g.Expect(ingress.Spec.Rules[0].Host).To(ContainSubstring(ingressHostDomainSubString))
+				g.Expect(len(ingress.Spec.Rules[0].HTTP.Paths)).To(BeEquivalentTo(1))
+				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).To(BeEquivalentTo(brokerCr.Name + "-wconsj-0-svc"))
+				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name).To(BeEquivalentTo("wconsj-0"))
+				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Path).To(BeEquivalentTo("/"))
+				g.Expect(*ingress.Spec.Rules[0].HTTP.Paths[0].PathType).To(BeEquivalentTo(netv1.PathTypePrefix))
+
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("check ingress is created for acceptor")
+			ingKey = types.NamespacedName{
+				Name:      brokerCr.Name + "-acceptor-0-svc-ing",
+				Namespace: defaultNamespace,
+			}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, ingKey, &ingress)).To(Succeed())
+
+				g.Expect(len(ingress.Spec.Rules)).To(Equal(1))
+				g.Expect(ingress.Spec.Rules[0].Host).To(Equal(brokerCr.Name + "-acceptor-0-svc-ing." + ingressHostDomainSubString))
+				g.Expect(len(ingress.Spec.Rules[0].HTTP.Paths)).To(BeEquivalentTo(1))
+				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).To(Equal(brokerCr.Name + "-acceptor-0-svc"))
+				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name).To(Equal("acceptor-0"))
+				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Path).To(Equal("/"))
+				g.Expect(*ingress.Spec.Rules[0].HTTP.Paths[0].PathType).To(Equal(netv1.PathTypePrefix))
+
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("check ingress is created for connector")
+			ingKey = types.NamespacedName{
+				Name:      brokerCr.Name + "-connector-0-svc-ing",
+				Namespace: defaultNamespace,
+			}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, ingKey, &ingress)).To(Succeed())
+
+				g.Expect(len(ingress.Spec.Rules)).To(Equal(1))
+				g.Expect(ingress.Spec.Rules[0].Host).To(Equal(brokerCr.Name + "-connector-0-svc-ing." + ingressHostDomainSubString))
+				g.Expect(len(ingress.Spec.Rules[0].HTTP.Paths)).To(BeEquivalentTo(1))
+				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).To(Equal(brokerCr.Name + "-connector-0-svc"))
+				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name).To(Equal("connector-0"))
+				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Path).To(Equal("/"))
+				g.Expect(*ingress.Spec.Rules[0].HTTP.Paths[0].PathType).To(Equal(netv1.PathTypePrefix))
+
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			CleanResource(createdBrokerCr, createdBrokerCr.Name, defaultNamespace)
+		})
+
+		It("expose console with route mode", Label("console", "ingress"), func() {
+			By("Deploying a broker with console")
+			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				candidate.Spec.Console.Expose = true
+				candidate.Spec.Console.ExposeMode = &brokerv1beta1.ExposeModes.Route
+
+				candidate.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+					{
+						Name:       "acceptor",
+						Port:       61616,
+						Expose:     true,
+						ExposeMode: &brokerv1beta1.ExposeModes.Route,
+					},
+				}
+
+				candidate.Spec.Connectors = []brokerv1beta1.ConnectorType{
+					{
+						Name:       "connector",
+						Port:       61616,
+						Expose:     true,
+						ExposeMode: &brokerv1beta1.ExposeModes.Route,
+					},
+				}
+			})
+
+			isOpenshift, _ := common.DetectOpenshift()
+
+			if isOpenshift {
+				By("check route is created for console")
+				routeKey := types.NamespacedName{
+					Name:      brokerCr.Name + "-wconsj-0-svc-rte",
+					Namespace: defaultNamespace,
+				}
+				route := routev1.Route{}
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, routeKey, &route)).To(Succeed())
+					g.Expect(route.Spec.Port.TargetPort).To(Equal(intstr.FromString("wconsj-0")))
+					g.Expect(route.Spec.To.Kind).To(Equal("Service"))
+					g.Expect(route.Spec.To.Name).To(Equal(brokerCr.Name + "-wconsj-0-svc"))
+					g.Expect(route.Spec.TLS.Termination).To(BeEquivalentTo(routev1.TLSTerminationPassthrough))
+					g.Expect(route.Spec.TLS.InsecureEdgeTerminationPolicy).To(BeEquivalentTo(routev1.InsecureEdgeTerminationPolicyNone))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("checking route is created for acceptor")
+				routeKey = types.NamespacedName{
+					Name:      brokerCr.Name + "-acceptor-0-svc-rte",
+					Namespace: defaultNamespace,
+				}
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, routeKey, &route)).To(Succeed())
+					g.Expect(route.Spec.Port.TargetPort).To(Equal(intstr.FromString("acceptor-0")))
+					g.Expect(route.Spec.To.Kind).To(Equal("Service"))
+					g.Expect(route.Spec.To.Name).To(Equal(brokerCr.Name + "-acceptor-0-svc"))
+					g.Expect(route.Spec.TLS.Termination).To(BeEquivalentTo(routev1.TLSTerminationPassthrough))
+					g.Expect(route.Spec.TLS.InsecureEdgeTerminationPolicy).To(BeEquivalentTo(routev1.InsecureEdgeTerminationPolicyNone))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("checking route is created for connector")
+				routeKey = types.NamespacedName{
+					Name:      brokerCr.Name + "-connector-0-svc-rte",
+					Namespace: defaultNamespace,
+				}
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, routeKey, &route)).To(Succeed())
+					g.Expect(route.Spec.Port.TargetPort).To(Equal(intstr.FromString("connector-0")))
+					g.Expect(route.Spec.To.Kind).To(Equal("Service"))
+					g.Expect(route.Spec.To.Name).To(Equal(brokerCr.Name + "-connector-0-svc"))
+					g.Expect(route.Spec.TLS.Termination).To(BeEquivalentTo(routev1.TLSTerminationPassthrough))
+					g.Expect(route.Spec.TLS.InsecureEdgeTerminationPolicy).To(BeEquivalentTo(routev1.InsecureEdgeTerminationPolicyNone))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			} else {
+				brokerKey := types.NamespacedName{Name: brokerCr.Name, Namespace: brokerCr.Namespace}
+				deployedCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+				By("verify invalid acceptor expose mode")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
+					g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeFalse())
+
+					validation := meta.FindStatusCondition(deployedCrd.Status.Conditions, brokerv1beta1.ValidConditionType)
+					g.Expect(validation).ShouldNot(BeNil())
+					g.Expect(validation.Reason).Should(Equal(brokerv1beta1.ValidConditionFailedAcceptorWithInvalidExposeMode))
+					g.Expect(validation.Message).Should(ContainSubstring(".Spec.Acceptors \"acceptor\" has invalid expose mode route, it is only supported on OpenShift"))
+				}, timeout, interval).Should(Succeed())
+
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
+					deployedCrd.Spec.Acceptors[0].ExposeMode = nil
+					g.Expect(k8sClient.Update(ctx, deployedCrd)).Should(Succeed())
+				}, timeout, interval).Should(Succeed())
+
+				By("verify invalid connector expose mode")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
+					g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeFalse())
+
+					validation := meta.FindStatusCondition(deployedCrd.Status.Conditions, brokerv1beta1.ValidConditionType)
+					g.Expect(validation).ShouldNot(BeNil())
+					g.Expect(validation.Reason).Should(Equal(brokerv1beta1.ValidConditionFailedConnectorWithInvalidExposeMode))
+					g.Expect(validation.Message).Should(ContainSubstring(".Spec.Connectors \"connector\" has invalid expose mode route, it is only supported on OpenShift"))
+				}, timeout, interval).Should(Succeed())
+
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
+					deployedCrd.Spec.Connectors[0].ExposeMode = nil
+					g.Expect(k8sClient.Update(ctx, deployedCrd)).Should(Succeed())
+				}, timeout, interval).Should(Succeed())
+
+				By("verify invalid console expose mode")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
+					g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeFalse())
+
+					validation := meta.FindStatusCondition(deployedCrd.Status.Conditions, brokerv1beta1.ValidConditionType)
+					g.Expect(validation).ShouldNot(BeNil())
+					g.Expect(validation.Reason).Should(Equal(brokerv1beta1.ValidConditionFailedConsoleWithInvalidExposeMode))
+					g.Expect(validation.Message).Should(ContainSubstring(".Spec.Console has invalid expose mode route, it is only supported on OpenShift"))
+				}, timeout, interval).Should(Succeed())
+			}
+
+			CleanResource(createdBrokerCr, createdBrokerCr.Name, defaultNamespace)
+		})
+	})
+
 	It("ssl console secret validation", func() {
 
 		crd := generateArtemisSpec(defaultNamespace)

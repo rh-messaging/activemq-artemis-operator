@@ -448,6 +448,17 @@ type StorageType struct {
 	StorageClassName string `json:"storageClassName,omitempty"`
 }
 
+// +kubebuilder:validation:Enum=ingress;route
+type ExposeMode string
+
+var ExposeModes = struct {
+	Ingress ExposeMode
+	Route   ExposeMode
+}{
+	Ingress: "ingress",
+	Route:   "route",
+}
+
 type AcceptorType struct {
 	// The acceptor name
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Name",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:text"}
@@ -488,6 +499,9 @@ type AcceptorType struct {
 	// Whether or not to expose this acceptor
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Expose",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:booleanSwitch"}
 	Expose bool `json:"expose,omitempty"`
+	// Mode to expose the acceptor. Currently the supported modes are `route` and `ingress`. Default is `route` on OpenShift and `ingress` on Kubernetes. \n\n* `route` mode uses OpenShift Routes to expose the acceptor.\n* `ingress` mode uses Kubernetes Nginx Ingress to expose the acceptor with TLS passthrough.\n"
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Expose Mode",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:text"}
+	ExposeMode *ExposeMode `json:"exposeMode,omitempty"`
 	// To indicate which kind of routing type to use.
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Anycast Prefix",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:text"}
 	AnycastPrefix string `json:"anycastPrefix,omitempty"`
@@ -566,6 +580,9 @@ type ConnectorType struct {
 	// Whether or not to expose this connector
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Expose",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:booleanSwitch"}
 	Expose bool `json:"expose,omitempty"`
+	// Mode to expose the connector. Currently the supported modes are `route` and `ingress`. Default is `route` on OpenShift and `ingress` on Kubernetes. \n\n* `route` mode uses OpenShift Routes to expose the connector.\n* `ingress` mode uses Kubernetes Nginx Ingress to expose the connector with TLS passthrough.\n"
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Expose Mode",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:text"}
+	ExposeMode *ExposeMode `json:"exposeMode,omitempty"`
 	// Provider used for the keystore; "SUN", "SunJCE", etc. Default is null
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="KeyStore Provider",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:text"}
 	KeyStoreProvider string `json:"keyStoreProvider,omitempty"`
@@ -587,6 +604,9 @@ type ConsoleType struct {
 	// Whether or not to expose this port
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Expose",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:booleanSwitch"}
 	Expose bool `json:"expose,omitempty"`
+	// Mode to expose the console. Currently the supported modes are `route` and `ingress`. Default is `route` on OpenShift and `ingress` on Kubernetes. \n\n* `route` mode uses OpenShift Routes to expose the console.\n* `ingress` mode uses Kubernetes Nginx Ingress to expose the console with TLS passthrough.\n"
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Expose Mode",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:text"}
+	ExposeMode *ExposeMode `json:"exposeMode,omitempty"`
 	// Whether or not to enable SSL on this port
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="SSL Enabled",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:booleanSwitch"}
 	SSLEnabled bool `json:"sslEnabled,omitempty"`
@@ -729,10 +749,13 @@ const (
 	ValidConditionMissingResourcesReason = "MissingDependentResources"
 	ValidConditionInvalidVersionReason   = "SpecVersionInvalid"
 
-	ValidConditionPDBNonNilSelectorReason     = "PodDisruptionBudgetNonNilSelector"
-	ValidConditionFailedReservedLabelReason   = "ReservedLabelReference"
-	ValidConditionFailedExtraMountReason      = "InvalidExtraMount"
-	ValidConditionFailedDuplicateAcceptorPort = "DuplicateAcceptorPort"
+	ValidConditionPDBNonNilSelectorReason              = "PodDisruptionBudgetNonNilSelector"
+	ValidConditionFailedReservedLabelReason            = "ReservedLabelReference"
+	ValidConditionFailedExtraMountReason               = "InvalidExtraMount"
+	ValidConditionFailedDuplicateAcceptorPort          = "DuplicateAcceptorPort"
+	ValidConditionFailedAcceptorWithInvalidExposeMode  = "AcceptorWithInvalidExposeMode"
+	ValidConditionFailedConnectorWithInvalidExposeMode = "ConnectorWithInvalidExposeMode"
+	ValidConditionFailedConsoleWithInvalidExposeMode   = "ConsoelWithInvalidExposeMode"
 
 	ReadyConditionType      = "Ready"
 	ReadyConditionReason    = "ResourceReady"

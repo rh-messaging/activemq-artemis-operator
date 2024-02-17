@@ -41,6 +41,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 
+	"github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
@@ -242,6 +243,13 @@ func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Cli
 		}
 	}
 
+	if validationCondition.Status == metav1.ConditionTrue {
+		condition, retry = validateExposeModes(customResource, client, scheme, namer)
+		if condition != nil {
+			validationCondition = *condition
+		}
+	}
+
 	validationCondition.ObservedGeneration = customResource.Generation
 	meta.SetStatusCondition(&customResource.Status.Conditions, validationCondition)
 
@@ -292,6 +300,46 @@ func validateAcceptorPorts(customResource *brokerv1beta1.ActiveMQArtemis, client
 			portMap[acceptor.Port] = acceptor.Name
 		}
 	}
+	return nil, false
+}
+
+func validateExposeModes(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, namer common.Namers) (*metav1.Condition, bool) {
+	isOpenshift, _ := common.DetectOpenshift()
+
+	if !isOpenshift {
+		for _, acceptor := range customResource.Spec.Acceptors {
+			if acceptor.Expose && acceptor.ExposeMode != nil && *acceptor.ExposeMode == v1beta1.ExposeModes.Route {
+				return &metav1.Condition{
+					Type:    brokerv1beta1.ValidConditionType,
+					Status:  metav1.ConditionFalse,
+					Reason:  brokerv1beta1.ValidConditionFailedAcceptorWithInvalidExposeMode,
+					Message: fmt.Sprintf(".Spec.Acceptors %q has invalid expose mode route, it is only supported on OpenShift", acceptor.Name),
+				}, false
+			}
+		}
+
+		for _, connector := range customResource.Spec.Connectors {
+			if connector.Expose && connector.ExposeMode != nil && *connector.ExposeMode == v1beta1.ExposeModes.Route {
+				return &metav1.Condition{
+					Type:    brokerv1beta1.ValidConditionType,
+					Status:  metav1.ConditionFalse,
+					Reason:  brokerv1beta1.ValidConditionFailedConnectorWithInvalidExposeMode,
+					Message: fmt.Sprintf(".Spec.Connectors %q has invalid expose mode route, it is only supported on OpenShift", connector.Name),
+				}, false
+			}
+		}
+
+		console := customResource.Spec.Console
+		if console.Expose && console.ExposeMode != nil && *console.ExposeMode == v1beta1.ExposeModes.Route {
+			return &metav1.Condition{
+				Type:    brokerv1beta1.ValidConditionType,
+				Status:  metav1.ConditionFalse,
+				Reason:  brokerv1beta1.ValidConditionFailedConsoleWithInvalidExposeMode,
+				Message: ".Spec.Console has invalid expose mode route, it is only supported on OpenShift",
+			}, false
+		}
+	}
+
 	return nil, false
 }
 

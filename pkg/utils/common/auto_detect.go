@@ -41,7 +41,7 @@ func (b *AutoDetector) DetectOpenshift() error {
 		schema.GroupVersionResource{
 			Group:    "operator.openshift.io",
 			Version:  "v1",
-			Resource: OpenShiftAPIServerKind,
+			Resource: "openshiftapiservers",
 		})
 
 	if err != nil {

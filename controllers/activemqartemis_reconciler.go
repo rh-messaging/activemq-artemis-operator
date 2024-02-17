@@ -54,6 +54,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 
 	"strconv"
@@ -763,7 +764,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureAcceptorsExposure(cust
 			reconciler.trackDesired(serviceDefinition)
 
 			if acceptor.Expose {
-				exposureDefinition := reconciler.ExposureDefinitionForCR(customResource, namespacedName, serviceRoutelabels, acceptor.SSLEnabled, acceptor.IngressHost, ordinalString, acceptor.Name)
+				exposureDefinition := reconciler.ExposureDefinitionForCR(customResource, namespacedName, serviceRoutelabels, acceptor.SSLEnabled, acceptor.IngressHost, ordinalString, acceptor.Name, acceptor.ExposeMode)
 				reconciler.trackDesired(exposureDefinition)
 			}
 		}
@@ -779,12 +780,15 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ServiceDefinitionForCR(serviceN
 	return svc.NewServiceDefinitionForCR(serviceName, client, nameSuffix, portNumber, selectorLabels, labels, serviceDefinition)
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) ExposureDefinitionForCR(customResource *brokerv1beta1.ActiveMQArtemis, namespacedName types.NamespacedName, labels map[string]string, passthroughTLS bool, ingressHost string, ordinalString string, itemName string) rtclient.Object {
+func (reconciler *ActiveMQArtemisReconcilerImpl) ExposureDefinitionForCR(customResource *brokerv1beta1.ActiveMQArtemis, namespacedName types.NamespacedName, labels map[string]string, passthroughTLS bool, ingressHost string, ordinalString string, itemName string, exposeMode *v1beta1.ExposeMode) rtclient.Object {
 
 	targetPortName := itemName + "-" + ordinalString
 	targetServiceName := customResource.Name + "-" + targetPortName + "-" + ServiceTypePostfix
 
-	if isOpenshift, err := common.DetectOpenshift(); isOpenshift && err == nil {
+	isOpenshift, err := common.DetectOpenshift()
+	exposeWithRoute := (exposeMode == nil && isOpenshift && err == nil) || (exposeMode != nil && *exposeMode == v1beta1.ExposeModes.Route)
+
+	if exposeWithRoute {
 		reconciler.log.V(1).Info("creating route for "+targetPortName, "service", targetServiceName)
 
 		var existing *routev1.Route = nil
@@ -1004,7 +1008,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureConnectorsExposure(cus
 
 			if connector.Expose {
 
-				exposureDefinition := reconciler.ExposureDefinitionForCR(customResource, namespacedName, serviceRoutelabels, connector.SSLEnabled, connector.IngressHost, ordinalString, connector.Name)
+				exposureDefinition := reconciler.ExposureDefinitionForCR(customResource, namespacedName, serviceRoutelabels, connector.SSLEnabled, connector.IngressHost, ordinalString, connector.Name, connector.ExposeMode)
 
 				reconciler.trackDesired(exposureDefinition)
 			}
@@ -1051,9 +1055,10 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureConsoleExposure(custom
 			reconciler.checkExistingService(customResource, serviceDefinition, client)
 			reconciler.trackDesired(serviceDefinition)
 
-			isOpenshift := false
-			isOpenshift, _ = common.DetectOpenshift()
-			if isOpenshift {
+			isOpenshift, err := common.DetectOpenshift()
+			exposeWithRoute := (console.ExposeMode == nil && isOpenshift && err == nil) || (console.ExposeMode != nil && *console.ExposeMode == v1beta1.ExposeModes.Route)
+
+			if exposeWithRoute {
 				reconciler.log.V(2).Info("routeDefinition for " + targetPortName)
 				var existing *routev1.Route = nil
 				obj := reconciler.cloneOfDeployed(reflect.TypeOf(routev1.Route{}), targetServiceName+"-"+RouteTypePostfix)
@@ -1529,27 +1534,17 @@ func (r *ActiveMQArtemisReconcilerImpl) checkExistingPersistentVolumes(instance 
 var orderedTypes *([]reflect.Type)
 
 func getOrderedTypeList() []reflect.Type {
-	return genOrderedTypesLists()
-}
-
-func genOrderedTypesLists() []reflect.Type {
-
 	if orderedTypes == nil {
-		isOpenshift, _ := common.DetectOpenshift()
-		types := make([]reflect.Type, 6)
+		types := make([]reflect.Type, 7)
 
 		// we want to create/update in this order
 		types[0] = reflect.TypeOf(corev1.Secret{})
 		types[1] = reflect.TypeOf(corev1.ConfigMap{})
 		types[2] = reflect.TypeOf(appsv1.StatefulSet{})
 		types[3] = reflect.TypeOf(corev1.Service{})
-
-		if isOpenshift {
-			types[4] = reflect.TypeOf(routev1.Route{})
-		} else {
-			types[4] = reflect.TypeOf(netv1.Ingress{})
-		}
-		types[5] = reflect.TypeOf(policyv1.PodDisruptionBudget{})
+		types[4] = reflect.TypeOf(netv1.Ingress{})
+		types[5] = reflect.TypeOf(routev1.Route{})
+		types[6] = reflect.TypeOf(policyv1.PodDisruptionBudget{})
 		orderedTypes = &types
 	}
 	return *orderedTypes
