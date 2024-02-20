@@ -807,7 +807,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ExposureDefinitionForCR(customR
 			existing = obj.(*netv1.Ingress)
 		}
 		brokerHost := formatTemplatedString(customResource, ingressHost, ordinalString, itemName, IngressTypePostfix)
-		return ingresses.NewIngressForCRWithSSL(existing, namespacedName, labels, targetServiceName, targetPortName, passthroughTLS, customResource.Spec.IngressDomain, brokerHost)
+		return ingresses.NewIngressForCRWithSSL(existing, namespacedName, labels, targetServiceName, targetPortName, passthroughTLS, customResource.Spec.IngressDomain, brokerHost, isOpenshift)
 	}
 }
 
@@ -1077,7 +1077,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureConsoleExposure(custom
 					existing = obj.(*netv1.Ingress)
 				}
 				brokerHost := formatTemplatedString(customResource, customResource.Spec.Console.IngressHost, ordinalString, consoleName, IngressTypePostfix)
-				ingressDefinition := ingresses.NewIngressForCRWithSSL(existing, namespacedName, serviceRoutelabels, targetServiceName, targetPortName, console.SSLEnabled, customResource.Spec.IngressDomain, brokerHost)
+				ingressDefinition := ingresses.NewIngressForCRWithSSL(existing, namespacedName, serviceRoutelabels, targetServiceName, targetPortName, console.SSLEnabled, customResource.Spec.IngressDomain, brokerHost, isOpenshift)
 				reconciler.trackDesired(ingressDefinition)
 			}
 		}

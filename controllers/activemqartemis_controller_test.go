@@ -82,6 +82,7 @@ import (
 var _ = Describe("artemis controller", func() {
 
 	brokerPropertiesMatchString := "broker.properties"
+	defaultTestIngressDomain := "tests.artemiscloud.io"
 	ingressHostDomainSubString := "apps.artemiscloud.io"
 
 	// see what has changed from the controllers perspective, what we watch
@@ -1848,7 +1849,7 @@ var _ = Describe("artemis controller", func() {
 
 				crd.Spec.Console.Expose = true
 				crd.Spec.Console.SSLEnabled = true
-				crd.Spec.IngressDomain = "tests.artemiscloud.io"
+				crd.Spec.IngressDomain = defaultTestIngressDomain
 
 				isOpenshift, err := common.DetectOpenshift()
 				Expect(err).To(BeNil())
@@ -2028,7 +2029,7 @@ var _ = Describe("artemis controller", func() {
 					IngressHost: specIngressHost,
 				}
 
-				crd.Spec.IngressDomain = "tests.artemiscloud.io"
+				crd.Spec.IngressDomain = defaultTestIngressDomain
 
 				By("deploying broker" + crd.Name)
 				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
@@ -2299,9 +2300,11 @@ var _ = Describe("artemis controller", func() {
 	})
 
 	Context("Expose mode test", func() {
-		It("expose console with ingress mode", Label("console", "ingress"), func() {
+		It("expose with ingress mode", Label("console", "acceptor", "connector", "ingress"), func() {
 			By("Deploying a broker with console")
 			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				candidate.Spec.IngressDomain = defaultTestIngressDomain
+
 				candidate.Spec.Console.Expose = true
 				candidate.Spec.Console.ExposeMode = &brokerv1beta1.ExposeModes.Ingress
 
@@ -2334,7 +2337,7 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(k8sClient.Get(ctx, ingKey, &ingress)).To(Succeed())
 
 				g.Expect(len(ingress.Spec.Rules)).To(Equal(1))
-				g.Expect(ingress.Spec.Rules[0].Host).To(ContainSubstring(ingressHostDomainSubString))
+				g.Expect(ingress.Spec.Rules[0].Host).To(ContainSubstring(defaultTestIngressDomain))
 				g.Expect(len(ingress.Spec.Rules[0].HTTP.Paths)).To(BeEquivalentTo(1))
 				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).To(BeEquivalentTo(brokerCr.Name + "-wconsj-0-svc"))
 				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name).To(BeEquivalentTo("wconsj-0"))
@@ -2342,6 +2345,21 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(*ingress.Spec.Rules[0].HTTP.Paths[0].PathType).To(BeEquivalentTo(netv1.PathTypePrefix))
 
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			if isOpenshift || isIngressSSLPassthroughEnabled {
+				host := ingress.Name + "." + brokerCr.Spec.IngressDomain
+
+				By("check console is reachable")
+				httpClient := http.Client{Timeout: timeout, Transport: &http.Transport{
+					DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+						return (&net.Dialer{}).DialContext(ctx, network, clusterIngressHost+":80")
+					}}}
+				Eventually(func(g Gomega) {
+					res, err := httpClient.Get("http://" + host + "/console")
+					g.Expect(err).NotTo(HaveOccurred())
+					g.Expect(res.StatusCode).Should(Equal(200))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
 
 			By("check ingress is created for acceptor")
 			ingKey = types.NamespacedName{
@@ -2352,7 +2370,7 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(k8sClient.Get(ctx, ingKey, &ingress)).To(Succeed())
 
 				g.Expect(len(ingress.Spec.Rules)).To(Equal(1))
-				g.Expect(ingress.Spec.Rules[0].Host).To(Equal(brokerCr.Name + "-acceptor-0-svc-ing." + ingressHostDomainSubString))
+				g.Expect(ingress.Spec.Rules[0].Host).To(Equal(brokerCr.Name + "-acceptor-0-svc-ing." + defaultTestIngressDomain))
 				g.Expect(len(ingress.Spec.Rules[0].HTTP.Paths)).To(BeEquivalentTo(1))
 				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).To(Equal(brokerCr.Name + "-acceptor-0-svc"))
 				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name).To(Equal("acceptor-0"))
@@ -2370,7 +2388,7 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(k8sClient.Get(ctx, ingKey, &ingress)).To(Succeed())
 
 				g.Expect(len(ingress.Spec.Rules)).To(Equal(1))
-				g.Expect(ingress.Spec.Rules[0].Host).To(Equal(brokerCr.Name + "-connector-0-svc-ing." + ingressHostDomainSubString))
+				g.Expect(ingress.Spec.Rules[0].Host).To(Equal(brokerCr.Name + "-connector-0-svc-ing." + defaultTestIngressDomain))
 				g.Expect(len(ingress.Spec.Rules[0].HTTP.Paths)).To(BeEquivalentTo(1))
 				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).To(Equal(brokerCr.Name + "-connector-0-svc"))
 				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name).To(Equal("connector-0"))
@@ -2382,7 +2400,164 @@ var _ = Describe("artemis controller", func() {
 			CleanResource(createdBrokerCr, createdBrokerCr.Name, defaultNamespace)
 		})
 
-		It("expose console with route mode", Label("console", "ingress"), func() {
+		It("expose with secure ingress mode", Label("console", "acceptor", "conector", "ingress", "ssl"), func() {
+			var sslSecret *corev1.Secret
+
+			By("Deploying a broker with SSL secret")
+			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+
+				By("deploying ssl secret")
+				var sslSecretErr error
+				sslSecretName := candidate.Name + "-ssl-secret"
+				sslSecret, sslSecretErr = CreateTlsSecret(sslSecretName, defaultNamespace, defaultPassword, defaultSanDnsNames)
+				Expect(sslSecretErr).To(BeNil())
+				Expect(k8sClient.Create(ctx, sslSecret)).Should(Succeed())
+
+				candidate.Spec.IngressDomain = defaultTestIngressDomain
+				candidate.Spec.Console.Expose = true
+				candidate.Spec.Console.ExposeMode = &brokerv1beta1.ExposeModes.Ingress
+				candidate.Spec.Console.SSLEnabled = true
+				candidate.Spec.Console.SSLSecret = sslSecretName
+
+				candidate.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+					{
+						Name:       "acceptor",
+						Port:       61617,
+						Expose:     true,
+						ExposeMode: &brokerv1beta1.ExposeModes.Ingress,
+						SSLEnabled: true,
+						SSLSecret:  sslSecretName,
+					},
+				}
+
+				candidate.Spec.Connectors = []brokerv1beta1.ConnectorType{
+					{
+						Name:       "connector",
+						Port:       61617,
+						Expose:     true,
+						ExposeMode: &brokerv1beta1.ExposeModes.Ingress,
+						SSLEnabled: true,
+						SSLSecret:  sslSecretName,
+					},
+				}
+			})
+
+			By("check ingress is created for console")
+			ingKey := types.NamespacedName{
+				Name:      brokerCr.Name + "-wconsj-0-svc-ing",
+				Namespace: defaultNamespace,
+			}
+			ingress := netv1.Ingress{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, ingKey, &ingress)).To(Succeed())
+
+				g.Expect(len(ingress.Spec.Rules)).To(Equal(1))
+				g.Expect(ingress.Spec.Rules[0].Host).To(ContainSubstring(defaultTestIngressDomain))
+				g.Expect(len(ingress.Spec.Rules[0].HTTP.Paths)).To(BeEquivalentTo(1))
+				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).To(BeEquivalentTo(brokerCr.Name + "-wconsj-0-svc"))
+				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name).To(BeEquivalentTo("wconsj-0"))
+
+				if isOpenshift {
+					g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Path).To(BeEquivalentTo(""))
+					g.Expect(*ingress.Spec.Rules[0].HTTP.Paths[0].PathType).To(BeEquivalentTo(netv1.PathTypeImplementationSpecific))
+				} else {
+					g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Path).To(BeEquivalentTo("/"))
+					g.Expect(*ingress.Spec.Rules[0].HTTP.Paths[0].PathType).To(BeEquivalentTo(netv1.PathTypePrefix))
+
+					g.Expect(len(ingress.Spec.TLS)).To(BeEquivalentTo(1))
+					g.Expect(len(ingress.Spec.TLS[0].Hosts)).To(BeEquivalentTo(1))
+					g.Expect(ingress.Spec.TLS[0].Hosts[0]).To(ContainSubstring(defaultTestIngressDomain))
+				}
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			if isOpenshift || isIngressSSLPassthroughEnabled {
+				host := ingress.Name + "." + brokerCr.Spec.IngressDomain
+
+				By("check console is reachable")
+				httpClient := http.Client{Timeout: timeout, Transport: &http.Transport{
+					DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+						return (&net.Dialer{}).DialContext(ctx, network, clusterIngressHost+":443")
+					}, TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}}
+				Eventually(func(g Gomega) {
+					res, err := httpClient.Get("https://" + host + "/console")
+					g.Expect(err).NotTo(HaveOccurred())
+					g.Expect(res.StatusCode).Should(Equal(200))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
+
+			By("check ingress is created for acceptor")
+			ingKey = types.NamespacedName{
+				Name:      brokerCr.Name + "-acceptor-0-svc-ing",
+				Namespace: defaultNamespace,
+			}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, ingKey, &ingress)).To(Succeed())
+
+				g.Expect(len(ingress.Spec.Rules)).To(Equal(1))
+				g.Expect(ingress.Spec.Rules[0].Host).To(Equal(brokerCr.Name + "-acceptor-0-svc-ing." + defaultTestIngressDomain))
+				g.Expect(len(ingress.Spec.Rules[0].HTTP.Paths)).To(BeEquivalentTo(1))
+				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).To(Equal(brokerCr.Name + "-acceptor-0-svc"))
+				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name).To(Equal("acceptor-0"))
+
+				if isOpenshift {
+					g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Path).To(BeEquivalentTo(""))
+					g.Expect(*ingress.Spec.Rules[0].HTTP.Paths[0].PathType).To(BeEquivalentTo(netv1.PathTypeImplementationSpecific))
+				} else {
+					g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Path).To(BeEquivalentTo("/"))
+					g.Expect(*ingress.Spec.Rules[0].HTTP.Paths[0].PathType).To(BeEquivalentTo(netv1.PathTypePrefix))
+
+					g.Expect(len(ingress.Spec.TLS)).To(BeEquivalentTo(1))
+					g.Expect(len(ingress.Spec.TLS[0].Hosts)).To(BeEquivalentTo(1))
+					g.Expect(ingress.Spec.TLS[0].Hosts[0]).To(ContainSubstring(defaultTestIngressDomain))
+				}
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			if isOpenshift || isIngressSSLPassthroughEnabled {
+				host := ingress.Name + "." + brokerCr.Spec.IngressDomain
+
+				By("check acceptor is reachable")
+				Eventually(func(g Gomega) {
+					url := "amqps://" + clusterIngressHost + ":443"
+					connTLSConfig := amqp.ConnTLSConfig(&tls.Config{ServerName: host, InsecureSkipVerify: true})
+					client, err := amqp.Dial(url, amqp.ConnSASLPlain("dummy-user", "dummy-pass"), amqp.ConnTLS(true), connTLSConfig)
+					g.Expect(err).Should(BeNil())
+					g.Expect(client).ShouldNot(BeNil())
+					defer client.Close()
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
+
+			By("check ingress is created for connector")
+			ingKey = types.NamespacedName{
+				Name:      brokerCr.Name + "-connector-0-svc-ing",
+				Namespace: defaultNamespace,
+			}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, ingKey, &ingress)).To(Succeed())
+
+				g.Expect(len(ingress.Spec.Rules)).To(Equal(1))
+				g.Expect(ingress.Spec.Rules[0].Host).To(Equal(brokerCr.Name + "-connector-0-svc-ing." + defaultTestIngressDomain))
+				g.Expect(len(ingress.Spec.Rules[0].HTTP.Paths)).To(BeEquivalentTo(1))
+				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).To(Equal(brokerCr.Name + "-connector-0-svc"))
+				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name).To(Equal("connector-0"))
+
+				if isOpenshift {
+					g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Path).To(BeEquivalentTo(""))
+					g.Expect(*ingress.Spec.Rules[0].HTTP.Paths[0].PathType).To(BeEquivalentTo(netv1.PathTypeImplementationSpecific))
+				} else {
+					g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Path).To(BeEquivalentTo("/"))
+					g.Expect(*ingress.Spec.Rules[0].HTTP.Paths[0].PathType).To(BeEquivalentTo(netv1.PathTypePrefix))
+
+					g.Expect(len(ingress.Spec.TLS)).To(BeEquivalentTo(1))
+					g.Expect(len(ingress.Spec.TLS[0].Hosts)).To(BeEquivalentTo(1))
+					g.Expect(ingress.Spec.TLS[0].Hosts[0]).To(ContainSubstring(defaultTestIngressDomain))
+				}
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			CleanResource(createdBrokerCr, createdBrokerCr.Name, defaultNamespace)
+			CleanResource(sslSecret, sslSecret.Name, defaultNamespace)
+		})
+
+		It("expose with route mode", Label("console", "acceptor", "connector", "route"), func() {
 			By("Deploying a broker with console")
 			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
 				candidate.Spec.Console.Expose = true
@@ -2421,8 +2596,6 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(route.Spec.Port.TargetPort).To(Equal(intstr.FromString("wconsj-0")))
 					g.Expect(route.Spec.To.Kind).To(Equal("Service"))
 					g.Expect(route.Spec.To.Name).To(Equal(brokerCr.Name + "-wconsj-0-svc"))
-					g.Expect(route.Spec.TLS.Termination).To(BeEquivalentTo(routev1.TLSTerminationPassthrough))
-					g.Expect(route.Spec.TLS.InsecureEdgeTerminationPolicy).To(BeEquivalentTo(routev1.InsecureEdgeTerminationPolicyNone))
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("checking route is created for acceptor")
@@ -2435,8 +2608,6 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(route.Spec.Port.TargetPort).To(Equal(intstr.FromString("acceptor-0")))
 					g.Expect(route.Spec.To.Kind).To(Equal("Service"))
 					g.Expect(route.Spec.To.Name).To(Equal(brokerCr.Name + "-acceptor-0-svc"))
-					g.Expect(route.Spec.TLS.Termination).To(BeEquivalentTo(routev1.TLSTerminationPassthrough))
-					g.Expect(route.Spec.TLS.InsecureEdgeTerminationPolicy).To(BeEquivalentTo(routev1.InsecureEdgeTerminationPolicyNone))
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("checking route is created for connector")
@@ -2449,8 +2620,6 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(route.Spec.Port.TargetPort).To(Equal(intstr.FromString("connector-0")))
 					g.Expect(route.Spec.To.Kind).To(Equal("Service"))
 					g.Expect(route.Spec.To.Name).To(Equal(brokerCr.Name + "-connector-0-svc"))
-					g.Expect(route.Spec.TLS.Termination).To(BeEquivalentTo(routev1.TLSTerminationPassthrough))
-					g.Expect(route.Spec.TLS.InsecureEdgeTerminationPolicy).To(BeEquivalentTo(routev1.InsecureEdgeTerminationPolicyNone))
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 			} else {
 				brokerKey := types.NamespacedName{Name: brokerCr.Name, Namespace: brokerCr.Namespace}

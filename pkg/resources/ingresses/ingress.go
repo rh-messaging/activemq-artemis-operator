@@ -9,7 +9,7 @@ import (
 
 const defaultIngressDomain string = "apps.artemiscloud.io"
 
-func NewIngressForCRWithSSL(existing *netv1.Ingress, namespacedName types.NamespacedName, labels map[string]string, targetServiceName string, targetPortName string, sslEnabled bool, domain string, brokerHost string) *netv1.Ingress {
+func NewIngressForCRWithSSL(existing *netv1.Ingress, namespacedName types.NamespacedName, labels map[string]string, targetServiceName string, targetPortName string, sslEnabled bool, domain string, brokerHost string, isOpenshift bool) *netv1.Ingress {
 
 	pathType := netv1.PathTypePrefix
 
@@ -83,8 +83,16 @@ func NewIngressForCRWithSSL(existing *netv1.Ingress, namespacedName types.Namesp
 		if desired.Annotations == nil {
 			desired.Annotations = make(map[string]string)
 		}
-		desired.Annotations["nginx.ingress.kubernetes.io/ssl-passthrough"] = "true"
-		desired.Spec.TLS = []netv1.IngressTLS{{Hosts: []string{host}}}
+
+		if isOpenshift {
+			pathType = netv1.PathTypeImplementationSpecific
+			desired.Annotations["route.openshift.io/termination"] = "passthrough"
+			desired.Spec.Rules[0].IngressRuleValue.HTTP.Paths[0].Path = ""
+			desired.Spec.Rules[0].IngressRuleValue.HTTP.Paths[0].PathType = &pathType
+		} else {
+			desired.Annotations["nginx.ingress.kubernetes.io/ssl-passthrough"] = "true"
+			desired.Spec.TLS = []netv1.IngressTLS{{Hosts: []string{host}}}
+		}
 	}
 	return desired
 }

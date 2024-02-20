@@ -27,6 +27,7 @@ import (
 	"strconv"
 	"time"
 
+	configv1 "github.com/openshift/api/config/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	"go.uber.org/zap/zapcore"
 
@@ -96,6 +97,9 @@ var (
 
 	// the cluster url
 	clusterUrl *url.URL
+
+	// the cluster ingress host
+	clusterIngressHost string
 
 	// the manager may be stopped/restarted via tests
 	managerCtx    context.Context
@@ -174,11 +178,17 @@ func setUpEnvTest() {
 }
 
 func setUpIngressSSLPassthrough() {
-	isIngressSSLPassthroughEnabled = false
+	clusterIngressHost = clusterUrl.Hostname()
 
-	if isOpenshift {
+	ingressConfig := &configv1.Ingress{}
+	ingressConfigKey := types.NamespacedName{Name: "cluster"}
+	ingressConfigErr := k8sClient.Get(ctx, ingressConfigKey, ingressConfig)
+
+	if ingressConfigErr == nil {
 		isIngressSSLPassthroughEnabled = true
+		clusterIngressHost = "ingress." + ingressConfig.Spec.Domain
 	} else {
+		isIngressSSLPassthroughEnabled = false
 		ingressNginxControllerDeployment := &appsv1.Deployment{}
 		ingressNginxControllerDeploymentKey := types.NamespacedName{Name: "ingress-nginx-controller", Namespace: "ingress-nginx"}
 		err := k8sClient.Get(ctx, ingressNginxControllerDeploymentKey, ingressNginxControllerDeployment)
@@ -574,7 +584,10 @@ func setUpK8sClient() {
 
 	ctrl.Log.Info("Setting up k8s client")
 
-	err := routev1.AddToScheme(scheme.Scheme)
+	err := configv1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = routev1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = brokerv2alpha5.AddToScheme(scheme.Scheme)
