@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	Version = "7.12.0.OPR.1"
+	Version = "1.0.16"
 
 	//Vars injected at build-time
 	BuildTimestamp = ""
@@ -15,11 +15,11 @@ var (
 
 const (
 	// LatestVersion product version supported
-	LatestVersion        = "7.12.0"
-	CompactLatestVersion = "7120"
+	LatestVersion        = "2.31.2"
+	CompactLatestVersion = "2312"
 
-	LatestKubeImage = "registry.redhat.io/amq7/amq-broker-rhel8:7.12.0" + LatestVersion
-	LatestInitImage = "registry.redhat.io/amq7/amq-broker-init-rhel8:7.12.0" + LatestVersion
+	LatestKubeImage = "quay.io/artemiscloud/activemq-artemis-broker-kubernetes:artemis." + LatestVersion
+	LatestInitImage = "quay.io/artemiscloud/activemq-artemis-broker-init:artemis." + LatestVersion
 )
 
 func DefaultImageName(archSpecificRelatedImageEnvVarName string) string {
@@ -31,51 +31,52 @@ func DefaultImageName(archSpecificRelatedImageEnvVarName string) string {
 }
 
 var FullVersionFromCompactVersion map[string]string = map[string]string{
-	"7110": "7.11.0",
-	"7111": "7.11.1",
-	"7112": "7.11.2",
-	"7113": "7.11.3",
-	"7114": "7.11.4",
-	"7115": "7.11.5",
-	"7116": "7.11.6",
-	"7120": "7.12.0",
+	"2210": "2.21.0",
+	"2220": "2.22.0",
+	"2230": "2.23.0",
+	"2250": "2.25.0",
+	"2260": "2.26.0",
+	"2270": "2.27.0",
+	"2271": "2.27.1",
+	"2280": "2.28.0",
+	"2290": "2.29.0",
+	"2300": "2.30.0",
+	"2310": "2.31.0",
+	"2312": "2.31.2",
 }
 
 // The yacfg profile to use for a given full version of broker
 var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
-	"7.11.0": "7.10.0",
-	"7.11.1": "7.10.0",
-	"7.11.2": "7.10.0",
-	"7.11.3": "7.10.0",
-	"7.11.4": "7.10.0",
-	"7.11.5": "7.10.0",
-	"7.11.6": "7.10.0",
-	"7.12.0": "",
+	"2.21.0": "2.21.0",
+	"2.22.0": "2.21.0",
+	"2.23.0": "2.21.0",
+	"2.25.0": "2.21.0",
+	"2.26.0": "2.21.0",
+	"2.27.0": "2.21.0",
+	"2.27.1": "2.21.0",
+	"2.28.0": "2.21.0",
+	"2.29.0": "2.21.0",
+	"2.30.0": "2.21.0",
+	"2.31.0": "2.21.0",
+	"2.31.2": "2.21.0",
 }
 
-var YacfgProfileName string = "amq_broker"
+var YacfgProfileName string = "artemis"
 
 // Sorted array of supported ActiveMQ Artemis versions
 var SupportedActiveMQArtemisVersions = []string{
-	"7.11.0",
-	"7.11.1",
-	"7.11.2",
-	"7.11.3",
-	"7.11.4",
-	"7.11.5",
-	"7.11.6",
-	"7.12.0",
-}
-
-var ActiveMQArtemisVersionfromFullVersion map[string]string = map[string]string{
-	"7.11.0": "2.28.0.redhat-00003",
-	"7.11.1": "2.28.0.redhat-00004",
-	"7.11.2": "2.28.0.redhat-00009",
-	"7.11.3": "2.28.0.redhat-00011",
-	"7.11.4": "2.28.0.redhat-00012",
-	"7.11.5": "2.28.0.redhat-00016",
-	"7.11.6": "2.28.0.redhat-00019",
-	"7.12.0": "2.33.0.temporary-redhat-00018",
+	"2.21.0",
+	"2.22.0",
+	"2.23.0",
+	"2.25.0",
+	"2.26.0",
+	"2.27.0",
+	"2.27.1",
+	"2.28.0",
+	"2.29.0",
+	"2.30.0",
+	"2.31.0",
+	"2.31.2",
 }
 
 func CompactActiveMQArtemisVersion(version string) string {
