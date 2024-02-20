@@ -393,6 +393,18 @@ spec:
                   value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:5f842ebe9a6a4294a056ad10189a5f277cfd3fb4e6e0b3225e194bd5c131151d
                 - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7115_s390x
                   value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:7d53744ae8c77aea09c59165486c9ed0eaa131140f6b346042293bce0bd8a745
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7116
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:f8c1fc7a4298ec691855c5067ed92b4859a92cea7b7ed9af1bba04469b5a315f
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7116
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:e8fa2a00e576ecb95561ffbdbf87b1c82d479c8791ab2c6ce741dd0d0b496d15
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7116_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:f8c1fc7a4298ec691855c5067ed92b4859a92cea7b7ed9af1bba04469b5a315f
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7116_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:e8fa2a00e576ecb95561ffbdbf87b1c82d479c8791ab2c6ce741dd0d0b496d15
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7116_s390x
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:f8c1fc7a4298ec691855c5067ed92b4859a92cea7b7ed9af1bba04469b5a315f
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7116_s390x
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:e8fa2a00e576ecb95561ffbdbf87b1c82d479c8791ab2c6ce741dd0d0b496d15
                 - name: OPERATOR_NAME
                   valueFrom:
                     fieldRef:
@@ -704,5 +716,9 @@ spec:
   - image: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:5f842ebe9a6a4294a056ad10189a5f277cfd3fb4e6e0b3225e194bd5c131151d
     name: ""
   - image: registry.redhat.io/amq7/amq-broker-rhel8@sha256:7d53744ae8c77aea09c59165486c9ed0eaa131140f6b346042293bce0bd8a745
+    name: ""
+  - image: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:f8c1fc7a4298ec691855c5067ed92b4859a92cea7b7ed9af1bba04469b5a315f
+    name: ""
+  - image: registry.redhat.io/amq7/amq-broker-rhel8@sha256:e8fa2a00e576ecb95561ffbdbf87b1c82d479c8791ab2c6ce741dd0d0b496d15
     name: ""
   version: 1.0.17
