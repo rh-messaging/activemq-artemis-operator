@@ -147,7 +147,7 @@ spec:
               fieldPath: metadata.namespace
         - name: ENABLE_WEBHOOKS
           value: "false"
-        image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:c820a0e33c0a8451b96d6893ca175ff1f5a447cfe455d89773ffae735d8d35aa
+        image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:4eaf805a578f72f10eb8e020b9d6afc2116f09dd8717c14cc476dd4873803c23
         livenessProbe:
           httpGet:
             path: /healthz
