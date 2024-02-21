@@ -39,7 +39,7 @@ RUN cp -r $REMOTE_SOURCE_DIR/app/* .
 # by leaving it empty we can ensure that the container and binary shipped on it will have the same platform.
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -ldflags="-X '${GO_MODULE}/version.BuildTimestamp=`date '+%Y-%m-%dT%H:%M:%S'`'" -o manager main.go
 
-FROM registry-proxy.engineering.redhat.com/rh-osbs/ubi8@sha256:627867e53ad6846afba2dfbf5cef1d54c868a9025633ef0afd546278d4654eac as base-env
+FROM registry-proxy.engineering.redhat.com/rh-osbs/ubi8@sha256:bce7e9f69fb7d4533447232478fd825811c760288f87a35699f9c8f030f2c1a6 as base-env
 
 ENV BROKER_NAME=amq-broker
 ENV USER_UID=1000
