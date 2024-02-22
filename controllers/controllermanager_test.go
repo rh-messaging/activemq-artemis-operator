@@ -114,6 +114,67 @@ var _ = Describe("tests regarding controller manager", func() {
 			})
 		})
 
+		It("test watching restricted namespace", func() {
+			testWatchNamespace("restricted", Default, func(g Gomega) {
+				By("deploying broker in to target namespace")
+				cr, createdCr := DeployCustomBroker(restrictedNamespace, func(c *brokerv1beta1.ActiveMQArtemis) {
+					c.Spec.DeploymentPlan.Size = common.Int32ToPtr(2)
+					c.Spec.DeploymentPlan.PersistenceEnabled = true
+					c.Spec.DeploymentPlan.MessageMigration = common.NewTrue()
+				})
+
+				By("check statefulset get created")
+				createdSs := &appsv1.StatefulSet{}
+				Eventually(func(g Gomega) {
+					key := types.NamespacedName{Name: namer.CrToSS(cr.Name), Namespace: restrictedNamespace}
+					err := k8sClient.Get(ctx, key, createdSs)
+					g.Expect(err).To(Succeed(), "expect to get ss for cr "+cr.Name)
+				}, timeout, interval).Should(Succeed())
+
+				if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+					// with kube, deleting while initialising leads to long delays on terminating the namespace..
+
+					By("verifying started")
+					deployedCrd := brokerv1beta1.ActiveMQArtemis{}
+					key := types.NamespacedName{Name: createdCr.Name, Namespace: createdCr.Namespace}
+
+					Eventually(func(g Gomega) {
+						g.Expect(k8sClient.Get(ctx, key, &deployedCrd)).Should(Succeed())
+						g.Expect(len(deployedCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(2))
+						g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
+						g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
+					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+					By("sending message to pod for scale down")
+					podWithOrdinal := namer.CrToSS(createdCr.Name) + "-1"
+					sendCmd := []string{"amq-broker/bin/artemis", "producer", "--user", "Jay", "--password", "activemq", "--url", "tcp://" + podWithOrdinal + ":61616", "--message-count", "1", "--destination", "TEST", "--verbose"}
+
+					content, err := RunCommandInPodWithNamespace(podWithOrdinal, restrictedNamespace, createdCr.Name+"-container", sendCmd)
+					Expect(err).To(BeNil())
+					Expect(*content).Should(ContainSubstring("Produced: 1 messages"))
+
+					By("Scaling down to pod 0")
+					podWithOrdinal = namer.CrToSS(createdCr.Name) + "-0"
+					Eventually(func(g Gomega) {
+						getPersistedVersionedCrd(createdCr.Name, restrictedNamespace, createdCr)
+						createdCr.Spec.DeploymentPlan.Size = common.Int32ToPtr(1)
+						k8sClient.Update(ctx, createdCr)
+						g.Expect(len(createdCr.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+						By("Checking messsage count on broker 0")
+						curlUrl := "http://" + podWithOrdinal + ":8161/console/jolokia/read/org.apache.activemq.artemis:address=\"TEST\",broker=\"amq-broker\",component=addresses,queue=\"TEST\",routing-type=\"anycast\",subcomponent=queues/MessageCount"
+						queryCmd := []string{"curl", "-k", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
+						reply, err := RunCommandInPodWithNamespace(podWithOrdinal, restrictedNamespace, createdCr.Name+"-container", queryCmd)
+						g.Expect(err).To(BeNil())
+						g.Expect(*reply).To(ContainSubstring("\"value\":1"))
+
+					}, existingClusterTimeout, interval*2).Should(Succeed())
+				}
+
+				CleanResource(createdCr, cr.Name, restrictedNamespace)
+			})
+		})
+
 		It("test watching all namespaces", func() {
 			testWatchNamespace("all", Default, func(g Gomega) {
 				By("deploying broker in to all namespaces")
@@ -274,7 +335,7 @@ var _ = Describe("tests regarding controller manager", func() {
 	})
 })
 
-func createNamespace(namespace string) error {
+func createNamespace(namespace string, securityPolicy *string) error {
 	ns := corev1.Namespace{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Namespace",
@@ -283,6 +344,14 @@ func createNamespace(namespace string) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
 		},
+	}
+
+	if securityPolicy != nil {
+		ns.ObjectMeta.Labels = map[string]string{
+			"pod-security.kubernetes.io/audit":   *securityPolicy,
+			"pod-security.kubernetes.io/enforce": *securityPolicy,
+			"pod-security.kubernetes.io/warn":    *securityPolicy,
+		}
 	}
 
 	err := k8sClient.Create(ctx, &ns, &client.CreateOptions{})
@@ -341,12 +410,16 @@ func testWatchNamespace(kind string, g Gomega, testFunc func(g Gomega)) {
 
 	shutdownControllerManager()
 
-	g.Expect(createNamespace(namespace1)).To(Succeed())
-	g.Expect(createNamespace(namespace2)).To(Succeed())
-	g.Expect(createNamespace(namespace3)).To(Succeed())
+	restrictedSecurityPolicy := "restricted"
+	g.Expect(createNamespace(namespace1, nil)).To(Succeed())
+	g.Expect(createNamespace(namespace2, nil)).To(Succeed())
+	g.Expect(createNamespace(namespace3, nil)).To(Succeed())
+	g.Expect(createNamespace(restrictedNamespace, &restrictedSecurityPolicy)).To(Succeed())
 
 	if kind == "single" {
 		createControllerManager(true, defaultNamespace)
+	} else if kind == "restricted" {
+		createControllerManager(true, restrictedNamespace)
 	} else if kind == "all" {
 		createControllerManager(true, "")
 	} else {
@@ -360,6 +433,7 @@ func testWatchNamespace(kind string, g Gomega, testFunc func(g Gomega)) {
 	deleteNamespace(namespace1, g)
 	deleteNamespace(namespace2, g)
 	deleteNamespace(namespace3, g)
+	deleteNamespace(restrictedNamespace, g)
 
 	createControllerManagerForSuite()
 }

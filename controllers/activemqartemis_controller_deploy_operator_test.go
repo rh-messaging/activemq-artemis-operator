@@ -29,6 +29,7 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/types"
@@ -104,8 +105,8 @@ var _ = Describe("artemis controller", Label("do"), func() {
 		It("test operator with env var", func() {
 			if os.Getenv("DEPLOY_OPERATOR") == "true" {
 				// re-install a new operator to have a fresh log
-				uninstallOperator(false)
-				installOperator(nil)
+				uninstallOperator(false, defaultNamespace)
+				installOperator(nil, defaultNamespace)
 				By("checking default operator should have INFO logs")
 				Eventually(func(g Gomega) {
 					oprLog, err := GetOperatorLog(defaultNamespace)
@@ -116,12 +117,12 @@ var _ = Describe("artemis controller", Label("do"), func() {
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("Uninstall existing operator")
-				uninstallOperator(false)
+				uninstallOperator(false, defaultNamespace)
 
 				By("install the operator again with logging env var")
 				envMap := make(map[string]string)
 				envMap["ARGS"] = "--zap-log-level=error"
-				installOperator(envMap)
+				installOperator(envMap, defaultNamespace)
 				By("delploy a basic broker to produce some more log")
 				brokerCr, createdCr := DeployCustomBroker(defaultNamespace, nil)
 
@@ -163,4 +164,29 @@ var _ = Describe("artemis controller", Label("do"), func() {
 			}
 		})
 	})
+
+	Context("operator deployment in restricted namespace", Label("do-operator-restricted"), func() {
+		It("test in a restricted namespace", func() {
+			if os.Getenv("DEPLOY_OPERATOR") == "true" {
+				restrictedNs := NextSpecResourceName()
+				restrictedSecurityPolicy := "restricted"
+				uninstallOperator(false, defaultNamespace)
+				By("creating a restricted namespace " + restrictedNs)
+				createNamespace(restrictedNs, &restrictedSecurityPolicy)
+				Expect(installOperator(nil, restrictedNs)).To(Succeed())
+
+				By("checking operator deployment")
+				deployment := appsv1.Deployment{}
+				deploymentKey := types.NamespacedName{Name: "activemq-artemis-controller-manager", Namespace: restrictedNs}
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, deploymentKey, &deployment)).Should(Succeed())
+					g.Expect(deployment.Status.ReadyReplicas).Should(Equal(int32(1)))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				uninstallOperator(false, restrictedNs)
+				Expect(installOperator(nil, defaultNamespace)).To(Succeed())
+			}
+		})
+	})
+
 })

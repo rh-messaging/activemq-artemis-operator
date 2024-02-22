@@ -1212,6 +1212,9 @@ spec:
         path: deploymentPlan.clustered
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Specifies the container security context
+        displayName: Container Security Context
+        path: deploymentPlan.containerSecurityContext
       - description: Whether or not to install the artemis metrics plugin
         displayName: Enable Metrics Plugin
         path: deploymentPlan.enableMetricsPlugin
@@ -2725,8 +2728,15 @@ spec:
                 resources: {}
                 securityContext:
                   allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+                  seccompProfile:
+                    type: RuntimeDefault
               securityContext:
                 runAsNonRoot: true
+                seccompProfile:
+                  type: RuntimeDefault
               serviceAccountName: activemq-artemis-controller-manager
               terminationGracePeriodSeconds: 10
       permissions:

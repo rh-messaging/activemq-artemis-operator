@@ -1040,6 +1040,22 @@ spec:
 
 When deploying the above custom resource the operator will spread matching pods among the given topology
 
+### Container SecurityContext
+
+The ActiveMQArtemis custom resource offers a container level SecurityContext option for the broker that holds security configuration that will be applied to the containers.
+
+```yaml
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: broker
+  namespace: activemq-artemis-operator
+spec:
+  deploymentPlan:
+    containerSecurityContext:
+      runAsNonRoot: true
+```
+
 ## Configuring Jolokia Access
 
 The operator uses jolokia endpoints to get broker status and also create queue/address resources using the address CRs.

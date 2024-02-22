@@ -22,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes/scheme"
+	utilpointer "k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -1071,6 +1072,32 @@ func TestNewPodTemplateSpecForCR_IncludesTopologySpreadConstraints(t *testing.T)
 		},
 	}
 	assert.Equal(t, newSpec.Spec.TopologySpreadConstraints, expectedTopologySpreadConstraints)
+}
+
+func TestNewPodTemplateSpecForCR_IncludesContainerSecurityContext(t *testing.T) {
+	containerSecurityContext := &v1.SecurityContext{RunAsNonRoot: utilpointer.Bool(false)}
+
+	cr := &brokerv1beta1.ActiveMQArtemis{
+		Spec: brokerv1beta1.ActiveMQArtemisSpec{
+			DeploymentPlan: brokerv1beta1.DeploymentPlanType{
+				ContainerSecurityContext: containerSecurityContext,
+			},
+		},
+	}
+
+	reconciler := &ActiveMQArtemisReconcilerImpl{
+		log:            ctrl.Log.WithName("test"),
+		customResource: cr,
+	}
+
+	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, newSpec)
+	expectedSecurityContext := &v1.SecurityContext{RunAsNonRoot: utilpointer.Bool(false)}
+
+	assert.Equal(t, newSpec.Spec.Containers[0].SecurityContext, expectedSecurityContext)
+	assert.Equal(t, newSpec.Spec.InitContainers[0].SecurityContext, expectedSecurityContext)
 }
 
 func TestLoginConfigSyntaxCheck(t *testing.T) {

@@ -374,6 +374,9 @@ type DeploymentPlanType struct {
 	// Specifies the Revision History Limit of the statefulset
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Revision History Limit"
 	RevisionHistoryLimit *int32 `json:"revisionHistoryLimit,omitempty"`
+	// Specifies the container security context
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Container Security Context"
+	ContainerSecurityContext *corev1.SecurityContext `json:"containerSecurityContext,omitempty"`
 }
 
 type ResourceTemplate struct {
