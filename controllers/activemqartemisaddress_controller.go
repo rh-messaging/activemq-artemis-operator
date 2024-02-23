@@ -358,7 +358,7 @@ func (r *ActiveMQArtemisAddressReconciler) deleteQueue(instance *AddressDeployme
 						reqLogger.V(1).Info("Queue is already gone", "queue", queueName)
 						err = nil
 					} else {
-						reqLogger.V(1).Info("Error deleting queue", "err msg", response.Error)
+						reqLogger.V(1).Info("Error deleting queue", "response", response)
 						reqLogger.Error(err, "Deleting ActiveMQArtemisAddress error for queue "+queueName)
 					}
 					break

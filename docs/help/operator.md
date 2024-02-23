@@ -983,6 +983,24 @@ spec:
 ```
 For a complete example please refer to this [artemiscloud example](https://github.com/artemiscloud/artemiscloud-examples/tree/main/operator/prometheus).
 
+## Enabling Operator Metrics
+
+The operator exposes a port called **http-metrics** for Prometheus to monitor.
+The following is a sample Prometheus PodMonitor resource
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: activemq-artemis-controller-manager
+spec:
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  podMetricsEndpoints:
+  - port: http-metrics
+```
+
 ## Configuring PodDisruptionBudget for broker deployment
 
 The ActiveMQArtemis custom resource offers a PodDisruptionBudget option

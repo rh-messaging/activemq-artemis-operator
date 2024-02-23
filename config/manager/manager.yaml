@@ -66,6 +66,9 @@ spec:
         image: controller:latest
         # imagePullPolicy: Always
         name: manager
+        ports:
+        - name: http-metrics
+          containerPort: 8383
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

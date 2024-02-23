@@ -2719,6 +2719,9 @@ spec:
                   initialDelaySeconds: 15
                   periodSeconds: 20
                 name: manager
+                ports:
+                - containerPort: 8383
+                  name: http-metrics
                 readinessProbe:
                   httpGet:
                     path: /readyz
