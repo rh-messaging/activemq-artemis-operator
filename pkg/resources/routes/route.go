@@ -42,7 +42,7 @@ func NewRouteDefinitionForCR(existing *routev1.Route, namespacedName types.Names
 	if brokerHost != "" {
 		desired.Spec.Host = brokerHost
 	} else if domain != "" {
-		desired.Spec.Host = desired.GetObjectMeta().GetName() + "." + domain
+		desired.Spec.Host = desired.GetObjectMeta().GetName() + "-" + namespacedName.Namespace + "." + domain
 	}
 
 	desired.Spec.Port = &routev1.RoutePort{

@@ -105,7 +105,7 @@ var _ = Describe("subresource scale down", func() {
 					By("by updating via via scale sub resource")
 					scaleVal.Spec.Replicas = 0
 					_, err = currentScales.Update(ctx, resource, scaleVal, v1.UpdateOptions{})
-					Expect(err).To(BeNil())
+					g.Expect(err).To(BeNil())
 
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 

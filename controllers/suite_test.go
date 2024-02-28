@@ -19,12 +19,15 @@ package controllers
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -59,9 +62,11 @@ import (
 
 	//+kubebuilder:scaffold:imports
 
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/ingresses"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -73,7 +78,7 @@ import (
 
 // Define utility constants for object names and testing timeouts/durations and intervals.
 const (
-	defaultNamespace        = "default"
+	defaultNamespace        = "test"
 	otherNamespace          = "other"
 	restrictedNamespace     = "restricted"
 	timeout                 = time.Second * 30
@@ -132,6 +137,7 @@ var (
 	verbose                        = false
 	kubeTool                       = "kubectl"
 	defaultOperatorInstalled       = true
+	defaultUid                     = int64(185)
 )
 
 func init() {
@@ -171,7 +177,9 @@ func setUpEnvTest() {
 
 	setUpK8sClient()
 
-	setUpIngressSSLPassthrough()
+	setUpIngress()
+
+	setUpNamespace()
 
 	setUpTestProxy()
 
@@ -180,18 +188,41 @@ func setUpEnvTest() {
 	createControllerManagerForSuite()
 }
 
-func setUpIngressSSLPassthrough() {
-	clusterIngressHost = clusterUrl.Hostname()
+func setUpNamespace() {
+	testNamespace := corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      defaultNamespace,
+			Namespace: defaultNamespace,
+		},
+		Spec: corev1.NamespaceSpec{},
+	}
 
+	err := k8sClient.Create(ctx, &testNamespace)
+	Expect(err == nil || errors.IsConflict(err))
+
+	if isOpenshift {
+		testNamespaceKey := types.NamespacedName{Name: defaultNamespace}
+		Expect(k8sClient.Get(ctx, testNamespaceKey, &testNamespace)).Should(Succeed())
+		uidRange := testNamespace.Annotations["openshift.io/sa.scc.uid-range"]
+		uidRangeTokens := strings.Split(uidRange, "/")
+		defaultUid, err = strconv.ParseInt(uidRangeTokens[0], 10, 64)
+		Expect(err).Should(Succeed())
+	}
+}
+
+func setUpIngress() {
 	ingressConfig := &configv1.Ingress{}
 	ingressConfigKey := types.NamespacedName{Name: "cluster"}
 	ingressConfigErr := k8sClient.Get(ctx, ingressConfigKey, ingressConfig)
 
 	if ingressConfigErr == nil {
+		isOpenshift = true
 		isIngressSSLPassthroughEnabled = true
 		clusterIngressHost = "ingress." + ingressConfig.Spec.Domain
 	} else {
+		isOpenshift = false
 		isIngressSSLPassthroughEnabled = false
+		clusterIngressHost = clusterUrl.Hostname()
 		ingressNginxControllerDeployment := &appsv1.Deployment{}
 		ingressNginxControllerDeploymentKey := types.NamespacedName{Name: "ingress-nginx-controller", Namespace: "ingress-nginx"}
 		err := k8sClient.Get(ctx, ingressNginxControllerDeploymentKey, ingressNginxControllerDeployment)
@@ -222,15 +253,20 @@ func setUpIngressSSLPassthrough() {
 func setUpTestProxy() {
 
 	var err error
-	var testProxyPort int32 = 3128
-	var testProxyNodePort int32 = 30128
-	var testProxyDeploymentReplicas int32 = 1
+	testProxyPort := int32(3129)
+	testProxyDeploymentReplicas := int32(1)
+	testProxyName := "test-proxy"
+	testProxyNamespace := "default"
+	testProxyHost := testProxyName + ".tests.artemiscloud.io"
 	testProxyLabels := map[string]string{"app": "test-proxy"}
+	testProxyScript := fmt.Sprintf("openssl req -newkey rsa:2048 -nodes -keyout %[1]s -x509 -days 365 -out %[2]s -subj '/CN=test-proxy' && "+
+		"echo 'https_port %[3]d tls-cert=%[2]s tls-key=%[1]s' >> %[4]s && "+"entrypoint.sh -f %[4]s -NYC",
+		"/etc/squid/key.pem", "/etc/squid/certificate.pem", 3129, "/etc/squid/squid.conf")
 
 	testProxyDeployment := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-proxy",
-			Namespace: defaultNamespace,
+			Name:      testProxyName + "-dep",
+			Namespace: testProxyNamespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
@@ -244,8 +280,9 @@ func setUpTestProxy() {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  "ningx",
-							Image: "ubuntu/squid:edge",
+							Name:    "ningx",
+							Image:   "ubuntu/squid:edge",
+							Command: []string{"sh", "-c", testProxyScript},
 							Ports: []corev1.ContainerPort{
 								{
 									ContainerPort: testProxyPort,
@@ -264,17 +301,15 @@ func setUpTestProxy() {
 
 	testProxyService := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-proxy",
-			Namespace: defaultNamespace,
+			Name:      testProxyName + "-dep-svc",
+			Namespace: testProxyNamespace,
 		},
 		Spec: corev1.ServiceSpec{
-			Type:     corev1.ServiceTypeNodePort,
 			Selector: testProxyLabels,
 			Ports: []corev1.ServicePort{
 				{
 					Port:       testProxyPort,
 					TargetPort: intstr.IntOrString{IntVal: testProxyPort},
-					NodePort:   testProxyNodePort,
 				},
 			},
 		},
@@ -283,19 +318,39 @@ func setUpTestProxy() {
 	err = k8sClient.Create(ctx, &testProxyService)
 	Expect(err != nil || errors.IsConflict(err))
 
-	proxyUrl, err := url.Parse(fmt.Sprintf("http://%s:%d", clusterUrl.Hostname(), testProxyNodePort))
+	testProxyIngress := ingresses.NewIngressForCRWithSSL(
+		nil, types.NamespacedName{Name: testProxyName, Namespace: testProxyNamespace},
+		map[string]string{}, testProxyName+"-dep-svc", strconv.FormatInt(int64(testProxyPort), 10),
+		true, "", testProxyHost, isOpenshift)
+
+	err = k8sClient.Create(ctx, testProxyIngress)
+	Expect(err != nil || errors.IsConflict(err))
+
+	proxyUrl, err := url.Parse(fmt.Sprintf("https://%s:%d", testProxyHost, 443))
 	Expect(err).NotTo(HaveOccurred())
 
-	http.DefaultTransport = &http.Transport{Proxy: http.ProxyURL(proxyUrl)}
+	http.DefaultTransport = &http.Transport{
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			if strings.HasPrefix(addr, testProxyHost) {
+				addr = clusterIngressHost + ":443"
+			}
+			return (&net.Dialer{}).DialContext(ctx, network, addr)
+		},
+		Proxy:           http.ProxyURL(proxyUrl),
+		TLSClientConfig: &tls.Config{ServerName: testProxyHost, InsecureSkipVerify: true},
+	}
 }
 
 func cleanUpTestProxy() {
 	var err error
 
+	testProxyName := "test-proxy"
+	testProxyNamespace := "default"
+
 	testProxyDeployment := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-proxy",
-			Namespace: defaultNamespace,
+			Name:      testProxyName + "-dep",
+			Namespace: testProxyNamespace,
 		},
 	}
 
@@ -304,12 +359,22 @@ func cleanUpTestProxy() {
 
 	testProxyService := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-proxy",
-			Namespace: defaultNamespace,
+			Name:      testProxyName + "-dep-svc",
+			Namespace: testProxyNamespace,
 		},
 	}
 
 	err = k8sClient.Delete(ctx, &testProxyService)
+	Expect(err != nil || errors.IsNotFound(err))
+
+	testProxyIngress := netv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      testProxyName + "-dep-svc-ing",
+			Namespace: testProxyNamespace,
+		},
+	}
+
+	err = k8sClient.Delete(ctx, &testProxyIngress)
 	Expect(err != nil || errors.IsNotFound(err))
 }
 
@@ -436,6 +501,8 @@ func setUpRealOperator() {
 	Expect(err).ShouldNot(HaveOccurred(), "failed to get the config")
 
 	setUpK8sClient()
+
+	setUpNamespace()
 
 	ctrl.Log.Info("Installing CRDs")
 	crds := []string{"../deploy/crds"}

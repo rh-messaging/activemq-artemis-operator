@@ -283,6 +283,47 @@ var _ = Describe("tests regarding controller manager", func() {
 			})
 		})
 
+		It("test watching all namespaces with same cr name and exposed console", func() {
+
+			brokerName := "ec-for-many-ns"
+			testWatchNamespace("all", Default, func(g Gomega) {
+				By("deploying same broker cr name to three namespaces")
+				nameSpaces := []string{namespace1, namespace2, namespace3}
+				var createdCrs []*brokerv1beta1.ActiveMQArtemis
+				for _, ns := range nameSpaces {
+					_, createdCr := DeployCustomBroker(ns, func(c *brokerv1beta1.ActiveMQArtemis) {
+						c.Name = brokerName
+						c.Spec.Console.Expose = true
+					})
+					createdCrs = append(createdCrs, createdCr)
+				}
+
+				if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+					deployedCrd := brokerv1beta1.ActiveMQArtemis{}
+
+					for _, ns := range nameSpaces {
+
+						key := types.NamespacedName{Name: brokerName, Namespace: ns}
+
+						By("asserting brokers ready")
+						Eventually(func(g Gomega) {
+							g.Expect(k8sClient.Get(ctx, key, &deployedCrd)).Should(Succeed())
+
+							g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
+							g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
+
+						}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+					}
+				}
+
+				By("clean up")
+				for _, createdCr := range createdCrs {
+					CleanResource(createdCr, createdCr.Name, createdCr.Namespace)
+				}
+			})
+		})
+
 		It("test watching multiple namespaces", Label("test-watching-namespace"), func() {
 			testWatchNamespace("multiple", Default, func(g Gomega) {
 				//only namespace2 and namespace3 is watched

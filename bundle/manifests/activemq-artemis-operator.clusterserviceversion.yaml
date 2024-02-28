@@ -525,7 +525,7 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:text
       - description: 'Host for Ingress and Route resources of the acceptor. It supports
           the following variables: $(CR_NAME), $(CR_NAMESPACE), $(BROKER_ORDINAL),
-          $(ITEM_NAME), $(RES_NAME) and $(INGRESS_DOMAIN). Default is $(CR_NAME)-$(ITEM_NAME)-$(BROKER_ORDINAL)-svc-$(RES_TYPE).$(INGRESS_DOMAIN)'
+          $(ITEM_NAME), $(RES_NAME) and $(INGRESS_DOMAIN). Default is $(CR_NAME)-$(ITEM_NAME)-$(BROKER_ORDINAL)-svc-$(RES_TYPE)-$(CR_NAMESPACE).$(INGRESS_DOMAIN)'
         displayName: Ingress Host
         path: acceptors[0].ingressHost
         x-descriptors:
@@ -1058,7 +1058,7 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:text
       - description: 'Host for Ingress and Route resources of the acceptor. It supports
           the following variables: $(CR_NAME), $(CR_NAMESPACE), $(BROKER_ORDINAL),
-          $(ITEM_NAME), $(RES_NAME) and $(INGRESS_DOMAIN). Default is $(CR_NAME)-$(ITEM_NAME)-$(BROKER_ORDINAL)-svc-$(RES_TYPE).$(INGRESS_DOMAIN)'
+          $(ITEM_NAME), $(RES_NAME) and $(INGRESS_DOMAIN). Default is $(CR_NAME)-$(ITEM_NAME)-$(BROKER_ORDINAL)-svc-$(RES_TYPE)-$(CR_NAMESPACE).$(INGRESS_DOMAIN)'
         displayName: Ingress Host
         path: connectors[0].ingressHost
         x-descriptors:
@@ -1156,7 +1156,7 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:text
       - description: 'Host for Ingress and Route resources of the acceptor. It supports
           the following variables: $(CR_NAME), $(CR_NAMESPACE), $(BROKER_ORDINAL),
-          $(ITEM_NAME), $(RES_NAME) and $(INGRESS_DOMAIN). Default is $(CR_NAME)-$(ITEM_NAME)-$(BROKER_ORDINAL)-svc-$(RES_TYPE).$(INGRESS_DOMAIN)'
+          $(ITEM_NAME), $(RES_NAME) and $(INGRESS_DOMAIN). Default is $(CR_NAME)-$(ITEM_NAME)-$(BROKER_ORDINAL)-svc-$(RES_TYPE)-$(CR_NAMESPACE).$(INGRESS_DOMAIN)'
         displayName: Ingress Host
         path: console.ingressHost
         x-descriptors:
@@ -2734,6 +2734,7 @@ spec:
                   capabilities:
                     drop:
                     - ALL
+                  runAsNonRoot: true
                   seccompProfile:
                     type: RuntimeDefault
               securityContext:

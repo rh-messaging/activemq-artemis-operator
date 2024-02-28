@@ -72,7 +72,7 @@ func NewIngressForCRWithSSL(existing *netv1.Ingress, namespacedName types.Namesp
 		domain = defaultIngressDomain
 	}
 
-	host := desired.GetObjectMeta().GetName() + "." + domain
+	host := desired.GetObjectMeta().GetName() + "-" + namespacedName.Namespace + "." + domain
 
 	if brokerHost != "" {
 		host = brokerHost
