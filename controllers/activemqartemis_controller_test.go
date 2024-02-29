@@ -323,7 +323,7 @@ var _ = Describe("artemis controller", func() {
 						g.Expect(k8sClient.Get(ctx, ingKey, &ingress)).To(Succeed())
 
 						g.Expect(len(ingress.Spec.Rules)).To(Equal(1)) //artemis-broker-amqp-ssl-0-svc-ing.
-						g.Expect(ingress.Spec.Rules[0].Host).To(Equal(brokerCr.Name + "-amqp-ssl-0-svc-ing." + ingressHostDomainSubString))
+						g.Expect(ingress.Spec.Rules[0].Host).To(Equal(brokerCr.Name + "-amqp-ssl-0-svc-ing-" + defaultNamespace + "." + ingressHostDomainSubString))
 						g.Expect(len(ingress.Spec.Rules[0].HTTP.Paths)).To(BeEquivalentTo(1))
 						g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).To(Equal(brokerCr.Name + "-amqp-ssl-0-svc"))
 						g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name).To(Equal("amqp-ssl-0"))
@@ -332,7 +332,7 @@ var _ = Describe("artemis controller", func() {
 
 						g.Expect(len(ingress.Spec.TLS)).To(BeEquivalentTo(1))
 						g.Expect(len(ingress.Spec.TLS[0].Hosts)).To(BeEquivalentTo(1))
-						g.Expect(ingress.Spec.TLS[0].Hosts[0]).To(Equal(brokerCr.Name + "-amqp-ssl-0-svc-ing." + ingressHostDomainSubString))
+						g.Expect(ingress.Spec.TLS[0].Hosts[0]).To(Equal(brokerCr.Name + "-amqp-ssl-0-svc-ing-" + defaultNamespace + "." + ingressHostDomainSubString))
 
 					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
@@ -345,7 +345,7 @@ var _ = Describe("artemis controller", func() {
 						g.Expect(k8sClient.Get(ctx, ingKey, &ingress)).To(Succeed())
 
 						g.Expect(len(ingress.Spec.Rules)).To(Equal(1))
-						g.Expect(ingress.Spec.Rules[0].Host).To(Equal(brokerCr.Name + "-connector-ssl-0-svc-ing." + ingressHostDomainSubString))
+						g.Expect(ingress.Spec.Rules[0].Host).To(Equal(brokerCr.Name + "-connector-ssl-0-svc-ing-" + defaultNamespace + "." + ingressHostDomainSubString))
 						g.Expect(len(ingress.Spec.Rules[0].HTTP.Paths)).To(BeEquivalentTo(1))
 						g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).To(Equal(brokerCr.Name + "-connector-ssl-0-svc"))
 						g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name).To(Equal("connector-ssl-0"))
@@ -354,7 +354,7 @@ var _ = Describe("artemis controller", func() {
 
 						g.Expect(len(ingress.Spec.TLS)).To(BeEquivalentTo(1))
 						g.Expect(len(ingress.Spec.TLS[0].Hosts)).To(BeEquivalentTo(1))
-						g.Expect(ingress.Spec.TLS[0].Hosts[0]).To(Equal(brokerCr.Name + "-connector-ssl-0-svc-ing." + ingressHostDomainSubString))
+						g.Expect(ingress.Spec.TLS[0].Hosts[0]).To(Equal(brokerCr.Name + "-connector-ssl-0-svc-ing-" + defaultNamespace + "." + ingressHostDomainSubString))
 
 					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 				}
@@ -1911,7 +1911,7 @@ var _ = Describe("artemis controller", func() {
 					Eventually(func(g Gomega) {
 						g.Expect(k8sClient.Get(ctx, routeKey, &route)).To(Succeed())
 
-						host = route.Name + "." + crd.Spec.IngressDomain
+						host = route.Name + "-" + defaultNamespace + "." + crd.Spec.IngressDomain
 						g.Expect(route.Spec.Port.TargetPort).To(Equal(intstr.FromString("wconsj-0")))
 						g.Expect(route.Spec.To.Kind).To(Equal("Service"))
 						g.Expect(route.Spec.To.Name).To(Equal(crd.Name + "-wconsj-0-svc"))
@@ -1930,7 +1930,7 @@ var _ = Describe("artemis controller", func() {
 					Eventually(func(g Gomega) {
 						g.Expect(k8sClient.Get(ctx, ingKey, &ingress)).To(Succeed())
 
-						host = ingress.Name + "." + crd.Spec.IngressDomain
+						host = ingress.Name + "-" + defaultNamespace + "." + crd.Spec.IngressDomain
 						g.Expect(ingress.Spec.Rules).To(HaveLen(1))
 						g.Expect(ingress.Spec.Rules[0].Host).To(Equal(host))
 						g.Expect(ingress.Spec.Rules[0].HTTP.Paths).To(HaveLen(1))
@@ -2349,7 +2349,7 @@ var _ = Describe("artemis controller", func() {
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			if isOpenshift || isIngressSSLPassthroughEnabled {
-				host := ingress.Name + "." + brokerCr.Spec.IngressDomain
+				host := ingress.Name + "-" + defaultNamespace + "." + brokerCr.Spec.IngressDomain
 
 				By("check console is reachable")
 				httpClient := http.Client{Timeout: timeout, Transport: &http.Transport{
@@ -2372,7 +2372,7 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(k8sClient.Get(ctx, ingKey, &ingress)).To(Succeed())
 
 				g.Expect(len(ingress.Spec.Rules)).To(Equal(1))
-				g.Expect(ingress.Spec.Rules[0].Host).To(Equal(brokerCr.Name + "-acceptor-0-svc-ing." + defaultTestIngressDomain))
+				g.Expect(ingress.Spec.Rules[0].Host).To(Equal(brokerCr.Name + "-acceptor-0-svc-ing-" + defaultNamespace + "." + defaultTestIngressDomain))
 				g.Expect(len(ingress.Spec.Rules[0].HTTP.Paths)).To(BeEquivalentTo(1))
 				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).To(Equal(brokerCr.Name + "-acceptor-0-svc"))
 				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name).To(Equal("acceptor-0"))
@@ -2390,7 +2390,7 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(k8sClient.Get(ctx, ingKey, &ingress)).To(Succeed())
 
 				g.Expect(len(ingress.Spec.Rules)).To(Equal(1))
-				g.Expect(ingress.Spec.Rules[0].Host).To(Equal(brokerCr.Name + "-connector-0-svc-ing." + defaultTestIngressDomain))
+				g.Expect(ingress.Spec.Rules[0].Host).To(Equal(brokerCr.Name + "-connector-0-svc-ing-" + defaultNamespace + "." + defaultTestIngressDomain))
 				g.Expect(len(ingress.Spec.Rules[0].HTTP.Paths)).To(BeEquivalentTo(1))
 				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).To(Equal(brokerCr.Name + "-connector-0-svc"))
 				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name).To(Equal("connector-0"))
@@ -2473,7 +2473,7 @@ var _ = Describe("artemis controller", func() {
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			if isOpenshift || isIngressSSLPassthroughEnabled {
-				host := ingress.Name + "." + brokerCr.Spec.IngressDomain
+				host := ingress.Name + "-" + defaultNamespace + "." + brokerCr.Spec.IngressDomain
 
 				By("check console is reachable")
 				httpClient := http.Client{Timeout: timeout, Transport: &http.Transport{
@@ -2496,7 +2496,7 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(k8sClient.Get(ctx, ingKey, &ingress)).To(Succeed())
 
 				g.Expect(len(ingress.Spec.Rules)).To(Equal(1))
-				g.Expect(ingress.Spec.Rules[0].Host).To(Equal(brokerCr.Name + "-acceptor-0-svc-ing." + defaultTestIngressDomain))
+				g.Expect(ingress.Spec.Rules[0].Host).To(Equal(brokerCr.Name + "-acceptor-0-svc-ing-" + defaultNamespace + "." + defaultTestIngressDomain))
 				g.Expect(len(ingress.Spec.Rules[0].HTTP.Paths)).To(BeEquivalentTo(1))
 				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).To(Equal(brokerCr.Name + "-acceptor-0-svc"))
 				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name).To(Equal("acceptor-0"))
@@ -2515,7 +2515,7 @@ var _ = Describe("artemis controller", func() {
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			if isOpenshift || isIngressSSLPassthroughEnabled {
-				host := ingress.Name + "." + brokerCr.Spec.IngressDomain
+				host := ingress.Name + "-" + defaultNamespace + "." + brokerCr.Spec.IngressDomain
 
 				By("check acceptor is reachable")
 				Eventually(func(g Gomega) {
@@ -2537,7 +2537,7 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(k8sClient.Get(ctx, ingKey, &ingress)).To(Succeed())
 
 				g.Expect(len(ingress.Spec.Rules)).To(Equal(1))
-				g.Expect(ingress.Spec.Rules[0].Host).To(Equal(brokerCr.Name + "-connector-0-svc-ing." + defaultTestIngressDomain))
+				g.Expect(ingress.Spec.Rules[0].Host).To(Equal(brokerCr.Name + "-connector-0-svc-ing-" + defaultNamespace + "." + defaultTestIngressDomain))
 				g.Expect(len(ingress.Spec.Rules[0].HTTP.Paths)).To(BeEquivalentTo(1))
 				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).To(Equal(brokerCr.Name + "-connector-0-svc"))
 				g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name).To(Equal("connector-0"))
