@@ -184,6 +184,7 @@ var _ = Describe("artemis controller", Label("do"), func() {
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				uninstallOperator(false, restrictedNs)
+				deleteNamespace(restrictedNs, Default)
 				Expect(installOperator(nil, defaultNamespace)).To(Succeed())
 			}
 		})
