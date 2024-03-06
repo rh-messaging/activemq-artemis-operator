@@ -35,6 +35,7 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/version"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
+	"golang.org/x/exp/slices"
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -164,6 +165,11 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) Process(customResource *brokerv
 }
 
 func trackSecretCheckSumInEnvVar(requestedResources []rtclient.Object, container []corev1.Container) {
+	// the requestedResources need to be sorted because they are extracted
+	// from a map and adler32 depends on the prder of the bytes
+	slices.SortFunc(requestedResources, func(a rtclient.Object, b rtclient.Object) bool {
+		return a.GetName() < b.GetName()
+	})
 
 	// find desired secrets and checksum their 'sorted' values
 	digest := adler32.New()
