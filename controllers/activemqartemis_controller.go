@@ -125,7 +125,7 @@ func NewActiveMQArtemisReconciler(client rtclient.Client, scheme *runtime.Scheme
 //+kubebuilder:rbac:groups="",namespace=activemq-artemis-operator,resources=pods;services;endpoints;persistentvolumeclaims;events;configmaps;secrets;routes;serviceaccounts,verbs=*
 //+kubebuilder:rbac:groups="",namespace=activemq-artemis-operator,resources=namespaces,verbs=get
 //+kubebuilder:rbac:groups=apps,namespace=activemq-artemis-operator,resources=deployments;daemonsets;replicasets;statefulsets,verbs=*
-//+kubebuilder:rbac:groups=networking.k8s.io,namespace=activemq-artemis-operator,resources=ingresses,verbs=get;list;watch;create;delete
+//+kubebuilder:rbac:groups=networking.k8s.io,namespace=activemq-artemis-operator,resources=ingresses,verbs=get;list;watch;create;delete;update
 //+kubebuilder:rbac:groups=route.openshift.io,namespace=activemq-artemis-operator,resources=routes;routes/custom-host;routes/status,verbs=get;list;watch;create;delete;update
 //+kubebuilder:rbac:groups=monitoring.coreos.com,namespace=activemq-artemis-operator,resources=servicemonitors,verbs=get;create
 //+kubebuilder:rbac:groups=apps,namespace=activemq-artemis-operator,resources=deployments/finalizers,verbs=update
