@@ -21,10 +21,7 @@ require (
 	sigs.k8s.io/controller-runtime v0.11.1
 )
 
-require (
-	github.com/blang/semver/v4 v4.0.0
-	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
-)
+require github.com/blang/semver/v4 v4.0.0
 
 require (
 	cloud.google.com/go v0.81.0 // indirect
