@@ -21,7 +21,10 @@ require (
 	sigs.k8s.io/controller-runtime v0.11.1
 )
 
-require github.com/blang/semver/v4 v4.0.0
+require (
+	github.com/blang/semver/v4 v4.0.0
+	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
+)
 
 require (
 	cloud.google.com/go v0.81.0 // indirect
@@ -41,7 +44,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/google/go-cmp v0.5.5 // indirect
+	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/google/uuid v1.1.2 // indirect
 	github.com/googleapis/gnostic v0.5.5 // indirect
