@@ -47,8 +47,8 @@ function writeFile() {
         createFile "$destdir/role.yaml"
         true_kind="ClusterRole"
         createFile "$destdir/cluster_role.yaml"
-        sed -i 's/kind: Role/kind: ClusterRole/' \
-          "$destdir/cluster_role.yaml"
+        sed -i.bak 's/kind: Role/kind: ClusterRole/' \
+          "$destdir/cluster_role.yaml" && rm "$destdir/cluster_role.yaml.bak"
       elif [[ ${resource_name} =~ (leader-election) ]]; then
         createFile "$destdir/election_role.yaml"
       else
@@ -61,9 +61,9 @@ function writeFile() {
         createFile "$destdir/role_binding.yaml"
         true_kind="ClusterRoleBinding"
         createFile "$destdir/cluster_role_binding.yaml"
-        sed -i -e 's/kind: Role/kind: ClusterRole/' \
+        sed -i.bak -e 's/kind: Role/kind: ClusterRole/' \
           -e 's/kind: RoleBinding/kind: ClusterRoleBinding/' \
-          "$destdir/cluster_role_binding.yaml"
+          "$destdir/cluster_role_binding.yaml" && rm "$destdir/cluster_role_binding.yaml.bak"
         echo "  namespace: ${OPERATOR_NAMESPACE}" >> \
           "$destdir/cluster_role_binding.yaml"
       elif [[ ${resource_name} =~ (leader-election) ]]; then
