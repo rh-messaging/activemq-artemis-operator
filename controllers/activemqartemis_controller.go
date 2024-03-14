@@ -41,7 +41,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 
-	"github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
@@ -163,7 +162,7 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 
 	var requeueRequest bool = false
 	var valid bool = false
-	if valid, requeueRequest = validate(customResource, r.Client, r.Scheme, *namer); valid {
+	if valid, requeueRequest = validate(customResource, r.Client, *namer); valid {
 
 		err = reconciler.Process(customResource, *namer, r.Client, r.Scheme)
 
@@ -195,7 +194,7 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 	return result, err
 }
 
-func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, namer common.Namers) (bool, retry bool) {
+func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namer common.Namers) (bool, retry bool) {
 	// Do additional validation here
 	validationCondition := metav1.Condition{
 		Type:   brokerv1beta1.ValidConditionType,
@@ -203,7 +202,7 @@ func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Cli
 		Reason: brokerv1beta1.ValidConditionSuccessReason,
 	}
 
-	condition, retry := validateExtraMounts(customResource, client, scheme)
+	condition, retry := validateExtraMounts(customResource, client)
 	if condition != nil {
 		validationCondition = *condition
 	}
@@ -216,14 +215,14 @@ func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Cli
 	}
 
 	if validationCondition.Status == metav1.ConditionTrue {
-		condition, retry = validateAcceptorPorts(customResource, client, scheme, namer)
+		condition, retry = validateAcceptorPorts(customResource)
 		if condition != nil {
 			validationCondition = *condition
 		}
 	}
 
 	if validationCondition.Status == metav1.ConditionTrue {
-		condition, retry = validateSSLEnabledSecrets(customResource, client, scheme, namer)
+		condition, retry = validateSSLEnabledSecrets(customResource, client, namer)
 		if condition != nil {
 			validationCondition = *condition
 		}
@@ -244,7 +243,7 @@ func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Cli
 	}
 
 	if validationCondition.Status == metav1.ConditionTrue {
-		condition, retry = validateExposeModes(customResource, client, scheme, namer)
+		condition, retry = validateExposeModes(customResource)
 		if condition != nil {
 			validationCondition = *condition
 		}
@@ -284,7 +283,7 @@ func validateReservedLabels(customResource *brokerv1beta1.ActiveMQArtemis) *meta
 	return nil
 }
 
-func validateAcceptorPorts(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, namer common.Namers) (*metav1.Condition, bool) {
+func validateAcceptorPorts(customResource *brokerv1beta1.ActiveMQArtemis) (*metav1.Condition, bool) {
 	portMap := map[int32]string{}
 
 	for _, acceptor := range customResource.Spec.Acceptors {
@@ -303,12 +302,12 @@ func validateAcceptorPorts(customResource *brokerv1beta1.ActiveMQArtemis, client
 	return nil, false
 }
 
-func validateExposeModes(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, namer common.Namers) (*metav1.Condition, bool) {
+func validateExposeModes(customResource *brokerv1beta1.ActiveMQArtemis) (*metav1.Condition, bool) {
 	isOpenshift, _ := common.DetectOpenshift()
 
 	if !isOpenshift {
 		for _, acceptor := range customResource.Spec.Acceptors {
-			if acceptor.Expose && acceptor.ExposeMode != nil && *acceptor.ExposeMode == v1beta1.ExposeModes.Route {
+			if acceptor.Expose && acceptor.ExposeMode != nil && *acceptor.ExposeMode == brokerv1beta1.ExposeModes.Route {
 				return &metav1.Condition{
 					Type:    brokerv1beta1.ValidConditionType,
 					Status:  metav1.ConditionFalse,
@@ -319,7 +318,7 @@ func validateExposeModes(customResource *brokerv1beta1.ActiveMQArtemis, client r
 		}
 
 		for _, connector := range customResource.Spec.Connectors {
-			if connector.Expose && connector.ExposeMode != nil && *connector.ExposeMode == v1beta1.ExposeModes.Route {
+			if connector.Expose && connector.ExposeMode != nil && *connector.ExposeMode == brokerv1beta1.ExposeModes.Route {
 				return &metav1.Condition{
 					Type:    brokerv1beta1.ValidConditionType,
 					Status:  metav1.ConditionFalse,
@@ -330,7 +329,7 @@ func validateExposeModes(customResource *brokerv1beta1.ActiveMQArtemis, client r
 		}
 
 		console := customResource.Spec.Console
-		if console.Expose && console.ExposeMode != nil && *console.ExposeMode == v1beta1.ExposeModes.Route {
+		if console.Expose && console.ExposeMode != nil && *console.ExposeMode == brokerv1beta1.ExposeModes.Route {
 			return &metav1.Condition{
 				Type:    brokerv1beta1.ValidConditionType,
 				Status:  metav1.ConditionFalse,
@@ -343,7 +342,7 @@ func validateExposeModes(customResource *brokerv1beta1.ActiveMQArtemis, client r
 	return nil, false
 }
 
-func validateSSLEnabledSecrets(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, namer common.Namers) (*metav1.Condition, bool) {
+func validateSSLEnabledSecrets(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namer common.Namers) (*metav1.Condition, bool) {
 
 	var retry = true
 	if customResource.Spec.Console.SSLEnabled {
@@ -351,7 +350,7 @@ func validateSSLEnabledSecrets(customResource *brokerv1beta1.ActiveMQArtemis, cl
 		secretName := namer.SecretsConsoleNameBuilder.Name()
 
 		secret := corev1.Secret{}
-		found := retrieveResource(secretName, customResource.Namespace, &secret, client, scheme)
+		found := retrieveResource(secretName, customResource.Namespace, &secret, client)
 		if !found {
 			return &metav1.Condition{
 				Type:    brokerv1beta1.ValidConditionType,
@@ -402,7 +401,7 @@ func validatePodDisruption(customResource *brokerv1beta1.ActiveMQArtemis) *metav
 	return nil
 }
 
-func validateExtraMounts(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme) (*metav1.Condition, bool) {
+func validateExtraMounts(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) (*metav1.Condition, bool) {
 
 	instanceCounts := map[string]int{}
 	var Condition *metav1.Condition
@@ -410,7 +409,7 @@ func validateExtraMounts(customResource *brokerv1beta1.ActiveMQArtemis, client r
 	var ContextMessage = ".Spec.DeploymentPlan.ExtraMounts.ConfigMaps,"
 	for _, cm := range customResource.Spec.DeploymentPlan.ExtraMounts.ConfigMaps {
 		configMap := corev1.ConfigMap{}
-		found := retrieveResource(cm, customResource.Namespace, &configMap, client, scheme)
+		found := retrieveResource(cm, customResource.Namespace, &configMap, client)
 		if !found {
 			return &metav1.Condition{
 				Type:    brokerv1beta1.ValidConditionType,
@@ -439,7 +438,7 @@ func validateExtraMounts(customResource *brokerv1beta1.ActiveMQArtemis, client r
 	ContextMessage = ".Spec.DeploymentPlan.ExtraMounts.Secrets,"
 	for _, s := range customResource.Spec.DeploymentPlan.ExtraMounts.Secrets {
 		secret := corev1.Secret{}
-		found := retrieveResource(s, customResource.Namespace, &secret, client, scheme)
+		found := retrieveResource(s, customResource.Namespace, &secret, client)
 		if !found {
 			return &metav1.Condition{
 				Type:    brokerv1beta1.ValidConditionType,
@@ -553,7 +552,7 @@ func AssertSecretContainsOneOf(secret corev1.Secret, keys []string, contextMessa
 	}
 }
 
-func retrieveResource(name, namespace string, obj rtclient.Object, client rtclient.Client, scheme *runtime.Scheme) bool {
+func retrieveResource(name, namespace string, obj rtclient.Object, client rtclient.Client) bool {
 	err := client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, obj)
 	return err == nil
 }

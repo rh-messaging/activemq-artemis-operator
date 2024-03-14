@@ -377,6 +377,50 @@ type DeploymentPlanType struct {
 	// Specifies the container security context
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Container Security Context"
 	ContainerSecurityContext *corev1.SecurityContext `json:"containerSecurityContext,omitempty"`
+	// Specifies additional Volumes to be attached to the broker pods
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Extra Volumes"
+	ExtraVolumes []corev1.Volume `json:"extraVolumes,omitempty"`
+	// Specifies mount options for extraVolumes
+	// +optional
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Extra Mount Options"
+	ExtraVolumeMounts []corev1.VolumeMount `json:"extraVolumeMounts,omitempty"`
+	// Specifies Extra Volume Claims Templates for the broker pods
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Extra Volume Claims Templates"
+	ExtraVolumeClaimTemplates []VolumeClaimTemplate `json:"extraVolumeClaimTemplates,omitempty"`
+}
+type VolumeClaimTemplate struct {
+	// Specifies the desired metadata of a volume claim
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Metadata"
+	ObjectMeta `json:"metadata,omitempty"`
+
+	// Specifies the desired characteristics of a volume claim
+	// More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Spec"
+	Spec corev1.PersistentVolumeClaimSpec `json:"spec,omitempty"`
+}
+
+type ObjectMeta struct {
+	// Name must be unique within a namespace. Is required when creating resources, although
+	// some resources may allow a client to request the generation of an appropriate name
+	// automatically. Name is primarily intended for creation idempotence and configuration
+	// definition.
+	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#names
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Name",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:text"}
+	Name string `json:"name,omitempty"`
+
+	// Annotations is an unstructured key value map stored with a resource that may be
+	// set by external tools to store and retrieve arbitrary metadata. They are not
+	// queryable and should be preserved when modifying objects.
+	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Annotations"
+	Annotations map[string]string `json:"annotations,omitempty"`
+
+	// Map of string keys and values that can be used to organize and categorize
+	// (scope and select) objects. May match selectors of replication controllers
+	// and services.
+	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Labels"
+	Labels map[string]string `json:"labels,omitempty"`
 }
 
 type ResourceTemplate struct {

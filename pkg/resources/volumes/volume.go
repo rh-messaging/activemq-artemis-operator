@@ -116,3 +116,28 @@ func MakeVolumeForSecret(secretName string) corev1.Volume {
 	}
 	return volume
 }
+
+func GetDefaultMountPath(volume *corev1.Volume) string {
+	return "/amq/extra/volumes/" + volume.Name
+}
+
+func MakeVolumeMountForVolume(vol *corev1.Volume) *corev1.VolumeMount {
+	volumeMount := corev1.VolumeMount{
+		Name:      vol.Name,
+		MountPath: GetDefaultMountPath(vol),
+	}
+	return &volumeMount
+}
+
+func GetDefaultExternalPVCMountPath(nameBase string) *string {
+	var path = "/opt/" + nameBase + "/data"
+	return &path
+}
+
+func NewVolumeMountForPVC(name string) *corev1.VolumeMount {
+	vMount := &corev1.VolumeMount{
+		Name:      name,
+		MountPath: *GetDefaultExternalPVCMountPath(name),
+	}
+	return vMount
+}

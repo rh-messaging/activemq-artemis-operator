@@ -826,7 +826,7 @@ spec:
 ```
 
 ## Providing additional brokerProperties configuration from a secret
-It is possible to replace the use of the activemqartemisaddresses CRD and much of the activemqartemissecurities CRD with configuration via broker properties. This can necessitate a large amount of configuration in the CR.brokerPropertis field.
+It is possible to replace the use of the activemqartemisaddresses CRD and much of the activemqartemissecurities CRD with configuration via broker properties. This can necessitate a large amount of configuration in the CR.brokerProperties field.
 In order to provide a way to split or orgainse these properties by file or by secret, an extra mount can be used to provide a secret that will be treated as an additional source of broker properties configuration.
 Using an **extraMounts** secret with a suffix "-bp" will cause the operator to auto mount the secret and make the broker aware of it's location. In addition the CR.Status.Condition[BrokerPropertiesApplied] will reflect the content of this secret.
 Broker properties are applied in order, starting with the CR.brokerProperties and then with the "-bp" auto mounts in turn. Keys (or property files) from secrets are applied in alphabetical order.
@@ -1114,3 +1114,79 @@ stringData:
   jolokiaUser: alice
   jolokiaPassword: password1
 ```
+
+## Configuring Additional Volumes to the Broker
+
+### Attaching extra volumes shared by all broker pods
+
+When you have some existing volumes to be used by brokers, you can use **spec.deploymentPlan.extraVolumes** and **spec.deploymentPlan.extraVolumeMounts** to configure a broker custom resource to mount those volumes. For example if you have a PersistentVolumeClaim type volume called **my-pvc** and it has 1G capacity with some useful data in it:
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: my-pvc
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+```
+You can configure a broker CR to use it:
+
+```yaml
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: artemis-broker
+spec:
+  deploymentPlan:
+    size: 2
+    extraVolumes:
+      - name: mydata
+        persistentVolumeClaim:
+          claimName: my-pvc
+    extraVolumeMounts:
+      - name: mydata
+        mountPath: /opt/mydata
+```
+When deploying the above CR, the PVC volume will be mounted to path **/opt/mydata** in the broker container of both broker pods. The **extraVolumeMounts** is optional. If not specified a default mountPath is given based on the type of the volume, following the pattern:
+
+/amq/extra/<volume-type>/<volume.name>
+
+For example if you configure to attach a PersistentVolumeClaim type volume called `mydata`, the default mount path is **/amq/extra/volumes/mydata**.
+
+### Attaching extra persistent volume claims to each broker
+
+The operator also supports configuration for each of the brokers of a custom resource to have a separate persistent volume. To do this you need configure the CR using **spec.extraVolumeClaimTemplates** in your CR. For example:
+
+```yaml
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: artemis-broker
+spec:
+  deploymentPlan:
+    extraVolumeClaimTemplates:
+    - metadata:
+        name: mydata
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Mi
+    size: 2
+    extraVolumeMounts:
+      - name: mydata
+        mountPath: /opt/mydata
+```
+The **extraVolumeClaimTemplates** is a list of PVC specs. The key is the **pvc name base** of the PVC. The value is of type [persistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#persistentvolumeclaimspec-v1-core)
+
+When deploying the above CR, the operator will append the external PVC to the statefulset's PersistentVolumeClaimTemplate field. When the statesulset rolls out the pods it will mount matching PVCs to each pod.
+
+Note for each pod the PVC's name must follow the pattern `<volumeName>-<statefulset-name>-<ordinal>`.
+For the above CR the matching PVC names are **mydata-artemis-broker-ss-0** for pod0 and **mydata-artemis-broker-ss-1** for pod1 respectively. You can configure an optional VolumeMount for each PVC under **extraVolumeMounts**. If not specified the default mount path is **/opt/<volumeName>/data**.
+
+For complete configruation options please take a look at the api definitions of [broker CRD](../../api/v1beta1/activemqartemis_types.go).

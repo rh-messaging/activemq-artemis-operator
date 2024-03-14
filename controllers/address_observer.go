@@ -84,7 +84,7 @@ func (c *AddressObserver) newPodReady(ready *types.NamespacedName) {
 
 	//find out real name of the pod basename-(num - 1)
 	//podBaseNames is our interested statefulsets name
-	podBaseName, podSerial, labels := GetStatefulSetNameForPod(c.opclient, ready, c.log)
+	podBaseName, podSerial, _ := GetStatefulSetNameForPod(c.opclient, ready, c.log)
 	if podBaseName == "" {
 		c.log.V(1).Info("Pod is not a candidate")
 		return
@@ -107,10 +107,10 @@ func (c *AddressObserver) newPodReady(ready *types.NamespacedName) {
 		return
 	}
 
-	c.checkCRsForNewPod(pod, labels)
+	c.checkCRsForNewPod(pod)
 }
 
-func (c *AddressObserver) checkCRsForNewPod(newPod *corev1.Pod, labels map[string]string) {
+func (c *AddressObserver) checkCRsForNewPod(newPod *corev1.Pod) {
 	//get the address cr instances
 	addressInstances, err := c.getAddressInstances(newPod)
 	if err != nil || len(addressInstances.Items) == 0 {

@@ -1003,6 +1003,38 @@ spec:
       - description: Specifies Secret names
         displayName: Secret Names
         path: deploymentPlan.extraMounts.secrets
+      - description: Specifies Extra Volume Claims Templates for the broker pods
+        displayName: Extra Volume Claims Templates
+        path: deploymentPlan.extraVolumeClaimTemplates
+      - description: 'Annotations is an unstructured key value map stored with a resource
+          that may be set by external tools to store and retrieve arbitrary metadata.
+          They are not queryable and should be preserved when modifying objects. More
+          info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations'
+        displayName: Annotations
+        path: deploymentPlan.extraVolumeClaimTemplates[0].annotations
+      - description: 'Map of string keys and values that can be used to organize and
+          categorize (scope and select) objects. May match selectors of replication
+          controllers and services. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels'
+        displayName: Labels
+        path: deploymentPlan.extraVolumeClaimTemplates[0].labels
+      - description: 'Name must be unique within a namespace. Is required when creating
+          resources, although some resources may allow a client to request the generation
+          of an appropriate name automatically. Name is primarily intended for creation
+          idempotence and configuration definition. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#names'
+        displayName: Name
+        path: deploymentPlan.extraVolumeClaimTemplates[0].name
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: 'Specifies the desired characteristics of a volume claim More
+          info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims'
+        displayName: Spec
+        path: deploymentPlan.extraVolumeClaimTemplates[0].spec
+      - description: Specifies mount options for extraVolumes
+        displayName: Extra Mount Options
+        path: deploymentPlan.extraVolumeMounts
+      - description: Specifies additional Volumes to be attached to the broker pods
+        displayName: Extra Volumes
+        path: deploymentPlan.extraVolumes
       - description: The image used for the broker, all upgrades are disabled. Needs
           a corresponding initImage
         displayName: Image

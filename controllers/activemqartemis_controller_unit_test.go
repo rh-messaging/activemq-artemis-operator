@@ -40,7 +40,7 @@ func TestValidate(t *testing.T) {
 
 	namer := MakeNamers(cr)
 
-	valid, retry := validate(cr, k8sClient, nil, *namer)
+	valid, retry := validate(cr, k8sClient, *namer)
 
 	assert.False(t, valid)
 	assert.False(t, retry)

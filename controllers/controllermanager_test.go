@@ -148,11 +148,14 @@ var _ = Describe("tests regarding controller manager", func() {
 
 					By("sending message to pod for scale down")
 					podWithOrdinal := namer.CrToSS(createdCr.Name) + "-1"
-					sendCmd := []string{"amq-broker/bin/artemis", "producer", "--user", "Jay", "--password", "activemq", "--url", "tcp://" + podWithOrdinal + ":61616", "--message-count", "1", "--destination", "TEST", "--verbose"}
+					Eventually(func(g Gomega) {
 
-					content, err := RunCommandInPodWithNamespace(podWithOrdinal, restrictedNamespace, createdCr.Name+"-container", sendCmd)
-					Expect(err).To(BeNil())
-					Expect(*content).Should(ContainSubstring("Produced: 1 messages"))
+						sendCmd := []string{"amq-broker/bin/artemis", "producer", "--user", "Jay", "--password", "activemq", "--url", "tcp://" + podWithOrdinal + ":61616", "--message-count", "1", "--destination", "TEST", "--verbose"}
+						content, err := RunCommandInPodWithNamespace(podWithOrdinal, restrictedNamespace, createdCr.Name+"-container", sendCmd)
+						g.Expect(err).To(BeNil())
+						g.Expect(*content).Should(ContainSubstring("Produced: 1 messages"))
+
+					}, timeout, interval).Should(Succeed())
 
 					By("Scaling down to pod 0")
 					podWithOrdinal = namer.CrToSS(createdCr.Name) + "-0"
@@ -168,7 +171,7 @@ var _ = Describe("tests regarding controller manager", func() {
 						g.Expect(err).To(BeNil())
 						g.Expect(*reply).To(ContainSubstring("\"value\":1"))
 
-					}, existingClusterTimeout, interval*2).Should(Succeed())
+					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 				}
 
 				CleanResource(createdCr, cr.Name, restrictedNamespace)

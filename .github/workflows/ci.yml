@@ -32,6 +32,9 @@ jobs:
           cpus: 2
           memory: 4g
 
+      - name: Check go.mod and go.sum files
+        run: go mod tidy && git status && git diff-index --quiet HEAD --
+
       - name: Check generate files
         run: make generate-deploy && make bundle && git status && git diff-index --quiet HEAD --
 

@@ -88,7 +88,7 @@ func (r *ActiveMQArtemisAddressReconciler) Reconcile(ctx context.Context, reques
 			// Delete action
 			if lookupSucceeded {
 				if addressInstance.AddressResource.Spec.RemoveFromBrokerOnDelete {
-					err = r.deleteQueue(&addressInstance, request, r.Client, r.Scheme)
+					err = r.deleteQueue(&addressInstance, request, r.Client)
 					if err != nil {
 						reqLogger.Error(err, "Failed to delete the queue")
 					}
@@ -128,7 +128,7 @@ func (r *ActiveMQArtemisAddressReconciler) Reconcile(ctx context.Context, reques
 		}
 	}
 
-	err = r.createQueue(&addressDeployment, request, r.Client, r.Scheme)
+	err = r.createQueue(&addressDeployment, request, r.Client)
 	if nil == err {
 		namespacedNameToAddressName[request.NamespacedName] = addressDeployment
 		crstr, merr := common.ToJson(instance)
@@ -187,7 +187,7 @@ func (r *ActiveMQArtemisAddressReconciler) createNameBuilders(instance *brokerv1
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ActiveMQArtemisAddressReconciler) SetupWithManager(mgr ctrl.Manager, ctx context.Context) error {
-	go r.setupAddressObserver(mgr, channels.AddressListeningCh, ctx)
+	go r.setupAddressObserver(mgr, ctx)
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&brokerv1beta1.ActiveMQArtemisAddress{}).
 		Owns(&corev1.Pod{}).
@@ -195,12 +195,12 @@ func (r *ActiveMQArtemisAddressReconciler) SetupWithManager(mgr ctrl.Manager, ct
 }
 
 // This method deals with creating queues and addresses.
-func (r *ActiveMQArtemisAddressReconciler) createQueue(instance *AddressDeployment, request ctrl.Request, client client.Client, scheme *runtime.Scheme) error {
+func (r *ActiveMQArtemisAddressReconciler) createQueue(instance *AddressDeployment, request ctrl.Request, client client.Client) error {
 
 	r.log.V(1).Info("Creating ActiveMQArtemisAddress")
 
 	var err error = nil
-	artemisArray := r.getPodBrokers(instance, request, client, scheme)
+	artemisArray := r.getPodBrokers(instance, request, client)
 	if nil != artemisArray {
 		for _, a := range artemisArray {
 			if nil == a {
@@ -323,7 +323,7 @@ func (ar *AddressRetry) safeDelete() {
 }
 
 // This method deals with deleting queues and addresses.
-func (r *ActiveMQArtemisAddressReconciler) deleteQueue(instance *AddressDeployment, request ctrl.Request, client client.Client, scheme *runtime.Scheme) error {
+func (r *ActiveMQArtemisAddressReconciler) deleteQueue(instance *AddressDeployment, request ctrl.Request, client client.Client) error {
 
 	reqLogger := r.log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 
@@ -337,7 +337,7 @@ func (r *ActiveMQArtemisAddressReconciler) deleteQueue(instance *AddressDeployme
 	reqLogger.V(1).Info("Deleting ActiveMQArtemisAddress for queue " + addressName + "/" + queueName)
 
 	var err error = nil
-	artemisArray := r.getPodBrokers(instance, request, client, scheme)
+	artemisArray := r.getPodBrokers(instance, request, client)
 	if nil != artemisArray {
 		addressRetry := NewAddressRetry(addressName, make([]*mgmt.Artemis, 0), r.log.WithName("retry"))
 		for _, a := range artemisArray {
@@ -375,7 +375,7 @@ func (r *ActiveMQArtemisAddressReconciler) deleteQueue(instance *AddressDeployme
 	return err
 }
 
-func (r *ActiveMQArtemisAddressReconciler) getPodBrokers(instance *AddressDeployment, request ctrl.Request, client client.Client, scheme *runtime.Scheme) []*jc.JkInfo {
+func (r *ActiveMQArtemisAddressReconciler) getPodBrokers(instance *AddressDeployment, request ctrl.Request, client client.Client) []*jc.JkInfo {
 	reqLogger := r.log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.V(2).Info("Getting Pod Brokers for address " + instance.AddressResource.Namespace + "/" + instance.AddressResource.Name)
 	targetCrNamespacedNames := createTargetCrNamespacedNames(request.Namespace, instance.AddressResource.Spec.ApplyToCrNames, reqLogger)
@@ -446,7 +446,7 @@ func GetStatefulSetNameForPod(client client.Client, pod *types.NamespacedName, l
 	return "", -1, nil
 }
 
-func (r *ActiveMQArtemisAddressReconciler) setupAddressObserver(mgr manager.Manager, c chan types.NamespacedName, ctx context.Context) {
+func (r *ActiveMQArtemisAddressReconciler) setupAddressObserver(mgr manager.Manager, ctx context.Context) {
 	r.log.V(2).Info("Setting up address observer")
 
 	kubeClient, err := kubernetes.NewForConfig(mgr.GetConfig())

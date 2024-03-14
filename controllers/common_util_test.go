@@ -38,6 +38,7 @@ import (
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -45,6 +46,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -749,4 +751,55 @@ func CreateTlsSecret(secretName string, ns string, ksPassword string, nsNames []
 
 func StringToPtr(v string) *string {
 	return &v
+}
+
+func DeployCustomPVC(name string, targetNamespace string, customFunc func(candidate *corev1.PersistentVolumeClaim)) (*corev1.PersistentVolumeClaim, *corev1.PersistentVolumeClaim) {
+	ctx := context.Background()
+	pvc := corev1.PersistentVolumeClaim{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "PersistentVolumeClaim",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: targetNamespace,
+		},
+	}
+
+	if customFunc != nil {
+		customFunc(&pvc)
+	}
+
+	Expect(k8sClient.Create(ctx, &pvc)).Should(Succeed())
+
+	createdPvc := corev1.PersistentVolumeClaim{}
+
+	Eventually(func() bool {
+		return getPersistedVersionedCrd(pvc.Name, targetNamespace, &createdPvc)
+	}, timeout, interval).Should(BeTrue())
+	Expect(createdPvc.Name).Should(Equal(pvc.Name))
+	Expect(createdPvc.Namespace).Should(Equal(targetNamespace))
+
+	return &pvc, &createdPvc
+}
+
+func WaitForPod(crName string, iPods ...int32) {
+	ssKey := types.NamespacedName{
+		Name:      namer.CrToSS(crName),
+		Namespace: defaultNamespace,
+	}
+
+	currentSS := &appsv1.StatefulSet{}
+
+	for podOrdinal := range iPods {
+		podKey := types.NamespacedName{Name: namer.CrToSS(crName) + "-" + strconv.Itoa(podOrdinal), Namespace: defaultNamespace}
+		pod := &corev1.Pod{}
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, ssKey, currentSS)).Should(Succeed())
+			g.Expect(k8sClient.Get(ctx, podKey, pod)).Should(Succeed())
+			g.Expect(len(pod.Status.ContainerStatuses)).Should(Equal(1))
+			g.Expect(pod.Status.ContainerStatuses[0].State.Running).ShouldNot(BeNil())
+		}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+	}
 }
