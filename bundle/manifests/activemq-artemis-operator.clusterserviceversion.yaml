@@ -230,7 +230,7 @@ metadata:
     capabilities: Basic Install
     operators.operatorframework.io/builder: operator-sdk-v1.28.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
-  name: activemq-artemis-operator.v1.1.0
+  name: activemq-artemis-operator.v7.12.0-opr-1
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -307,8 +307,9 @@ spec:
                 control-plane: controller-manager
                 name: amq-broker-operator
                 rht.comp: Broker_AMQ
-                rht.comp_ver: 7.x.x
+                rht.comp_ver: 7.12.0
                 rht.prod_name: Red_Hat_Integration
+                rht.prod_ver: 2024.Q1
                 rht.subcomp: broker-amq-operator
                 rht.subcomp_t: application
             spec:
@@ -749,4 +750,4 @@ spec:
     name: ""
   - image: registry.redhat.io/amq7/amq-broker-rhel8@sha256:9630a8e1dbc01e26a66b92aa420b906190c16c8ecd9b5dc2b19dcfbb5e758d05
     name: ""
-  version: 1.1.0
+  version: 7.12.0-opr-1
