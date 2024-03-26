@@ -65,10 +65,11 @@ spec:
                       type: boolean
                     exposeMode:
                       description: Mode to expose the acceptor. Currently the supported
-                        modes are `route` and `ingress`. Default is `route` on OpenShift
-                        and `ingress` on Kubernetes. \n\n* `route` mode uses OpenShift
-                        Routes to expose the acceptor.\n* `ingress` mode uses Kubernetes
-                        Nginx Ingress to expose the acceptor with TLS passthrough.\n"
+                        modes are `route` and `ingress`. It is ignored when the field
+                        `Expose` is false. Default is `route` on OpenShift and `ingress`
+                        on Kubernetes. \n\n* `route` mode uses OpenShift Routes to
+                        expose the acceptor.\n* `ingress` mode uses Kubernetes Nginx
+                        Ingress to expose the acceptor with TLS passthrough.\n"
                       enum:
                       - ingress
                       - route
@@ -77,7 +78,8 @@ spec:
                       description: 'Host for Ingress and Route resources of the acceptor.
                         It supports the following variables: $(CR_NAME), $(CR_NAMESPACE),
                         $(BROKER_ORDINAL), $(ITEM_NAME), $(RES_NAME) and $(INGRESS_DOMAIN).
-                        Default is $(CR_NAME)-$(ITEM_NAME)-$(BROKER_ORDINAL)-svc-$(RES_TYPE)-$(CR_NAMESPACE).$(INGRESS_DOMAIN)'
+                        It is required for the acceptors exposed with the ingress
+                        mode when the ingress domain is not specified.'
                       type: string
                     keyStoreProvider:
                       description: Provider used for the keystore; "SUN", "SunJCE",
@@ -488,10 +490,11 @@ spec:
                       type: boolean
                     exposeMode:
                       description: Mode to expose the connector. Currently the supported
-                        modes are `route` and `ingress`. Default is `route` on OpenShift
-                        and `ingress` on Kubernetes. \n\n* `route` mode uses OpenShift
-                        Routes to expose the connector.\n* `ingress` mode uses Kubernetes
-                        Nginx Ingress to expose the connector with TLS passthrough.\n"
+                        modes are `route` and `ingress`. It is ignored when the field
+                        `Expose` is false. Default is `route` on OpenShift and `ingress`
+                        on Kubernetes. \n\n* `route` mode uses OpenShift Routes to
+                        expose the connector.\n* `ingress` mode uses Kubernetes Nginx
+                        Ingress to expose the connector with TLS passthrough.\n"
                       enum:
                       - ingress
                       - route
@@ -503,7 +506,8 @@ spec:
                       description: 'Host for Ingress and Route resources of the acceptor.
                         It supports the following variables: $(CR_NAME), $(CR_NAMESPACE),
                         $(BROKER_ORDINAL), $(ITEM_NAME), $(RES_NAME) and $(INGRESS_DOMAIN).
-                        Default is $(CR_NAME)-$(ITEM_NAME)-$(BROKER_ORDINAL)-svc-$(RES_TYPE)-$(CR_NAMESPACE).$(INGRESS_DOMAIN)'
+                        It is required for the connectors exposed with the ingress
+                        mode when the ingress domain is not specified.'
                       type: string
                     keyStoreProvider:
                       description: Provider used for the keystore; "SUN", "SunJCE",
@@ -570,10 +574,11 @@ spec:
                     type: boolean
                   exposeMode:
                     description: Mode to expose the console. Currently the supported
-                      modes are `route` and `ingress`. Default is `route` on OpenShift
-                      and `ingress` on Kubernetes. \n\n* `route` mode uses OpenShift
-                      Routes to expose the console.\n* `ingress` mode uses Kubernetes
-                      Nginx Ingress to expose the console with TLS passthrough.\n"
+                      modes are `route` and `ingress`. It is ignored when the field
+                      `Expose` is false. Default is `route` on OpenShift and `ingress`
+                      on Kubernetes. \n\n* `route` mode uses OpenShift Routes to expose
+                      the console.\n* `ingress` mode uses Kubernetes Nginx Ingress
+                      to expose the console with TLS passthrough.\n"
                     enum:
                     - ingress
                     - route
@@ -582,7 +587,8 @@ spec:
                     description: 'Host for Ingress and Route resources of the acceptor.
                       It supports the following variables: $(CR_NAME), $(CR_NAMESPACE),
                       $(BROKER_ORDINAL), $(ITEM_NAME), $(RES_NAME) and $(INGRESS_DOMAIN).
-                      Default is $(CR_NAME)-$(ITEM_NAME)-$(BROKER_ORDINAL)-svc-$(RES_TYPE)-$(CR_NAMESPACE).$(INGRESS_DOMAIN)'
+                      It is required for the console exposed with the ingress mode
+                      when the ingress domain is not specified.'
                     type: string
                   name:
                     description: The name of the console. Default is wconsj.
@@ -4757,9 +4763,9 @@ spec:
                   type: object
                 type: array
               ingressDomain:
-                description: The ingress domain to expose the application. By default,
-                  on Kubernetes it is apps.artemiscloud.io and on OpenShift it is
-                  the Ingress Controller domain.
+                description: The default ingress domain. It is required when any acceptor,
+                  connector or console uses the ingress mode and does not specify
+                  an IngressHost.
                 type: string
               resourceTemplates:
                 description: Specifies the template for various resources that the

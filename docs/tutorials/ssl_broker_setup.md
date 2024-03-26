@@ -201,6 +201,59 @@ Consumer ActiveMQQueue[TEST], thread=0 Consumer thread finished
 ```
 Now you get an idea how an SSL acceptor is configured and processed by the operator and see it in action!
 
+### Secure cluster connections
+The internal cluster connections rely on the internal acceptor listening on the port `61616` and the internal connector with the name `artemis`. They can be secured with the following steps, create a secret with the secure stores, enable ssl in the internal acceptor by using the acceptor fields `sslEnabled` and `sslSecret`, and enable ssl in the internal connector by using broker properties
+
+The server certificate included in the secure stores must include a wildcard DNS name for the internal broker instances in the `Subject Alternative Name`, i.e. for an ActiveMQArtemis CR with name `ex-aao` deployed in the namespace `test` a key and trust store with a self -signed certificate could be generated with the following commands:
+```
+keytool -storetype jks -keystore server-keystore.jks -storepass artemis -keypass artemis -alias server -genkey -keyalg "RSA" -keysize 2048 -dname "CN=ActiveMQ Artemis Server, OU=Artemis, O=ActiveMQ, L=AMQ, S=AMQ, C=AMQ" -validity 365 -ext bc=ca:false -ext eku=sA -ext san=dns:*.ex-aao-hdls-svc.test.svc.cluster.local
+
+keytool -storetype jks -keystore server-keystore.jks -storepass artemis -alias server -exportcert -rfc > server.crt
+
+keytool -storetype jks -keystore server-truststore.jks -storepass artemis -keypass artemis -importcert -alias server -file server.crt -noprompt
+```
+If the wildcard DNS names are not supported a DNS name for every internal broker instance could be included in the `Subject Alternative Name`, i.e.
+```
+keytool -storetype jks -keystore server-keystore.jks -storepass artemis -keypass artemis -alias server -genkey -keyalg "RSA" -keysize 2048 -dname "CN=ActiveMQ Artemis Server, OU=Artemis, O=ActiveMQ, L=AMQ, S=AMQ, C=AMQ" -validity 365 -ext bc=ca:false -ext eku=sA -ext san=dns:ex-aao-ss-0.ex-aao-hdls-svc.test.svc.cluster.local,dns:ex-aao-ss-1.ex-aao-hdls-svc.test.svc.cluster.local
+```
+If DNS names are not supported the host verification must be disabled setting the connector parameter `verifyHost` to false by using the broker properties, i.e.
+```
+  brokerProperties:
+    - 'connectorConfigurations.artemis.params.verifyHost=false'
+```
+
+The secret with the secure stores can be created by using the following command:
+```
+kubectl create secret generic artemis-ssl-secret --namespace test \
+--from-file=broker.ks=server-keystore.jks \
+--from-file=client.ts=server-truststore.jks \
+--from-literal=keyStorePassword=artemis \
+--from-literal=trustStorePassword=artemis
+```
+
+The ActiveMQ Artemis with the secured internal acceptor and connector can be created by using the following command:
+```
+kubectl apply -f - <<EOF
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: ex-aao
+  namespace: test
+spec:
+  deploymentPlan:
+    size: 2
+  acceptors:
+    - name: artemis
+      port: 61616
+      sslEnabled: true
+      sslSecret: artemis-ssl-secret
+  brokerProperties:
+    - 'connectorConfigurations.artemis.params.sslEnabled=true'
+    - 'connectorConfigurations.artemis.params.trustStorePath=/etc/artemis-ssl-secret-volume/broker.ks'
+    - 'connectorConfigurations.artemis.params.trustStorePassword=artemis'
+EOF
+```
+
 ### More SSL options
 We have just demonstrated a simplified SSL configuration. In fact the operator supports quite a few more SSL options through the CRD definitions.
 You can checkout those options in broker CRD [down here](https://github.com/artemiscloud/activemq-artemis-operator/blob/5183ddc4c2f66e0d270233a3f37340b14e225d80/deploy/crds/broker_activemqartemis_crd.yaml#L45)

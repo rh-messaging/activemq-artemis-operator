@@ -369,6 +369,10 @@ var _ = Describe("security controller", func() {
 				brokerCrdToDeploy.Spec.DeploymentPlan.PersistenceEnabled = true
 				brokerCrdToDeploy.Spec.DeploymentPlan.RequireLogin = true
 				brokerCrdToDeploy.Spec.DeploymentPlan.Size = common.Int32ToPtr(1)
+
+				if !isOpenshift {
+					brokerCrdToDeploy.Spec.IngressDomain = defaultTestIngressDomain
+				}
 			})
 
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {

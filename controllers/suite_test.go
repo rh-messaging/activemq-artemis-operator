@@ -90,6 +90,9 @@ const (
 	namespace2              = "namespace2"
 	namespace3              = "namespace3"
 	specShortNameLimit      = 25
+
+	// Default ingress domain for tests
+	defaultTestIngressDomain = "tests.artemiscloud.io"
 )
 
 var (

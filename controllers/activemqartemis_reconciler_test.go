@@ -971,6 +971,60 @@ func TestProcess_TemplateCustomAttributeContainerSecurityContext(t *testing.T) {
 	assert.True(t, runAsRootOk)
 }
 
+func TestProcess_TemplateCustomAttributePriorityClassName(t *testing.T) {
+
+	var kindMatchSs string = "StatefulSet"
+
+	cr := &brokerv1beta1.ActiveMQArtemis{
+		ObjectMeta: metav1.ObjectMeta{Name: "cr"},
+		Spec: brokerv1beta1.ActiveMQArtemisSpec{
+			ResourceTemplates: []brokerv1beta1.ResourceTemplate{
+				{
+					Selector: &brokerv1beta1.ResourceSelector{
+						Kind: &kindMatchSs,
+					},
+					Patch: &unstructured.Unstructured{Object: map[string]interface{}{
+						"spec": map[string]interface{}{
+							"template": map[string]interface{}{
+								"spec": map[string]interface{}{
+									"priorityClassName": "high-priority",
+								},
+							},
+						},
+					},
+					},
+				},
+			},
+		},
+	}
+
+	reconciler := NewActiveMQArtemisReconcilerImpl(
+		cr,
+		ctrl.Log.WithName("test"),
+		scheme.Scheme,
+	)
+
+	namer := MakeNamers(cr)
+
+	newSS, _ := reconciler.ProcessStatefulSet(cr, *namer, nil)
+	reconciler.trackDesired(newSS)
+
+	fakeClient := fake.NewClientBuilder().Build()
+	err := reconciler.ProcessResources(cr, fakeClient, nil)
+	assert.NoError(t, err)
+
+	var priorityClassNameOk = false
+	for _, resource := range reconciler.requestedResources {
+
+		if ss, ok := resource.(*appsv1.StatefulSet); ok {
+			assert.Equal(t, ss.Spec.Template.Spec.PriorityClassName, "high-priority")
+			priorityClassNameOk = true
+		}
+
+	}
+	assert.True(t, priorityClassNameOk)
+}
+
 func TestNewPodTemplateSpecForCR_AppendsDebugArgs(t *testing.T) {
 
 	cr := &brokerv1beta1.ActiveMQArtemis{

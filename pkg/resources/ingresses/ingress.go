@@ -7,8 +7,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-const defaultIngressDomain string = "apps.artemiscloud.io"
-
 func NewIngressForCRWithSSL(existing *netv1.Ingress, namespacedName types.NamespacedName, labels map[string]string, targetServiceName string, targetPortName string, sslEnabled bool, domain string, brokerHost string, isOpenshift bool) *netv1.Ingress {
 
 	pathType := netv1.PathTypePrefix
@@ -68,14 +66,11 @@ func NewIngressForCRWithSSL(existing *netv1.Ingress, namespacedName types.Namesp
 		}
 	}
 
-	if domain == "" {
-		domain = defaultIngressDomain
-	}
-
-	host := desired.GetObjectMeta().GetName() + "-" + namespacedName.Namespace + "." + domain
-
+	host := ""
 	if brokerHost != "" {
 		host = brokerHost
+	} else if domain != "" {
+		host = desired.GetObjectMeta().GetName() + "-" + namespacedName.Namespace + "." + domain
 	}
 
 	desired.Spec.Rules[0].Host = host

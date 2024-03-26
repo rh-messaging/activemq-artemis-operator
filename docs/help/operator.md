@@ -651,7 +651,6 @@ The use of Taints and Tolerations is outside the scope of this document, for ful
 
 It is possible to configure Affinity for the container pods, An example of this would be:
 
-
 ```yaml
 apiVersion: broker.amq.io/v1beta1
 kind: ActiveMQArtemis
@@ -669,18 +668,56 @@ spec:
                   operator: In
                   values:
                     - ssd
-  acceptors:
-    - name: "artemis"
-      port: 61617
-      protocols: core
 ```
 
 Affinity is outside the scope of this document, for full documentation see the [Kubernetes Documentation](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes-using-node-affinity/)
 
-### Labels and Node Selectors
+### Node Selectors
+
+It is possible to configure Node Selectors for the container pods, An example of this would be:
+
+```yaml
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: broker
+  namespace: activemq-artemis-operator
+spec:
+  deploymentPlan:
+    nodeSelector:
+      location: "production"
+```
+
+Node Selectors are outside the scope of this document, for full documentation see the [Kubernetes Documentation](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/)
+
+### Priority Class
+
+It is possible to configure PriorityClassName for the container pods, An example of this would be:
+
+```yaml
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: broker
+  namespace: activemq-artemis-operator
+spec:
+  resourceTemplates:
+    - selector:
+        kind: StatefulSet
+      patch:
+        spec:
+          template:
+            spec:
+              priorityClassName: high-priority
+```
+
+Pod Priority is outside the scope of this document, for full documentation see the [Kubernetes Documentation](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/)
+
+## Configuring Labels and Annotations
+
+### Labels
 
 Labels can be added to the pods by defining them like so:
-
 
 ```yaml
 apiVersion: broker.amq.io/v1beta1
@@ -693,36 +730,13 @@ spec:
     labels:
       location: "production"
       partition: "customerA"
-  acceptors:
-    - name: "artemis"
-      port: 61617
-      protocols: core
 ```
 
-It is also possible to configure a Node Selector for the container pods, this is configured like:
-
-```yaml
-apiVersion: broker.amq.io/v1beta1
-kind: ActiveMQArtemis
-metadata:
-  name: broker
-  namespace: activemq-artemis-operator
-spec:
-  deploymentPlan:
-    nodeSelector:
-      location: "production"
-  acceptors:
-    - name: "artemis"
-      port: 61617
-      protocols: core
-```
-
-labels Node Selectors are outside the scope of this document, for full documentation see the [Kubernetes Documentation](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/)
+Labels are outside the scope of this document, for full documentation see the [Kubernetes Documentation](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/)
 
 ### Annotations
 
 Annotations can be added to the pods by defining them like so:
-
 
 ```yaml
 apiVersion: broker.amq.io/v1beta1
@@ -738,6 +752,7 @@ spec:
 ```
 
 ### Custom Labels and Annotations on supporting resources; Services, Ingress, Secrets etc.
+
 It is possible to configure  ResourceTemplate(s) for resources that are managed by the operator.
 The TemplateType contains Labels and Annotations with an optional Selector. If the selector is empty
 the template matches all resources. Othewise it can be used to restrict what is matched.
@@ -758,8 +773,9 @@ spec:
        someKey: "somevalue"
 ```
 
-## Custom mods via a strategic merge patch
-Occasionally it is necessary to make customisations to the spec of a managed resource. The `resourceTemplate. patch` attribute can be used to apply such customisations. The `patch` is appled by the operator using a [strategic merge](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/update-api-object-kubectl-patch/#notes-on-the-strategic-merge-patch) before submitting to the api server.
+## Custom Modifications via a Strategic Merge Patch
+
+Occasionally it is necessary to make customisations to the spec of a managed resource. The `resourceTemplate.patch` attribute can be used to apply such customisations. The `patch` is appled by the operator using a [strategic merge](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/update-api-object-kubectl-patch/#notes-on-the-strategic-merge-patch) before submitting to the api server.
 In the following example, a custom security context is added to the internal broker container of the managed StatefulSet by patching just the required attribute. Note: `name` is the mergeKey, it must match that of the managed container with the CR.Name prefix:
 
 ```yaml
@@ -770,19 +786,19 @@ metadata:
 spec:
   resourceTemplates:
   - selector:
-     kind: "StatefulSet"
+      kind: "StatefulSet"
     patch:
-     kind: "StatefulSet"
-     spec:
-      template:
-       spec:
-        containers:
-        - name: "broker-container"
-          securityContext:
-           runAsNonRoot: true
+      kind: "StatefulSet"
+      spec:
+        template:
+          spec:
+            containers:
+            - name: "broker-container"
+              securityContext:
+                runAsNonRoot: true
 ```
 
-### Setting  Environment Variables
+## Setting  Environment Variables
 
 As an advanced option, you can set environment variables for containers using a CR.
 For example, to have the JDK output what it sees as 'the system', provide a relevant JDK_JAVA_OPTIONS key in the env attribute.

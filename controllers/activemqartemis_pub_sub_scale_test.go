@@ -205,6 +205,10 @@ var _ = Describe("pub sub scale", func() {
 
 				brokerCrd.Spec.DeploymentPlan.EnableMetricsPlugin = &boolTrue
 
+				if !isOpenshift {
+					brokerCrd.Spec.IngressDomain = defaultTestIngressDomain
+				}
+
 				By("provisioning the broker")
 				Expect(k8sClient.Create(ctx, &brokerCrd)).Should(Succeed())
 

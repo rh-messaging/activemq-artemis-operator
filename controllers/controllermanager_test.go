@@ -297,6 +297,10 @@ var _ = Describe("tests regarding controller manager", func() {
 					_, createdCr := DeployCustomBroker(ns, func(c *brokerv1beta1.ActiveMQArtemis) {
 						c.Name = brokerName
 						c.Spec.Console.Expose = true
+
+						if !isOpenshift {
+							c.Spec.IngressDomain = defaultTestIngressDomain
+						}
 					})
 					createdCrs = append(createdCrs, createdCr)
 				}

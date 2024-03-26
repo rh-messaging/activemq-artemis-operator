@@ -311,7 +311,7 @@ func validateExposeModes(customResource *brokerv1beta1.ActiveMQArtemis) (*metav1
 				return &metav1.Condition{
 					Type:    brokerv1beta1.ValidConditionType,
 					Status:  metav1.ConditionFalse,
-					Reason:  brokerv1beta1.ValidConditionFailedAcceptorWithInvalidExposeMode,
+					Reason:  brokerv1beta1.ValidConditionFailedInvalidExposeMode,
 					Message: fmt.Sprintf(".Spec.Acceptors %q has invalid expose mode route, it is only supported on OpenShift", acceptor.Name),
 				}, false
 			}
@@ -322,7 +322,7 @@ func validateExposeModes(customResource *brokerv1beta1.ActiveMQArtemis) (*metav1
 				return &metav1.Condition{
 					Type:    brokerv1beta1.ValidConditionType,
 					Status:  metav1.ConditionFalse,
-					Reason:  brokerv1beta1.ValidConditionFailedConnectorWithInvalidExposeMode,
+					Reason:  brokerv1beta1.ValidConditionFailedInvalidExposeMode,
 					Message: fmt.Sprintf(".Spec.Connectors %q has invalid expose mode route, it is only supported on OpenShift", connector.Name),
 				}, false
 			}
@@ -333,10 +333,45 @@ func validateExposeModes(customResource *brokerv1beta1.ActiveMQArtemis) (*metav1
 			return &metav1.Condition{
 				Type:    brokerv1beta1.ValidConditionType,
 				Status:  metav1.ConditionFalse,
-				Reason:  brokerv1beta1.ValidConditionFailedConsoleWithInvalidExposeMode,
+				Reason:  brokerv1beta1.ValidConditionFailedInvalidExposeMode,
 				Message: ".Spec.Console has invalid expose mode route, it is only supported on OpenShift",
 			}, false
 		}
+	}
+
+	for _, acceptor := range customResource.Spec.Acceptors {
+		if acceptor.Expose && (acceptor.ExposeMode != nil && *acceptor.ExposeMode == brokerv1beta1.ExposeModes.Ingress || !isOpenshift) &&
+			customResource.Spec.IngressDomain == "" && acceptor.IngressHost == "" {
+			return &metav1.Condition{
+				Type:    brokerv1beta1.ValidConditionType,
+				Status:  metav1.ConditionFalse,
+				Reason:  brokerv1beta1.ValidConditionFailedInvalidIngressSettings,
+				Message: fmt.Sprintf(".Spec.Acceptors %q has invalid ingress settings, IngressHost unspecified and no Spec.IngressDomain default domain provided", acceptor.Name),
+			}, false
+		}
+	}
+
+	for _, connector := range customResource.Spec.Connectors {
+		if connector.Expose && (connector.ExposeMode != nil && *connector.ExposeMode == brokerv1beta1.ExposeModes.Ingress || !isOpenshift) &&
+			customResource.Spec.IngressDomain == "" && connector.IngressHost == "" {
+			return &metav1.Condition{
+				Type:    brokerv1beta1.ValidConditionType,
+				Status:  metav1.ConditionFalse,
+				Reason:  brokerv1beta1.ValidConditionFailedInvalidIngressSettings,
+				Message: fmt.Sprintf(".Spec.Connectors %q has invalid ingress settings, IngressHost unspecified and no Spec.IngressDomain default domain provided", connector.Name),
+			}, false
+		}
+	}
+
+	console := customResource.Spec.Console
+	if console.Expose && (console.ExposeMode != nil && *console.ExposeMode == brokerv1beta1.ExposeModes.Ingress || !isOpenshift) &&
+		customResource.Spec.IngressDomain == "" && console.IngressHost == "" {
+		return &metav1.Condition{
+			Type:    brokerv1beta1.ValidConditionType,
+			Status:  metav1.ConditionFalse,
+			Reason:  brokerv1beta1.ValidConditionFailedInvalidIngressSettings,
+			Message: ".Spec.Console has invalid ingress settings, IngressHost unspecified and no Spec.IngressDomain default domain provided",
+		}, false
 	}
 
 	return nil, false

@@ -84,6 +84,10 @@ var _ = Describe("artemis controller", Label("do"), func() {
 					candidate.Spec.Console.Expose = true
 					candidate.Spec.Console.SSLEnabled = true
 					candidate.Spec.Console.SSLSecret = commonSecretName
+
+					if !isOpenshift {
+						candidate.Spec.IngressDomain = defaultTestIngressDomain
+					}
 				})
 
 				By("Check ready status")

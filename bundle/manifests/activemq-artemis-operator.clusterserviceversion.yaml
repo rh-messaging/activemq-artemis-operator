@@ -515,17 +515,18 @@ spec:
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Mode to expose the acceptor. Currently the supported modes are
-          `route` and `ingress`. Default is `route` on OpenShift and `ingress` on
-          Kubernetes. \n\n* `route` mode uses OpenShift Routes to expose the acceptor.\n*
-          `ingress` mode uses Kubernetes Nginx Ingress to expose the acceptor with
-          TLS passthrough.\n"
+          `route` and `ingress`. It is ignored when the field `Expose` is false. Default
+          is `route` on OpenShift and `ingress` on Kubernetes. \n\n* `route` mode
+          uses OpenShift Routes to expose the acceptor.\n* `ingress` mode uses Kubernetes
+          Nginx Ingress to expose the acceptor with TLS passthrough.\n"
         displayName: Expose Mode
         path: acceptors[0].exposeMode
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
       - description: 'Host for Ingress and Route resources of the acceptor. It supports
           the following variables: $(CR_NAME), $(CR_NAMESPACE), $(BROKER_ORDINAL),
-          $(ITEM_NAME), $(RES_NAME) and $(INGRESS_DOMAIN). Default is $(CR_NAME)-$(ITEM_NAME)-$(BROKER_ORDINAL)-svc-$(RES_TYPE)-$(CR_NAMESPACE).$(INGRESS_DOMAIN)'
+          $(ITEM_NAME), $(RES_NAME) and $(INGRESS_DOMAIN). It is required for the
+          acceptors exposed with the ingress mode when the ingress domain is not specified.'
         displayName: Ingress Host
         path: acceptors[0].ingressHost
         x-descriptors:
@@ -1043,10 +1044,10 @@ spec:
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Mode to expose the connector. Currently the supported modes are
-          `route` and `ingress`. Default is `route` on OpenShift and `ingress` on
-          Kubernetes. \n\n* `route` mode uses OpenShift Routes to expose the connector.\n*
-          `ingress` mode uses Kubernetes Nginx Ingress to expose the connector with
-          TLS passthrough.\n"
+          `route` and `ingress`. It is ignored when the field `Expose` is false. Default
+          is `route` on OpenShift and `ingress` on Kubernetes. \n\n* `route` mode
+          uses OpenShift Routes to expose the connector.\n* `ingress` mode uses Kubernetes
+          Nginx Ingress to expose the connector with TLS passthrough.\n"
         displayName: Expose Mode
         path: connectors[0].exposeMode
         x-descriptors:
@@ -1058,7 +1059,9 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:text
       - description: 'Host for Ingress and Route resources of the acceptor. It supports
           the following variables: $(CR_NAME), $(CR_NAMESPACE), $(BROKER_ORDINAL),
-          $(ITEM_NAME), $(RES_NAME) and $(INGRESS_DOMAIN). Default is $(CR_NAME)-$(ITEM_NAME)-$(BROKER_ORDINAL)-svc-$(RES_TYPE)-$(CR_NAMESPACE).$(INGRESS_DOMAIN)'
+          $(ITEM_NAME), $(RES_NAME) and $(INGRESS_DOMAIN). It is required for the
+          connectors exposed with the ingress mode when the ingress domain is not
+          specified.'
         displayName: Ingress Host
         path: connectors[0].ingressHost
         x-descriptors:
@@ -1146,17 +1149,18 @@ spec:
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Mode to expose the console. Currently the supported modes are
-          `route` and `ingress`. Default is `route` on OpenShift and `ingress` on
-          Kubernetes. \n\n* `route` mode uses OpenShift Routes to expose the console.\n*
-          `ingress` mode uses Kubernetes Nginx Ingress to expose the console with
-          TLS passthrough.\n"
+          `route` and `ingress`. It is ignored when the field `Expose` is false. Default
+          is `route` on OpenShift and `ingress` on Kubernetes. \n\n* `route` mode
+          uses OpenShift Routes to expose the console.\n* `ingress` mode uses Kubernetes
+          Nginx Ingress to expose the console with TLS passthrough.\n"
         displayName: Expose Mode
         path: console.exposeMode
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
       - description: 'Host for Ingress and Route resources of the acceptor. It supports
           the following variables: $(CR_NAME), $(CR_NAMESPACE), $(BROKER_ORDINAL),
-          $(ITEM_NAME), $(RES_NAME) and $(INGRESS_DOMAIN). Default is $(CR_NAME)-$(ITEM_NAME)-$(BROKER_ORDINAL)-svc-$(RES_TYPE)-$(CR_NAMESPACE).$(INGRESS_DOMAIN)'
+          $(ITEM_NAME), $(RES_NAME) and $(INGRESS_DOMAIN). It is required for the
+          console exposed with the ingress mode when the ingress domain is not specified.'
         displayName: Ingress Host
         path: console.ingressHost
         x-descriptors:
@@ -1382,9 +1386,8 @@ spec:
           not exclusive
         displayName: Environment Variables
         path: env
-      - description: The ingress domain to expose the application. By default, on
-          Kubernetes it is apps.artemiscloud.io and on OpenShift it is the Ingress
-          Controller domain.
+      - description: The default ingress domain. It is required when any acceptor,
+          connector or console uses the ingress mode and does not specify an IngressHost.
         displayName: Ingress Domain
         path: ingressDomain
         x-descriptors:
