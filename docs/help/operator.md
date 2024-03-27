@@ -844,9 +844,55 @@ spec:
 ## Providing additional brokerProperties configuration from a secret
 It is possible to replace the use of the activemqartemisaddresses CRD and much of the activemqartemissecurities CRD with configuration via broker properties. This can necessitate a large amount of configuration in the CR.brokerProperties field.
 In order to provide a way to split or orgainse these properties by file or by secret, an extra mount can be used to provide a secret that will be treated as an additional source of broker properties configuration.
+
 Using an **extraMounts** secret with a suffix "-bp" will cause the operator to auto mount the secret and make the broker aware of it's location. In addition the CR.Status.Condition[BrokerPropertiesApplied] will reflect the content of this secret.
+
 Broker properties are applied in order, starting with the CR.brokerProperties and then with the "-bp" auto mounts in turn. Keys (or property files) from secrets are applied in alphabetical order.
 
+To configure a specific broker instance in a "-bp" secret, use `broker-N` as the prefix for a key in the secret data. For example:
+
+Create two -bp secrets:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: config-1-bp
+stringData:
+  journal1.properties: |
+    journalFileSize=12345
+  broker-0.globalMem.properties: |
+    globalMaxSize=512M
+```
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: config-2-bp
+stringData:
+  journal2.properties: |
+    journalMinFiles=3
+  broker-1.globalMem.properties: |
+    globalMaxSize=12M
+```
+
+and add the above secrets to extraMounts in the CR:
+
+```yaml
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: ex-aao
+spec:
+  deploymentPlan:
+    size: 2
+    extraMounts:
+      secrets:
+      - "config-1-bp"
+      - "config-2-bp"
+```
+When the CR is deployed the broker in pod 0 broker will get `globalMaxSize=512M` and pod 1 broker will get `globalMaxSize=12M`. While both will get properties from `journal1.properties` of secret **config-1-bp** and `journal2.properties` from secret **config-2-bp**.
 
 ## Configuring Logging for Brokers
 

@@ -9322,6 +9322,111 @@ var _ = Describe("artemis controller", func() {
 			Expect(k8sClient.Delete(ctx, &crd)).To(Succeed())
 		})
 
+		It("-bp suffix secret broker-n support", Label("broker-n-bp-secret"), func() {
+
+			ctx := context.Background()
+
+			_, bpSecret1 := DeploySecret(defaultNamespace, func(candidate *corev1.Secret) {
+				candidate.Name = "config-1-bp"
+				candidate.StringData = map[string]string{
+					"journal1.properties":           `journalFileSize=12345`,
+					"broker-0.globalMem.properties": `globalMaxSize=512M`,
+				}
+			})
+
+			_, bpSecret2 := DeploySecret(defaultNamespace, func(candidate *corev1.Secret) {
+				candidate.Name = "config-2-bp"
+				candidate.StringData = map[string]string{
+					"journal2.properties":           `journalMinFiles=3`,
+					"broker-1.globalMem.properties": `globalMaxSize=12M`,
+				}
+			})
+
+			By("Deploying the CRD")
+			_, crd := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				candidate.Spec.DeploymentPlan.Size = common.Int32ToPtr(2)
+				candidate.Spec.DeploymentPlan.ExtraMounts.Secrets = []string{bpSecret1.Name, bpSecret2.Name}
+			})
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+				ssKey := types.NamespacedName{
+					Name:      namer.CrToSS(crd.Name),
+					Namespace: defaultNamespace,
+				}
+
+				By("checking statefulset is ready")
+				currentSS := &appsv1.StatefulSet{}
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, ssKey, currentSS)).Should(Succeed())
+					g.Expect(currentSS.Status.ReadyReplicas).To(Equal(int32(2)))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("checking pod 0 status that has properties applied")
+				podWithOrdinal0 := namer.CrToSS(crd.Name) + "-0"
+
+				curlUrl := "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/Status"
+				curlCmd := []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
+				Eventually(func(g Gomega) {
+					result, err := RunCommandInPod(podWithOrdinal0, crd.Name+"-container", curlCmd)
+					g.Expect(err).To(BeNil())
+					g.Expect(*result).To(ContainSubstring("journal1.properties"))
+					g.Expect(*result).To(ContainSubstring("broker-0.globalMem.properties"))
+					g.Expect(*result).To(ContainSubstring("journal2.properties"))
+					g.Expect(*result).NotTo(ContainSubstring("broker-1.globalMem.properties"))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				curlUrl = "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/GlobalMaxSize"
+				curlCmd = []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
+				Eventually(func(g Gomega) {
+					result, err := RunCommandInPod(podWithOrdinal0, crd.Name+"-container", curlCmd)
+					g.Expect(err).To(BeNil())
+					// 512M = 512 * 1024 * 1024
+					g.Expect(*result).To(ContainSubstring("\"value\":536870912"))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("checking pod 1 status that has properties applied")
+				podWithOrdinal1 := namer.CrToSS(crd.Name) + "-1"
+
+				curlUrl = "http://" + podWithOrdinal1 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/Status"
+				curlCmd = []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
+				Eventually(func(g Gomega) {
+					result, err := RunCommandInPod(podWithOrdinal1, crd.Name+"-container", curlCmd)
+					g.Expect(err).To(BeNil())
+					g.Expect(*result).To(ContainSubstring("journal1.properties"))
+					g.Expect(*result).To(ContainSubstring("broker-1.globalMem.properties"))
+					g.Expect(*result).To(ContainSubstring("journal2.properties"))
+					g.Expect(*result).NotTo(ContainSubstring("broker-0.globalMem.properties"))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				curlUrl = "http://" + podWithOrdinal1 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/GlobalMaxSize"
+				curlCmd = []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
+				Eventually(func(g Gomega) {
+					result, err := RunCommandInPod(podWithOrdinal1, crd.Name+"-container", curlCmd)
+					g.Expect(err).To(BeNil())
+					// 12M = 12 * 1024 * 1024
+					g.Expect(*result).To(ContainSubstring("\"value\":12582912"))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+				brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
+
+				By("verify status ok")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+
+					condition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType)
+					g.Expect(condition).NotTo(BeNil())
+					g.Expect(condition.Status).To(Equal(metav1.ConditionTrue))
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			}
+
+			Expect(k8sClient.Delete(ctx, crd)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, bpSecret1)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, bpSecret2)).To(Succeed())
+		})
+
 		It("extraMount.configMap logging config manually", func() {
 
 			ctx := context.Background()

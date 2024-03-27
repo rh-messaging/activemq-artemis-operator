@@ -1769,17 +1769,23 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 
 	configMapsToCreate := customResource.Spec.DeploymentPlan.ExtraMounts.ConfigMaps
 	secretsToCreate := customResource.Spec.DeploymentPlan.ExtraMounts.Secrets
-	brokerPropertiesResourceName, isSecret, brokerPropertiesMapData := reconciler.addResourceForBrokerProperties(customResource, namer)
+	brokerPropertiesResourceName, isSecret, brokerPropertiesMapData, serr := reconciler.addResourceForBrokerProperties(customResource, namer)
+	if serr != nil {
+		return nil, serr
+	}
 	if isSecret {
 		secretsToCreate = append(secretsToCreate, brokerPropertiesResourceName)
 	} else {
 		configMapsToCreate = append(configMapsToCreate, brokerPropertiesResourceName)
 	}
-	extraVolumes, extraVolumeMounts := reconciler.createExtraConfigmapsAndSecretsVolumeMounts(configMapsToCreate, secretsToCreate, brokerPropertiesResourceName, brokerPropertiesMapData)
+	extraVolumes, extraVolumeMounts, err := reconciler.createExtraConfigmapsAndSecretsVolumeMounts(configMapsToCreate, secretsToCreate, brokerPropertiesResourceName, brokerPropertiesMapData, client)
+	if err != nil {
+		return nil, err
+	}
 
 	reqLogger.V(2).Info("Extra volumes", "volumes", extraVolumes)
 	reqLogger.V(2).Info("Extra mounts", "mounts", extraVolumeMounts)
-	var err error
+
 	container.VolumeMounts, err = reconciler.MakeVolumeMounts(customResource, namer)
 	if err != nil {
 		return nil, err
@@ -2070,8 +2076,8 @@ func brokerPropertiesConfigSystemPropValue(customResource *brokerv1beta1.ActiveM
 
 	for _, extraSecretName := range customResource.Spec.DeploymentPlan.ExtraMounts.Secrets {
 		if strings.HasSuffix(extraSecretName, brokerPropsSuffix) {
-			// formated append to result with comma
-			result = fmt.Sprintf("%s,%s%s/", result, secretPathBase, extraSecretName)
+			// append to ordinal path
+			result = fmt.Sprintf("%s,%s%s/,%s%s/%s${STATEFUL_SET_ORDINAL}/", result, secretPathBase, extraSecretName, secretPathBase, extraSecretName, OrdinalPrefix)
 		}
 	}
 	return result
@@ -2258,7 +2264,7 @@ func getConfigAppliedConfigMapName(artemis *brokerv1beta1.ActiveMQArtemis) types
 	}
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) addResourceForBrokerProperties(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers) (string, bool, map[string]string) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) addResourceForBrokerProperties(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers) (string, bool, map[string]string, error) {
 
 	// fetch and do idempotent transform based on CR
 
@@ -2277,7 +2283,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) addResourceForBrokerProperties(
 		reconciler.log.V(1).Info("Requesting configMap for broker properties", "name", resourceName.Name)
 		reconciler.trackDesired(existing)
 
-		return resourceName.Name, false, existing.Data
+		return resourceName.Name, false, existing.Data, nil
 	}
 
 	var desired *corev1.Secret
@@ -2300,7 +2306,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) addResourceForBrokerProperties(
 	reconciler.trackDesired(desired)
 
 	reconciler.log.V(1).Info("Requesting mount for broker properties secret")
-	return resourceName.Name, true, data
+	return resourceName.Name, true, data, nil
 }
 
 func alder32StringValue(alder32Bytes []byte) string {
@@ -2453,7 +2459,7 @@ func (r *ActiveMQArtemisReconcilerImpl) configPodSecurity(podSpec *corev1.PodSpe
 	}
 }
 
-func (r *ActiveMQArtemisReconcilerImpl) createExtraConfigmapsAndSecretsVolumeMounts(configMaps []string, secrets []string, brokePropertiesResourceName string, brokerPropsData map[string]string) ([]corev1.Volume, []corev1.VolumeMount) {
+func (r *ActiveMQArtemisReconcilerImpl) createExtraConfigmapsAndSecretsVolumeMounts(configMaps []string, secrets []string, brokePropertiesResourceName string, brokerPropsData map[string]string, client rtclient.Client) ([]corev1.Volume, []corev1.VolumeMount, error) {
 
 	var extraVolumes []corev1.Volume
 	var extraVolumeMounts []corev1.VolumeMount
@@ -2495,13 +2501,36 @@ func (r *ActiveMQArtemisReconcilerImpl) createExtraConfigmapsAndSecretsVolumeMou
 					}
 				}
 			}
+
+			if strings.HasSuffix(secret, brokerPropsSuffix) {
+				bpSecret := &corev1.Secret{}
+				bpSecretKey := types.NamespacedName{
+					Name:      secret,
+					Namespace: r.customResource.Namespace,
+				}
+				if err := resources.Retrieve(bpSecretKey, client, bpSecret); err != nil {
+					return nil, nil, err
+				}
+
+				if len(bpSecret.Data) > 0 {
+					for _, key := range sortedKeysStringKeyByteValue(bpSecret.Data) {
+						if hasOrdinal, separatorIndex := extractOrdinalPrefixSeperatorIndex(key); hasOrdinal {
+							subPath := key[:separatorIndex]
+							secretVol.VolumeSource.Secret.Items = append(secretVol.VolumeSource.Secret.Items, corev1.KeyToPath{Key: key, Path: fmt.Sprintf("%s/%s", subPath, key)})
+						} else {
+							secretVol.VolumeSource.Secret.Items = append(secretVol.VolumeSource.Secret.Items, corev1.KeyToPath{Key: key, Path: key})
+						}
+					}
+				}
+
+			}
 			secretVolumeMount := volumes.MakeVolumeMountForCfg(secretVol.Name, secretPath, true)
 			extraVolumes = append(extraVolumes, secretVol)
 			extraVolumeMounts = append(extraVolumeMounts, secretVolumeMount)
 		}
 	}
 
-	return extraVolumes, extraVolumeMounts
+	return extraVolumes, extraVolumeMounts, nil
 }
 
 func extractOrdinalPrefixSeperatorIndex(key string) (bool, int) {
@@ -2815,7 +2844,6 @@ func AssertBrokerPropertiesStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtcl
 	if errorStatus == nil {
 		for _, extraSecretName := range cr.Spec.DeploymentPlan.ExtraMounts.Secrets {
 			if strings.HasSuffix(extraSecretName, brokerPropsSuffix) {
-
 				secretProjection, err = getSecretProjection(types.NamespacedName{Name: extraSecretName, Namespace: cr.Namespace}, client)
 				if err != nil {
 					reqLogger.V(2).Info("error retrieving -bp extra mount resource. requeing")
@@ -3051,7 +3079,7 @@ func getConfigMappedJaasProperties(cr *brokerv1beta1.ActiveMQArtemis, client rtc
 func newProjectionFromByteValues(resourceMeta metav1.ObjectMeta, configKeyValue map[string][]byte) *projection {
 	projection := projection{Name: resourceMeta.Name, ResourceVersion: resourceMeta.ResourceVersion, Generation: resourceMeta.Generation, Files: map[string]propertyFile{}}
 	for prop_file_name, data := range configKeyValue {
-		projection.Files[prop_file_name] = propertyFile{Alder32: alder32FromData([]byte(data))}
+		projection.Files[prop_file_name] = propertyFile{Alder32: alder32FromData(data)}
 	}
 	return &projection
 }
