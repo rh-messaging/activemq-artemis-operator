@@ -5,10 +5,7 @@ generatorOptions:
   disableNameSuffixHash: true
 
 patches:
-- path: amq_broker_manager_related_images.yaml
-  target:
-    kind: Deployment
-- path: amq_broker_manager_labels.yaml
+- path: activemq_artemis_manager_related_images.yaml
   target:
     kind: Deployment
 
@@ -17,4 +14,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: quay.io/artemiscloud/activemq-artemis-operator
-  newTag: amq-broker-7.12-openshift-rhel-8-containers-candidate-96751-20240326020300
+  newTag: 1.1.0
