@@ -13,3 +13,23 @@ spec:
         # The *Kubernetes* values refer to the broker on openshift container that runs the broker itself.
         # NOTE: Below are the original image:tag values and equivalent SHA image references. The SHA values are unique to the specific
         #       container tag utilized during operator bundle build time.
+
+        # 8.0.0
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_800
+          #value: registry.redhat.io/amq7/amq-broker-init-rhel8:8.0.0-scratch-58229-20240330002631
+          value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:fa438f48e908dc1934b38baf04b8bbc696e864e7ddd6354481e31796ffa27eb4
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_800
+          #value: registry.redhat.io/amq7/amq-broker-rhel8:8.0.0-scratch-83690-20240330001019
+          value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:9a695138d068f6ac2f2c927849b53f1d341908e7e88bfca9797f25355df9b1a0
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_800_ppc64le
+          #value: registry.redhat.io/amq7/amq-broker-init-rhel8:8.0.0-scratch-58229-20240330002631
+          value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:fa438f48e908dc1934b38baf04b8bbc696e864e7ddd6354481e31796ffa27eb4
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_800_ppc64le
+          #value: registry.redhat.io/amq7/amq-broker-rhel8:8.0.0-scratch-83690-20240330001019
+          value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:9a695138d068f6ac2f2c927849b53f1d341908e7e88bfca9797f25355df9b1a0
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_800_s390x
+          #value: registry.redhat.io/amq7/amq-broker-init-rhel8:8.0.0-scratch-58229-20240330002631
+          value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:fa438f48e908dc1934b38baf04b8bbc696e864e7ddd6354481e31796ffa27eb4
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_800_s390x
+          #value: registry.redhat.io/amq7/amq-broker-rhel8:8.0.0-scratch-83690-20240330001019
+          value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:9a695138d068f6ac2f2c927849b53f1d341908e7e88bfca9797f25355df9b1a0
