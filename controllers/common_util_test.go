@@ -29,6 +29,7 @@ import (
 	"math/big"
 	"math/rand"
 	"os"
+	"os/exec"
 	"path"
 	"regexp"
 	"strconv"
@@ -44,6 +45,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"software.sslmate.com/src/go-pkcs12"
 
+	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	tm "github.com/cert-manager/trust-manager/pkg/apis/trust/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -65,6 +68,8 @@ var chars = []rune("hgjkmnpqrtvwxyzslbcdaefiou")
 var defaultPassword string = "password"
 var defaultSanDnsNames = []string{"*.apps.artemiscloud.io", "*.tests.artemiscloud.io"}
 var okDefaultPwd = "okdefaultpassword"
+
+const helmCmd = "helm"
 
 type TestLogWriter struct {
 	unbufferedWriter bytes.Buffer
@@ -523,14 +528,16 @@ func ExecOnPod(podWithOrdinal string, brokerName string, namespace string, comma
 	g.Expect(err).To(BeNil())
 
 	var outPutbuffer bytes.Buffer
+	var errBuffer bytes.Buffer
 
+	By("executing " + fmt.Sprintf(" command: %v", command))
 	err = exec.StreamWithContext(ctx, remotecommand.StreamOptions{
 		Stdin:  os.Stdin,
 		Stdout: &outPutbuffer,
-		Stderr: os.Stderr,
+		Stderr: &errBuffer,
 		Tty:    false,
 	})
-	g.Expect(err).To(BeNil())
+	g.Expect(err).To(BeNil(), errBuffer.String())
 
 	g.Eventually(func(g Gomega) {
 		By("Checking for output from " + fmt.Sprintf(" command: %v", command))
@@ -802,4 +809,248 @@ func WaitForPod(crName string, iPods ...int32) {
 		}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 	}
+}
+
+func InstallCertManager() error {
+	cmd := exec.Command(helmCmd, "repo", "add", "jetstack", "https://charts.jetstack.io", "--force-update")
+	err := cmd.Run()
+	if err != nil {
+		return err
+	}
+	// cert manager
+	cmd = exec.Command(helmCmd, "upgrade", "-i", "-n", "cert-manager", "cert-manager", "jetstack/cert-manager", "--set", "installCRDs=true", "--wait", "--create-namespace")
+	err = cmd.Run()
+	if err != nil {
+		return err
+	}
+	// Wait for cert-manager-webhook to be ready, which can take time if cert-manager
+	// was re-installed after uninstalling on a cluster.
+	cmd = exec.Command(kubeTool, "wait", "deployment.apps/cert-manager-webhook",
+		"--for", "condition=Available",
+		"--namespace", "cert-manager",
+		"--timeout", "5m")
+	err = cmd.Run()
+	if err != nil {
+		fmt.Printf("error waiting cert-manager %v\n", err)
+		return err
+	}
+	// trust manager
+	// https://cert-manager.io/docs/trust/trust-manager/installation/
+	cmd = exec.Command(helmCmd, "upgrade", "-i", "-n", "cert-manager", "trust-manager", "jetstack/trust-manager", "--set", "secretTargets.enabled=true", "--set", "secretTargets.authorizedSecretsAll=true", "--wait")
+	err = cmd.Run()
+
+	if err != nil {
+		fmt.Printf("error waiting cert-manager %v\n", err)
+	}
+
+	return err
+}
+
+func UninstallCertManager() error {
+
+	//trust manager
+	cmd := exec.Command(helmCmd, "uninstall", "-n", "cert-manager", "trust-manager")
+	err := cmd.Run()
+	if err != nil {
+		return err
+	}
+	//cert manager
+	cmd = exec.Command(helmCmd, "uninstall", "-n", "cert-manager", "cert-manager")
+	err = cmd.Run()
+	if err != nil {
+		return err
+	}
+	//namespace
+	cmd = exec.Command(kubeTool, "delete", "namespace", "cert-manager")
+	err = cmd.Run()
+	return err
+}
+
+func CertManagerInstalled() bool {
+	cmDeploymentKey := types.NamespacedName{Name: "cert-manager", Namespace: "cert-manager"}
+	cmDeployment := &appsv1.Deployment{}
+	err := k8sClient.Get(ctx, cmDeploymentKey, cmDeployment)
+	return err == nil
+}
+
+func InstallClusteredIssuer(issuerName string, customFunc func(*cmv1.ClusterIssuer)) *cmv1.ClusterIssuer {
+	issuer := cmv1.ClusterIssuer{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ClusterIssuer",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: issuerName,
+		},
+		Spec: cmv1.IssuerSpec{
+			IssuerConfig: cmv1.IssuerConfig{
+				SelfSigned: &cmv1.SelfSignedIssuer{},
+			},
+		},
+	}
+	if customFunc != nil {
+		customFunc(&issuer)
+	}
+	Expect(k8sClient.Create(ctx, &issuer, &client.CreateOptions{})).To(Succeed())
+	issKey := types.NamespacedName{Name: issuerName, Namespace: defaultNamespace}
+	currentIssuer := &cmv1.ClusterIssuer{}
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, issKey, currentIssuer)).Should(Succeed())
+	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+	return currentIssuer
+}
+
+func InstallCert(certName string, namespace string, customFunc func(candidate *cmv1.Certificate)) *cmv1.Certificate {
+	cmCert := cmv1.Certificate{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Certificate",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      certName,
+			Namespace: namespace,
+		},
+		Spec: cmv1.CertificateSpec{
+			SecretName: certName + "-secret",
+			DNSNames:   defaultSanDnsNames,
+			Subject: &cmv1.X509Subject{
+				Organizations: []string{"www.artemiscloud.io"},
+			},
+		},
+	}
+	if customFunc != nil {
+		customFunc(&cmCert)
+	}
+
+	Expect(k8sClient.Create(ctx, &cmCert, &client.CreateOptions{})).To(Succeed())
+
+	certKey := types.NamespacedName{Name: certName, Namespace: namespace}
+	cert := &cmv1.Certificate{}
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, certKey, cert)).Should(Succeed())
+	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+	secretKey := types.NamespacedName{Name: cmCert.Spec.SecretName, Namespace: namespace}
+	secret := corev1.Secret{}
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, secretKey, &secret)).Should(Succeed())
+	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+	return &cmCert
+}
+
+func InstallCaBundle(name string, sourceSecret string, caFileName string) *tm.Bundle {
+	bundle := tm.Bundle{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "trust.cert-manager.io/v1alpha1",
+			Kind:       "Bundle",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "cert-manager",
+		},
+		Spec: tm.BundleSpec{
+			Sources: []tm.BundleSource{
+				{
+					Secret: &tm.SourceObjectKeySelector{
+						Name: sourceSecret,
+						KeySelector: tm.KeySelector{
+							Key: "tls.crt",
+						},
+					},
+				},
+			},
+			Target: tm.BundleTarget{
+				Secret: &tm.KeySelector{
+					Key: caFileName,
+				},
+			},
+		},
+	}
+
+	Expect(k8sClient.Create(ctx, &bundle, &client.CreateOptions{})).To(Succeed())
+	bundleKey := types.NamespacedName{Name: name, Namespace: "cert-manager"}
+	newBundle := &tm.Bundle{}
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, bundleKey, newBundle)).Should(Succeed())
+	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+	return newBundle
+}
+
+func UnInstallCaBundle(bundleName string) {
+	bundleKey := types.NamespacedName{Name: bundleName, Namespace: "cert-manager"}
+	bundle := &tm.Bundle{}
+
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, bundleKey, bundle)).Should(Succeed())
+	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+	CleanResource(bundle, bundleName, bundle.Namespace)
+}
+
+func InstallSecret(secretName string, namespace string, configFunc func(candidate *corev1.Secret)) *corev1.Secret {
+	secret := corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: namespace,
+		},
+		StringData: make(map[string]string),
+	}
+	if configFunc != nil {
+		configFunc(&secret)
+	}
+
+	Expect(k8sClient.Create(ctx, &secret, &client.CreateOptions{})).To(Succeed())
+	certKey := types.NamespacedName{Name: secretName, Namespace: namespace}
+	newSecret := &corev1.Secret{}
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, certKey, newSecret)).Should(Succeed())
+	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+	return &secret
+}
+
+func UninstallCert(certName string, namespace string) {
+	certKey := types.NamespacedName{Name: certName, Namespace: namespace}
+	cert := &cmv1.Certificate{}
+
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, certKey, cert)).Should(Succeed())
+	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+	CleanResource(cert, certName, namespace)
+
+	certSecret := corev1.Secret{}
+	secretKey := types.NamespacedName{Name: cert.Spec.SecretName, Namespace: namespace}
+	Expect(k8sClient.Get(ctx, secretKey, &certSecret)).To(Succeed())
+
+	CleanResource(&certSecret, certSecret.Name, certSecret.Namespace)
+}
+
+func UninstallSecret(secretName string, namespace string) {
+	secretKey := types.NamespacedName{Name: secretName, Namespace: namespace}
+	secret := &corev1.Secret{}
+
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, secretKey, secret)).Should(Succeed())
+	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+	CleanResource(secret, secretName, namespace)
+}
+
+func UninstallClusteredIssuer(issuerName string) {
+	issKey := types.NamespacedName{Name: issuerName, Namespace: defaultNamespace}
+	currentIssuer := &cmv1.ClusterIssuer{}
+
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, issKey, currentIssuer)).Should(Succeed())
+	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+	CleanResource(currentIssuer, issuerName, defaultNamespace)
 }

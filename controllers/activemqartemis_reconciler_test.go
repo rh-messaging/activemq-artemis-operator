@@ -560,7 +560,7 @@ func TestProcess_TemplateIncludesLabelsServiceAndSecret(t *testing.T) {
 	var ssFound = false
 	var secretFound = false
 	var serviceFound = false
-	for _, resource := range reconciler.requestedResources {
+	for _, resource := range common.ToResourceList(reconciler.requestedResources) {
 		if ss, ok := resource.(*appsv1.StatefulSet); ok {
 
 			newSpec := ss.Spec.Template
@@ -637,7 +637,7 @@ func TestProcess_TemplateIncludesLabelsSecretRegexp(t *testing.T) {
 	var secretFound = false
 	var serviceFound = false
 
-	for _, resource := range reconciler.requestedResources {
+	for _, resource := range common.ToResourceList(reconciler.requestedResources) {
 		if secret, ok := resource.(*v1.Secret); ok {
 			assert.True(t, len(secret.Labels) >= 1)
 			assert.Equal(t, secret.Labels["mySecretKey"], "mySecretValue")
@@ -690,7 +690,7 @@ func TestProcess_TemplateDuplicateKeyReplacesOk(t *testing.T) {
 	assert.NoError(t, err)
 
 	var secretFound = false
-	for _, resource := range reconciler.requestedResources {
+	for _, resource := range common.ToResourceList(reconciler.requestedResources) {
 		if secret, ok := resource.(*v1.Secret); ok {
 			assert.True(t, len(secret.Labels) >= 1)
 			assert.Equal(t, secret.Labels["mySecretKey"], "mySecretValue")
@@ -730,10 +730,9 @@ func TestProcess_TemplateKeyValue(t *testing.T) {
 				},
 			},
 			Acceptors: []brokerv1beta1.AcceptorType{{
-				Name:       "aa",
-				Port:       563,
-				Expose:     true,
-				SSLEnabled: true,
+				Name:   "aa",
+				Port:   563,
+				Expose: true,
 			}},
 		},
 	}
@@ -759,7 +758,7 @@ func TestProcess_TemplateKeyValue(t *testing.T) {
 	var secretFound = false
 	var serviceFound = false
 	var ssFound = false
-	for _, resource := range reconciler.requestedResources {
+	for _, resource := range common.ToResourceList(reconciler.requestedResources) {
 		if ss, ok := resource.(*appsv1.StatefulSet); ok {
 
 			v, ok := ss.Labels["myKey"]
@@ -785,7 +784,7 @@ func TestProcess_TemplateKeyValue(t *testing.T) {
 		}
 
 		if ingress, ok := resource.(*netv1.Ingress); ok {
-			assert.True(t, len(ingress.Annotations) >= 2)
+			assert.True(t, len(ingress.Annotations) >= 1)
 			assert.Equal(t, ingress.Annotations["myIngressKey-cr"], "myValue-0", resource.GetName())
 		}
 
@@ -821,7 +820,7 @@ func TestProcess_TemplateCustomAttributeIngress(t *testing.T) {
 				Name:       "aa",
 				Port:       563,
 				Expose:     true,
-				SSLEnabled: true,
+				SSLEnabled: false,
 			}},
 		},
 	}
@@ -845,10 +844,10 @@ func TestProcess_TemplateCustomAttributeIngress(t *testing.T) {
 	assert.NoError(t, err)
 
 	var ingressOk = false
-	for _, resource := range reconciler.requestedResources {
+	for _, resource := range common.ToResourceList(reconciler.requestedResources) {
 
 		if ingress, ok := resource.(*netv1.Ingress); ok {
-			assert.True(t, len(ingress.Annotations) >= 2)
+			assert.True(t, len(ingress.Annotations) >= 1)
 			assert.Equal(t, ingress.Annotations["myIngressKey-cr"], "myValue-0", resource.GetName())
 			assert.NotNil(t, ingress.Spec.IngressClassName)
 			assert.Equal(t, *ingress.Spec.IngressClassName, ingressClassVal)
@@ -884,7 +883,7 @@ func TestProcess_TemplateCustomAttributeMisSpellingIngress(t *testing.T) {
 				Name:       "aa",
 				Port:       563,
 				Expose:     true,
-				SSLEnabled: true,
+				SSLEnabled: false,
 			}},
 		},
 	}
@@ -958,7 +957,7 @@ func TestProcess_TemplateCustomAttributeContainerSecurityContext(t *testing.T) {
 	assert.NoError(t, err)
 
 	var runAsRootOk = false
-	for _, resource := range reconciler.requestedResources {
+	for _, resource := range common.ToResourceList(reconciler.requestedResources) {
 
 		if ss, ok := resource.(*appsv1.StatefulSet); ok {
 			assert.NotNil(t, ss.Spec.Template.Spec.Containers[0].SecurityContext.RunAsNonRoot)
@@ -1014,7 +1013,7 @@ func TestProcess_TemplateCustomAttributePriorityClassName(t *testing.T) {
 	assert.NoError(t, err)
 
 	var priorityClassNameOk = false
-	for _, resource := range reconciler.requestedResources {
+	for _, resource := range common.ToResourceList(reconciler.requestedResources) {
 
 		if ss, ok := resource.(*appsv1.StatefulSet); ok {
 			assert.Equal(t, ss.Spec.Template.Spec.PriorityClassName, "high-priority")

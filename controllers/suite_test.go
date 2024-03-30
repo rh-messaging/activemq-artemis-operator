@@ -40,6 +40,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 
+	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -64,6 +65,7 @@ import (
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/ingresses"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
+	tm "github.com/cert-manager/trust-manager/pkg/apis/trust/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -673,6 +675,12 @@ func setUpK8sClient() {
 	Expect(err).NotTo(HaveOccurred())
 
 	err = routev1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = cmv1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = tm.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = brokerv2alpha5.AddToScheme(scheme.Scheme)

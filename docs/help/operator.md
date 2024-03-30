@@ -1164,7 +1164,9 @@ spec:
   deploymentPlan:
     size: 1
 ```
-And you use init container to configure security to have a username **alice** with password **password1** for jolikia access. To enable operator to use client to have access jolokia, create a secret named **amq-jolokia-secret** in the same namespace, like this:
+
+And you use init container to configure security to have a username **alice** with password **password1** for jolokia access. To enable operator to use client to have access jolokia, create a secret named **amq-jolokia-secret** in the same namespace, like this:
+
 ```yaml
 apiVersion: v1
 metadata:
@@ -1215,7 +1217,7 @@ spec:
 ```
 When deploying the above CR, the PVC volume will be mounted to path **/opt/mydata** in the broker container of both broker pods. The **extraVolumeMounts** is optional. If not specified a default mountPath is given based on the type of the volume, following the pattern:
 
-/amq/extra/<volume-type>/<volume.name>
+/amq/extra/volumes/<volume.name>
 
 For example if you configure to attach a PersistentVolumeClaim type volume called `mydata`, the default mount path is **/amq/extra/volumes/mydata**.
 
@@ -1252,3 +1254,164 @@ Note for each pod the PVC's name must follow the pattern `<volumeName>-<stateful
 For the above CR the matching PVC names are **mydata-artemis-broker-ss-0** for pod0 and **mydata-artemis-broker-ss-1** for pod1 respectively. You can configure an optional VolumeMount for each PVC under **extraVolumeMounts**. If not specified the default mount path is **/opt/<volumeName>/data**.
 
 For complete configruation options please take a look at the api definitions of [broker CRD](../../api/v1beta1/activemqartemis_types.go).
+
+## Using cert-manager and trust-manager configure brokers
+
+Note: this feature currently is experimental. Feedback is welcomed.
+
+[cert-manager](https://cert-manager.io/) adds certificates and certificate issuers as resource types in Kubernetes clusters, and simplifies the process of obtaining, renewing and using those certificates.
+
+The operator provides options in the custom resource that utilizes cert-manager x509 certificates to configure SSL/TLS transports for brokers. It also works with [trust-manager](https://github.com/cert-manager/trust-manager) to distribute trust CA bundles.
+
+Before configuring a broker you need to have the certificates and bundles ready. In the following example a self-signed isser is used as a root CA.
+
+Step 1 - create the root self-signed issuer
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: root-issuer
+spec:
+  selfSigned: {}
+```
+
+Step 2 - create the root Certificate
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: root-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: "artemiscloud.io.root"
+  secretName: root-ca-secret
+  subject:
+    organizations:
+    - "www.artemiscloud.io"
+  issuerRef:
+    name: root-issuer
+    kind: ClusterIssuer
+```
+
+Step 3 - create a ca issuer that is used to issue broker certificates signed by the root CA
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: broker-cert-issuer
+spec:
+  ca:
+    secretName: root-ca-secret
+```
+
+Step 4 - create a broker certificate signed by the root CA
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: server-cert
+spec:
+  isCA: false
+  commonName: "artemiscloud.io"
+  dnsNames:
+    - "artemis-broker-ss-0"
+    - "artemis-broker-ss-0.artemis-broker-hdls-svc.default.svc.cluster.local"
+  secretName: server-cert-secret
+  subject:
+    organizations:
+    - "www.artemiscloud.io"
+  issuerRef:
+    name: broker-cert-issuer
+    kind: ClusterIssuer
+```
+
+Step 5 - create the ca bundle from the root CA using trust-manager
+
+```yaml
+apiVersion: trust.cert-manager.io/v1alpha1
+kind: Bundle
+metadata:
+  name: ca-bundle
+spec:
+  sources:
+  - useDefaultCAs: false
+  - secret:
+      name: "root-ca-secret"
+      key: "tls.crt"
+  target:
+    secret:
+      key: "trust-bundle.pem"
+```
+
+### Configuring SSL/TLS for management console
+
+Once you have the certificate and ca bundle ready you can configure the management console of the broker to used it:
+
+```yaml
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: artemis-broker
+spec:
+  console:
+    expose: true
+    sslEnabled: true
+    sslSecret: server-cert-secret
+    trustSecret: ca-bundle
+  deploymentPlan:
+    size: 1
+```
+
+The above broker cr configures a broker that has a SSL/TLS secured management console whose keystore and truststore are generated from certificate stored in secret `server-cert-secret`.
+
+### Configuring SSL/TLS for acceptors and connectors
+
+With the certificate ready you can configure an acceptor and/or connector of the broker to use it:
+
+```yaml
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: artemis-broker
+spec:
+  acceptors:
+    - name: new-acceptor
+      protocols: all
+      port: 62666
+      sslEnabled: true
+      needClientAuth: true
+      expose: true
+      sslSecret: server-cert-secret
+      trustSecret: ca-bundle
+  deploymentPlan:
+    size: 1
+```
+
+The above broker cr configures a broker that has a SSL/TLS secured acceptor called `new-acceptor` whose keystore and truststore are generated from secret `server-cert-secret` that is from the certificate resource.
+
+You can configure a connector with ssl parameters from a certificate in like manner, for example the following yaml configures a connector called `new-connector` with the certificated above mentioned:
+
+```yaml
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: artemis-broker
+spec:
+  connectors:
+    - name: new-connector
+      host: artemis-broker-ss-0
+      port: 62666
+      sslEnabled: true
+      expose: true
+      sslSecret: server-cert-secret
+      trustSecret: ca-bundle
+  deploymentPlan:
+    size: 1
+```
+
+For details on how to use cert-manager to manage your certificates please refer to its [documentation](https://cert-manager.io/docs/).

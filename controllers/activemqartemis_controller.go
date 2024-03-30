@@ -37,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/certutil"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -383,6 +384,9 @@ func validateSSLEnabledSecrets(customResource *brokerv1beta1.ActiveMQArtemis, cl
 	if customResource.Spec.Console.SSLEnabled {
 
 		secretName := namer.SecretsConsoleNameBuilder.Name()
+		if customResource.Spec.Console.SSLSecret != "" {
+			secretName = customResource.Spec.Console.SSLSecret
+		}
 
 		secret := corev1.Secret{}
 		found := retrieveResource(secretName, customResource.Namespace, &secret, client)
@@ -561,6 +565,18 @@ func AssertConfigMapContainsKey(configMap corev1.ConfigMap, key string, contextM
 }
 
 func AssertSecretContainsKey(secret corev1.Secret, key string, contextMessage string) *metav1.Condition {
+	isCertSecret, isValid := certutil.IsSecretFromCert(&secret)
+	if isCertSecret {
+		if isValid {
+			return nil
+		}
+		return &metav1.Condition{
+			Type:    brokerv1beta1.ValidConditionType,
+			Status:  metav1.ConditionFalse,
+			Reason:  brokerv1beta1.ValidConditionInvalidCertSecretReason,
+			Message: fmt.Sprintf("%s certificate secret %s not valid, must have keys ca.crt tls.crt tls.key", contextMessage, secret.Name),
+		}
+	}
 	if _, present := secret.Data[key]; !present {
 		return &metav1.Condition{
 			Type:    brokerv1beta1.ValidConditionType,
@@ -573,6 +589,18 @@ func AssertSecretContainsKey(secret corev1.Secret, key string, contextMessage st
 }
 
 func AssertSecretContainsOneOf(secret corev1.Secret, keys []string, contextMessage string) *metav1.Condition {
+	ok, valid := certutil.IsSecretFromCert(&secret)
+	if ok {
+		if valid {
+			return nil
+		}
+		return &metav1.Condition{
+			Type:    brokerv1beta1.ValidConditionType,
+			Status:  metav1.ConditionFalse,
+			Reason:  brokerv1beta1.ValidConditionInvalidCertSecretReason,
+			Message: fmt.Sprintf("%s secret %s must contain keys %v", contextMessage, secret.Name, "ca.crt,tls.crt,tls.key"),
+		}
+	}
 	for _, key := range keys {
 		_, present := secret.Data[key]
 		if present {
@@ -627,6 +655,7 @@ func MakeNamers(customResource *brokerv1beta1.ActiveMQArtemis) *common.Namers {
 		newNamers.SecretsConsoleNameBuilder.Prefix(customResource.Name).Base("console").Suffix("secret").Generate()
 	}
 	newNamers.SecretsNettyNameBuilder.Prefix(customResource.Name).Base("netty").Suffix("secret").Generate()
+
 	newNamers.LabelBuilder.Base(customResource.Name).Suffix("app").Generate()
 
 	return &newNamers

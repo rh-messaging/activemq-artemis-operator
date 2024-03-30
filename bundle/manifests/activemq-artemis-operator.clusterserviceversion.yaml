@@ -598,6 +598,11 @@ spec:
         path: acceptors[0].suppressInternalManagementObjects
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: The name of the truststore secret.
+        displayName: Trust Secret
+        path: acceptors[0].trustSecret
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
       - description: Provider used for the truststore; "SUN", "SunJCE", etc. Default
           in broker is null
         displayName: TrustStore Provider
@@ -1111,6 +1116,11 @@ spec:
         path: connectors[0].sslSecret
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The name of the truststore secret.
+        displayName: Trust Secret
+        path: connectors[0].trustSecret
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
       - description: Provider used for the truststore; "SUN", "SunJCE", etc. Default
           in broker is null
         displayName: TrustStore Provider
@@ -1178,6 +1188,11 @@ spec:
       - description: Name of the secret to use for ssl information
         displayName: SSL Secret
         path: console.sslSecret
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The name of the truststore secret.
+        displayName: Trust Secret
+        path: console.trustSecret
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
       - description: If the embedded server requires client authentication

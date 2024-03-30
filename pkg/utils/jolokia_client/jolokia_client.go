@@ -188,7 +188,7 @@ func getEnvVarValueFromSecret(envName string, varSource *corev1.EnvVarSource, na
 	stringDataMap := map[string]string{
 		envName: "",
 	}
-	theSecret := secrets.NewSecret(namespacedName, secretName, stringDataMap, labels)
+	theSecret := secrets.NewSecret(namespacedName, stringDataMap, labels)
 	var err error = nil
 	if err = resources.Retrieve(namespacedName, client, theSecret); err != nil {
 		if errors.IsNotFound(err) {

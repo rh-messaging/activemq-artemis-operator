@@ -102,6 +102,9 @@ spec:
                     suppressInternalManagementObjects:
                       description: If prevents advisory addresses/queues to be registered to management service, default false
                       type: boolean
+                    trustSecret:
+                      description: The name of the truststore secret.
+                      type: string
                     trustStoreProvider:
                       description: Provider used for the truststore; "SUN", "SunJCE", etc. Default in broker is null
                       type: string
@@ -412,6 +415,9 @@ spec:
                     sslSecret:
                       description: Name of the secret to use for ssl information
                       type: string
+                    trustSecret:
+                      description: The name of the truststore secret.
+                      type: string
                     trustStoreProvider:
                       description: Provider used for the truststore; "SUN", "SunJCE", etc. Default in broker is null
                       type: string
@@ -456,6 +462,9 @@ spec:
                     type: boolean
                   sslSecret:
                     description: Name of the secret to use for ssl information
+                    type: string
+                  trustSecret:
+                    description: The name of the truststore secret.
                     type: string
                   useClientAuth:
                     description: If the embedded server requires client authentication

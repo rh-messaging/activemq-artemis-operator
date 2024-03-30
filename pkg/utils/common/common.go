@@ -657,3 +657,31 @@ func ApplyAnnotations(objectMeta *metav1.ObjectMeta, annotations map[string]stri
 		}
 	}
 }
+
+func ToResourceList(resourceMap map[reflect.Type]map[string]rtclient.Object) []rtclient.Object {
+	var resourceList []rtclient.Object
+	for _, resMap := range resourceMap {
+		for _, res := range resMap {
+			resourceList = append(resourceList, res)
+		}
+	}
+	return resourceList
+}
+
+func HasVolumeInStatefulset(ss *appsv1.StatefulSet, volumeName string) bool {
+	for _, v := range ss.Spec.Template.Spec.Volumes {
+		if v.Name == volumeName {
+			return true
+		}
+	}
+	return false
+}
+
+func HasVolumeMount(container *corev1.Container, mountName string) bool {
+	for _, vm := range container.VolumeMounts {
+		if vm.Name == mountName {
+			return true
+		}
+	}
+	return false
+}

@@ -750,7 +750,7 @@ func (c *Controller) getClusterCredentials(namespace string, ssNames map[string]
 	stringDataMap["AMQ_CLUSTER_USER"] = ""
 	stringDataMap["AMQ_CLUSTER_PASSWORD"] = ""
 
-	secretDefinition := secrets.NewSecret(namespacedName, secretName, stringDataMap, c.ssLabels)
+	secretDefinition := secrets.NewSecret(namespacedName, stringDataMap, c.ssLabels)
 
 	c.log.V(2).Info("Try retrieving cluster credentials from secret", "secret", namespacedName)
 	if err := resources.Retrieve(namespacedName, c.client, secretDefinition); err != nil {

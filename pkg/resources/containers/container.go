@@ -26,7 +26,7 @@ func MakeContainer(hostingPodSpec *corev1.PodSpec, customResourceName string, im
 	if container == nil {
 		container = &corev1.Container{
 			Name:    name,
-			Command: []string{"/bin/bash", "-c", "export STATEFUL_SET_ORDINAL=${HOSTNAME##*-};export JDK_JAVA_OPTIONS=${JDK_JAVA_OPTIONS//\\$\\{STATEFUL_SET_ORDINAL\\}/${HOSTNAME##*-}};exec /opt/amq/bin/launch.sh", "start"},
+			Command: []string{"/bin/bash", "-c", "export STATEFUL_SET_ORDINAL=${HOSTNAME##*-}; export JDK_JAVA_OPTIONS=${JDK_JAVA_OPTIONS//\\$\\{STATEFUL_SET_ORDINAL\\}/${HOSTNAME##*-}}; export FQ_HOST_NAME=$(hostname -f); export JAVA_ARGS_APPEND=$( echo ${JAVA_ARGS_APPEND} | sed \"s/FQ_HOST_NAME/${FQ_HOST_NAME}/\"); exec /opt/amq/bin/launch.sh", "start"},
 		}
 	}
 

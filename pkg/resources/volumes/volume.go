@@ -21,11 +21,14 @@ func MakeVolumeMount(volumeMountName string) corev1.VolumeMount {
 func MakeVolume(secretName string) corev1.Volume {
 
 	volumeName := secretName + "-volume"
+	// 420(decimal) = 0644(octal)
+	var defaultMode int32 = 420
 	volume := corev1.Volume{
 		Name: volumeName,
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
-				SecretName: secretName,
+				SecretName:  secretName,
+				DefaultMode: &defaultMode,
 			},
 		},
 	}

@@ -69,7 +69,7 @@ func (r *ActiveMQArtemisAddress) ValidateUpdate(old runtime.Object) (warnings ad
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *ActiveMQArtemisAddress) ValidateDelete() (warnings admission.Warnings, err error) {
-	activemqartemisaddresslog.V(1).Info("validate delete", "name", r.Name)
+	activemqartemisaddresslog.Info("validate delete", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil, nil

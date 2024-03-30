@@ -189,7 +189,6 @@ func main() {
 		setupLog.Info("setting up operator to watch local namespace")
 		mgrOptions.Cache.DefaultNamespaces = map[string]cache.Config{
 			oprNamespace: {}}
-
 	} else {
 		if watchList != nil {
 			if len(watchList) == 1 {

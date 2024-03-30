@@ -582,6 +582,9 @@ type AcceptorType struct {
 	// Host for Ingress and Route resources of the acceptor. It supports the following variables: $(CR_NAME), $(CR_NAMESPACE), $(BROKER_ORDINAL), $(ITEM_NAME), $(RES_NAME) and $(INGRESS_DOMAIN). It is required for the acceptors exposed with the ingress mode when the ingress domain is not specified.
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Ingress Host",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:text"}
 	IngressHost string `json:"ingressHost,omitempty"`
+	// The name of the truststore secret.
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Trust Secret",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:text"}
+	TrustSecret *string `json:"trustSecret,omitempty"`
 }
 
 type ConnectorType struct {
@@ -642,6 +645,9 @@ type ConnectorType struct {
 	// Host for Ingress and Route resources of the acceptor. It supports the following variables: $(CR_NAME), $(CR_NAMESPACE), $(BROKER_ORDINAL), $(ITEM_NAME), $(RES_NAME) and $(INGRESS_DOMAIN). It is required for the connectors exposed with the ingress mode when the ingress domain is not specified.
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Ingress Host",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:text"}
 	IngressHost string `json:"ingressHost,omitempty"`
+	// The name of the truststore secret.
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Trust Secret",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:text"}
+	TrustSecret *string `json:"trustSecret,omitempty"`
 }
 
 type ConsoleType struct {
@@ -666,6 +672,9 @@ type ConsoleType struct {
 	// Host for Ingress and Route resources of the acceptor. It supports the following variables: $(CR_NAME), $(CR_NAMESPACE), $(BROKER_ORDINAL), $(ITEM_NAME), $(RES_NAME) and $(INGRESS_DOMAIN). It is required for the console exposed with the ingress mode when the ingress domain is not specified.
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Ingress Host",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:text"}
 	IngressHost string `json:"ingressHost,omitempty"`
+	// The name of the truststore secret.
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Trust Secret",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:text"}
+	TrustSecret *string `json:"trustSecret,omitempty"`
 }
 
 // ActiveMQArtemis App product upgrade flags, this is deprecated in v1beta1, specifying the Version is sufficient
@@ -802,6 +811,7 @@ const (
 	ValidConditionFailedDuplicateAcceptorPort  = "DuplicateAcceptorPort"
 	ValidConditionFailedInvalidExposeMode      = "InvalidExposeMode"
 	ValidConditionFailedInvalidIngressSettings = "InvalidIngressSettings"
+	ValidConditionInvalidCertSecretReason      = "InvalidCertSecret"
 
 	ReadyConditionType      = "Ready"
 	ReadyConditionReason    = "ResourceReady"

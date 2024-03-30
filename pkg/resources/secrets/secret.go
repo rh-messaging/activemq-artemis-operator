@@ -35,7 +35,7 @@ func MakeStringDataMap(keyName string, valueName string, key string, value strin
 	return stringDataMap
 }
 
-func MakeSecret(namespacedName types.NamespacedName, secretName string, stringData map[string]string, labels map[string]string) corev1.Secret {
+func MakeSecretWithData(namespacedName types.NamespacedName, secretName string, data map[string][]byte, labels map[string]string) *corev1.Secret {
 
 	secretDefinition := corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
@@ -47,15 +47,33 @@ func MakeSecret(namespacedName types.NamespacedName, secretName string, stringDa
 			Name:      secretName,
 			Namespace: namespacedName.Namespace,
 		},
+		Data: data,
+	}
+
+	return &secretDefinition
+}
+
+func MakeSecret(namespacedName types.NamespacedName, stringData map[string]string, labels map[string]string) corev1.Secret {
+
+	secretDefinition := corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:    labels,
+			Name:      namespacedName.Name,
+			Namespace: namespacedName.Namespace,
+		},
 		StringData: stringData,
 	}
 
 	return secretDefinition
 }
 
-func NewSecret(namespacedName types.NamespacedName, secretName string, stringData map[string]string, labels map[string]string) *corev1.Secret {
+func NewSecret(namespacedName types.NamespacedName, stringData map[string]string, labels map[string]string) *corev1.Secret {
 
-	secretDefinition := MakeSecret(namespacedName, secretName, stringData, labels)
+	secretDefinition := MakeSecret(namespacedName, stringData, labels)
 
 	return &secretDefinition
 }
@@ -63,7 +81,7 @@ func NewSecret(namespacedName types.NamespacedName, secretName string, stringDat
 func CreateOrUpdate(owner metav1.Object, namespacedName types.NamespacedName, stringDataMap map[string]string, labels map[string]string, client client.Client, scheme *runtime.Scheme) error {
 	log := ctrl.Log.WithName("util_secrets")
 	var err error = nil
-	secretDefinition := NewSecret(namespacedName, namespacedName.Name, stringDataMap, labels)
+	secretDefinition := NewSecret(namespacedName, stringDataMap, labels)
 
 	if err = resources.Retrieve(namespacedName, client, secretDefinition); err != nil {
 		if errors.IsNotFound(err) {
@@ -76,7 +94,7 @@ func CreateOrUpdate(owner metav1.Object, namespacedName types.NamespacedName, st
 		}
 	} else {
 		//Update
-		secretDefinition = NewSecret(namespacedName, namespacedName.Name, stringDataMap, labels)
+		secretDefinition = NewSecret(namespacedName, stringDataMap, labels)
 		if err = resources.Update(client, secretDefinition); err != nil {
 			log.Error(err, "Failed to update secret", "secret", namespacedName.Name)
 		}
@@ -89,7 +107,7 @@ func Create(owner metav1.Object, namespacedName types.NamespacedName, stringData
 	log := ctrl.Log.WithName("util_secrets")
 
 	var err error = nil
-	secretDefinition := NewSecret(namespacedName, namespacedName.Name, stringDataMap, labels)
+	secretDefinition := NewSecret(namespacedName, stringDataMap, labels)
 
 	if err = resources.Retrieve(namespacedName, client, secretDefinition); err != nil {
 		if errors.IsNotFound(err) {
@@ -104,13 +122,13 @@ func Create(owner metav1.Object, namespacedName types.NamespacedName, stringData
 }
 
 func Delete(namespacedName types.NamespacedName, stringDataMap map[string]string, labels map[string]string, client client.Client) {
-	secretDefinition := NewSecret(namespacedName, namespacedName.Name, stringDataMap, labels)
+	secretDefinition := NewSecret(namespacedName, stringDataMap, labels)
 	resources.Delete(client, secretDefinition)
 }
 
 func RetriveSecret(namespacedName types.NamespacedName, secretName string, labels map[string]string, client client.Client) (*corev1.Secret, error) {
 	stringData := make(map[string]string)
-	secretDefinition := MakeSecret(namespacedName, secretName, stringData, labels)
+	secretDefinition := MakeSecret(namespacedName, stringData, labels)
 	if err := resources.Retrieve(namespacedName, client, &secretDefinition); err != nil {
 		return nil, err
 	}
@@ -129,7 +147,7 @@ func GetValueFromSecret(namespace string,
 	// Attempt to retrieve the secret
 	stringDataMap := make(map[string]string)
 
-	secretDefinition := NewSecret(namespacedName, secretName, stringDataMap, labels)
+	secretDefinition := NewSecret(namespacedName, stringDataMap, labels)
 
 	if err := resources.Retrieve(namespacedName, client, secretDefinition); err != nil {
 		if errors.IsNotFound(err) {

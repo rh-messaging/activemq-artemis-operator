@@ -245,7 +245,7 @@ func (r *ActiveMQArtemisSecurityConfigHandler) getPassword(secretName string, ke
 	// Attempt to retrieve the secret
 	stringDataMap := make(map[string]string)
 
-	secretDefinition := secrets.NewSecret(namespacedName, secretName, stringDataMap, r.GetDefaultLabels())
+	secretDefinition := secrets.NewSecret(namespacedName, stringDataMap, r.GetDefaultLabels())
 
 	if err := resources.Retrieve(namespacedName, r.owner.Client, secretDefinition); err != nil {
 		if errors.IsNotFound(err) {
