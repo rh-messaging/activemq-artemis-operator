@@ -151,7 +151,9 @@ activemqartemis.broker.amq.io "artemis-broker" deleted
 
 Users can use the activemqartemisaddress CRD to create and remove queues/address on a running broker pod.
 
-For example suppose you have deployed a broker pod like above, you can deploy an activemqartemisaddress resouce from the [examples dir](../../examples/address/address_queue.yaml):
+Having [a deployed broker pod](#deploying-the-broker) is necessary to apply the commands in this section.
+
+Assuming you have one already running, you can then deploy an activemqartemisaddress resource from the [examples dir](../../examples/address/address_queue.yaml):
 
 address-queue.yaml:
 ```$yaml
