@@ -9,4 +9,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: amq-broker-controller-manager
-  namespace: activemq-artemis-operator
+  namespace: amq-broker-operator

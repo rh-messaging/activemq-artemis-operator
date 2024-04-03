@@ -6244,7 +6244,7 @@ spec:
         - --zap-time-encoding=iso8601
         - --leader-elect
         command:
-        - /home/activemq-artemis-operator/bin/entrypoint
+        - /home/amq-broker-operator/bin/entrypoint
         env:
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7110
           value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:b9f93c243ead118651083880786a81c624f390fcc3596c7ec5ebd55f34f95ea3

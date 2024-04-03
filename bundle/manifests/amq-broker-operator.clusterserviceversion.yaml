@@ -2,7 +2,231 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
   annotations:
-    alm-examples: '[]'
+    alm-examples: |-
+      [
+        {
+          "apiVersion": "broker.amq.io/v1alpha1",
+          "kind": "ActiveMQArtemisSecurity",
+          "metadata": {
+            "name": "ex-prop"
+          },
+          "spec": {
+            "loginModules": {
+              "propertiesLoginModules": [
+                {
+                  "name": "prop-module",
+                  "users": [
+                    {
+                      "name": "bob",
+                      "roles": [
+                        "root"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "securityDomains": {
+              "brokerDomain": {
+                "loginModules": [
+                  {
+                    "flag": "sufficient",
+                    "name": "prop-module"
+                  }
+                ],
+                "name": "activemq"
+              }
+            }
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v1beta1",
+          "kind": "ActiveMQArtemis",
+          "metadata": {
+            "name": "ex-aao"
+          },
+          "spec": {
+            "deploymentPlan": {
+              "image": "placeholder",
+              "jolokiaAgentEnabled": false,
+              "journalType": "nio",
+              "managementRBACEnabled": true,
+              "messageMigration": false,
+              "persistenceEnabled": false,
+              "requireLogin": false,
+              "size": 2
+            }
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v1beta1",
+          "kind": "ActiveMQArtemisAddress",
+          "metadata": {
+            "name": "ex-aaoaddress"
+          },
+          "spec": {
+            "addressName": "myAddress0",
+            "queueName": "myQueue0",
+            "routingType": "anycast"
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v1beta1",
+          "kind": "ActiveMQArtemisScaledown",
+          "metadata": {
+            "name": "ex-aaoscaledown"
+          },
+          "spec": {
+            "localOnly": true
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v1beta1",
+          "kind": "ActiveMQArtemisSecurity",
+          "metadata": {
+            "name": "ex-prop"
+          },
+          "spec": {
+            "loginModules": {
+              "propertiesLoginModules": [
+                {
+                  "name": "prop-module",
+                  "users": [
+                    {
+                      "name": "bob",
+                      "roles": [
+                        "root"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "securityDomains": {
+              "brokerDomain": {
+                "loginModules": [
+                  {
+                    "flag": "sufficient",
+                    "name": "prop-module"
+                  }
+                ],
+                "name": "activemq"
+              }
+            }
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v2alpha1",
+          "kind": "ActiveMQArtemis",
+          "metadata": {
+            "name": "ex-aao"
+          },
+          "spec": {
+            "deploymentPlan": {
+              "image": "placeholder",
+              "size": 2
+            }
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v2alpha1",
+          "kind": "ActiveMQArtemisAddress",
+          "metadata": {
+            "name": "ex-aaoaddress"
+          },
+          "spec": {
+            "addressName": "myAddress0",
+            "queueName": "myQueue0",
+            "routingType": "anycast"
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v2alpha1",
+          "kind": "ActiveMQArtemisScaledown",
+          "metadata": {
+            "name": "ex-aaoscaledown"
+          },
+          "spec": {
+            "localOnly": true
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v2alpha2",
+          "kind": "ActiveMQArtemis",
+          "metadata": {
+            "name": "ex-aao"
+          },
+          "spec": {
+            "deploymentPlan": {
+              "image": "placeholder",
+              "size": 2
+            }
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v2alpha2",
+          "kind": "ActiveMQArtemisAddress",
+          "metadata": {
+            "name": "ex-aaoaddress"
+          },
+          "spec": {
+            "addressName": "myAddress0",
+            "queueName": "myQueue0",
+            "routingType": "anycast"
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v2alpha3",
+          "kind": "ActiveMQArtemis",
+          "metadata": {
+            "name": "ex-aao"
+          },
+          "spec": {
+            "deploymentPlan": {
+              "image": "placeholder",
+              "size": 2
+            }
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v2alpha3",
+          "kind": "ActiveMQArtemisAddress",
+          "metadata": {
+            "name": "ex-aaoaddress"
+          },
+          "spec": {
+            "addressName": "myAddress0",
+            "queueName": "myQueue0",
+            "routingType": "anycast"
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v2alpha4",
+          "kind": "ActiveMQArtemis",
+          "metadata": {
+            "name": "ex-aao"
+          },
+          "spec": {
+            "deploymentPlan": {
+              "image": "placeholder",
+              "size": 2
+            }
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v2alpha5",
+          "kind": "ActiveMQArtemis",
+          "metadata": {
+            "name": "ex-aao"
+          },
+          "spec": {
+            "deploymentPlan": {
+              "image": "placeholder",
+              "size": 2
+            }
+          }
+        }
+      ]
     capabilities: Seamless Upgrades
     categories: Streaming & Messaging
     certified: "false"
@@ -20,6 +244,8 @@ metadata:
     features.operators.openshift.io/token-auth-gcp: "false"
     operators.openshift.io/valid-subscription: '["Red Hat Runtimes", "Red Hat Integration",
       "Red Hat Process Automation", "Red Hat AMQ"]'
+    operators.operatorframework.io/builder: operator-sdk-v1.28.0
+    operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/rh-messaging/activemq-artemis-operator
     support: Red Hat
     tectonic-visibility: ocs
@@ -29,7 +255,7 @@ metadata:
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
     operatorframework.io/os.linux: supported
-  name: amq-broker-operator.v0.0.0
+  name: amq-broker-operator.v7.12.0-opr-1
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -225,7 +451,7 @@ spec:
       - kind: Secret
         name: ""
         version: v1
-      version: v2alpha3
+      version: v2alpha1
     - description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses
         API
       displayName: Active MQArtemis Address
@@ -245,7 +471,7 @@ spec:
       - kind: Secret
         name: ""
         version: v1
-      version: v2alpha1
+      version: v2alpha3
     - description: A stateful deployment of one or more brokers
       displayName: ActiveMQ Artemis
       kind: ActiveMQArtemis
@@ -1302,25 +1528,7 @@ spec:
       - kind: Secret
         name: ""
         version: v1
-      version: v2alpha5
-    - description: ActiveMQArtemis is the Schema for the activemqartemises API
-      displayName: Active MQArtemis
-      kind: ActiveMQArtemis
-      name: activemqartemises.broker.amq.io
-      resources:
-      - kind: Secret
-        name: ""
-        version: v1
-      version: v2alpha4
-    - description: ActiveMQArtemis is the Schema for the activemqartemises API
-      displayName: Active MQArtemis
-      kind: ActiveMQArtemis
-      name: activemqartemises.broker.amq.io
-      resources:
-      - kind: Secret
-        name: ""
-        version: v1
-      version: v2alpha3
+      version: v2alpha1
     - description: ActiveMQArtemis is the Schema for the activemqartemises API
       displayName: Active MQArtemis
       kind: ActiveMQArtemis
@@ -1338,7 +1546,25 @@ spec:
       - kind: Secret
         name: ""
         version: v1
-      version: v2alpha1
+      version: v2alpha3
+    - description: ActiveMQArtemis is the Schema for the activemqartemises API
+      displayName: Active MQArtemis
+      kind: ActiveMQArtemis
+      name: activemqartemises.broker.amq.io
+      resources:
+      - kind: Secret
+        name: ""
+        version: v1
+      version: v2alpha4
+    - description: ActiveMQArtemis is the Schema for the activemqartemises API
+      displayName: Active MQArtemis
+      kind: ActiveMQArtemis
+      name: activemqartemises.broker.amq.io
+      resources:
+      - kind: Secret
+        name: ""
+        version: v1
+      version: v2alpha5
     - description: Provides message migration on clustered broker scaledown
       displayName: ActiveMQ Artemis Scaledown
       kind: ActiveMQArtemisScaledown
@@ -1375,6 +1601,528 @@ spec:
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       version: v2alpha1
+    - description: Security configuration for the broker
+      displayName: ActiveMQ Artemis Security
+      kind: ActiveMQArtemisSecurity
+      name: activemqartemissecurities.broker.amq.io
+      resources:
+      - kind: Secret
+        name: ""
+        version: v1
+      specDescriptors:
+      - description: Apply this security config to the broker crs in the current namespace.
+          A value of * or empty string means applying to all broker crs. Default apply
+          to all broker crs
+        displayName: Apply to Broker CR Names
+        path: applyToCrNames
+      - description: Specifies the login modules (deprecated in favour of ActiveMQArtemisSpec.DeploymentPlan.ExtraMounts.Secrets
+          -jaas-config)
+        displayName: Login Modules
+        path: loginModules
+      - description: Specifies the guest login modules
+        displayName: Guest Login Modules
+        path: loginModules.guestLoginModules
+      - description: The guest user role
+        displayName: Guest Role
+        path: loginModules.guestLoginModules[0].guestRole
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The guest user name
+        displayName: Guest User
+        path: loginModules.guestLoginModules[0].guestUser
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Name for GuestLoginModule
+        displayName: Name
+        path: loginModules.guestLoginModules[0].name
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Specifies the Keycloak login modules
+        displayName: Keycloak Login Modules
+        path: loginModules.keycloakLoginModules
+      - description: Specifies the Keycloak module configuration
+        displayName: Keycloa Module Configuration
+        path: loginModules.keycloakLoginModules[0].configuration
+      - description: If to allow any host name
+        displayName: Allow Any Host Name
+        path: loginModules.keycloakLoginModules[0].configuration.allowAnyHostName
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: If always refresh token
+        displayName: Always Refresh Token
+        path: loginModules.keycloakLoginModules[0].configuration.alwaysRefreshToken
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: URL of the keycloak authentication server
+        displayName: Auth Server Url
+        path: loginModules.keycloakLoginModules[0].configuration.authServerUrl
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: If auto-detect bearer token only
+        displayName: Auto Detect Bearer Only
+        path: loginModules.keycloakLoginModules[0].configuration.autoDetectBearerOnly
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: If only verify bearer token
+        displayName: Bearer Only
+        path: loginModules.keycloakLoginModules[0].configuration.bearerOnly
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Client key password
+        displayName: Client Key Password
+        path: loginModules.keycloakLoginModules[0].configuration.clientKeyPassword
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:password
+      - description: Path of a client keystore
+        displayName: Client KeyStore
+        path: loginModules.keycloakLoginModules[0].configuration.clientKeyStore
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Client keystore password
+        displayName: Client KeyStore Password
+        path: loginModules.keycloakLoginModules[0].configuration.clientKeyStorePassword
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:password
+      - description: The confidential port used by the Keycloak server for secure
+          connections over SSL/TLS
+        displayName: Confidential Port
+        path: loginModules.keycloakLoginModules[0].configuration.confidentialPort
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
+      - description: Size of the connection pool
+        displayName: Connection Pool Size
+        path: loginModules.keycloakLoginModules[0].configuration.connectionPoolSize
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
+      - description: CORS allowed headers
+        displayName: Cors Allowed Headers
+        path: loginModules.keycloakLoginModules[0].configuration.corsAllowedHeaders
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: CORS allowed methods
+        displayName: Cors Allowed Methods
+        path: loginModules.keycloakLoginModules[0].configuration.corsAllowedMethods
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: CORS exposed headers
+        displayName: Cors Exposed Headers
+        path: loginModules.keycloakLoginModules[0].configuration.corsExposedHeaders
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: CORS max age
+        displayName: Cors Max Age
+        path: loginModules.keycloakLoginModules[0].configuration.corsMaxAge
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
+      - description: Specify the credentials
+        displayName: Credentials
+        path: loginModules.keycloakLoginModules[0].configuration.credentials
+      - description: The regular expression to match the Redirect URI
+        displayName: Key
+        path: loginModules.keycloakLoginModules[0].configuration.credentials[0].key
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The replacement value
+        displayName: Value
+        path: loginModules.keycloakLoginModules[0].configuration.credentials[0].value
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: If to disable trust manager
+        displayName: Disable Trust Manager
+        path: loginModules.keycloakLoginModules[0].configuration.disableTrustManager
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Whether to support basic authentication
+        displayName: Enable Basic Auth
+        path: loginModules.keycloakLoginModules[0].configuration.enableBasicAuth
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: If to enable CORS
+        displayName: Enable Cors
+        path: loginModules.keycloakLoginModules[0].configuration.enableCors
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: If to expose access token
+        displayName: Expose Token
+        path: loginModules.keycloakLoginModules[0].configuration.exposeToken
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Whether to turn off processing of the access_token query parameter
+          for bearer token processing
+        displayName: Ignore Oauth Query Parameter
+        path: loginModules.keycloakLoginModules[0].configuration.ignoreOauthQueryParameter
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Minimum interval between two requests to Keycloak to retrieve
+          new public keys
+        displayName: Min Time Between Jwks Requests
+        path: loginModules.keycloakLoginModules[0].configuration.minTimeBetweenJwksRequests
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
+      - description: OpenID Connect ID Token attribute to populate the UserPrincipal
+          name with
+        displayName: Principal Attribute
+        path: loginModules.keycloakLoginModules[0].configuration.principalAttribute
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The proxy URL
+        displayName: Proxy Url
+        path: loginModules.keycloakLoginModules[0].configuration.proxyUrl
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: If it is public client
+        displayName: Public Client
+        path: loginModules.keycloakLoginModules[0].configuration.publicClient
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Maximum interval between two requests to Keycloak to retrieve
+          new public keys
+        displayName: Public Key Cache Ttl
+        path: loginModules.keycloakLoginModules[0].configuration.publicKeyCacheTtl
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
+      - description: Realm for KeycloakLoginModule
+        displayName: Realm
+        path: loginModules.keycloakLoginModules[0].configuration.realm
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Public key for the realm
+        displayName: Realm PublicKey
+        path: loginModules.keycloakLoginModules[0].configuration.realmPublicKey
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Specify the redirect rewrite rules
+        displayName: Redirect Rewrite Rules
+        path: loginModules.keycloakLoginModules[0].configuration.redirectRewriteRules
+      - description: The regular expression to match the Redirect URI
+        displayName: Key
+        path: loginModules.keycloakLoginModules[0].configuration.redirectRewriteRules[0].key
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The replacement value
+        displayName: Value
+        path: loginModules.keycloakLoginModules[0].configuration.redirectRewriteRules[0].value
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: If register node at startup
+        displayName: Register Node At Startup
+        path: loginModules.keycloakLoginModules[0].configuration.registerNodeAtStartup
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Period for re-registering node
+        displayName: Register Node Period
+        path: loginModules.keycloakLoginModules[0].configuration.registerNodePeriod
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
+      - description: Resource Name
+        displayName: Resource
+        path: loginModules.keycloakLoginModules[0].configuration.resource
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The OAuth2 scope parameter for DirectAccessGrantsLoginModule
+        displayName: Scope
+        path: loginModules.keycloakLoginModules[0].configuration.scope
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: How SSL is required
+        displayName: SSL Required
+        path: loginModules.keycloakLoginModules[0].configuration.sslRequired
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Cookie path for a cookie store
+        displayName: Token Cookie Path
+        path: loginModules.keycloakLoginModules[0].configuration.tokenCookiePath
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Minimum time to refresh an active access token
+        displayName: Token Minimum Time To Live
+        path: loginModules.keycloakLoginModules[0].configuration.tokenMinimumTimeToLive
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
+      - description: Type of token store. session or cookie
+        displayName: Token Store
+        path: loginModules.keycloakLoginModules[0].configuration.tokenStore
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Path of a trust store
+        displayName: TrustStore
+        path: loginModules.keycloakLoginModules[0].configuration.trustStore
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Truststore password
+        displayName: TrustStore Password
+        path: loginModules.keycloakLoginModules[0].configuration.trustStorePassword
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:password
+      - description: If not to change session id on a successful login
+        displayName: Turn Off Change SessionId On Login
+        path: loginModules.keycloakLoginModules[0].configuration.turnOffChangeSessionIdOnLogin
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: If to use resource role mappings
+        displayName: Use Resource Role Mappings
+        path: loginModules.keycloakLoginModules[0].configuration.useResourceRoleMappings
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Verify whether the token contains this client name (resource)
+          as an audience
+        displayName: Verify Token Audience
+        path: loginModules.keycloakLoginModules[0].configuration.verifyTokenAudience
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Type of KeycloakLoginModule directAccess or bearerToken
+        displayName: Module Type
+        path: loginModules.keycloakLoginModules[0].moduleType
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Name for KeycloakLoginModule
+        displayName: Name
+        path: loginModules.keycloakLoginModules[0].name
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Specifies the properties login modules
+        displayName: Properties Login Modules
+        path: loginModules.propertiesLoginModules
+      - description: Name for PropertiesLoginModule
+        displayName: Name
+        path: loginModules.propertiesLoginModules[0].name
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Specifies the users
+        displayName: Users
+        path: loginModules.propertiesLoginModules[0].users
+      - description: User name to be defined in properties login module
+        displayName: Name
+        path: loginModules.propertiesLoginModules[0].users[0].name
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Password to be defined in properties login module
+        displayName: Password
+        path: loginModules.propertiesLoginModules[0].users[0].password
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:password
+      - description: Roles to be defined in properties login module
+        displayName: Roles
+        path: loginModules.propertiesLoginModules[0].users[0].roles
+      - description: Specifies the security domains (deprecated in favour of ActiveMQArtemisSpec.DeploymentPlan.ExtraMounts.Secrets
+          -jaas-config)
+        displayName: Security Domains
+        path: securityDomains
+      - description: Specify the broker domain
+        displayName: Broker Domain
+        path: securityDomains.brokerDomain
+      - description: Specify the login modules
+        displayName: Login Modules
+        path: securityDomains.brokerDomain.loginModules
+      - description: Debug option of the login module
+        displayName: Debug
+        path: securityDomains.brokerDomain.loginModules[0].debug
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Flag of the login module
+        displayName: Flag
+        path: securityDomains.brokerDomain.loginModules[0].flag
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Name of the login module
+        displayName: Name
+        path: securityDomains.brokerDomain.loginModules[0].name
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Reload option of the login module
+        displayName: Reload
+        path: securityDomains.brokerDomain.loginModules[0].reload
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Name for the broker/console domain
+        displayName: Name
+        path: securityDomains.brokerDomain.name
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Specify the console domain
+        displayName: Console Domain
+        path: securityDomains.consoleDomain
+      - description: Specify the login modules
+        displayName: Login Modules
+        path: securityDomains.consoleDomain.loginModules
+      - description: Debug option of the login module
+        displayName: Debug
+        path: securityDomains.consoleDomain.loginModules[0].debug
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Flag of the login module
+        displayName: Flag
+        path: securityDomains.consoleDomain.loginModules[0].flag
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Name of the login module
+        displayName: Name
+        path: securityDomains.consoleDomain.loginModules[0].name
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Reload option of the login module
+        displayName: Reload
+        path: securityDomains.consoleDomain.loginModules[0].reload
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Name for the broker/console domain
+        displayName: Name
+        path: securityDomains.consoleDomain.name
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Specifies the security settings
+        displayName: Security Settings
+        path: securitySettings
+      - description: Specify the broker security settings
+        displayName: Broker Security Settings
+        path: securitySettings.broker
+      - description: The address match pattern of a security setting
+        displayName: Match
+        path: securitySettings.broker[0].match
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Specify the permissions
+        displayName: Permissions
+        path: securitySettings.broker[0].permissions
+      - description: The operation type of a security setting
+        displayName: Operation Type
+        path: securitySettings.broker[0].permissions[0].operationType
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The roles of a security setting
+        displayName: Roles
+        path: securitySettings.broker[0].permissions[0].roles
+      - description: Specify the management security settings
+        displayName: Management Security Settings
+        path: securitySettings.management
+      - description: Specify the authorisation configurations
+        displayName: Authorisation Configurations
+        path: securitySettings.management.authorisation
+      - description: Specify the allowed entries
+        displayName: Allowed Entries
+        path: securitySettings.management.authorisation.allowedList
+      - description: The domain of allowedList
+        displayName: Domain
+        path: securitySettings.management.authorisation.allowedList[0].domain
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The key of allowedList
+        displayName: Key
+        path: securitySettings.management.authorisation.allowedList[0].key
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Specify the default accesses
+        displayName: Default Accesses
+        path: securitySettings.management.authorisation.defaultAccess
+      - description: Specifies the access entry method
+        displayName: Method
+        path: securitySettings.management.authorisation.defaultAccess[0].method
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Specifies the access entry roles
+        displayName: Roles
+        path: securitySettings.management.authorisation.defaultAccess[0].roles
+      - description: Specify the role accesses
+        displayName: Role Accesses
+        path: securitySettings.management.authorisation.roleAccess
+      - description: Specify the default accesses
+        displayName: Default Accesses
+        path: securitySettings.management.authorisation.roleAccess[0].accessList
+      - description: Specifies the access entry method
+        displayName: Method
+        path: securitySettings.management.authorisation.roleAccess[0].accessList[0].method
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Specifies the access entry roles
+        displayName: Roles
+        path: securitySettings.management.authorisation.roleAccess[0].accessList[0].roles
+      - description: The domain of the role access
+        displayName: Domain
+        path: securitySettings.management.authorisation.roleAccess[0].domain
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The key of the role access
+        displayName: Key
+        path: securitySettings.management.authorisation.roleAccess[0].key
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Specify connector configurations
+        displayName: Connector Configurations
+        path: securitySettings.management.connector
+      - description: The management authentication type
+        displayName: Authenticator Type
+        path: securitySettings.management.connector.authenticatorType
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The connector host for connecting to management
+        displayName: Host
+        path: securitySettings.management.connector.host
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The JMX realm of management
+        displayName: Jmx Realm
+        path: securitySettings.management.connector.jmxRealm
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The keystore password for management connector
+        displayName: KeyStore Password
+        path: securitySettings.management.connector.keyStorePassword
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The keystore path for management connector
+        displayName: KeyStore Path
+        path: securitySettings.management.connector.keyStorePath
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The keystore provider for management connector
+        displayName: KeyStore Provider
+        path: securitySettings.management.connector.keyStoreProvider
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The JMX object name of management
+        displayName: Object Name
+        path: securitySettings.management.connector.objectName
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The password codec for management connector
+        displayName: Password Codec
+        path: securitySettings.management.connector.passwordCodec
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The connector port for connecting to management
+        displayName: Port
+        path: securitySettings.management.connector.port
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
+      - description: The RMI registry port for management
+        displayName: Rmi Registry Port
+        path: securitySettings.management.connector.rmiRegistryPort
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
+      - description: Whether management connection is secured
+        displayName: Secured
+        path: securitySettings.management.connector.secured
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: The truststore password for management connector
+        displayName: TrustStore Password
+        path: securitySettings.management.connector.trustStorePassword
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The truststore path for management connector
+        displayName: TrustStore Path
+        path: securitySettings.management.connector.trustStorePath
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The truststore provider for management connector
+        displayName: TrustStore Provider
+        path: securitySettings.management.connector.trustStoreProvider
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: The roles allowed to login hawtio
+        displayName: Hawtio Roles
+        path: securitySettings.management.hawtioRoles
+      version: v1alpha1
     - description: Security configuration for the broker
       displayName: ActiveMQ Artemis Security
       kind: ActiveMQArtemisSecurity
@@ -1907,528 +2655,6 @@ spec:
         displayName: Hawtio Roles
         path: securitySettings.management.hawtioRoles
       version: v1beta1
-    - description: Security configuration for the broker
-      displayName: ActiveMQ Artemis Security
-      kind: ActiveMQArtemisSecurity
-      name: activemqartemissecurities.broker.amq.io
-      resources:
-      - kind: Secret
-        name: ""
-        version: v1
-      specDescriptors:
-      - description: Apply this security config to the broker crs in the current namespace.
-          A value of * or empty string means applying to all broker crs. Default apply
-          to all broker crs
-        displayName: Apply to Broker CR Names
-        path: applyToCrNames
-      - description: Specifies the login modules (deprecated in favour of ActiveMQArtemisSpec.DeploymentPlan.ExtraMounts.Secrets
-          -jaas-config)
-        displayName: Login Modules
-        path: loginModules
-      - description: Specifies the guest login modules
-        displayName: Guest Login Modules
-        path: loginModules.guestLoginModules
-      - description: The guest user role
-        displayName: Guest Role
-        path: loginModules.guestLoginModules[0].guestRole
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: The guest user name
-        displayName: Guest User
-        path: loginModules.guestLoginModules[0].guestUser
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Name for GuestLoginModule
-        displayName: Name
-        path: loginModules.guestLoginModules[0].name
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Specifies the Keycloak login modules
-        displayName: Keycloak Login Modules
-        path: loginModules.keycloakLoginModules
-      - description: Specifies the Keycloak module configuration
-        displayName: Keycloa Module Configuration
-        path: loginModules.keycloakLoginModules[0].configuration
-      - description: If to allow any host name
-        displayName: Allow Any Host Name
-        path: loginModules.keycloakLoginModules[0].configuration.allowAnyHostName
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: If always refresh token
-        displayName: Always Refresh Token
-        path: loginModules.keycloakLoginModules[0].configuration.alwaysRefreshToken
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: URL of the keycloak authentication server
-        displayName: Auth Server Url
-        path: loginModules.keycloakLoginModules[0].configuration.authServerUrl
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: If auto-detect bearer token only
-        displayName: Auto Detect Bearer Only
-        path: loginModules.keycloakLoginModules[0].configuration.autoDetectBearerOnly
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: If only verify bearer token
-        displayName: Bearer Only
-        path: loginModules.keycloakLoginModules[0].configuration.bearerOnly
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Client key password
-        displayName: Client Key Password
-        path: loginModules.keycloakLoginModules[0].configuration.clientKeyPassword
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:password
-      - description: Path of a client keystore
-        displayName: Client KeyStore
-        path: loginModules.keycloakLoginModules[0].configuration.clientKeyStore
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Client keystore password
-        displayName: Client KeyStore Password
-        path: loginModules.keycloakLoginModules[0].configuration.clientKeyStorePassword
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:password
-      - description: The confidential port used by the Keycloak server for secure
-          connections over SSL/TLS
-        displayName: Confidential Port
-        path: loginModules.keycloakLoginModules[0].configuration.confidentialPort
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:number
-      - description: Size of the connection pool
-        displayName: Connection Pool Size
-        path: loginModules.keycloakLoginModules[0].configuration.connectionPoolSize
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:number
-      - description: CORS allowed headers
-        displayName: Cors Allowed Headers
-        path: loginModules.keycloakLoginModules[0].configuration.corsAllowedHeaders
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: CORS allowed methods
-        displayName: Cors Allowed Methods
-        path: loginModules.keycloakLoginModules[0].configuration.corsAllowedMethods
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: CORS exposed headers
-        displayName: Cors Exposed Headers
-        path: loginModules.keycloakLoginModules[0].configuration.corsExposedHeaders
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: CORS max age
-        displayName: Cors Max Age
-        path: loginModules.keycloakLoginModules[0].configuration.corsMaxAge
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:number
-      - description: Specify the credentials
-        displayName: Credentials
-        path: loginModules.keycloakLoginModules[0].configuration.credentials
-      - description: The regular expression to match the Redirect URI
-        displayName: Key
-        path: loginModules.keycloakLoginModules[0].configuration.credentials[0].key
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: The replacement value
-        displayName: Value
-        path: loginModules.keycloakLoginModules[0].configuration.credentials[0].value
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: If to disable trust manager
-        displayName: Disable Trust Manager
-        path: loginModules.keycloakLoginModules[0].configuration.disableTrustManager
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Whether to support basic authentication
-        displayName: Enable Basic Auth
-        path: loginModules.keycloakLoginModules[0].configuration.enableBasicAuth
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: If to enable CORS
-        displayName: Enable Cors
-        path: loginModules.keycloakLoginModules[0].configuration.enableCors
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: If to expose access token
-        displayName: Expose Token
-        path: loginModules.keycloakLoginModules[0].configuration.exposeToken
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Whether to turn off processing of the access_token query parameter
-          for bearer token processing
-        displayName: Ignore Oauth Query Parameter
-        path: loginModules.keycloakLoginModules[0].configuration.ignoreOauthQueryParameter
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Minimum interval between two requests to Keycloak to retrieve
-          new public keys
-        displayName: Min Time Between Jwks Requests
-        path: loginModules.keycloakLoginModules[0].configuration.minTimeBetweenJwksRequests
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:number
-      - description: OpenID Connect ID Token attribute to populate the UserPrincipal
-          name with
-        displayName: Principal Attribute
-        path: loginModules.keycloakLoginModules[0].configuration.principalAttribute
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: The proxy URL
-        displayName: Proxy Url
-        path: loginModules.keycloakLoginModules[0].configuration.proxyUrl
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: If it is public client
-        displayName: Public Client
-        path: loginModules.keycloakLoginModules[0].configuration.publicClient
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Maximum interval between two requests to Keycloak to retrieve
-          new public keys
-        displayName: Public Key Cache Ttl
-        path: loginModules.keycloakLoginModules[0].configuration.publicKeyCacheTtl
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:number
-      - description: Realm for KeycloakLoginModule
-        displayName: Realm
-        path: loginModules.keycloakLoginModules[0].configuration.realm
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Public key for the realm
-        displayName: Realm PublicKey
-        path: loginModules.keycloakLoginModules[0].configuration.realmPublicKey
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Specify the redirect rewrite rules
-        displayName: Redirect Rewrite Rules
-        path: loginModules.keycloakLoginModules[0].configuration.redirectRewriteRules
-      - description: The regular expression to match the Redirect URI
-        displayName: Key
-        path: loginModules.keycloakLoginModules[0].configuration.redirectRewriteRules[0].key
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: The replacement value
-        displayName: Value
-        path: loginModules.keycloakLoginModules[0].configuration.redirectRewriteRules[0].value
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: If register node at startup
-        displayName: Register Node At Startup
-        path: loginModules.keycloakLoginModules[0].configuration.registerNodeAtStartup
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Period for re-registering node
-        displayName: Register Node Period
-        path: loginModules.keycloakLoginModules[0].configuration.registerNodePeriod
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:number
-      - description: Resource Name
-        displayName: Resource
-        path: loginModules.keycloakLoginModules[0].configuration.resource
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: The OAuth2 scope parameter for DirectAccessGrantsLoginModule
-        displayName: Scope
-        path: loginModules.keycloakLoginModules[0].configuration.scope
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: How SSL is required
-        displayName: SSL Required
-        path: loginModules.keycloakLoginModules[0].configuration.sslRequired
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Cookie path for a cookie store
-        displayName: Token Cookie Path
-        path: loginModules.keycloakLoginModules[0].configuration.tokenCookiePath
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Minimum time to refresh an active access token
-        displayName: Token Minimum Time To Live
-        path: loginModules.keycloakLoginModules[0].configuration.tokenMinimumTimeToLive
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:number
-      - description: Type of token store. session or cookie
-        displayName: Token Store
-        path: loginModules.keycloakLoginModules[0].configuration.tokenStore
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Path of a trust store
-        displayName: TrustStore
-        path: loginModules.keycloakLoginModules[0].configuration.trustStore
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Truststore password
-        displayName: TrustStore Password
-        path: loginModules.keycloakLoginModules[0].configuration.trustStorePassword
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:password
-      - description: If not to change session id on a successful login
-        displayName: Turn Off Change SessionId On Login
-        path: loginModules.keycloakLoginModules[0].configuration.turnOffChangeSessionIdOnLogin
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: If to use resource role mappings
-        displayName: Use Resource Role Mappings
-        path: loginModules.keycloakLoginModules[0].configuration.useResourceRoleMappings
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Verify whether the token contains this client name (resource)
-          as an audience
-        displayName: Verify Token Audience
-        path: loginModules.keycloakLoginModules[0].configuration.verifyTokenAudience
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Type of KeycloakLoginModule directAccess or bearerToken
-        displayName: Module Type
-        path: loginModules.keycloakLoginModules[0].moduleType
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Name for KeycloakLoginModule
-        displayName: Name
-        path: loginModules.keycloakLoginModules[0].name
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Specifies the properties login modules
-        displayName: Properties Login Modules
-        path: loginModules.propertiesLoginModules
-      - description: Name for PropertiesLoginModule
-        displayName: Name
-        path: loginModules.propertiesLoginModules[0].name
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Specifies the users
-        displayName: Users
-        path: loginModules.propertiesLoginModules[0].users
-      - description: User name to be defined in properties login module
-        displayName: Name
-        path: loginModules.propertiesLoginModules[0].users[0].name
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Password to be defined in properties login module
-        displayName: Password
-        path: loginModules.propertiesLoginModules[0].users[0].password
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:password
-      - description: Roles to be defined in properties login module
-        displayName: Roles
-        path: loginModules.propertiesLoginModules[0].users[0].roles
-      - description: Specifies the security domains (deprecated in favour of ActiveMQArtemisSpec.DeploymentPlan.ExtraMounts.Secrets
-          -jaas-config)
-        displayName: Security Domains
-        path: securityDomains
-      - description: Specify the broker domain
-        displayName: Broker Domain
-        path: securityDomains.brokerDomain
-      - description: Specify the login modules
-        displayName: Login Modules
-        path: securityDomains.brokerDomain.loginModules
-      - description: Debug option of the login module
-        displayName: Debug
-        path: securityDomains.brokerDomain.loginModules[0].debug
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Flag of the login module
-        displayName: Flag
-        path: securityDomains.brokerDomain.loginModules[0].flag
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Name of the login module
-        displayName: Name
-        path: securityDomains.brokerDomain.loginModules[0].name
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Reload option of the login module
-        displayName: Reload
-        path: securityDomains.brokerDomain.loginModules[0].reload
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Name for the broker/console domain
-        displayName: Name
-        path: securityDomains.brokerDomain.name
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Specify the console domain
-        displayName: Console Domain
-        path: securityDomains.consoleDomain
-      - description: Specify the login modules
-        displayName: Login Modules
-        path: securityDomains.consoleDomain.loginModules
-      - description: Debug option of the login module
-        displayName: Debug
-        path: securityDomains.consoleDomain.loginModules[0].debug
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Flag of the login module
-        displayName: Flag
-        path: securityDomains.consoleDomain.loginModules[0].flag
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Name of the login module
-        displayName: Name
-        path: securityDomains.consoleDomain.loginModules[0].name
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Reload option of the login module
-        displayName: Reload
-        path: securityDomains.consoleDomain.loginModules[0].reload
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Name for the broker/console domain
-        displayName: Name
-        path: securityDomains.consoleDomain.name
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Specifies the security settings
-        displayName: Security Settings
-        path: securitySettings
-      - description: Specify the broker security settings
-        displayName: Broker Security Settings
-        path: securitySettings.broker
-      - description: The address match pattern of a security setting
-        displayName: Match
-        path: securitySettings.broker[0].match
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Specify the permissions
-        displayName: Permissions
-        path: securitySettings.broker[0].permissions
-      - description: The operation type of a security setting
-        displayName: Operation Type
-        path: securitySettings.broker[0].permissions[0].operationType
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: The roles of a security setting
-        displayName: Roles
-        path: securitySettings.broker[0].permissions[0].roles
-      - description: Specify the management security settings
-        displayName: Management Security Settings
-        path: securitySettings.management
-      - description: Specify the authorisation configurations
-        displayName: Authorisation Configurations
-        path: securitySettings.management.authorisation
-      - description: Specify the allowed entries
-        displayName: Allowed Entries
-        path: securitySettings.management.authorisation.allowedList
-      - description: The domain of allowedList
-        displayName: Domain
-        path: securitySettings.management.authorisation.allowedList[0].domain
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: The key of allowedList
-        displayName: Key
-        path: securitySettings.management.authorisation.allowedList[0].key
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Specify the default accesses
-        displayName: Default Accesses
-        path: securitySettings.management.authorisation.defaultAccess
-      - description: Specifies the access entry method
-        displayName: Method
-        path: securitySettings.management.authorisation.defaultAccess[0].method
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Specifies the access entry roles
-        displayName: Roles
-        path: securitySettings.management.authorisation.defaultAccess[0].roles
-      - description: Specify the role accesses
-        displayName: Role Accesses
-        path: securitySettings.management.authorisation.roleAccess
-      - description: Specify the default accesses
-        displayName: Default Accesses
-        path: securitySettings.management.authorisation.roleAccess[0].accessList
-      - description: Specifies the access entry method
-        displayName: Method
-        path: securitySettings.management.authorisation.roleAccess[0].accessList[0].method
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Specifies the access entry roles
-        displayName: Roles
-        path: securitySettings.management.authorisation.roleAccess[0].accessList[0].roles
-      - description: The domain of the role access
-        displayName: Domain
-        path: securitySettings.management.authorisation.roleAccess[0].domain
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: The key of the role access
-        displayName: Key
-        path: securitySettings.management.authorisation.roleAccess[0].key
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Specify connector configurations
-        displayName: Connector Configurations
-        path: securitySettings.management.connector
-      - description: The management authentication type
-        displayName: Authenticator Type
-        path: securitySettings.management.connector.authenticatorType
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: The connector host for connecting to management
-        displayName: Host
-        path: securitySettings.management.connector.host
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: The JMX realm of management
-        displayName: Jmx Realm
-        path: securitySettings.management.connector.jmxRealm
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: The keystore password for management connector
-        displayName: KeyStore Password
-        path: securitySettings.management.connector.keyStorePassword
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: The keystore path for management connector
-        displayName: KeyStore Path
-        path: securitySettings.management.connector.keyStorePath
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: The keystore provider for management connector
-        displayName: KeyStore Provider
-        path: securitySettings.management.connector.keyStoreProvider
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: The JMX object name of management
-        displayName: Object Name
-        path: securitySettings.management.connector.objectName
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: The password codec for management connector
-        displayName: Password Codec
-        path: securitySettings.management.connector.passwordCodec
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: The connector port for connecting to management
-        displayName: Port
-        path: securitySettings.management.connector.port
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:number
-      - description: The RMI registry port for management
-        displayName: Rmi Registry Port
-        path: securitySettings.management.connector.rmiRegistryPort
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:number
-      - description: Whether management connection is secured
-        displayName: Secured
-        path: securitySettings.management.connector.secured
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: The truststore password for management connector
-        displayName: TrustStore Password
-        path: securitySettings.management.connector.trustStorePassword
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: The truststore path for management connector
-        displayName: TrustStore Path
-        path: securitySettings.management.connector.trustStorePath
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: The truststore provider for management connector
-        displayName: TrustStore Provider
-        path: securitySettings.management.connector.trustStoreProvider
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:text
-      - description: The roles allowed to login hawtio
-        displayName: Hawtio Roles
-        path: securitySettings.management.hawtioRoles
-      version: v1alpha1
   description: |
     **Red Hat AMQ Broker** is a pure-Java multiprotocol message broker. It’s built on an efficient, asynchronous core with a fast journal for message persistence.
 
@@ -2469,8 +2695,417 @@ spec:
     mediatype: image/png
   install:
     spec:
-      deployments: null
-    strategy: ""
+      deployments:
+      - label:
+          control-plane: controller-manager
+        name: amq-broker-controller-manager
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              control-plane: controller-manager
+              name: amq-broker-operator
+          strategy:
+            rollingUpdate:
+              maxSurge: 1
+              maxUnavailable: 1
+            type: RollingUpdate
+          template:
+            metadata:
+              labels:
+                com.company: Red_Hat
+                control-plane: controller-manager
+                name: amq-broker-operator
+                rht.comp: Broker_AMQ
+                rht.comp_ver: 7.12.0
+                rht.prod_name: Red_Hat_Integration
+                rht.prod_ver: 2024.Q2
+                rht.subcomp: broker-amq-operator
+                rht.subcomp_t: application
+            spec:
+              containers:
+              - args:
+                - --zap-log-level=info
+                - --zap-encoder=console
+                - --zap-time-encoding=iso8601
+                - --leader-elect
+                command:
+                - /home/amq-broker-operator/bin/entrypoint
+                env:
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7110
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:b9f93c243ead118651083880786a81c624f390fcc3596c7ec5ebd55f34f95ea3
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7110
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:25c3732e945b4bc3e9aca721ce709d0217339b065d9dac9afdb6202e9fd8a799
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7110_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:b9f93c243ead118651083880786a81c624f390fcc3596c7ec5ebd55f34f95ea3
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7110_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:25c3732e945b4bc3e9aca721ce709d0217339b065d9dac9afdb6202e9fd8a799
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7110_s390x
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:b9f93c243ead118651083880786a81c624f390fcc3596c7ec5ebd55f34f95ea3
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7110_s390x
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:25c3732e945b4bc3e9aca721ce709d0217339b065d9dac9afdb6202e9fd8a799
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7111
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:9c1ac38bf8eec67a3da57c3cc61105513776a749408cb287fe6448a17889de4e
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7111
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:40ccaf2bb2e0f8132f2541b39cb835f17b38050b3ca9232f0861fd5fcaf4324a
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7111_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:9c1ac38bf8eec67a3da57c3cc61105513776a749408cb287fe6448a17889de4e
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7111_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:40ccaf2bb2e0f8132f2541b39cb835f17b38050b3ca9232f0861fd5fcaf4324a
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7111_s390x
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:9c1ac38bf8eec67a3da57c3cc61105513776a749408cb287fe6448a17889de4e
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7111_s390x
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:40ccaf2bb2e0f8132f2541b39cb835f17b38050b3ca9232f0861fd5fcaf4324a
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7112
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:0dde839c2dce7cb684094bf26523c8e16677de03149a0fff468b8c3f106e1f4f
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7112
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:29f07006ad62023c20d34971cb3ae900349efae5ab2918aaa8e5647d788032be
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7112_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:0dde839c2dce7cb684094bf26523c8e16677de03149a0fff468b8c3f106e1f4f
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7112_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:29f07006ad62023c20d34971cb3ae900349efae5ab2918aaa8e5647d788032be
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7112_s390x
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:0dde839c2dce7cb684094bf26523c8e16677de03149a0fff468b8c3f106e1f4f
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7112_s390x
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:29f07006ad62023c20d34971cb3ae900349efae5ab2918aaa8e5647d788032be
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7113
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:5e5d8b551ab8ca377e0bc939037970a2f31ee14e9f555853ebea2759d673895a
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7113
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:ade37271426ab8f543d72f8da3e9f663d665f9427379a2539fc9323f6897cc44
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7113_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:5e5d8b551ab8ca377e0bc939037970a2f31ee14e9f555853ebea2759d673895a
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7113_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:ade37271426ab8f543d72f8da3e9f663d665f9427379a2539fc9323f6897cc44
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7113_s390x
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:5e5d8b551ab8ca377e0bc939037970a2f31ee14e9f555853ebea2759d673895a
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7113_s390x
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:ade37271426ab8f543d72f8da3e9f663d665f9427379a2539fc9323f6897cc44
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7114
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:8b4c4400a02c6cacfd978147b158e2ccbe5da955578b4b970a5ee7edac865326
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7114
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:89bb769b4c33eb931cc7866eeabec9a315b913851cfa84bc6e11ae8d1e8b2cbb
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7114_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:8b4c4400a02c6cacfd978147b158e2ccbe5da955578b4b970a5ee7edac865326
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7114_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:89bb769b4c33eb931cc7866eeabec9a315b913851cfa84bc6e11ae8d1e8b2cbb
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7114_s390x
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:8b4c4400a02c6cacfd978147b158e2ccbe5da955578b4b970a5ee7edac865326
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7114_s390x
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:89bb769b4c33eb931cc7866eeabec9a315b913851cfa84bc6e11ae8d1e8b2cbb
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7115
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:5f842ebe9a6a4294a056ad10189a5f277cfd3fb4e6e0b3225e194bd5c131151d
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7115
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:7d53744ae8c77aea09c59165486c9ed0eaa131140f6b346042293bce0bd8a745
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7115_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:5f842ebe9a6a4294a056ad10189a5f277cfd3fb4e6e0b3225e194bd5c131151d
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7115_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:7d53744ae8c77aea09c59165486c9ed0eaa131140f6b346042293bce0bd8a745
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7115_s390x
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:5f842ebe9a6a4294a056ad10189a5f277cfd3fb4e6e0b3225e194bd5c131151d
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7115_s390x
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:7d53744ae8c77aea09c59165486c9ed0eaa131140f6b346042293bce0bd8a745
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7116
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:f8c1fc7a4298ec691855c5067ed92b4859a92cea7b7ed9af1bba04469b5a315f
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7116
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:e8fa2a00e576ecb95561ffbdbf87b1c82d479c8791ab2c6ce741dd0d0b496d15
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7116_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:f8c1fc7a4298ec691855c5067ed92b4859a92cea7b7ed9af1bba04469b5a315f
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7116_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:e8fa2a00e576ecb95561ffbdbf87b1c82d479c8791ab2c6ce741dd0d0b496d15
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7116_s390x
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:f8c1fc7a4298ec691855c5067ed92b4859a92cea7b7ed9af1bba04469b5a315f
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7116_s390x
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:e8fa2a00e576ecb95561ffbdbf87b1c82d479c8791ab2c6ce741dd0d0b496d15
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7120
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:4e110a0ff6682fc1c3ee4555b1d95bb183142cf29cae32806d56117e1fa48cbd
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7120
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:b1f84dc928d786918ba4c9e62960ec94554bde48944b4873b5129575d44a6d2f
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7120_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:4e110a0ff6682fc1c3ee4555b1d95bb183142cf29cae32806d56117e1fa48cbd
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7120_ppc64le
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:b1f84dc928d786918ba4c9e62960ec94554bde48944b4873b5129575d44a6d2f
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7120_s390x
+                  value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:4e110a0ff6682fc1c3ee4555b1d95bb183142cf29cae32806d56117e1fa48cbd
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7120_s390x
+                  value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:b1f84dc928d786918ba4c9e62960ec94554bde48944b4873b5129575d44a6d2f
+                - name: OPERATOR_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.labels['name']
+                - name: POD_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: WATCH_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.annotations['olm.targetNamespaces']
+                - name: ENABLE_WEBHOOKS
+                  value: "false"
+                image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:3358f6fb2e199acb1dd9a2c8975841e9712b56e65ce430a603a0573a601c8ee1
+                livenessProbe:
+                  httpGet:
+                    path: /healthz
+                    port: 8081
+                  initialDelaySeconds: 15
+                  periodSeconds: 20
+                name: manager
+                ports:
+                - containerPort: 8383
+                  name: http-metrics
+                readinessProbe:
+                  httpGet:
+                    path: /readyz
+                    port: 8081
+                  initialDelaySeconds: 5
+                  periodSeconds: 10
+                resources: {}
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+                  runAsNonRoot: true
+                  seccompProfile:
+                    type: RuntimeDefault
+              securityContext:
+                runAsNonRoot: true
+                seccompProfile:
+                  type: RuntimeDefault
+              serviceAccountName: amq-broker-controller-manager
+              terminationGracePeriodSeconds: 10
+      permissions:
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+        - apiGroups:
+          - coordination.k8s.io
+          resources:
+          - leases
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+        - apiGroups:
+          - ""
+          resources:
+          - events
+          verbs:
+          - create
+          - patch
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          - endpoints
+          - events
+          - persistentvolumeclaims
+          - pods
+          - routes
+          - secrets
+          - serviceaccounts
+          - services
+          verbs:
+          - '*'
+        - apiGroups:
+          - ""
+          resources:
+          - namespaces
+          verbs:
+          - get
+        - apiGroups:
+          - apps
+          resources:
+          - daemonsets
+          - deployments
+          - replicasets
+          - statefulsets
+          verbs:
+          - '*'
+        - apiGroups:
+          - apps
+          resources:
+          - deployments/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemisaddresses
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemisaddresses/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemisaddresses/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemises
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemises/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemises/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemisscaledowns
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemisscaledowns/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemisscaledowns/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemissecurities
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemissecurities/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemissecurities/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - pods
+          verbs:
+          - get
+          - list
+        - apiGroups:
+          - monitoring.coreos.com
+          resources:
+          - servicemonitors
+          verbs:
+          - create
+          - get
+        - apiGroups:
+          - networking.k8s.io
+          resources:
+          - ingresses
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - update
+          - watch
+        - apiGroups:
+          - policy
+          resources:
+          - poddisruptionbudgets
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - update
+          - watch
+        - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
+          - rolebindings
+          - roles
+          verbs:
+          - create
+          - delete
+          - get
+        - apiGroups:
+          - route.openshift.io
+          resources:
+          - routes
+          - routes/custom-host
+          - routes/status
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - update
+          - watch
+        serviceAccountName: amq-broker-controller-manager
+    strategy: deployment
   installModes:
   - supported: true
     type: OwnNamespace
@@ -2501,4 +3136,37 @@ spec:
   provider:
     name: Red Hat
     url: https://www.redhat.com/
-  version: 0.0.0
+  relatedImages:
+  - image: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:b9f93c243ead118651083880786a81c624f390fcc3596c7ec5ebd55f34f95ea3
+    name: ""
+  - image: registry.redhat.io/amq7/amq-broker-rhel8@sha256:25c3732e945b4bc3e9aca721ce709d0217339b065d9dac9afdb6202e9fd8a799
+    name: ""
+  - image: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:9c1ac38bf8eec67a3da57c3cc61105513776a749408cb287fe6448a17889de4e
+    name: ""
+  - image: registry.redhat.io/amq7/amq-broker-rhel8@sha256:40ccaf2bb2e0f8132f2541b39cb835f17b38050b3ca9232f0861fd5fcaf4324a
+    name: ""
+  - image: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:0dde839c2dce7cb684094bf26523c8e16677de03149a0fff468b8c3f106e1f4f
+    name: ""
+  - image: registry.redhat.io/amq7/amq-broker-rhel8@sha256:29f07006ad62023c20d34971cb3ae900349efae5ab2918aaa8e5647d788032be
+    name: ""
+  - image: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:5e5d8b551ab8ca377e0bc939037970a2f31ee14e9f555853ebea2759d673895a
+    name: ""
+  - image: registry.redhat.io/amq7/amq-broker-rhel8@sha256:ade37271426ab8f543d72f8da3e9f663d665f9427379a2539fc9323f6897cc44
+    name: ""
+  - image: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:8b4c4400a02c6cacfd978147b158e2ccbe5da955578b4b970a5ee7edac865326
+    name: ""
+  - image: registry.redhat.io/amq7/amq-broker-rhel8@sha256:89bb769b4c33eb931cc7866eeabec9a315b913851cfa84bc6e11ae8d1e8b2cbb
+    name: ""
+  - image: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:5f842ebe9a6a4294a056ad10189a5f277cfd3fb4e6e0b3225e194bd5c131151d
+    name: ""
+  - image: registry.redhat.io/amq7/amq-broker-rhel8@sha256:7d53744ae8c77aea09c59165486c9ed0eaa131140f6b346042293bce0bd8a745
+    name: ""
+  - image: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:f8c1fc7a4298ec691855c5067ed92b4859a92cea7b7ed9af1bba04469b5a315f
+    name: ""
+  - image: registry.redhat.io/amq7/amq-broker-rhel8@sha256:e8fa2a00e576ecb95561ffbdbf87b1c82d479c8791ab2c6ce741dd0d0b496d15
+    name: ""
+  - image: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:4e110a0ff6682fc1c3ee4555b1d95bb183142cf29cae32806d56117e1fa48cbd
+    name: ""
+  - image: registry.redhat.io/amq7/amq-broker-rhel8@sha256:b1f84dc928d786918ba4c9e62960ec94554bde48944b4873b5129575d44a6d2f
+    name: ""
+  version: 7.12.0-opr-1
