@@ -52,7 +52,7 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/version"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/client-go/kubernetes/scheme"
-	utilpointer "k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -6482,8 +6482,8 @@ var _ = Describe("artemis controller", func() {
 			// the broker init images before 2.32.0 has root user
 			// that doesn't work in namespaces with the restricted policy
 			crd.Spec.DeploymentPlan.PodSecurityContext = &corev1.PodSecurityContext{
-				RunAsUser:      utilpointer.Int64(defaultUid),
-				RunAsNonRoot:   utilpointer.Bool(true),
+				RunAsUser:      ptr.To(defaultUid),
+				RunAsNonRoot:   ptr.To(true),
 				SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
 			}
 
@@ -9565,7 +9565,7 @@ var _ = Describe("artemis controller", func() {
 
 				tlsSecretName := crd.Name + "tls-secret"
 				tlsSecret, err := CreateTlsSecret(tlsSecretName, defaultNamespace, defaultPassword, []string{
-					"*." + crd.Name + "-hdls-svc.test.svc.cluster.local",
+					"*." + crd.Name + "-hdls-svc." + defaultNamespace + ".svc.cluster.local",
 				})
 				Expect(err).To(BeNil())
 				Expect(k8sClient.Create(ctx, tlsSecret)).Should(Succeed())
@@ -9602,14 +9602,62 @@ var _ = Describe("artemis controller", func() {
 			}
 		})
 
-		It("secure connections with multiple wildcard DNS names", func() {
+		It("secure connections with openshift serving certificate", func() {
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" && isOpenshift {
+				crd := generateArtemisSpec(defaultNamespace)
+
+				tlsSecretName := crd.Name + "-cp-secret"
+				crd.Spec.DeploymentPlan.Size = common.Int32ToPtr(2)
+				crd.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+					{
+						Name:       "artemis",
+						Port:       61616,
+						SSLEnabled: true,
+						SSLSecret:  tlsSecretName,
+					},
+				}
+
+				crd.Spec.BrokerProperties = []string{
+					"connectorConfigurations.artemis.params.sslEnabled=true",
+					"connectorConfigurations.artemis.params.trustStorePath=/etc/" + tlsSecretName + "-volume/tls.crt",
+					"connectorConfigurations.artemis.params.trustStoreType=PEM",
+				}
+
+				crd.Spec.ResourceTemplates = []brokerv1beta1.ResourceTemplate{
+					{
+						Selector: &brokerv1beta1.ResourceSelector{
+							Kind: ptr.To("Service"),
+							Name: ptr.To(crd.Name + "-hdls-svc"),
+						},
+						Annotations: map[string]string{
+							"service.beta.openshift.io/serving-cert-secret-name": tlsSecretName,
+						},
+					},
+				}
+
+				By("Deploying broker" + crd.Name)
+				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+				Eventually(func(g Gomega) {
+					jolokia := jolokia.GetJolokia(crd.Name+"-ss-0."+crd.Name+"-hdls-svc."+defaultNamespace+".svc.cluster.local", "8161", "/console/jolokia", "", "", "http")
+					data, err := jolokia.Read("org.apache.activemq.artemis:broker=\"amq-broker\",component=cluster-connections,name=\"my-cluster\"/Nodes")
+					g.Expect(err).To(BeNil())
+					g.Expect(data.Value).Should(ContainSubstring(crd.Name+"-ss-1"), data.Value)
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				CleanResource(&crd, crd.Name, defaultNamespace)
+			}
+		})
+
+		It("secure connections with multiple DNS names", func() {
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 				crd := generateArtemisSpec(defaultNamespace)
 
 				tlsSecretName := crd.Name + "tls-secret"
 				tlsSecret, err := CreateTlsSecret(tlsSecretName, defaultNamespace, defaultPassword, []string{
-					crd.Name + "-ss-0." + crd.Name + "-hdls-svc.test.svc.cluster.local",
-					crd.Name + "-ss-1." + crd.Name + "-hdls-svc.test.svc.cluster.local",
+					crd.Name + "-ss-0." + crd.Name + "-hdls-svc." + defaultNamespace + ".svc.cluster.local",
+					crd.Name + "-ss-1." + crd.Name + "-hdls-svc." + defaultNamespace + ".svc.cluster.local",
 				})
 				Expect(err).To(BeNil())
 				Expect(k8sClient.Create(ctx, tlsSecret)).Should(Succeed())
@@ -9634,7 +9682,7 @@ var _ = Describe("artemis controller", func() {
 				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
 
 				Eventually(func(g Gomega) {
-					jolokia := jolokia.GetJolokia(crd.Name+"-ss-0."+crd.Name+"-hdls-svc.test.svc.cluster.local", "8161", "/console/jolokia", "", "", "http")
+					jolokia := jolokia.GetJolokia(crd.Name+"-ss-0."+crd.Name+"-hdls-svc."+defaultNamespace+".svc.cluster.local", "8161", "/console/jolokia", "", "", "http")
 					data, err := jolokia.Read("org.apache.activemq.artemis:broker=\"amq-broker\",component=cluster-connections,name=\"my-cluster\"/Nodes")
 					g.Expect(err).To(BeNil())
 					g.Expect(data.Value).Should(ContainSubstring(crd.Name+"-ss-1"), data.Value)
@@ -9676,7 +9724,7 @@ var _ = Describe("artemis controller", func() {
 				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
 
 				Eventually(func(g Gomega) {
-					jolokia := jolokia.GetJolokia(crd.Name+"-ss-0."+crd.Name+"-hdls-svc.test.svc.cluster.local", "8161", "/console/jolokia", "", "", "http")
+					jolokia := jolokia.GetJolokia(crd.Name+"-ss-0."+crd.Name+"-hdls-svc."+defaultNamespace+".svc.cluster.local", "8161", "/console/jolokia", "", "", "http")
 					data, err := jolokia.Read("org.apache.activemq.artemis:broker=\"amq-broker\",component=cluster-connections,name=\"my-cluster\"/Nodes")
 					g.Expect(err).To(BeNil())
 					g.Expect(data.Value).Should(ContainSubstring(crd.Name+"-ss-1"), data.Value)

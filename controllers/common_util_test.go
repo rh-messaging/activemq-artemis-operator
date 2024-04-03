@@ -891,6 +891,7 @@ func InstallClusteredIssuer(issuerName string, customFunc func(*cmv1.ClusterIssu
 	if customFunc != nil {
 		customFunc(&issuer)
 	}
+	k8sClient.Delete(ctx, &issuer)
 	Expect(k8sClient.Create(ctx, &issuer, &client.CreateOptions{})).To(Succeed())
 	issKey := types.NamespacedName{Name: issuerName, Namespace: defaultNamespace}
 	currentIssuer := &cmv1.ClusterIssuer{}
@@ -923,6 +924,7 @@ func InstallCert(certName string, namespace string, customFunc func(candidate *c
 		customFunc(&cmCert)
 	}
 
+	k8sClient.Delete(ctx, &cmCert)
 	Expect(k8sClient.Create(ctx, &cmCert, &client.CreateOptions{})).To(Succeed())
 
 	certKey := types.NamespacedName{Name: certName, Namespace: namespace}
@@ -969,6 +971,7 @@ func InstallCaBundle(name string, sourceSecret string, caFileName string) *tm.Bu
 		},
 	}
 
+	k8sClient.Delete(ctx, &bundle)
 	Expect(k8sClient.Create(ctx, &bundle, &client.CreateOptions{})).To(Succeed())
 	bundleKey := types.NamespacedName{Name: name, Namespace: "cert-manager"}
 	newBundle := &tm.Bundle{}

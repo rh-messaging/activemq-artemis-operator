@@ -683,6 +683,10 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customRe
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) processSSLSecret(secretName string, customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) (*corev1.Secret, error) {
 
+	if strings.HasSuffix(secretName, certutil.Cert_provided_secret_suffix) {
+		return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName}}, nil
+	}
+
 	var trackedSecret *corev1.Secret = nil
 
 	// validate if secret exists
@@ -1228,14 +1232,18 @@ func formatTemplatedString(customResource *brokerv1beta1.ActiveMQArtemis, templa
 
 func (r *ActiveMQArtemisReconcilerImpl) generateCommonSSLFlags(customResource *brokerv1beta1.ActiveMQArtemis, secretName string, caSecretName *string, trustStoreType string, client rtclient.Client, isConsole bool) (*certutil.SslArguments, string, error) {
 
-	secretNamespacedName := types.NamespacedName{
-		Name:      secretName,
-		Namespace: customResource.Namespace,
-	}
-
 	sslSecret := &corev1.Secret{}
-	if err := resources.Retrieve(secretNamespacedName, client, sslSecret); err != nil {
-		return nil, "", err
+	if strings.HasSuffix(secretName, certutil.Cert_provided_secret_suffix) {
+		sslSecret.ObjectMeta = metav1.ObjectMeta{Name: secretName}
+	} else {
+		secretNamespacedName := types.NamespacedName{
+			Name:      secretName,
+			Namespace: customResource.Namespace,
+		}
+
+		if err := resources.Retrieve(secretNamespacedName, client, sslSecret); err != nil {
+			return nil, "", err
+		}
 	}
 
 	// for trust manager ca bundle.

@@ -16,9 +16,12 @@ limitations under the License.
 package controllers
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"os"
 
+	"github.com/Azure/go-amqp"
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/certutil"
@@ -30,7 +33,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 )
 
 const (
@@ -175,6 +180,147 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 			Expect(valid).To(BeTrue())
 		})
 	})
+
+	Context("Certificate from annotations", Label("certificate"), func() {
+		It("ingress certificate annotations", func() {
+			if isOpenshift {
+				Skip("Passthrough ingress resources with spec.tls are not supported on OpenShift")
+			}
+
+			activeMQArtemis := generateArtemisSpec(defaultNamespace)
+
+			rootIssuerName := activeMQArtemis.Name + "-root-issuer"
+			By("Creating root issuer: " + rootIssuerName)
+			rootIssuer := cmv1.Issuer{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Issuer"},
+				ObjectMeta: metav1.ObjectMeta{Name: rootIssuerName, Namespace: defaultNamespace},
+				Spec: cmv1.IssuerSpec{
+					IssuerConfig: cmv1.IssuerConfig{
+						SelfSigned: &cmv1.SelfSignedIssuer{},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, &rootIssuer)).Should(Succeed())
+
+			issuerCertName := activeMQArtemis.Name + "-issuer-cert"
+			issuerCertSecretName := issuerCertName + "-secret"
+			By("Creating issuer certificate: " + issuerCertName)
+			issuerCert := cmv1.Certificate{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Certificate"},
+				ObjectMeta: metav1.ObjectMeta{Name: issuerCertName, Namespace: defaultNamespace},
+				Spec: cmv1.CertificateSpec{
+					IsCA:       true,
+					SecretName: issuerCertSecretName,
+					IssuerRef:  cmmetav1.ObjectReference{Name: rootIssuerName, Kind: "Issuer"},
+					CommonName: "ArtemisCloud Issuer",
+					DNSNames:   []string{"issuer.artemiscloud.io"},
+					Subject:    &cmv1.X509Subject{Organizations: []string{"ArtemisCloud"}},
+				},
+			}
+			Expect(k8sClient.Create(ctx, &issuerCert)).Should(Succeed())
+
+			issuerName := activeMQArtemis.Name + "-issuer"
+			By("Creating issuer: " + issuerName)
+			issuer := cmv1.Issuer{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Issuer"},
+				ObjectMeta: metav1.ObjectMeta{Name: issuerName, Namespace: defaultNamespace},
+				Spec: cmv1.IssuerSpec{
+					IssuerConfig: cmv1.IssuerConfig{
+						CA: &cmv1.CAIssuer{SecretName: issuerCertSecretName},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, &issuer)).Should(Succeed())
+
+			ingressHost := activeMQArtemis.Name + "." + defaultTestIngressDomain
+			acceptorName := "tls"
+			acceptorIngressName := activeMQArtemis.Name + "-" + acceptorName + "-0-svc-ing"
+			certSecretName := acceptorIngressName + "-cp-secret"
+
+			By("Creating ActiveMQArtemis: " + activeMQArtemis.Name)
+			activeMQArtemis.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+				{
+					Name:        acceptorName,
+					Port:        61617,
+					SSLEnabled:  true,
+					SSLSecret:   certSecretName,
+					Expose:      true,
+					ExposeMode:  &brokerv1beta1.ExposeModes.Ingress,
+					IngressHost: ingressHost,
+				},
+			}
+			activeMQArtemis.Spec.ResourceTemplates = []brokerv1beta1.ResourceTemplate{
+				{
+					Selector: &brokerv1beta1.ResourceSelector{
+						Kind: ptr.To("Ingress"),
+						Name: ptr.To(acceptorIngressName),
+					},
+					Annotations: map[string]string{
+						"cert-manager.io/issuer": issuerName,
+					},
+					Patch: &unstructured.Unstructured{
+						Object: map[string]interface{}{
+							"kind": "Ingress",
+							"spec": map[string]interface{}{
+								"tls": []interface{}{
+									map[string]interface{}{
+										"hosts":      []string{ingressHost},
+										"secretName": certSecretName,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			activeMQArtemis.Spec.DeploymentPlan.ExtraMounts.Secrets = []string{issuerCertSecretName}
+
+			Expect(k8sClient.Create(ctx, &activeMQArtemis)).Should(Succeed())
+
+			By("Checking tls acceptor")
+			podName := activeMQArtemis.Name + "-ss-0"
+			trustStorePath := "/amq/extra/secrets/" + issuerCertSecretName + "/tls.crt"
+			checkCommandBeforeUpdating := []string{"/home/jboss/amq-broker/bin/artemis", "check", "node", "--up", "--url",
+				"tcp://" + podName + ":61617?sslEnabled=true&sniHost=" + ingressHost + "&trustStoreType=PEM&trustStorePath=" + trustStorePath}
+			Eventually(func(g Gomega) {
+				stdOutContent := ExecOnPod(podName, activeMQArtemis.Name, defaultNamespace, checkCommandBeforeUpdating, g)
+				g.Expect(stdOutContent).Should(ContainSubstring("Checks run: 1"))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			if isIngressSSLPassthroughEnabled {
+				By("loading issuer cert secret")
+				issuerCertSecret := &corev1.Secret{}
+				Expect(k8sClient.Get(ctx, types.NamespacedName{Name: issuerCertSecretName, Namespace: defaultNamespace}, issuerCertSecret)).Should(Succeed())
+
+				roots := x509.NewCertPool()
+				Expect(roots.AppendCertsFromPEM([]byte(issuerCertSecret.Data["tls.crt"]))).Should(BeTrue())
+
+				By("check acceptor is reachable")
+				Eventually(func(g Gomega) {
+					url := "amqps://" + clusterIngressHost + ":443"
+					connTLSConfig := amqp.ConnTLSConfig(&tls.Config{ServerName: ingressHost, RootCAs: roots})
+					client, err := amqp.Dial(url, amqp.ConnSASLPlain("dummy-user", "dummy-pass"), amqp.ConnTLS(true), connTLSConfig)
+					g.Expect(err).Should(BeNil())
+					g.Expect(client).ShouldNot(BeNil())
+					defer client.Close()
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
+
+			CleanResource(&activeMQArtemis, activeMQArtemis.Name, defaultNamespace)
+			CleanResource(&issuer, issuer.Name, defaultNamespace)
+			CleanResource(&issuerCert, issuerCert.Name, defaultNamespace)
+			CleanResource(&rootIssuer, rootIssuer.Name, defaultNamespace)
+
+			certSecret := &corev1.Secret{}
+			// by default, cert-manager does not delete the Secret resource containing the signed certificate
+			// when the corresponding Certificate resource is deleted
+			if k8sClient.Get(ctx, types.NamespacedName{Name: certSecretName, Namespace: defaultNamespace}, certSecret) == nil {
+				CleanResource(certSecret, certSecretName, defaultNamespace)
+			}
+		})
+	})
+
 })
 
 func getConnectorConfig(podName string, crName string, connectorName string, g Gomega) map[string]string {
