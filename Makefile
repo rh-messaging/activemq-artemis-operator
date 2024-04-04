@@ -17,6 +17,14 @@ GO_MODULE := github.com/artemiscloud/activemq-artemis-operator
 OS := $(shell go env GOOS)
 ARCH := $(shell go env GOARCH)
 
+# Check that the system's go version is compatible with the one stored in the
+# go.mod file.
+RUNTIME_GO_VERSION := $(shell go version)
+REQUIRED_GO_VERSION := $(subst go ,,$(shell grep -i -e '^go .*' go.mod))
+
+ifeq (,$(findstring $(REQUIRED_GO_VERSION),$(RUNTIME_GO_VERSION)))
+$(error The go version $(RUNTIME_GO_VERSION) the system is currently running is incompatible with the required one $(REQUIRED_GO_VERSION))
+endif
 
 # directory to hold static resources for deploying operator
 DEPLOY := ./deploy
