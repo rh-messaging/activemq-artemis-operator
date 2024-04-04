@@ -1,0 +1,13 @@
+annotations:
+  name: "amq7/amq-broker-rhel8-operator-bundle"
+  description: "Red Hat AMQ Broker 7.x Operator Bundle"
+  maintainer: "Roddie Kieley <rkieley@redhat.com>"
+  version: "7.x.x"
+  summary: "Red Hat AMQ Broker 7.x Operator Bundle"
+  amq.broker.version: "7.x.x.OPR.2.CR1"
+  com.redhat.component: "amq-broker-rhel8-operator-bundle-container"
+  com.redhat.delivery.backport: false
+  com.redhat.delivery.operator.bundle: true
+  com.redhat.openshift.versions: "v4.12"
+  io.k8s.display-name: "Red Hat AMQ Broker 7.x Operator Bundle"
+  io.openshift.tags: "messaging,amq,integration,operator,golang"
