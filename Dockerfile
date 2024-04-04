@@ -67,7 +67,7 @@ RUN dnf update -y --setopt=install_weak_deps=0 && rm -rf /var/cache/yum
 USER ${USER_UID}
 ENTRYPOINT ["${USER_HOME}/bin/entrypoint"]
 
-LABEL name="amq7/amq-broker-rhel8-operator"
+LABEL name="amq8/amq-broker-rhel8-operator"
 LABEL description="Red Hat AMQ Broker 8.0 Operator"
 LABEL maintainer="Roddie Kieley <rkieley@redhat.com>"
 LABEL version="8.0.0"
