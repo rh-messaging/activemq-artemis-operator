@@ -208,42 +208,42 @@ func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Cli
 		validationCondition = *condition
 	}
 
-	if validationCondition.Status == metav1.ConditionTrue && customResource.Spec.DeploymentPlan.PodDisruptionBudget != nil {
+	if validationCondition.Status != metav1.ConditionFalse && customResource.Spec.DeploymentPlan.PodDisruptionBudget != nil {
 		condition := validatePodDisruption(customResource)
 		if condition != nil {
 			validationCondition = *condition
 		}
 	}
 
-	if validationCondition.Status == metav1.ConditionTrue {
+	if validationCondition.Status != metav1.ConditionFalse {
 		condition, retry = validateAcceptorPorts(customResource)
 		if condition != nil {
 			validationCondition = *condition
 		}
 	}
 
-	if validationCondition.Status == metav1.ConditionTrue {
+	if validationCondition.Status != metav1.ConditionFalse {
 		condition, retry = validateSSLEnabledSecrets(customResource, client, namer)
 		if condition != nil {
 			validationCondition = *condition
 		}
 	}
 
-	if validationCondition.Status == metav1.ConditionTrue {
+	if validationCondition.Status != metav1.ConditionFalse {
 		condition := common.ValidateBrokerImageVersion(customResource)
 		if condition != nil {
 			validationCondition = *condition
 		}
 	}
 
-	if validationCondition.Status == metav1.ConditionTrue {
+	if validationCondition.Status != metav1.ConditionFalse {
 		condition := validateReservedLabels(customResource)
 		if condition != nil {
 			validationCondition = *condition
 		}
 	}
 
-	if validationCondition.Status == metav1.ConditionTrue {
+	if validationCondition.Status != metav1.ConditionFalse {
 		condition, retry = validateExposeModes(customResource)
 		if condition != nil {
 			validationCondition = *condition

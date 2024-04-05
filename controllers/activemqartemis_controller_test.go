@@ -2337,6 +2337,10 @@ var _ = Describe("artemis controller", func() {
 						ExposeMode: &brokerv1beta1.ExposeModes.Ingress,
 					},
 				}
+
+				// force a non-fatal failure for the validation of the broker images
+				candidate.Spec.DeploymentPlan.Image = version.LatestKubeImage
+				candidate.Spec.Version = ""
 			})
 
 			brokerKey := types.NamespacedName{Name: brokerCr.Name, Namespace: brokerCr.Namespace}
