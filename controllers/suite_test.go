@@ -290,7 +290,7 @@ func setUpTestProxy() {
 					Containers: []corev1.Container{
 						{
 							Name:    "ningx",
-							Image:   "ubuntu/squid:edge",
+							Image:   "docker.io/ubuntu/squid:edge",
 							Command: []string{"sh", "-c", testProxyScript},
 							Ports: []corev1.ContainerPort{
 								{
