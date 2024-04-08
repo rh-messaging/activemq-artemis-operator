@@ -206,12 +206,14 @@ func setUpNamespace() {
 	Expect(err == nil || errors.IsConflict(err))
 
 	if isOpenshift {
-		testNamespaceKey := types.NamespacedName{Name: defaultNamespace}
-		Expect(k8sClient.Get(ctx, testNamespaceKey, &testNamespace)).Should(Succeed())
-		uidRange := testNamespace.Annotations["openshift.io/sa.scc.uid-range"]
-		uidRangeTokens := strings.Split(uidRange, "/")
-		defaultUid, err = strconv.ParseInt(uidRangeTokens[0], 10, 64)
-		Expect(err).Should(Succeed())
+		Eventually(func(g Gomega) {
+			testNamespaceKey := types.NamespacedName{Name: defaultNamespace}
+			g.Expect(k8sClient.Get(ctx, testNamespaceKey, &testNamespace)).Should(Succeed())
+			uidRange := testNamespace.Annotations["openshift.io/sa.scc.uid-range"]
+			uidRangeTokens := strings.Split(uidRange, "/")
+			defaultUid, err = strconv.ParseInt(uidRangeTokens[0], 10, 64)
+			g.Expect(err).Should(Succeed())
+		}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 	}
 }
 
