@@ -8991,6 +8991,117 @@ var _ = Describe("artemis controller", func() {
 			Expect(k8sClient.Delete(ctx, &crd)).To(Succeed())
 		})
 
+		It("CR.brokerProperties and -bp duplicate validation", func() {
+
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+
+			secret := &corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "k8s.io.api.core.v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "v-bp",
+					Namespace: crd.ObjectMeta.Namespace,
+				},
+			}
+
+			secret.StringData = map[string]string{"a.properties": "journalMinFiles=10\njournalMinFiles=20"}
+
+			crd.Spec.DeploymentPlan.ExtraMounts.Secrets = []string{secret.Name}
+
+			By("Deploying the secret " + secret.ObjectMeta.Name)
+			Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
+
+			By("Deploying the CRD " + crd.ObjectMeta.Name)
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			By("verifying invalid via status")
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+			brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+
+				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
+				g.Expect(meta.IsStatusConditionPresentAndEqual(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType, metav1.ConditionFalse)).Should(BeTrue())
+
+				deployedCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)
+				g.Expect(deployedCondition.Reason).Should(Equal(brokerv1beta1.DeployedConditionValidationFailedReason))
+
+				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
+				validationCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)
+				g.Expect(validationCondition.Reason).To(Equal(brokerv1beta1.ValidConditionFailedExtraMountReason))
+				g.Expect(validationCondition.Message).To(ContainSubstring("a.properties"))
+
+			}, timeout, interval).Should(Succeed())
+
+			By("update secret map")
+			createdSecret := &corev1.Secret{}
+			secretName := types.NamespacedName{Name: secret.Name, Namespace: secret.Namespace}
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, secretName, createdSecret)).Should(Succeed())
+				createdSecret.StringData = map[string]string{"a.properties": "journalMinFiles=20"}
+				g.Expect(k8sClient.Update(ctx, createdSecret)).Should(Succeed())
+
+			}, timeout, interval).Should(Succeed())
+
+			By("verifying now valid")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+				g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
+			}, timeout, interval).Should(Succeed())
+
+			By("Invalidating again via brokerProperties")
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+
+				createdCrd.Spec.BrokerProperties = []string{
+					"journalMinFiles=30",
+					"journalMinFiles=40",
+				}
+
+				g.Expect(k8sClient.Update(ctx, createdCrd)).Should(Succeed())
+
+			}, timeout, interval).Should(Succeed())
+
+			By("verifying now invalid with cr.brokerPropertiues dups")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+				g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeFalse())
+
+				validationCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)
+				g.Expect(validationCondition.Reason).To(Equal(brokerv1beta1.ValidConditionFailedDuplicateBrokerPropertiesKey))
+				g.Expect(validationCondition.Message).To(ContainSubstring("journalMinFiles"))
+
+			}, timeout, interval).Should(Succeed())
+
+			By("remove duplicate")
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+
+				createdCrd.Spec.BrokerProperties = []string{
+					"journalMinFiles=50",
+				}
+
+				g.Expect(k8sClient.Update(ctx, createdCrd)).Should(Succeed())
+
+			}, timeout, interval).Should(Succeed())
+
+			By("verifying now valid")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+				g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
+			}, timeout, interval).Should(Succeed())
+
+			Expect(k8sClient.Delete(ctx, secret)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, &crd)).To(Succeed())
+		})
+
 		It("onboarding - jaas-config new user queue rbac", func() {
 
 			ctx := context.Background()

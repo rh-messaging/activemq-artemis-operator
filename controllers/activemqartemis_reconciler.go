@@ -77,9 +77,11 @@ const (
 
 	OrdinalPrefix         = "broker-"
 	OrdinalPrefixSep      = "."
-	BrokerPropertiesName  = "broker.properties"
+	UncheckedPrefix       = "_"
+	PropertiesSuffix      = ".properties"
+	BrokerPropertiesName  = "broker" + PropertiesSuffix
 	JaasConfigKey         = "login.config"
-	LoggingConfigKey      = "logging.properties"
+	LoggingConfigKey      = "logging" + PropertiesSuffix
 	PodNameLabelKey       = "statefulset.kubernetes.io/pod-name"
 	ServiceTypePostfix    = "svc"
 	RouteTypePostfix      = "rte"
@@ -3122,7 +3124,7 @@ func checkProjectionStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Cl
 			if !present {
 				// with ordinal prefix or extras in the map this can be the case
 				isForOrdinal, _ := extractOrdinalPrefixSeperatorIndex(name)
-				if !(name == JaasConfigKey || strings.HasPrefix(name, "_") || isForOrdinal) {
+				if !(name == JaasConfigKey || strings.HasPrefix(name, UncheckedPrefix) || isForOrdinal) {
 					missingKeys = append(missingKeys, name)
 				}
 				continue
@@ -3235,6 +3237,10 @@ func newProjectionFromByteValues(resourceMeta metav1.ObjectMeta, configKeyValue 
 }
 
 func alder32FromData(data []byte) string {
+	return alder32StringValue(alder32Of(KeyValuePairs(data)))
+}
+
+func KeyValuePairs(data []byte) []string {
 	// need to skip white space and comments for checksum
 	keyValuePairs := []string{}
 
@@ -3247,7 +3253,7 @@ func alder32FromData(data []byte) string {
 		}
 		keyValuePairs = appendNonEmpty(keyValuePairs, line)
 	}
-	return alder32StringValue(alder32Of(keyValuePairs))
+	return keyValuePairs
 }
 
 func appendNonEmpty(propsKvs []string, data string) []string {

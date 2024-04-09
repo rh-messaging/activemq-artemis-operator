@@ -216,6 +216,13 @@ func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Cli
 	}
 
 	if validationCondition.Status != metav1.ConditionFalse {
+		condition, retry = validateNoDupKeysInBrokerProperties(customResource)
+		if condition != nil {
+			validationCondition = *condition
+		}
+	}
+
+	if validationCondition.Status != metav1.ConditionFalse {
 		condition, retry = validateAcceptorPorts(customResource)
 		if condition != nil {
 			validationCondition = *condition
@@ -254,6 +261,21 @@ func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Cli
 	meta.SetStatusCondition(&customResource.Status.Conditions, validationCondition)
 
 	return validationCondition.Status != metav1.ConditionFalse, retry
+}
+
+func validateNoDupKeysInBrokerProperties(customResource *brokerv1beta1.ActiveMQArtemis) (*metav1.Condition, bool) {
+	if len(customResource.Spec.BrokerProperties) > 0 {
+		if duplicateKey := DuplicateKeyIn(customResource.Spec.BrokerProperties); duplicateKey != "" {
+			return &metav1.Condition{
+				Type:    brokerv1beta1.ValidConditionType,
+				Status:  metav1.ConditionFalse,
+				Reason:  brokerv1beta1.ValidConditionFailedDuplicateBrokerPropertiesKey,
+				Message: fmt.Sprintf(".Spec.BrokerProperties has a duplicate key for %v", duplicateKey),
+			}, false
+		}
+
+	}
+	return nil, false
 }
 
 func validateReservedLabels(customResource *brokerv1beta1.ActiveMQArtemis) *metav1.Condition {
@@ -495,6 +517,8 @@ func validateExtraMounts(customResource *brokerv1beta1.ActiveMQArtemis, client r
 				Condition = AssertSyntaxOkOnLoginConfigData(secret.Data[JaasConfigKey], s, ContextMessage)
 			}
 			instanceCounts[jaasConfigSuffix]++
+		} else if strings.HasSuffix(s, brokerPropsSuffix) {
+			Condition = AssertNoDupKeyInProperties(secret, ContextMessage)
 		}
 		if Condition != nil {
 			return Condition, retry
@@ -562,6 +586,43 @@ func AssertConfigMapContainsKey(configMap corev1.ConfigMap, key string, contextM
 		}
 	}
 	return nil
+}
+
+func AssertNoDupKeyInProperties(secret corev1.Secret, contextMessage string) *metav1.Condition {
+	for key, data := range secret.Data {
+		if !strings.HasPrefix(key, UncheckedPrefix) && strings.HasSuffix(key, PropertiesSuffix) {
+			if duplicateKey := DuplicateKeyInPropertiesContent(data); duplicateKey != "" {
+				return &metav1.Condition{
+					Type:    brokerv1beta1.ValidConditionType,
+					Status:  metav1.ConditionFalse,
+					Reason:  brokerv1beta1.ValidConditionFailedExtraMountReason,
+					Message: fmt.Sprintf("%s properties secret %v entry %v has a duplicate key for %v", contextMessage, secret.Name, key, duplicateKey),
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func DuplicateKeyInPropertiesContent(keyValues []byte) string {
+	return DuplicateKeyIn(KeyValuePairs(keyValues))
+}
+
+func DuplicateKeyIn(keyValues []string) string {
+	keysMap := map[string]string{}
+
+	for _, keyAndValue := range keyValues {
+		if key, _, found := strings.Cut(keyAndValue, "="); found {
+			_, duplicate := keysMap[key]
+			if !(duplicate) {
+				keysMap[key] = key
+			} else {
+				return key
+			}
+		}
+	}
+
+	return ""
 }
 
 func AssertSecretContainsKey(secret corev1.Secret, key string, contextMessage string) *metav1.Condition {
