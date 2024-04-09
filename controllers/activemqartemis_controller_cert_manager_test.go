@@ -183,6 +183,10 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 
 	Context("Certificate from annotations", Label("certificate"), func() {
 		It("ingress certificate annotations", func() {
+			if os.Getenv("USE_EXISTING_CLUSTER") != "true" {
+				Skip("Existing cluster required")
+			}
+
 			if isOpenshift {
 				Skip("Passthrough ingress resources with spec.tls are not supported on OpenShift")
 			}
