@@ -32,7 +32,7 @@ const (
 	// Secrets with this suffix are not validated. It is useful for secrets created from
 	// annotations because they typically won't exist till the annotations are processed
 	// and the secret is 'provided' by some other controller.
-	Cert_provided_secret_suffix = "cp-secret"
+	Cert_provided_secret_suffix = "-ptls"
 )
 
 var defaultKeyStorePassword = "password"

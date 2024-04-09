@@ -239,7 +239,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 			ingressHost := activeMQArtemis.Name + "." + defaultTestIngressDomain
 			acceptorName := "tls"
 			acceptorIngressName := activeMQArtemis.Name + "-" + acceptorName + "-0-svc-ing"
-			certSecretName := acceptorIngressName + "-cp-secret"
+			certSecretName := acceptorIngressName + "-ptls"
 
 			By("Creating ActiveMQArtemis: " + activeMQArtemis.Name)
 			activeMQArtemis.Spec.Acceptors = []brokerv1beta1.AcceptorType{

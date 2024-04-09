@@ -9612,7 +9612,7 @@ var _ = Describe("artemis controller", func() {
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" && isOpenshift {
 				crd := generateArtemisSpec(defaultNamespace)
 
-				tlsSecretName := crd.Name + "-cp-secret"
+				tlsSecretName := crd.Name + "-ptls"
 				crd.Spec.DeploymentPlan.Size = common.Int32ToPtr(2)
 				crd.Spec.Acceptors = []brokerv1beta1.AcceptorType{
 					{
