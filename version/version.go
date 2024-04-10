@@ -18,8 +18,8 @@ const (
 	LatestVersion        = "7.12.0"
 	CompactLatestVersion = "7120"
 
-	LatestKubeImage = "registry.redhat.io/amq7/amq-broker-rhel8:7.12.0" + LatestVersion
-	LatestInitImage = "registry.redhat.io/amq7/amq-broker-init-rhel8:7.12.0" + LatestVersion
+	LatestKubeImage = "registry.redhat.io/amq7/amq-broker-rhel8:" + LatestVersion
+	LatestInitImage = "registry.redhat.io/amq7/amq-broker-init-rhel8:" + LatestVersion
 )
 
 func DefaultImageName(archSpecificRelatedImageEnvVarName string) string {
