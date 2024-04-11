@@ -3736,6 +3736,12 @@ var _ = Describe("artemis controller", func() {
 			Expect(err).To(BeNil())
 			Expect(k8sClient.Create(ctx, tlsSecret)).To(Succeed())
 
+			By("veryify secret exists")
+			createdTlsSecret := &corev1.Secret{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: tlsSecret.Name, Namespace: tlsSecret.Namespace}, createdTlsSecret)).Should(Succeed())
+			}, timeout*2, interval).Should(Succeed())
+
 			currentSS := &appsv1.StatefulSet{}
 			currentSS.Name = namer.CrToSS(crd.Name)
 			currentSS.Namespace = defaultNamespace
@@ -3747,7 +3753,7 @@ var _ = Describe("artemis controller", func() {
 			}}
 
 			namer := MakeNamers(&crd)
-			reconcilerImpl.ProcessConsole(&crd, *namer, brokerReconciler.Client, brokerReconciler.Scheme, currentSS)
+			Expect(reconcilerImpl.ProcessConsole(&crd, *namer, brokerReconciler.Client, brokerReconciler.Scheme, currentSS)).Should(Succeed())
 
 			secretName := namer.SecretsConsoleNameBuilder.Name()
 			internalSecretName := secretName + "-internal"
