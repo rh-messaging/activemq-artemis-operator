@@ -181,7 +181,7 @@ var _ = Describe("artemis controller", Label("do"), func() {
 
 				By("checking operator deployment")
 				deployment := appsv1.Deployment{}
-				deploymentKey := types.NamespacedName{Name: "activemq-artemis-controller-manager", Namespace: restrictedNs}
+				deploymentKey := types.NamespacedName{Name: depName, Namespace: restrictedNs}
 				Eventually(func(g Gomega) {
 					g.Expect(k8sClient.Get(ctx, deploymentKey, &deployment)).Should(Succeed())
 					g.Expect(deployment.Status.ReadyReplicas).Should(Equal(int32(1)))

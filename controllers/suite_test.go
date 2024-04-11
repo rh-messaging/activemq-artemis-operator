@@ -123,7 +123,9 @@ var (
 	brokerReconciler   *ActiveMQArtemisReconciler
 	securityReconciler *ActiveMQArtemisSecurityReconciler
 
-	oprRes = []string{
+	depName string
+	oprName string
+	oprRes  = []string{
 		"../deploy/service_account.yaml",
 		"../deploy/role.yaml",
 		"../deploy/role_binding.yaml",
@@ -570,7 +572,7 @@ func uninstallOperator(deleteCrds bool, namespace string) error {
 
 func waitForOperator(namespace string) error {
 	podList := &corev1.PodList{}
-	labelSelector, err := labels.Parse("name=activemq-artemis-operator")
+	labelSelector, err := labels.Parse("name=" + oprName)
 	Expect(err).To(BeNil())
 	opts := &client.ListOptions{
 		Namespace:     namespace,
@@ -639,6 +641,8 @@ func installYamlResource(resPath string, envMap map[string]string, namespace str
 
 	if gkv.Kind == "Deployment" {
 		oprObj := cobj.(*appsv1.Deployment)
+		depName = oprObj.Name
+		oprName = oprObj.Spec.Template.Labels["name"]
 		if oprImg := os.Getenv("IMG"); oprImg != "" {
 			ctrl.Log.Info("Using custom operator image", "url", oprImg)
 			oprObj.Spec.Template.Spec.Containers[0].Image = oprImg
