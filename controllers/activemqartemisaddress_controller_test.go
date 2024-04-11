@@ -975,12 +975,13 @@ func QueueStatAssertionInPod(brokerCrName string, podName string, namespace stri
 		Fail("function should be called with an existing cluster")
 	}
 
+	podKey := types.NamespacedName{
+		Name:      podName,
+		Namespace: namespace,
+	}
+	pod := &corev1.Pod{}
 	Eventually(func(g Gomega) {
-		key := types.NamespacedName{Name: namer.CrToSS(brokerCrName), Namespace: namespace}
-		sfsFound := &appsv1.StatefulSet{}
-
-		g.Expect(k8sClient.Get(ctx, key, sfsFound)).Should(Succeed())
-		g.Expect(sfsFound.Status.ReadyReplicas).Should(BeEquivalentTo(1))
+		g.Expect(k8sClient.Get(ctx, podKey, pod)).Should(Succeed())
 	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 	gvk := schema.GroupVersionKind{
@@ -1028,6 +1029,11 @@ func QueueStatAssertionInPod(brokerCrName string, podName string, namespace stri
 		By("Checking for output pod")
 		g.Expect(capturedOut.Len() > 0)
 		content := capturedOut.String()
+
+		if verbose {
+			fmt.Printf("OutputFromPod: \n%v\n", content)
+		}
+
 		customAssert(g, content)
 	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 }

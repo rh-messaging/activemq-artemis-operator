@@ -1,0 +1,14 @@
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: artemis-broker-props-address
+spec:
+  brokerProperties:
+   - "# anycast, consumers compete"
+   - addressConfigurations."APP.JOBS".routingTypes=ANYCAST
+   - addressConfigurations."APP.JOBS".queueConfigs."APP.JOBS".routingType=ANYCAST
+   - "# mulitcast, consumers see all messages"
+   - addressConfigurations."APP.COMMANDS".routingTypes=MULTICAST
+   - "# allow delete (this is the source of truth)"
+   - addressSettings."APP.#".configDeleteAddresses=FORCE
+   - addressSettings."APP.#".configDeleteQueues=FORCE
