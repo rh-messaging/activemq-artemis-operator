@@ -248,8 +248,10 @@ func DeployCustomBroker(targetNamespace string, customFunc func(candidate *broke
 
 func getPersistedVersionedCrd(name string, nameSpace string, object client.Object) bool {
 	key := types.NamespacedName{Name: name, Namespace: nameSpace}
-	err := k8sClient.Get(ctx, key, object)
-	return err == nil
+	if err := k8sClient.Get(ctx, key, object); err == nil {
+		return object.GetResourceVersion() != ""
+	}
+	return false
 }
 
 func DeploySecret(targetNamespace string, customFunc func(candidate *corev1.Secret)) (*corev1.Secret, *corev1.Secret) {
@@ -616,7 +618,7 @@ func DeployCustomAddress(targetNamespace string, customFunc func(candidate *brok
 func GetOperatorLog(ns string) (*string, error) {
 	cfg, err := config.GetConfig()
 	Expect(err).To(BeNil())
-	labelSelector, err := labels.Parse("control-plane=controller-manager")
+	labelSelector, err := labels.Parse("control-plane=controller-manager,name=" + oprName)
 	Expect(err).To(BeNil())
 	clientset, err := kubernetes.NewForConfig(cfg)
 	Expect(err).To(BeNil())
