@@ -31,19 +31,23 @@ func DefaultImageName(archSpecificRelatedImageEnvVarName string) string {
 }
 
 var FullVersionFromCompactVersion map[string]string = map[string]string{
+	"800": "8.0.0",
 }
 
 // The yacfg profile to use for a given full version of broker
 var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
+	"8.0.0": "7.10.0",
 }
 
 var YacfgProfileName string = "amq_broker"
 
 // Sorted array of supported ActiveMQ Artemis versions
 var SupportedActiveMQArtemisVersions = []string{
+	"8.0.0",
 }
 
 var ActiveMQArtemisVersionfromFullVersion map[string]string = map[string]string{
+	"8.0.0": "2.34.0.temporary-redhat-00022",
 }
 
 func CompactActiveMQArtemisVersion(version string) string {
