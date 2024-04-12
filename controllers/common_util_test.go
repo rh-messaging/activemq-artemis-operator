@@ -618,7 +618,7 @@ func DeployCustomAddress(targetNamespace string, customFunc func(candidate *brok
 func GetOperatorLog(ns string) (*string, error) {
 	cfg, err := config.GetConfig()
 	Expect(err).To(BeNil())
-	labelSelector, err := labels.Parse("control-plane=controller-manager,name=activemq-artemis-operator")
+	labelSelector, err := labels.Parse("control-plane=controller-manager,name=" + oprName)
 	Expect(err).To(BeNil())
 	clientset, err := kubernetes.NewForConfig(cfg)
 	Expect(err).To(BeNil())
