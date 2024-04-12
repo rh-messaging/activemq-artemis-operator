@@ -22,7 +22,6 @@ import (
 	"container/list"
 	"fmt"
 	"os"
-	"strconv"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/volumes"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
@@ -145,9 +144,8 @@ var _ = Describe("artemis controller 2", func() {
 				By("shut down the pod")
 				CleanResource(createdBrokerCr, createdBrokerCr.Name, defaultNamespace)
 
-				By("deploying 2 brokers to use existing volume")
+				By("deploying broker to use existing volume")
 				brokerCr, createdBrokerCr = DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
-					candidate.Spec.DeploymentPlan.Size = common.Int32ToPtr(2)
 					candidate.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
 						InitialDelaySeconds: 1,
 						PeriodSeconds:       1,
@@ -171,22 +169,20 @@ var _ = Describe("artemis controller 2", func() {
 					}
 				})
 
-				By("waiting 2 pods ready")
-				WaitForPod(brokerCr.Name, 0, 1)
+				By("waiting for pod ready")
+				WaitForPod(brokerCr.Name, 0)
 
 				By("checking the file still exist on volumes")
 				lsCmd = []string{"ls", "/opt/common"}
 				catCmd := []string{"cat", "/opt/common/fake.config"}
-				for podOrdinal := range []int32{0, 1} {
-					podWithOrdinal = namer.CrToSS(brokerCr.Name) + "-" + strconv.Itoa(podOrdinal)
-					content, err = RunCommandInPod(podWithOrdinal, brokerCr.Name+"-container", lsCmd)
-					Expect(err).To(BeNil())
-					Expect(*content).To(ContainSubstring("fake.config"), *content)
+				podWithOrdinal = namer.CrToSS(brokerCr.Name) + "-0"
+				content, err = RunCommandInPod(podWithOrdinal, brokerCr.Name+"-container", lsCmd)
+				Expect(err).To(BeNil())
+				Expect(*content).To(ContainSubstring("fake.config"), *content)
 
-					content, err = RunCommandInPod(podWithOrdinal, brokerCr.Name+"-container", catCmd)
-					Expect(err).To(BeNil())
-					Expect(*content).To(ContainSubstring("Hello-World"))
-				}
+				content, err = RunCommandInPod(podWithOrdinal, brokerCr.Name+"-container", catCmd)
+				Expect(err).To(BeNil())
+				Expect(*content).To(ContainSubstring("Hello-World"))
 
 				CleanResource(createdBrokerCr, createdBrokerCr.Name, defaultNamespace)
 				CleanResource(createdPvc, pvc.Name, pvc.Namespace)

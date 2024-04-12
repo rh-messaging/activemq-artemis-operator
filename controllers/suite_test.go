@@ -123,7 +123,9 @@ var (
 	brokerReconciler   *ActiveMQArtemisReconciler
 	securityReconciler *ActiveMQArtemisSecurityReconciler
 
-	oprRes = []string{
+	depName string
+	oprName string
+	oprRes  = []string{
 		"../deploy/service_account.yaml",
 		"../deploy/role.yaml",
 		"../deploy/role_binding.yaml",
@@ -206,12 +208,14 @@ func setUpNamespace() {
 	Expect(err == nil || errors.IsConflict(err))
 
 	if isOpenshift {
-		testNamespaceKey := types.NamespacedName{Name: defaultNamespace}
-		Expect(k8sClient.Get(ctx, testNamespaceKey, &testNamespace)).Should(Succeed())
-		uidRange := testNamespace.Annotations["openshift.io/sa.scc.uid-range"]
-		uidRangeTokens := strings.Split(uidRange, "/")
-		defaultUid, err = strconv.ParseInt(uidRangeTokens[0], 10, 64)
-		Expect(err).Should(Succeed())
+		Eventually(func(g Gomega) {
+			testNamespaceKey := types.NamespacedName{Name: defaultNamespace}
+			g.Expect(k8sClient.Get(ctx, testNamespaceKey, &testNamespace)).Should(Succeed())
+			uidRange := testNamespace.Annotations["openshift.io/sa.scc.uid-range"]
+			uidRangeTokens := strings.Split(uidRange, "/")
+			defaultUid, err = strconv.ParseInt(uidRangeTokens[0], 10, 64)
+			g.Expect(err).Should(Succeed())
+		}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 	}
 }
 
@@ -286,7 +290,7 @@ func setUpTestProxy() {
 					Containers: []corev1.Container{
 						{
 							Name:    "ningx",
-							Image:   "ubuntu/squid:edge",
+							Image:   "docker.io/ubuntu/squid:edge",
 							Command: []string{"sh", "-c", testProxyScript},
 							Ports: []corev1.ContainerPort{
 								{
@@ -568,7 +572,7 @@ func uninstallOperator(deleteCrds bool, namespace string) error {
 
 func waitForOperator(namespace string) error {
 	podList := &corev1.PodList{}
-	labelSelector, err := labels.Parse("name=activemq-artemis-operator")
+	labelSelector, err := labels.Parse("name=" + oprName)
 	Expect(err).To(BeNil())
 	opts := &client.ListOptions{
 		Namespace:     namespace,
@@ -637,6 +641,8 @@ func installYamlResource(resPath string, envMap map[string]string, namespace str
 
 	if gkv.Kind == "Deployment" {
 		oprObj := cobj.(*appsv1.Deployment)
+		depName = oprObj.Name
+		oprName = oprObj.Spec.Template.Labels["name"]
 		if oprImg := os.Getenv("IMG"); oprImg != "" {
 			ctrl.Log.Info("Using custom operator image", "url", oprImg)
 			oprObj.Spec.Template.Spec.Containers[0].Image = oprImg

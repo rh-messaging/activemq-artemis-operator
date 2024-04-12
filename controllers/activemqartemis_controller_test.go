@@ -52,7 +52,7 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/version"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/client-go/kubernetes/scheme"
-	utilpointer "k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -2337,6 +2337,10 @@ var _ = Describe("artemis controller", func() {
 						ExposeMode: &brokerv1beta1.ExposeModes.Ingress,
 					},
 				}
+
+				// force a non-fatal failure for the validation of the broker images
+				candidate.Spec.DeploymentPlan.Image = version.LatestKubeImage
+				candidate.Spec.Version = ""
 			})
 
 			brokerKey := types.NamespacedName{Name: brokerCr.Name, Namespace: brokerCr.Namespace}
@@ -3732,6 +3736,12 @@ var _ = Describe("artemis controller", func() {
 			Expect(err).To(BeNil())
 			Expect(k8sClient.Create(ctx, tlsSecret)).To(Succeed())
 
+			By("veryify secret exists")
+			createdTlsSecret := &corev1.Secret{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: tlsSecret.Name, Namespace: tlsSecret.Namespace}, createdTlsSecret)).Should(Succeed())
+			}, timeout*2, interval).Should(Succeed())
+
 			currentSS := &appsv1.StatefulSet{}
 			currentSS.Name = namer.CrToSS(crd.Name)
 			currentSS.Namespace = defaultNamespace
@@ -3743,7 +3753,7 @@ var _ = Describe("artemis controller", func() {
 			}}
 
 			namer := MakeNamers(&crd)
-			reconcilerImpl.ProcessConsole(&crd, *namer, brokerReconciler.Client, brokerReconciler.Scheme, currentSS)
+			Expect(reconcilerImpl.ProcessConsole(&crd, *namer, brokerReconciler.Client, brokerReconciler.Scheme, currentSS)).Should(Succeed())
 
 			secretName := namer.SecretsConsoleNameBuilder.Name()
 			internalSecretName := secretName + "-internal"
@@ -6478,8 +6488,8 @@ var _ = Describe("artemis controller", func() {
 			// the broker init images before 2.32.0 has root user
 			// that doesn't work in namespaces with the restricted policy
 			crd.Spec.DeploymentPlan.PodSecurityContext = &corev1.PodSecurityContext{
-				RunAsUser:      utilpointer.Int64(defaultUid),
-				RunAsNonRoot:   utilpointer.Bool(true),
+				RunAsUser:      ptr.To(defaultUid),
+				RunAsNonRoot:   ptr.To(true),
 				SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
 			}
 
@@ -8981,6 +8991,117 @@ var _ = Describe("artemis controller", func() {
 			Expect(k8sClient.Delete(ctx, &crd)).To(Succeed())
 		})
 
+		It("CR.brokerProperties and -bp duplicate validation", func() {
+
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+
+			secret := &corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "k8s.io.api.core.v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "v-bp",
+					Namespace: crd.ObjectMeta.Namespace,
+				},
+			}
+
+			secret.StringData = map[string]string{"a.properties": "journalMinFiles=10\njournalMinFiles=20"}
+
+			crd.Spec.DeploymentPlan.ExtraMounts.Secrets = []string{secret.Name}
+
+			By("Deploying the secret " + secret.ObjectMeta.Name)
+			Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
+
+			By("Deploying the CRD " + crd.ObjectMeta.Name)
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			By("verifying invalid via status")
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+			brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+
+				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
+				g.Expect(meta.IsStatusConditionPresentAndEqual(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType, metav1.ConditionFalse)).Should(BeTrue())
+
+				deployedCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)
+				g.Expect(deployedCondition.Reason).Should(Equal(brokerv1beta1.DeployedConditionValidationFailedReason))
+
+				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
+				validationCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)
+				g.Expect(validationCondition.Reason).To(Equal(brokerv1beta1.ValidConditionFailedExtraMountReason))
+				g.Expect(validationCondition.Message).To(ContainSubstring("a.properties"))
+
+			}, timeout, interval).Should(Succeed())
+
+			By("update secret map")
+			createdSecret := &corev1.Secret{}
+			secretName := types.NamespacedName{Name: secret.Name, Namespace: secret.Namespace}
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, secretName, createdSecret)).Should(Succeed())
+				createdSecret.StringData = map[string]string{"a.properties": "journalMinFiles=20"}
+				g.Expect(k8sClient.Update(ctx, createdSecret)).Should(Succeed())
+
+			}, timeout, interval).Should(Succeed())
+
+			By("verifying now valid")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+				g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
+			}, timeout, interval).Should(Succeed())
+
+			By("Invalidating again via brokerProperties")
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+
+				createdCrd.Spec.BrokerProperties = []string{
+					"journalMinFiles=30",
+					"journalMinFiles=40",
+				}
+
+				g.Expect(k8sClient.Update(ctx, createdCrd)).Should(Succeed())
+
+			}, timeout, interval).Should(Succeed())
+
+			By("verifying now invalid with cr.brokerPropertiues dups")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+				g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeFalse())
+
+				validationCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)
+				g.Expect(validationCondition.Reason).To(Equal(brokerv1beta1.ValidConditionFailedDuplicateBrokerPropertiesKey))
+				g.Expect(validationCondition.Message).To(ContainSubstring("journalMinFiles"))
+
+			}, timeout, interval).Should(Succeed())
+
+			By("remove duplicate")
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+
+				createdCrd.Spec.BrokerProperties = []string{
+					"journalMinFiles=50",
+				}
+
+				g.Expect(k8sClient.Update(ctx, createdCrd)).Should(Succeed())
+
+			}, timeout, interval).Should(Succeed())
+
+			By("verifying now valid")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+				g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
+			}, timeout, interval).Should(Succeed())
+
+			Expect(k8sClient.Delete(ctx, secret)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, &crd)).To(Succeed())
+		})
+
 		It("onboarding - jaas-config new user queue rbac", func() {
 
 			ctx := context.Background()
@@ -9561,7 +9682,7 @@ var _ = Describe("artemis controller", func() {
 
 				tlsSecretName := crd.Name + "tls-secret"
 				tlsSecret, err := CreateTlsSecret(tlsSecretName, defaultNamespace, defaultPassword, []string{
-					"*." + crd.Name + "-hdls-svc.test.svc.cluster.local",
+					"*." + crd.Name + "-hdls-svc." + defaultNamespace + ".svc.cluster.local",
 				})
 				Expect(err).To(BeNil())
 				Expect(k8sClient.Create(ctx, tlsSecret)).Should(Succeed())
@@ -9598,14 +9719,62 @@ var _ = Describe("artemis controller", func() {
 			}
 		})
 
-		It("secure connections with multiple wildcard DNS names", func() {
+		It("secure connections with openshift serving certificate", func() {
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" && isOpenshift {
+				crd := generateArtemisSpec(defaultNamespace)
+
+				tlsSecretName := crd.Name + "-ptls"
+				crd.Spec.DeploymentPlan.Size = common.Int32ToPtr(2)
+				crd.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+					{
+						Name:       "artemis",
+						Port:       61616,
+						SSLEnabled: true,
+						SSLSecret:  tlsSecretName,
+					},
+				}
+
+				crd.Spec.BrokerProperties = []string{
+					"connectorConfigurations.artemis.params.sslEnabled=true",
+					"connectorConfigurations.artemis.params.trustStorePath=/etc/" + tlsSecretName + "-volume/tls.crt",
+					"connectorConfigurations.artemis.params.trustStoreType=PEM",
+				}
+
+				crd.Spec.ResourceTemplates = []brokerv1beta1.ResourceTemplate{
+					{
+						Selector: &brokerv1beta1.ResourceSelector{
+							Kind: ptr.To("Service"),
+							Name: ptr.To(crd.Name + "-hdls-svc"),
+						},
+						Annotations: map[string]string{
+							"service.beta.openshift.io/serving-cert-secret-name": tlsSecretName,
+						},
+					},
+				}
+
+				By("Deploying broker" + crd.Name)
+				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+				Eventually(func(g Gomega) {
+					jolokia := jolokia.GetJolokia(crd.Name+"-ss-0."+crd.Name+"-hdls-svc."+defaultNamespace+".svc.cluster.local", "8161", "/console/jolokia", "", "", "http")
+					data, err := jolokia.Read("org.apache.activemq.artemis:broker=\"amq-broker\",component=cluster-connections,name=\"my-cluster\"/Nodes")
+					g.Expect(err).To(BeNil())
+					g.Expect(data.Value).Should(ContainSubstring(crd.Name+"-ss-1"), data.Value)
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				CleanResource(&crd, crd.Name, defaultNamespace)
+			}
+		})
+
+		It("secure connections with multiple DNS names", func() {
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 				crd := generateArtemisSpec(defaultNamespace)
 
 				tlsSecretName := crd.Name + "tls-secret"
 				tlsSecret, err := CreateTlsSecret(tlsSecretName, defaultNamespace, defaultPassword, []string{
-					crd.Name + "-ss-0." + crd.Name + "-hdls-svc.test.svc.cluster.local",
-					crd.Name + "-ss-1." + crd.Name + "-hdls-svc.test.svc.cluster.local",
+					crd.Name + "-ss-0." + crd.Name + "-hdls-svc." + defaultNamespace + ".svc.cluster.local",
+					crd.Name + "-ss-1." + crd.Name + "-hdls-svc." + defaultNamespace + ".svc.cluster.local",
 				})
 				Expect(err).To(BeNil())
 				Expect(k8sClient.Create(ctx, tlsSecret)).Should(Succeed())
@@ -9630,7 +9799,7 @@ var _ = Describe("artemis controller", func() {
 				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
 
 				Eventually(func(g Gomega) {
-					jolokia := jolokia.GetJolokia(crd.Name+"-ss-0."+crd.Name+"-hdls-svc.test.svc.cluster.local", "8161", "/console/jolokia", "", "", "http")
+					jolokia := jolokia.GetJolokia(crd.Name+"-ss-0."+crd.Name+"-hdls-svc."+defaultNamespace+".svc.cluster.local", "8161", "/console/jolokia", "", "", "http")
 					data, err := jolokia.Read("org.apache.activemq.artemis:broker=\"amq-broker\",component=cluster-connections,name=\"my-cluster\"/Nodes")
 					g.Expect(err).To(BeNil())
 					g.Expect(data.Value).Should(ContainSubstring(crd.Name+"-ss-1"), data.Value)
@@ -9672,7 +9841,7 @@ var _ = Describe("artemis controller", func() {
 				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
 
 				Eventually(func(g Gomega) {
-					jolokia := jolokia.GetJolokia(crd.Name+"-ss-0."+crd.Name+"-hdls-svc.test.svc.cluster.local", "8161", "/console/jolokia", "", "", "http")
+					jolokia := jolokia.GetJolokia(crd.Name+"-ss-0."+crd.Name+"-hdls-svc."+defaultNamespace+".svc.cluster.local", "8161", "/console/jolokia", "", "", "http")
 					data, err := jolokia.Read("org.apache.activemq.artemis:broker=\"amq-broker\",component=cluster-connections,name=\"my-cluster\"/Nodes")
 					g.Expect(err).To(BeNil())
 					g.Expect(data.Value).Should(ContainSubstring(crd.Name+"-ss-1"), data.Value)

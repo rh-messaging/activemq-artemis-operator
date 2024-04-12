@@ -51,3 +51,78 @@ func TestValidate(t *testing.T) {
 	assert.Equal(t, condition.Reason, brokerv1beta1.ValidConditionFailedReservedLabelReason)
 	assert.True(t, strings.Contains(condition.Message, "Templates[0]"))
 }
+
+func TestValidateBrokerPropsDuplicate(t *testing.T) {
+
+	cr := &brokerv1beta1.ActiveMQArtemis{
+		Spec: brokerv1beta1.ActiveMQArtemisSpec{
+			BrokerProperties: []string{
+				"min=X",
+				"min=y",
+			},
+		},
+	}
+
+	namer := MakeNamers(cr)
+
+	valid, retry := validate(cr, k8sClient, *namer)
+
+	assert.False(t, valid)
+	assert.False(t, retry)
+
+	assert.True(t, meta.IsStatusConditionFalse(cr.Status.Conditions, brokerv1beta1.ValidConditionType))
+
+	condition := meta.FindStatusCondition(cr.Status.Conditions, brokerv1beta1.ValidConditionType)
+	assert.Equal(t, condition.Reason, brokerv1beta1.ValidConditionFailedDuplicateBrokerPropertiesKey)
+	assert.True(t, strings.Contains(condition.Message, "min"))
+}
+
+func TestValidateBrokerPropsDuplicateOnFirstEquals(t *testing.T) {
+
+	cr := &brokerv1beta1.ActiveMQArtemis{
+		Spec: brokerv1beta1.ActiveMQArtemisSpec{
+			BrokerProperties: []string{
+				"nameWith\\=equals_not_matched=X",
+				"nameWith\\=equals_not_matched=Y",
+			},
+		},
+	}
+
+	namer := MakeNamers(cr)
+
+	valid, retry := validate(cr, k8sClient, *namer)
+
+	assert.False(t, valid)
+	assert.False(t, retry)
+
+	assert.True(t, meta.IsStatusConditionFalse(cr.Status.Conditions, brokerv1beta1.ValidConditionType))
+
+	condition := meta.FindStatusCondition(cr.Status.Conditions, brokerv1beta1.ValidConditionType)
+	assert.Equal(t, condition.Reason, brokerv1beta1.ValidConditionFailedDuplicateBrokerPropertiesKey)
+	assert.True(t, strings.Contains(condition.Message, "nameWith"))
+}
+
+func TestValidateBrokerPropsDuplicateOnFirstEqualsIncorrectButUnrealisticForOurBrokerConfigUsecase(t *testing.T) {
+
+	cr := &brokerv1beta1.ActiveMQArtemis{
+		Spec: brokerv1beta1.ActiveMQArtemisSpec{
+			BrokerProperties: []string{
+				"nameWith\\=equals_A_not_matched=X",
+				"nameWith\\=equals_B_not_matched=Y",
+			},
+		},
+	}
+
+	namer := MakeNamers(cr)
+
+	valid, retry := validate(cr, k8sClient, *namer)
+
+	assert.False(t, valid)
+	assert.False(t, retry)
+
+	assert.True(t, meta.IsStatusConditionFalse(cr.Status.Conditions, brokerv1beta1.ValidConditionType))
+
+	condition := meta.FindStatusCondition(cr.Status.Conditions, brokerv1beta1.ValidConditionType)
+	assert.Equal(t, condition.Reason, brokerv1beta1.ValidConditionFailedDuplicateBrokerPropertiesKey)
+	assert.True(t, strings.Contains(condition.Message, "nameWith"))
+}

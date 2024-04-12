@@ -77,9 +77,11 @@ const (
 
 	OrdinalPrefix         = "broker-"
 	OrdinalPrefixSep      = "."
-	BrokerPropertiesName  = "broker.properties"
+	UncheckedPrefix       = "_"
+	PropertiesSuffix      = ".properties"
+	BrokerPropertiesName  = "broker" + PropertiesSuffix
 	JaasConfigKey         = "login.config"
-	LoggingConfigKey      = "logging.properties"
+	LoggingConfigKey      = "logging" + PropertiesSuffix
 	PodNameLabelKey       = "statefulset.kubernetes.io/pod-name"
 	ServiceTypePostfix    = "svc"
 	RouteTypePostfix      = "rte"
@@ -683,6 +685,10 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customRe
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) processSSLSecret(secretName string, customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) (*corev1.Secret, error) {
 
+	if strings.HasSuffix(secretName, certutil.Cert_provided_secret_suffix) {
+		return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName}}, nil
+	}
+
 	var trackedSecret *corev1.Secret = nil
 
 	// validate if secret exists
@@ -1228,14 +1234,18 @@ func formatTemplatedString(customResource *brokerv1beta1.ActiveMQArtemis, templa
 
 func (r *ActiveMQArtemisReconcilerImpl) generateCommonSSLFlags(customResource *brokerv1beta1.ActiveMQArtemis, secretName string, caSecretName *string, trustStoreType string, client rtclient.Client, isConsole bool) (*certutil.SslArguments, string, error) {
 
-	secretNamespacedName := types.NamespacedName{
-		Name:      secretName,
-		Namespace: customResource.Namespace,
-	}
-
 	sslSecret := &corev1.Secret{}
-	if err := resources.Retrieve(secretNamespacedName, client, sslSecret); err != nil {
-		return nil, "", err
+	if strings.HasSuffix(secretName, certutil.Cert_provided_secret_suffix) {
+		sslSecret.ObjectMeta = metav1.ObjectMeta{Name: secretName}
+	} else {
+		secretNamespacedName := types.NamespacedName{
+			Name:      secretName,
+			Namespace: customResource.Namespace,
+		}
+
+		if err := resources.Retrieve(secretNamespacedName, client, sslSecret); err != nil {
+			return nil, "", err
+		}
 	}
 
 	// for trust manager ca bundle.
@@ -3096,7 +3106,7 @@ func checkProjectionStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Cl
 			if !present {
 				// with ordinal prefix or extras in the map this can be the case
 				isForOrdinal, _ := extractOrdinalPrefixSeperatorIndex(name)
-				if !(name == JaasConfigKey || strings.HasPrefix(name, "_") || isForOrdinal) {
+				if !(name == JaasConfigKey || strings.HasPrefix(name, UncheckedPrefix) || isForOrdinal) {
 					missingKeys = append(missingKeys, name)
 				}
 				continue
@@ -3209,6 +3219,10 @@ func newProjectionFromByteValues(resourceMeta metav1.ObjectMeta, configKeyValue 
 }
 
 func alder32FromData(data []byte) string {
+	return alder32StringValue(alder32Of(KeyValuePairs(data)))
+}
+
+func KeyValuePairs(data []byte) []string {
 	// need to skip white space and comments for checksum
 	keyValuePairs := []string{}
 
@@ -3221,7 +3235,7 @@ func alder32FromData(data []byte) string {
 		}
 		keyValuePairs = appendNonEmpty(keyValuePairs, line)
 	}
-	return alder32StringValue(alder32Of(keyValuePairs))
+	return keyValuePairs
 }
 
 func appendNonEmpty(propsKvs []string, data string) []string {
