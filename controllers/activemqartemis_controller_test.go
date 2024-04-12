@@ -3740,6 +3740,7 @@ var _ = Describe("artemis controller", func() {
 			createdTlsSecret := &corev1.Secret{}
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: tlsSecret.Name, Namespace: tlsSecret.Namespace}, createdTlsSecret)).Should(Succeed())
+				g.Expect(createdTlsSecret.ResourceVersion).ShouldNot(BeEmpty())
 			}, timeout*2, interval).Should(Succeed())
 
 			currentSS := &appsv1.StatefulSet{}
