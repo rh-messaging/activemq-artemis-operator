@@ -445,7 +445,7 @@ func RunCommandInPodWithNamespace(podName string, podNamespace string, container
 	//try get some content if any
 	Eventually(func(g Gomega) {
 		g.Expect(consumerCapturedOut.Len() > 0)
-	}, existingClusterTimeout, interval)
+	}, existingClusterTimeout, interval).Should(Succeed())
 
 	content := consumerCapturedOut.String()
 
