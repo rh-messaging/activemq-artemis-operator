@@ -6,3 +6,5 @@ spec:
   deploymentPlan:
     image: placeholder
     size: 2
+status:
+  conditions: []

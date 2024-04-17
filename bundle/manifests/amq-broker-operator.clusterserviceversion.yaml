@@ -37,6 +37,9 @@ metadata:
                 "name": "activemq"
               }
             }
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -56,6 +59,9 @@ metadata:
               "requireLogin": false,
               "size": 2
             }
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -68,6 +74,9 @@ metadata:
             "addressName": "myAddress0",
             "queueName": "myQueue0",
             "routingType": "anycast"
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -78,6 +87,9 @@ metadata:
           },
           "spec": {
             "localOnly": true
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -113,6 +125,9 @@ metadata:
                 "name": "activemq"
               }
             }
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -126,6 +141,9 @@ metadata:
               "image": "placeholder",
               "size": 2
             }
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -138,6 +156,9 @@ metadata:
             "addressName": "myAddress0",
             "queueName": "myQueue0",
             "routingType": "anycast"
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -148,6 +169,9 @@ metadata:
           },
           "spec": {
             "localOnly": true
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -161,6 +185,9 @@ metadata:
               "image": "placeholder",
               "size": 2
             }
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -173,6 +200,9 @@ metadata:
             "addressName": "myAddress0",
             "queueName": "myQueue0",
             "routingType": "anycast"
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -186,6 +216,9 @@ metadata:
               "image": "placeholder",
               "size": 2
             }
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -198,6 +231,9 @@ metadata:
             "addressName": "myAddress0",
             "queueName": "myQueue0",
             "routingType": "anycast"
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -211,6 +247,9 @@ metadata:
               "image": "placeholder",
               "size": 2
             }
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -224,6 +263,9 @@ metadata:
               "image": "placeholder",
               "size": 2
             }
+          },
+          "status": {
+            "conditions": []
           }
         }
       ]
@@ -441,6 +483,13 @@ spec:
         path: user
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v1beta1
     - description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses
         API
@@ -451,6 +500,13 @@ spec:
       - kind: Secret
         name: ""
         version: v1
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha1
     - description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses
         API
@@ -461,6 +517,13 @@ spec:
       - kind: Secret
         name: ""
         version: v1
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha2
     - description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses
         API
@@ -471,6 +534,13 @@ spec:
       - kind: Secret
         name: ""
         version: v1
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha3
     - description: A stateful deployment of one or more brokers
       displayName: ActiveMQ Artemis
@@ -1529,6 +1599,13 @@ spec:
       - kind: Secret
         name: ""
         version: v1
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha1
     - description: ActiveMQArtemis is the Schema for the activemqartemises API
       displayName: Active MQArtemis
@@ -1538,6 +1615,13 @@ spec:
       - kind: Secret
         name: ""
         version: v1
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha2
     - description: ActiveMQArtemis is the Schema for the activemqartemises API
       displayName: Active MQArtemis
@@ -1547,6 +1631,13 @@ spec:
       - kind: Secret
         name: ""
         version: v1
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha3
     - description: ActiveMQArtemis is the Schema for the activemqartemises API
       displayName: Active MQArtemis
@@ -1556,6 +1647,13 @@ spec:
       - kind: Secret
         name: ""
         version: v1
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha4
     - description: ActiveMQArtemis is the Schema for the activemqartemises API
       displayName: Active MQArtemis
@@ -1565,6 +1663,13 @@ spec:
       - kind: Secret
         name: ""
         version: v1
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha5
     - description: Provides internal message migration on clustered broker scaledown
       displayName: ActiveMQ Artemis Scaledown
@@ -1585,6 +1690,13 @@ spec:
         path: resources
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:resourceRequirements
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v1beta1
     - description: ActiveMQArtemisScaledown is the Schema for the activemqartemisscaledowns
         API
@@ -1601,6 +1713,13 @@ spec:
         path: localOnly
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha1
     - description: Security configuration for the broker
       displayName: ActiveMQ Artemis Security
@@ -2123,6 +2242,13 @@ spec:
       - description: The roles allowed to login hawtio
         displayName: Hawtio Roles
         path: securitySettings.management.hawtioRoles
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v1alpha1
     - description: Security configuration for the broker
       displayName: ActiveMQ Artemis Security
@@ -2655,6 +2781,13 @@ spec:
       - description: The roles allowed to login hawtio
         displayName: Hawtio Roles
         path: securitySettings.management.hawtioRoles
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v1beta1
   description: |
     **Red Hat AMQ Broker** is a pure-Java multiprotocol message broker. It’s built on an efficient, asynchronous core with a fast journal for message persistence.
@@ -3134,6 +3267,7 @@ spec:
   - email: rkieley@redhat.com
     name: Roderick Kieley
   maturity: beta
+  minKubeVersion: 1.20.0
   provider:
     name: Red Hat
     url: https://www.redhat.com/

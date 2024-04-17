@@ -4,3 +4,5 @@ metadata:
   name: ex-aaoscaledown
 spec:
   localOnly: true
+status:
+  conditions: []

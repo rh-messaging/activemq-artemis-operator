@@ -16,3 +16,5 @@ spec:
       loginModules:
       - name: 'prop-module'
         flag: 'sufficient'
+status:
+  conditions: []

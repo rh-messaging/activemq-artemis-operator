@@ -2498,6 +2498,7 @@ spec:
   - email: rkieley@redhat.com
     name: Roderick Kieley
   maturity: beta
+  minKubeVersion: 1.20.0
   provider:
     name: Red Hat
     url: https://www.redhat.com/
