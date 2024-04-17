@@ -122,7 +122,7 @@ spec:
                   type: object
                 type: array
               addressSettings:
-                description: Specifies the address configurations
+                description: Specifies the address configurations (deprecated in favour of BrokerProperties)
                 properties:
                   addressSetting:
                     description: Specifies the address settings

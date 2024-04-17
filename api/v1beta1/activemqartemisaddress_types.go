@@ -147,6 +147,7 @@ type ActiveMQArtemisAddressStatus struct {
 //+kubebuilder:resource:path=activemqartemisaddresses,shortName=aaa
 //+operator-sdk:csv:customresourcedefinitions:resources={{"Secret", "v1"}}
 
+// +kubebuilder:deprecatedversion:warning="The ActiveMQArtemisAddress CRD is deprecated. Use the spec.brokerProperties attribute in the ActiveMQArtemis CR to create addresses and queues instead"
 // Adding and removing addresses using custom resource definitions
 // +operator-sdk:csv:customresourcedefinitions:displayName="ActiveMQ Artemis Address"
 type ActiveMQArtemisAddress struct {

@@ -401,7 +401,8 @@ spec:
         path: acceptors[0].wantClientAuth
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Specifies the address configurations
+      - description: Specifies the address configurations (deprecated in favour of
+          BrokerProperties)
         displayName: Address Configurations
         path: addressSettings
       - description: Specifies the address settings
@@ -1325,7 +1326,7 @@ spec:
         name: ""
         version: v1
       version: v2alpha1
-    - description: Provides message migration on clustered broker scaledown
+    - description: Provides internal message migration on clustered broker scaledown
       displayName: ActiveMQ Artemis Scaledown
       kind: ActiveMQArtemisScaledown
       name: activemqartemisscaledowns.broker.amq.io

@@ -15,7 +15,11 @@ spec:
     singular: activemqartemissecurity
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - deprecated: true
+    deprecationWarning: The ActiveMQArtemisSecurity CRD is deprecated. Use the spec.brokerProperties
+      attribute in the ActiveMQArtemis CR and -jaas-config extraMount to configure
+      security instead
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Security configuration for the broker
@@ -473,7 +477,11 @@ spec:
     storage: false
     subresources:
       status: {}
-  - name: v1beta1
+  - deprecated: true
+    deprecationWarning: The ActiveMQArtemisSecurity CRD is deprecated. Use the spec.brokerProperties
+      attribute in the ActiveMQArtemis CR and -jaas-config extraMount to configure
+      security instead
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: Security configuration for the broker

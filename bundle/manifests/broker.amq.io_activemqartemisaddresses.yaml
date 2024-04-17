@@ -15,7 +15,10 @@ spec:
     singular: activemqartemisaddress
   scope: Namespaced
   versions:
-  - name: v1beta1
+  - deprecated: true
+    deprecationWarning: The ActiveMQArtemisAddress CRD is deprecated. Use the spec.brokerProperties
+      attribute in the ActiveMQArtemis CR to create addresses and queues instead
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: Adding and removing addresses using custom resource definitions
@@ -165,7 +168,10 @@ spec:
     storage: true
     subresources:
       status: {}
-  - name: v2alpha1
+  - deprecated: true
+    deprecationWarning: The ActiveMQArtemisAddress CRD is deprecated. Use the spec.brokerProperties
+      attribute in the ActiveMQArtemis CR to create addresses and queues instead
+    name: v2alpha1
     schema:
       openAPIV3Schema:
         description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses
@@ -206,7 +212,10 @@ spec:
     storage: false
     subresources:
       status: {}
-  - name: v2alpha2
+  - deprecated: true
+    deprecationWarning: The ActiveMQArtemisAddress CRD is deprecated. Use the spec.brokerProperties
+      attribute in the ActiveMQArtemis CR to create addresses and queues instead
+    name: v2alpha2
     schema:
       openAPIV3Schema:
         description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses
@@ -250,7 +259,10 @@ spec:
     storage: false
     subresources:
       status: {}
-  - name: v2alpha3
+  - deprecated: true
+    deprecationWarning: The ActiveMQArtemisAddress CRD is deprecated. Use the spec.brokerProperties
+      attribute in the ActiveMQArtemis CR to create addresses and queues instead
+    name: v2alpha3
     schema:
       openAPIV3Schema:
         description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses

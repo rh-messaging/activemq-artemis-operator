@@ -44,6 +44,7 @@ type ActiveMQArtemisScaledownStatus struct {
 //+kubebuilder:resource:path=activemqartemisscaledowns,shortName=aad
 //+operator-sdk:csv:customresourcedefinitions:resources={{"Secret", "v1"}}
 
+// +kubebuilder:deprecatedversion:warning="The ActiveMQArtemisScaledown CRD is deprecated, it is an internal only api"
 // ActiveMQArtemisScaledown is the Schema for the activemqartemisscaledowns API
 type ActiveMQArtemisScaledown struct {
 	metav1.TypeMeta   `json:",inline"`

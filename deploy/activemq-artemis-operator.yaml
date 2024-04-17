@@ -22,7 +22,9 @@ spec:
     singular: activemqartemisaddress
   scope: Namespaced
   versions:
-  - name: v1beta1
+  - deprecated: true
+    deprecationWarning: The ActiveMQArtemisAddress CRD is deprecated. Use the spec.brokerProperties attribute in the ActiveMQArtemis CR to create addresses and queues instead
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: Adding and removing addresses using custom resource definitions
@@ -160,7 +162,9 @@ spec:
     storage: true
     subresources:
       status: {}
-  - name: v2alpha1
+  - deprecated: true
+    deprecationWarning: The ActiveMQArtemisAddress CRD is deprecated. Use the spec.brokerProperties attribute in the ActiveMQArtemis CR to create addresses and queues instead
+    name: v2alpha1
     schema:
       openAPIV3Schema:
         description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses API
@@ -195,7 +199,9 @@ spec:
     storage: false
     subresources:
       status: {}
-  - name: v2alpha2
+  - deprecated: true
+    deprecationWarning: The ActiveMQArtemisAddress CRD is deprecated. Use the spec.brokerProperties attribute in the ActiveMQArtemis CR to create addresses and queues instead
+    name: v2alpha2
     schema:
       openAPIV3Schema:
         description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses API
@@ -233,7 +239,9 @@ spec:
     storage: false
     subresources:
       status: {}
-  - name: v2alpha3
+  - deprecated: true
+    deprecationWarning: The ActiveMQArtemisAddress CRD is deprecated. Use the spec.brokerProperties attribute in the ActiveMQArtemis CR to create addresses and queues instead
+    name: v2alpha3
     schema:
       openAPIV3Schema:
         description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses API
@@ -465,7 +473,7 @@ spec:
                   type: object
                 type: array
               addressSettings:
-                description: Specifies the address configurations
+                description: Specifies the address configurations (deprecated in favour of BrokerProperties)
                 properties:
                   addressSetting:
                     description: Specifies the address settings
@@ -4938,10 +4946,12 @@ spec:
     singular: activemqartemisscaledown
   scope: Namespaced
   versions:
-  - name: v1beta1
+  - deprecated: true
+    deprecationWarning: The ActiveMQArtemisScaledown CRD is deprecated, it is an internal only api
+    name: v1beta1
     schema:
       openAPIV3Schema:
-        description: Provides message migration on clustered broker scaledown
+        description: Provides internal message migration on clustered broker scaledown
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
@@ -5005,7 +5015,9 @@ spec:
     storage: true
     subresources:
       status: {}
-  - name: v2alpha1
+  - deprecated: true
+    deprecationWarning: The ActiveMQArtemisScaledown CRD is deprecated, it is an internal only api
+    name: v2alpha1
     schema:
       openAPIV3Schema:
         description: ActiveMQArtemisScaledown is the Schema for the activemqartemisscaledowns API
@@ -5053,7 +5065,9 @@ spec:
     singular: activemqartemissecurity
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - deprecated: true
+    deprecationWarning: The ActiveMQArtemisSecurity CRD is deprecated. Use the spec.brokerProperties attribute in the ActiveMQArtemis CR and -jaas-config extraMount to configure security instead
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Security configuration for the broker
@@ -5488,7 +5502,9 @@ spec:
     storage: false
     subresources:
       status: {}
-  - name: v1beta1
+  - deprecated: true
+    deprecationWarning: The ActiveMQArtemisSecurity CRD is deprecated. Use the spec.brokerProperties attribute in the ActiveMQArtemis CR and -jaas-config extraMount to configure security instead
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: Security configuration for the broker

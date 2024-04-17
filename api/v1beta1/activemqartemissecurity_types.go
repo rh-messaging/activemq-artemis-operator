@@ -411,6 +411,7 @@ type ActiveMQArtemisSecurityStatus struct {
 //+kubebuilder:resource:path=activemqartemissecurities,shortName=aas
 //+operator-sdk:csv:customresourcedefinitions:resources={{"Secret", "v1"}}
 
+// +kubebuilder:deprecatedversion:warning="The ActiveMQArtemisSecurity CRD is deprecated. Use the spec.brokerProperties attribute in the ActiveMQArtemis CR and -jaas-config extraMount to configure security instead"
 // Security configuration for the broker
 // +operator-sdk:csv:customresourcedefinitions:displayName="ActiveMQ Artemis Security"
 type ActiveMQArtemisSecurity struct {

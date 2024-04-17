@@ -44,6 +44,7 @@ type ActiveMQArtemisAddressStatus struct {
 //+kubebuilder:resource:path=activemqartemisaddresses,shortName=aaa
 //+operator-sdk:csv:customresourcedefinitions:resources={{"Secret", "v1"}}
 
+// +kubebuilder:deprecatedversion:warning="The ActiveMQArtemisAddress CRD is deprecated. Use the spec.brokerProperties attribute in the ActiveMQArtemis CR to create addresses and queues instead"
 // ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses API
 type ActiveMQArtemisAddress struct {
 	metav1.TypeMeta   `json:",inline"`
