@@ -63,6 +63,9 @@ var _ = Describe("security without controller", func() {
 			ctx := context.Background()
 			crd := generateArtemisSpec(defaultNamespace)
 
+			crd.Spec.AdminUser = "admin"
+			crd.Spec.AdminPassword = "admin"
+
 			secret := &corev1.Secret{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Secret",
@@ -115,6 +118,9 @@ var _ = Describe("security without controller", func() {
 
 				"securityRoles.\"mops.#\".admin.view=true",
 				"securityRoles.\"mops.#\".admin.edit=true",
+
+				"# deny forceFailover",
+				"securityRoles.\"mops.broker.forceFailover\".denied=-",
 			}
 
 			crd.Spec.DeploymentPlan.Size = common.Int32ToPtr(1)
@@ -197,6 +203,16 @@ var _ = Describe("security without controller", func() {
 				g.Expect(err).To(BeNil())
 				g.Expect(*result).To(ContainSubstring("200"))
 				g.Expect(*result).To(ContainSubstring("\"value\":0"))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("verify admin can't call forceFailover")
+			curlUrl = "http://" + podWithOrdinal0 + ":8161/console/jolokia/exec/org.apache.activemq.artemis:broker=\"amq-broker\"/forceFailover"
+			curlCmd = []string{"curl", "-S", "-v", "-H", originHeader, "-u", "admin:admin", curlUrl}
+			Eventually(func(g Gomega) {
+				result, err := RunCommandInPod(podWithOrdinal0, crd.Name+"-container", curlCmd)
+				g.Expect(err).To(BeNil())
+				g.Expect(*result).To(ContainSubstring("403"))
+				g.Expect(*result).To(ContainSubstring("EDIT"))
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
