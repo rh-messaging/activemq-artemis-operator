@@ -5876,6 +5876,10 @@ var _ = Describe("artemis controller", func() {
 		})
 
 		It("expect error message on wrong image version", func() {
+			if len(version.SupportedActiveMQArtemisVersions) < 2 {
+				Skip("The supported ActiveMQ Artemis versions are less than 2")
+			}
+
 			By("By creating a crd with latest image and wong version")
 			ctx := context.Background()
 			crd := generateArtemisSpec(defaultNamespace)
