@@ -37,6 +37,14 @@ type ActiveMQArtemisScaledownSpec struct {
 type ActiveMQArtemisScaledownStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	
+	// Current state of the resource
+	// Conditions represent the latest available observations of an object's state
+	//+optional
+	//+patchMergeKey=type
+	//+patchStrategy=merge
+	//+operator-sdk:csv:customresourcedefinitions:type=status,displayName="Conditions",xDescriptors="urn:alm:descriptor:io.kubernetes.conditions"
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,2,rep,name=conditions"`
 }
 
 //+kubebuilder:object:root=true
@@ -44,6 +52,7 @@ type ActiveMQArtemisScaledownStatus struct {
 //+kubebuilder:resource:path=activemqartemisscaledowns,shortName=aad
 //+operator-sdk:csv:customresourcedefinitions:resources={{"Secret", "v1"}}
 
+// +kubebuilder:deprecatedversion:warning="The ActiveMQArtemisScaledown CRD is deprecated, it is an internal only api"
 // ActiveMQArtemisScaledown is the Schema for the activemqartemisscaledowns API
 type ActiveMQArtemisScaledown struct {
 	metav1.TypeMeta   `json:",inline"`

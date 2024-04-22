@@ -201,6 +201,13 @@ spec:
         path: user
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v1beta1
     - description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses
         API
@@ -211,6 +218,13 @@ spec:
       - kind: Secret
         name: ""
         version: v1
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha3
     - description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses
         API
@@ -221,6 +235,13 @@ spec:
       - kind: Secret
         name: ""
         version: v1
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha2
     - description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses
         API
@@ -231,6 +252,13 @@ spec:
       - kind: Secret
         name: ""
         version: v1
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha1
     - description: A stateful deployment of one or more brokers
       displayName: ActiveMQ Artemis
@@ -401,7 +429,8 @@ spec:
         path: acceptors[0].wantClientAuth
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Specifies the address configurations
+      - description: Specifies the address configurations (deprecated in favour of
+          BrokerProperties)
         displayName: Address Configurations
         path: addressSettings
       - description: Specifies the address settings
@@ -1288,6 +1317,13 @@ spec:
       - kind: Secret
         name: ""
         version: v1
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha5
     - description: ActiveMQArtemis is the Schema for the activemqartemises API
       displayName: Active MQArtemis
@@ -1297,6 +1333,13 @@ spec:
       - kind: Secret
         name: ""
         version: v1
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha4
     - description: ActiveMQArtemis is the Schema for the activemqartemises API
       displayName: Active MQArtemis
@@ -1306,6 +1349,13 @@ spec:
       - kind: Secret
         name: ""
         version: v1
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha3
     - description: ActiveMQArtemis is the Schema for the activemqartemises API
       displayName: Active MQArtemis
@@ -1315,6 +1365,13 @@ spec:
       - kind: Secret
         name: ""
         version: v1
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha2
     - description: ActiveMQArtemis is the Schema for the activemqartemises API
       displayName: Active MQArtemis
@@ -1324,8 +1381,15 @@ spec:
       - kind: Secret
         name: ""
         version: v1
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha1
-    - description: Provides message migration on clustered broker scaledown
+    - description: Provides internal message migration on clustered broker scaledown
       displayName: ActiveMQ Artemis Scaledown
       kind: ActiveMQArtemisScaledown
       name: activemqartemisscaledowns.broker.amq.io
@@ -1344,6 +1408,13 @@ spec:
         path: resources
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:resourceRequirements
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v1beta1
     - description: ActiveMQArtemisScaledown is the Schema for the activemqartemisscaledowns
         API
@@ -1360,6 +1431,13 @@ spec:
         path: localOnly
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha1
     - description: Security configuration for the broker
       displayName: ActiveMQ Artemis Security
@@ -1892,6 +1970,13 @@ spec:
       - description: The roles allowed to login hawtio
         displayName: Hawtio Roles
         path: securitySettings.management.hawtioRoles
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v1beta1
     - description: Security configuration for the broker
       displayName: ActiveMQ Artemis Security
@@ -2414,6 +2499,13 @@ spec:
       - description: The roles allowed to login hawtio
         displayName: Hawtio Roles
         path: securitySettings.management.hawtioRoles
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v1alpha1
   description: ArtemisCloud Operator manages ActiveMQ Artemis messaging broker in
     the cloud
@@ -2457,6 +2549,7 @@ spec:
   - email: rkieley@redhat.com
     name: Roderick Kieley
   maturity: beta
+  minKubeVersion: 1.20.0
   provider:
     name: ArtemisCloud
     url: https://artemiscloud.io

@@ -12,3 +12,5 @@ spec:
     messageMigration: false
     jolokiaAgentEnabled: false
     managementRBACEnabled: true
+status:
+  conditions: []

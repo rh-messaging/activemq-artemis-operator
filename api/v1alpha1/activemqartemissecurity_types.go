@@ -397,6 +397,14 @@ type RoleAccessType struct {
 type ActiveMQArtemisSecurityStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	
+	// Current state of the resource
+	// Conditions represent the latest available observations of an object's state
+	//+optional
+	//+patchMergeKey=type
+	//+patchStrategy=merge
+	//+operator-sdk:csv:customresourcedefinitions:type=status,displayName="Conditions",xDescriptors="urn:alm:descriptor:io.kubernetes.conditions"
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,2,rep,name=conditions"`
 }
 
 //+kubebuilder:object:root=true
@@ -404,6 +412,7 @@ type ActiveMQArtemisSecurityStatus struct {
 //+kubebuilder:resource:path=activemqartemissecurities,shortName=aas
 //+operator-sdk:csv:customresourcedefinitions:resources={{"Secret", "v1"}}
 
+// +kubebuilder:deprecatedversion:warning="The ActiveMQArtemisSecurity CRD is deprecated. Use the spec.brokerProperties attribute in the ActiveMQArtemis CR and -jaas-config extraMount to configure security instead"
 // Security configuration for the broker
 // +operator-sdk:csv:customresourcedefinitions:displayName="ActiveMQ Artemis Security"
 type ActiveMQArtemisSecurity struct {

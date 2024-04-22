@@ -6,3 +6,5 @@ spec:
   addressName: myAddress0
   queueName: myQueue0
   routingType: anycast
+status:
+  conditions: []

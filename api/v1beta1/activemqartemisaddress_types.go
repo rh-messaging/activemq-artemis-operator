@@ -139,6 +139,14 @@ type QueueConfigurationType struct {
 type ActiveMQArtemisAddressStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	// Current state of the resource
+	// Conditions represent the latest available observations of an object's state
+	//+optional
+	//+patchMergeKey=type
+	//+patchStrategy=merge
+	//+operator-sdk:csv:customresourcedefinitions:type=status,displayName="Conditions",xDescriptors="urn:alm:descriptor:io.kubernetes.conditions"
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,2,rep,name=conditions"`
 }
 
 //+kubebuilder:object:root=true
@@ -147,6 +155,7 @@ type ActiveMQArtemisAddressStatus struct {
 //+kubebuilder:resource:path=activemqartemisaddresses,shortName=aaa
 //+operator-sdk:csv:customresourcedefinitions:resources={{"Secret", "v1"}}
 
+// +kubebuilder:deprecatedversion:warning="The ActiveMQArtemisAddress CRD is deprecated. Use the spec.brokerProperties attribute in the ActiveMQArtemis CR to create addresses and queues instead"
 // Adding and removing addresses using custom resource definitions
 // +operator-sdk:csv:customresourcedefinitions:displayName="ActiveMQ Artemis Address"
 type ActiveMQArtemisAddress struct {

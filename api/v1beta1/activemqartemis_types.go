@@ -56,7 +56,7 @@ type ActiveMQArtemisSpec struct {
 	// Specifies the upgrades (deprecated in favour of Version)
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Upgrades"
 	Upgrades ActiveMQArtemisUpgrades `json:"upgrades,omitempty"`
-	// Specifies the address configurations
+	// Specifies the address configurations (deprecated in favour of BrokerProperties)
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Address Configurations"
 	AddressSettings AddressSettingsType `json:"addressSettings,omitempty"`
 	// Optional list of key=value properties that are applied to the broker configuration bean.

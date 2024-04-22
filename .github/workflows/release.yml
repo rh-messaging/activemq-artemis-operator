@@ -16,6 +16,11 @@ jobs:
           sudo apt-get update &&
           sudo apt-get install pass
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.20.13'
+
       - name: Checkout the repo
         uses: actions/checkout@v4
 

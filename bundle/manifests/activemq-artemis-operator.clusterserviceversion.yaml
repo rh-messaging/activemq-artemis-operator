@@ -37,6 +37,9 @@ metadata:
                 "name": "activemq"
               }
             }
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -56,6 +59,9 @@ metadata:
               "requireLogin": false,
               "size": 2
             }
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -68,6 +74,9 @@ metadata:
             "addressName": "myAddress0",
             "queueName": "myQueue0",
             "routingType": "anycast"
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -78,6 +87,9 @@ metadata:
           },
           "spec": {
             "localOnly": true
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -113,6 +125,9 @@ metadata:
                 "name": "activemq"
               }
             }
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -126,6 +141,9 @@ metadata:
               "image": "placeholder",
               "size": 2
             }
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -138,6 +156,9 @@ metadata:
             "addressName": "myAddress0",
             "queueName": "myQueue0",
             "routingType": "anycast"
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -148,6 +169,9 @@ metadata:
           },
           "spec": {
             "localOnly": true
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -161,6 +185,9 @@ metadata:
               "image": "placeholder",
               "size": 2
             }
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -173,6 +200,9 @@ metadata:
             "addressName": "myAddress0",
             "queueName": "myQueue0",
             "routingType": "anycast"
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -186,6 +216,9 @@ metadata:
               "image": "placeholder",
               "size": 2
             }
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -198,6 +231,9 @@ metadata:
             "addressName": "myAddress0",
             "queueName": "myQueue0",
             "routingType": "anycast"
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -211,6 +247,9 @@ metadata:
               "image": "placeholder",
               "size": 2
             }
+          },
+          "status": {
+            "conditions": []
           }
         },
         {
@@ -224,6 +263,9 @@ metadata:
               "image": "placeholder",
               "size": 2
             }
+          },
+          "status": {
+            "conditions": []
           }
         }
       ]
@@ -241,7 +283,7 @@ metadata:
     features.operators.openshift.io/token-auth-gcp: "false"
     operators.operatorframework.io/builder: operator-sdk-v1.28.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
-  name: activemq-artemis-operator.v1.2.0
+  name: activemq-artemis-operator.v1.2.1
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -427,6 +469,13 @@ spec:
         path: user
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v1beta1
     - description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses
         API
@@ -437,6 +486,13 @@ spec:
       - kind: Secret
         name: ""
         version: v1
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha1
     - description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses
         API
@@ -447,6 +503,13 @@ spec:
       - kind: Secret
         name: ""
         version: v1
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha2
     - description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses
         API
@@ -457,6 +520,13 @@ spec:
       - kind: Secret
         name: ""
         version: v1
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha3
     - description: A stateful deployment of one or more brokers
       displayName: ActiveMQ Artemis
@@ -627,7 +697,8 @@ spec:
         path: acceptors[0].wantClientAuth
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Specifies the address configurations
+      - description: Specifies the address configurations (deprecated in favour of
+          BrokerProperties)
         displayName: Address Configurations
         path: addressSettings
       - description: Specifies the address settings
@@ -1514,6 +1585,13 @@ spec:
       - kind: Secret
         name: ""
         version: v1
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha1
     - description: ActiveMQArtemis is the Schema for the activemqartemises API
       displayName: Active MQArtemis
@@ -1523,6 +1601,13 @@ spec:
       - kind: Secret
         name: ""
         version: v1
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha2
     - description: ActiveMQArtemis is the Schema for the activemqartemises API
       displayName: Active MQArtemis
@@ -1532,6 +1617,13 @@ spec:
       - kind: Secret
         name: ""
         version: v1
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha3
     - description: ActiveMQArtemis is the Schema for the activemqartemises API
       displayName: Active MQArtemis
@@ -1541,6 +1633,13 @@ spec:
       - kind: Secret
         name: ""
         version: v1
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha4
     - description: ActiveMQArtemis is the Schema for the activemqartemises API
       displayName: Active MQArtemis
@@ -1550,8 +1649,15 @@ spec:
       - kind: Secret
         name: ""
         version: v1
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha5
-    - description: Provides message migration on clustered broker scaledown
+    - description: Provides internal message migration on clustered broker scaledown
       displayName: ActiveMQ Artemis Scaledown
       kind: ActiveMQArtemisScaledown
       name: activemqartemisscaledowns.broker.amq.io
@@ -1570,6 +1676,13 @@ spec:
         path: resources
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:resourceRequirements
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v1beta1
     - description: ActiveMQArtemisScaledown is the Schema for the activemqartemisscaledowns
         API
@@ -1586,6 +1699,13 @@ spec:
         path: localOnly
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha1
     - description: Security configuration for the broker
       displayName: ActiveMQ Artemis Security
@@ -2108,6 +2228,13 @@ spec:
       - description: The roles allowed to login hawtio
         displayName: Hawtio Roles
         path: securitySettings.management.hawtioRoles
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v1alpha1
     - description: Security configuration for the broker
       displayName: ActiveMQ Artemis Security
@@ -2640,6 +2767,13 @@ spec:
       - description: The roles allowed to login hawtio
         displayName: Hawtio Roles
         path: securitySettings.management.hawtioRoles
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v1beta1
   description: ArtemisCloud Operator manages ActiveMQ Artemis messaging broker in
     the cloud
@@ -2747,6 +2881,10 @@ spec:
                   value: quay.io/artemiscloud/activemq-artemis-broker-init@sha256:3bbfb6177e4839087f615a01ee54f9e06a95acaddbb083e11851b6af9315dbf0
                 - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2320
                   value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:52f337cd5d7d5d199eebf4fc722f8c5279f652506f009efbc0f8f6de88e18718
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2330
+                  value: quay.io/artemiscloud/activemq-artemis-broker-init@sha256:93168fd8cd4fb32f041795afb8fb0e21cf81081d6cc463a44356e153dc1ad032
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2330
+                  value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:b293c1269166cc6181f68b8d803fdfcf20fdbd5df2787ed0453724b22e298fb2
                 - name: OPERATOR_NAME
                   valueFrom:
                     fieldRef:
@@ -2761,7 +2899,7 @@ spec:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
                 - name: ENABLE_WEBHOOKS
                   value: "false"
-                image: quay.io/artemiscloud/activemq-artemis-operator:1.2.0
+                image: quay.io/artemiscloud/activemq-artemis-operator:1.2.1
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -3057,6 +3195,7 @@ spec:
   - email: rkieley@redhat.com
     name: Roderick Kieley
   maturity: beta
+  minKubeVersion: 1.20.0
   provider:
     name: ArtemisCloud
     url: https://artemiscloud.io
@@ -3129,4 +3268,8 @@ spec:
     name: activemq-artemis-broker-init-2320
   - image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:52f337cd5d7d5d199eebf4fc722f8c5279f652506f009efbc0f8f6de88e18718
     name: activemq-artemis-broker-kubernetes-2320
-  version: 1.2.0
+  - image: quay.io/artemiscloud/activemq-artemis-broker-init@sha256:93168fd8cd4fb32f041795afb8fb0e21cf81081d6cc463a44356e153dc1ad032
+    name: activemq-artemis-broker-init-2330
+  - image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:b293c1269166cc6181f68b8d803fdfcf20fdbd5df2787ed0453724b22e298fb2
+    name: activemq-artemis-broker-kubernetes-2330
+  version: 1.2.1
