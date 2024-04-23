@@ -6461,6 +6461,9 @@ var _ = Describe("artemis controller", func() {
 
 			// lets order and get LatestVersion - x
 			orderedSemVersions := version.SupportedActiveMQArtemisSemanticVersions()
+			if len(orderedSemVersions) < 4 {
+				Skip("The supported ActiveMQ Artemis versions are less than 4")
+			}
 			previousVersion := orderedSemVersions[len(orderedSemVersions)-4]
 			Expect(previousVersion.String()).ShouldNot(Equal(version.LatestVersion))
 
