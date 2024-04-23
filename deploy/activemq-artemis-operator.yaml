@@ -6936,17 +6936,17 @@ spec:
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7116_s390x
           value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:0f443f5aa818dd85bfa93e51e37bdac3909628a283aa52a89125b527dd75d9aa
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7120
-          value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:d7556a5d35a9e5e854040815a6b7c6120ff6bd8fa851264f7f1862f610024f3c
+          value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:aee1c6d1916da4607ce4b961fb61ed540b9d8fee6350e659208d1bcaaefb3992
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7120
-          value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:fdfb64ff7f4e40fe84f6423d2b19efa8e2330415985a6594b53fe006a1e0dd6e
+          value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:4a70ad8f02252427777696dca16a088afac4bc4849431c47f054d0648772fb03
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7120_ppc64le
-          value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:d7556a5d35a9e5e854040815a6b7c6120ff6bd8fa851264f7f1862f610024f3c
+          value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:aee1c6d1916da4607ce4b961fb61ed540b9d8fee6350e659208d1bcaaefb3992
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7120_ppc64le
-          value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:fdfb64ff7f4e40fe84f6423d2b19efa8e2330415985a6594b53fe006a1e0dd6e
+          value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:4a70ad8f02252427777696dca16a088afac4bc4849431c47f054d0648772fb03
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7120_s390x
-          value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:d7556a5d35a9e5e854040815a6b7c6120ff6bd8fa851264f7f1862f610024f3c
+          value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:aee1c6d1916da4607ce4b961fb61ed540b9d8fee6350e659208d1bcaaefb3992
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7120_s390x
-          value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:fdfb64ff7f4e40fe84f6423d2b19efa8e2330415985a6594b53fe006a1e0dd6e
+          value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:4a70ad8f02252427777696dca16a088afac4bc4849431c47f054d0648772fb03
         - name: OPERATOR_NAME
           valueFrom:
             fieldRef:
