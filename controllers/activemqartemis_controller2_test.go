@@ -55,28 +55,29 @@ var _ = Describe("artemis controller 2", func() {
 			fmt.Println("Time with MicroSeconds: ", time.Now().Format("2006-01-02 15:04:05.000000"), " test:", CurrentSpecReport())
 		}
 
-		for _, li := range toWatch {
+		if verbose {
+			for _, li := range toWatch {
 
-			wc, err := client.NewWithWatch(testEnv.Config, client.Options{})
-			if err != nil {
-				fmt.Printf("Err on watch client:  %v\n", err)
-				return
-			}
-
-			// see what changed
-			wi, err := wc.Watch(ctx, li, &client.ListOptions{})
-			if err != nil {
-				fmt.Printf("Err on watch:  %v\n", err)
-			}
-			wis.PushBack(wi)
-
-			go func() {
-				for event := range wi.ResultChan() {
-					if verbose {
-						fmt.Printf("%v : Object: %v\n", event.Type, event.Object)
-					}
+				wc, err := client.NewWithWatch(testEnv.Config, client.Options{})
+				if err != nil {
+					fmt.Printf("Err on watch client:  %v\n", err)
+					return
 				}
-			}()
+
+				// see what changed
+				wi, err := wc.Watch(ctx, li, &client.ListOptions{})
+				if err != nil {
+					fmt.Printf("Err on watch:  %v\n", err)
+				}
+				wis.PushBack(wi)
+
+				go func() {
+					for event := range wi.ResultChan() {
+						fmt.Printf("%v : Object: %v\n", event.Type, event.Object)
+
+					}
+				}()
+			}
 		}
 	})
 

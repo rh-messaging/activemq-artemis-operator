@@ -119,8 +119,6 @@ var (
 	managerCancel context.CancelFunc
 	k8Manager     manager.Manager
 
-	stateManager *common.StateManager
-
 	brokerReconciler   *ActiveMQArtemisReconciler
 	securityReconciler *ActiveMQArtemisSecurityReconciler
 
@@ -184,13 +182,18 @@ func setUpEnvTest() {
 
 	setUpK8sClient()
 
+	isOpenshift, err = common.DetectOpenshiftWith(restConfig)
+	Expect(err).NotTo(HaveOccurred())
+
+	if isOpenshift {
+		kubeTool = "oc"
+	}
+
 	setUpIngress()
 
 	setUpNamespace()
 
 	setUpTestProxy()
-
-	stateManager = common.GetStateManager()
 
 	createControllerManagerForSuite()
 }
@@ -212,6 +215,7 @@ func setUpNamespace() {
 			testNamespaceKey := types.NamespacedName{Name: defaultNamespace}
 			g.Expect(k8sClient.Get(ctx, testNamespaceKey, &testNamespace)).Should(Succeed())
 			uidRange := testNamespace.Annotations["openshift.io/sa.scc.uid-range"]
+			g.Expect(uidRange).ShouldNot(BeEmpty())
 			uidRangeTokens := strings.Split(uidRange, "/")
 			defaultUid, err = strconv.ParseInt(uidRangeTokens[0], 10, 64)
 			g.Expect(err).Should(Succeed())
@@ -225,11 +229,9 @@ func setUpIngress() {
 	ingressConfigErr := k8sClient.Get(ctx, ingressConfigKey, ingressConfig)
 
 	if ingressConfigErr == nil {
-		isOpenshift = true
 		isIngressSSLPassthroughEnabled = true
 		clusterIngressHost = "ingress." + ingressConfig.Spec.Domain
 	} else {
-		isOpenshift = false
 		isIngressSSLPassthroughEnabled = false
 		clusterIngressHost = clusterUrl.Hostname()
 		ingressNginxControllerDeployment := &appsv1.Deployment{}
@@ -435,26 +437,7 @@ func createControllerManager(disableMetrics bool, watchNamespace string) {
 	k8Manager, err = ctrl.NewManager(restConfig, mgrOptions)
 	Expect(err).ToNot(HaveOccurred())
 
-	// Create and start a new auto detect process for this operator
-	autodetect, err := common.NewAutoDetect(k8Manager)
-	if err != nil {
-		ctrl.Log.Error(err, "failed to start the background process to auto-detect the operator capabilities")
-	} else {
-		autodetect.DetectOpenshift()
-	}
-
-	isOpenshift, err = common.DetectOpenshift()
-	Expect(err).NotTo(HaveOccurred())
-
-	if isOpenshift {
-		kubeTool = "oc"
-	}
-
-	brokerReconciler = &ActiveMQArtemisReconciler{
-		Client: k8Manager.GetClient(),
-		Scheme: k8Manager.GetScheme(),
-		log:    ctrl.Log,
-	}
+	brokerReconciler = NewActiveMQArtemisReconciler(k8Manager, ctrl.Log, isOpenshift)
 
 	if err = brokerReconciler.SetupWithManager(k8Manager); err != nil {
 		ctrl.Log.Error(err, "unable to create controller", "controller", "ActiveMQArtemisReconciler")
@@ -766,10 +749,6 @@ var _ = AfterSuite(func() {
 		Expect(err).NotTo(HaveOccurred())
 	} else {
 		shutdownControllerManager()
-
-		if stateManager != nil {
-			stateManager.Clear()
-		}
 
 		// scaledown controller lifecycle seems a little loose, it does not complete on signal hander like the others
 		for _, drainController := range controllers {

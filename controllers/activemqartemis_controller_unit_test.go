@@ -20,6 +20,9 @@ import (
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/stretchr/testify/assert"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -40,7 +43,12 @@ func TestValidate(t *testing.T) {
 
 	namer := MakeNamers(cr)
 
-	valid, retry := validate(cr, k8sClient, *namer)
+	cfg, _ := config.GetConfig()
+	k8Manager, _ := ctrl.NewManager(cfg, manager.Options{})
+	r := NewActiveMQArtemisReconciler(k8Manager, ctrl.Log, isOpenshift)
+	ri := NewActiveMQArtemisReconcilerImpl(cr, r)
+
+	valid, retry := ri.validate(cr, k8sClient, *namer)
 
 	assert.False(t, valid)
 	assert.False(t, retry)
@@ -65,7 +73,13 @@ func TestValidateBrokerPropsDuplicate(t *testing.T) {
 
 	namer := MakeNamers(cr)
 
-	valid, retry := validate(cr, k8sClient, *namer)
+	cfg, _ := config.GetConfig()
+	k8Manager, _ := ctrl.NewManager(cfg, manager.Options{})
+
+	r := NewActiveMQArtemisReconciler(k8Manager, ctrl.Log, isOpenshift)
+	ri := NewActiveMQArtemisReconcilerImpl(cr, r)
+
+	valid, retry := ri.validate(cr, k8sClient, *namer)
 
 	assert.False(t, valid)
 	assert.False(t, retry)
@@ -90,7 +104,12 @@ func TestValidateBrokerPropsDuplicateOnFirstEquals(t *testing.T) {
 
 	namer := MakeNamers(cr)
 
-	valid, retry := validate(cr, k8sClient, *namer)
+	cfg, _ := config.GetConfig()
+	k8Manager, _ := ctrl.NewManager(cfg, manager.Options{})
+	r := NewActiveMQArtemisReconciler(k8Manager, ctrl.Log, isOpenshift)
+	ri := NewActiveMQArtemisReconcilerImpl(cr, r)
+
+	valid, retry := ri.validate(cr, k8sClient, *namer)
 
 	assert.False(t, valid)
 	assert.False(t, retry)
@@ -115,7 +134,12 @@ func TestValidateBrokerPropsDuplicateOnFirstEqualsIncorrectButUnrealisticForOurB
 
 	namer := MakeNamers(cr)
 
-	valid, retry := validate(cr, k8sClient, *namer)
+	cfg, _ := config.GetConfig()
+	k8Manager, _ := ctrl.NewManager(cfg, manager.Options{})
+	r := NewActiveMQArtemisReconciler(k8Manager, ctrl.Log, isOpenshift)
+	ri := NewActiveMQArtemisReconcilerImpl(cr, r)
+
+	valid, retry := ri.validate(cr, k8sClient, *namer)
 
 	assert.False(t, valid)
 	assert.False(t, retry)
