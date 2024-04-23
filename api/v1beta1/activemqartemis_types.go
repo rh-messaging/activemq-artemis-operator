@@ -760,6 +760,8 @@ type ExternalConfigStatus struct {
 //+kubebuilder:storageversion
 //+kubebuilder:resource:path=activemqartemises
 //+kubebuilder:resource:path=activemqartemises,shortName=aa
+//+kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status",description="The state of the resource"
+//+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",description="The age of the resource"
 //+operator-sdk:csv:customresourcedefinitions:resources={{"Service", "v1"}}
 //+operator-sdk:csv:customresourcedefinitions:resources={{"Secret", "v1"}}
 //+operator-sdk:csv:customresourcedefinitions:resources={{"ConfigMap", "v1"}}
