@@ -43,6 +43,7 @@ import (
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -172,7 +173,6 @@ func setUpEnvTest() {
 		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
 	}
-	testEnv.CRDInstallOptions.CleanUpAfterUse = true
 
 	var err error
 	restConfig, err = testEnv.Start()
@@ -557,14 +557,8 @@ func uninstallOperator(deleteCrds bool, namespace string) error {
 	}
 
 	if deleteCrds {
-		//uninstall CRDs
-		ctrl.Log.Info("Uninstalling CRDs")
-		crds := []string{"../deploy/crds"}
-		options := envtest.CRDInstallOptions{
-			Paths:              crds,
-			ErrorIfPathMissing: false,
-		}
-		return envtest.UninstallCRDs(restConfig, options)
+		// the envtest UninstallCRDs function is flaky on ROSA
+		uninstallCRDs()
 	}
 
 	return nil
@@ -782,11 +776,44 @@ var _ = AfterSuite(func() {
 			close(*drainController.GetStopCh())
 		}
 
+		// the envtest UninstallCRDs function is flaky on ROSA
+		uninstallCRDs()
+
 		err := testEnv.Stop()
 		Expect(err).NotTo(HaveOccurred())
 	}
-
 })
+
+func uninstallCRDs() {
+
+	crd := apiextensionsv1.CustomResourceDefinition{}
+
+	crdNames := [...]string{
+		"activemqartemises.broker.amq.io",
+		"activemqartemisaddresses.broker.amq.io",
+		"activemqartemisscaledowns.broker.amq.io",
+		"activemqartemissecurities.broker.amq.io",
+	}
+
+	for _, crdName := range crdNames {
+		Eventually(func(g Gomega) {
+			err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: crdName}, &crd)
+			g.Expect(err == nil || errors.IsNotFound(err)).To(BeTrue())
+
+			if !errors.IsNotFound(err) {
+				// delete CRD
+				err := k8sClient.Delete(context.TODO(), &crd)
+				g.Expect(err).NotTo(HaveOccurred())
+
+				// check CRD is not found
+				Eventually(func(g Gomega) {
+					err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: crdName}, &crd)
+					g.Expect(errors.IsNotFound(err)).To(BeTrue())
+				}, timeout, interval).Should(Succeed())
+			}
+		}, timeout, interval).Should(Succeed())
+	}
+}
 
 func StartCapturingLog() {
 	testWriter.Buffer = bytes.NewBuffer(nil)
