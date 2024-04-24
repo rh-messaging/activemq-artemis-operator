@@ -13,87 +13,43 @@ weight: 630
 toc: true
 ---
 
-# Bunding A Bundle and Deploy it into the Operator Lifecycle Manager(OLM)
+# Bundle
 
-## About the Operator Lifecycle Manager (OLM)
+## Operator Lifecycle Manager (OLM)
+The [Operator Lifecycle Manager](https://olm.operatorframework.io/) can help users to install and manage operators. The ArtemisCloud operator can be built into a bundle image and installed into OLM.
 
-The [Operator Lifecycle Manager](https://olm.operatorframework.io/) can help users to install and manage operators.
-The ArtemisCloud operator can be built into a bundle image and installed into OLM.
+### Install OLM
+Check out the latest [releases on github](https://github.com/operator-framework/operator-lifecycle-manager/releases) for release-specific install instructions.
 
-## Building
+## Create a repository
+Create a repository that Kubernetes will uses to pull your catalog image. You can create a public one for free on quay.io, see [how to create a repo](https://docs.quay.io/guides/create-repo.html).
 
-### Creating the bundle's manifests/metadata
-
-Before you build the bundle image generate the manifests and metadata:
-
-```$xslt
-make IMAGE_TAG_BASE=<bundle image registry> OPERATOR_IMAGE_REPO=<operator image registry> OPERATOR_VERSION=<operator tag> bundle
+## Build a catalog image
+Set your repository in CATALOG_IMG and execute the following command:
+```
+make CATALOG_IMG=quay.io/my-org/activemq-artemis-operator-index:latest catalog-build
 ```
 
-### Building the bundle image:
-
-```$xslt
-make IMAGE_TAG_BASE=<bundle image registry> bundle-build
+## Push a catalog image
+Set your repository in CATALOG_IMG and execute the following command:
 ```
-The result image tag takes the form like
-```$xslt
-${IMAGE_TAG_BASE}-bundle:v0.0.1
-```
-Note: the version v0.0.1 is defined by VERSION variable in the Makefile
-
-To push the built bundle image
-
-```$xslt
-make IMAGE_TAG_BASE=<bundle image registry> bundle-push
+make CATALOG_IMG=quay.io/my-org/activemq-artemis-operator-index:latest catalog-push
 ```
 
-### Building the catalog image
-
-Now with the bundle image in place, build the catalog(index) iamge:
-
-```$xslt
-make IMAGE_TAG_BASE=<bundle image registry> catalog-build
-```
-The result image tag takes the form like
-```$xslt
-${IMAGE_TAG_BASE}-index:v0.0.1
-```
-
-To push the catalog image to repo:
-
-```$xslt
-make IMAGE_TAG_BASE=<bundle image registry> catalog-push
-```
-
-## Installing operator via OLM (Minikube)
-
-### Install olm (If olm is not installed already)
-
-Make sure the Minikube is up and running.
-
-Use the [operator-sdk tool](https://sdk.operatorframework.io/):
-
-```$xslt
-operator-sdk olm install
-```
-It will deploy the latest olm into Minikube.
-
-### Create a catalog source (e.g. catalog-source.yaml):
+## Create a catalog source (e.g. catalog-source.yaml):
+Before creating the catalog source, ensure to update the **image** field within the `spec` section with your own built catalog image specified by the `CATALOG_IMG` environment variable.
+For the `CATALOG_IMG`, refer to the [Build a catalog image](#build-a-catalog-image) section.
 
 ```
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
-  name: artemis-index
+  name: activemq-artemis-operator-source
   namespace: operators
 spec:
+  displayName: ActiveMQ Artemis Operators
+  image: quay.io/my-org/activemq-artemis-operator-index:latest
   sourceType: grpc
-  image: quay.io/hgao/operator-catalog:v0.0.1
-  displayName: ArtemisCloud Index
-  publisher: ArtemisCloud
-  updateStrategy:
-    registryPoll:
-      interval: 10m
 ```
 
 and deploy it:
@@ -104,25 +60,24 @@ $ kubectl create -f catalog-source.yaml
 In a moment you will see the index image is up and running in namespace **operators**:
 
 ```$xslt
-[a]$ kubectl get pod -n operators
-NAME                  READY   STATUS    RESTARTS   AGE
-artemis-index-bzh75   1/1     Running   0          42s
+$ kubectl get pod -n operators
+NAME                                      READY   STATUS    RESTARTS   AGE
+activemq-artemis-operator-source-g94fd    1/1     Running   0          42s
 ```
 
-### Creating a subscription (e.g. subscription.yaml)
+## Create a subscription (e.g. subscription.yaml)
 
 ```
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
-  name: my-subscription
+  name: activemq-artemis-operator-subscription
   namespace: operators
 spec:
   channel: upstream
   name: activemq-artemis-operator
-  source: artemis-index
+  source: activemq-artemis-operator-source
   sourceNamespace: operators
-  installPlanApproval: Automatic
 ```
 
 and deploy it:
@@ -134,7 +89,23 @@ An operator will be installed into **operators** namespace.
 ```$xslt
 $ kubectl get pod -n operators
 NAME                                                              READY   STATUS      RESTARTS   AGE
-9365c56f188be1738a1fabddb5a408a693d8c1f2d7275514556644e52ejpdpj   0/1     Completed   0          2m20s
-activemq-artemis-controller-manager-84d58db649-tkt89              1/1     Running     0          117s
-artemis-index-frpn4                                               1/1     Running     0          3m35s
+069c5d363d51fc04d639086da1c5180883a6cea8ec9d9f9eedde1a55f6v7jsq   0/1     Completed   0          9m55s
+activemq-artemis-controller-manager-54c99b9df6-6xdzh              1/1     Running     0          9m28s
+activemq-artemis-operator-source-g94fd                            1/1     Running     0          58m
+```
+
+## Create a single ActiveMQ Artemis
+
+This step creates a single ActiveMQ Artemis broker instance by applying the custom resource (CR) defined in artemis_single.yaml file.
+
+```$xslt
+$ kubectl apply -f examples/artemis/artemis_single.yaml
+```
+
+To check the status of the broker, run:
+
+```$xslt 
+$ kubectl get ActivemqArtemis 
+NAME             READY   AGE
+artemis-broker   True    39s
 ```
