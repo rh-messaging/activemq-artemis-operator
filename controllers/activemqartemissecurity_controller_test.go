@@ -112,7 +112,7 @@ var _ = Describe("security controller", func() {
 					}
 				}
 				return secApplied
-			}, timeout, interval).Should(BeTrue())
+			}, existingClusterTimeout, existingClusterInterval).Should(BeTrue())
 
 			expectedSecuritySecret := &corev1.Secret{}
 			expectedSecuritySecretKey := types.NamespacedName{Name: "secret-security-" + createdSecurityCr.Name, Namespace: defaultNamespace}
@@ -167,7 +167,7 @@ var _ = Describe("security controller", func() {
 					}
 				}
 				g.Expect(secApplied).To(BeTrue())
-			}, timeout, interval).Should(Succeed())
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			By("checking the log")
 			Eventually(func(g Gomega) {
@@ -210,7 +210,7 @@ var _ = Describe("security controller", func() {
 					}
 				}
 				return secApplied
-			}, timeout, interval).Should(BeTrue())
+			}, existingClusterTimeout, existingClusterInterval).Should(BeTrue())
 
 			expectedSecuritySecret := &corev1.Secret{}
 			expectedSecuritySecretKey := types.NamespacedName{Name: "secret-security-" + createdSecurityCr.Name, Namespace: defaultNamespace}
@@ -246,7 +246,7 @@ var _ = Describe("security controller", func() {
 					}
 				}
 				return secApplied
-			}, timeout, interval).Should(BeTrue())
+			}, existingClusterTimeout, existingClusterInterval).Should(BeTrue())
 
 			CleanResource(createdBrokerCr, createdBrokerCr.Name, defaultNamespace)
 			CleanResource(createdSecurityCr, createdSecurityCr.Name, defaultNamespace)
@@ -887,7 +887,7 @@ var _ = Describe("security controller", func() {
 					}
 				}
 				return secApplied
-			}, timeout, interval).Should(BeTrue())
+			}, existingClusterTimeout, existingClusterInterval).Should(BeTrue())
 
 			By("Checking security doesn't get applied to broker2 " + broker2Cr.Name)
 			Eventually(func(g Gomega) {
@@ -987,7 +987,7 @@ var _ = Describe("security controller", func() {
 					}
 				}
 				return secApplied && emptyMetadata
-			}, timeout, interval).Should(BeTrue())
+			}, existingClusterTimeout, existingClusterInterval).Should(BeTrue())
 
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 				By("Checking status of CR because we expect it to deploy on a real cluster")
@@ -1163,7 +1163,7 @@ var _ = Describe("security controller", func() {
 			}
 
 			return len(createdBrokerCrd.Status.PodStatus.Stopped), nil
-		}, timeout, interval).Should(Equal(1))
+		}, existingClusterTimeout, existingClusterInterval).Should(Equal(1))
 
 		// after stable status, determine version
 		createdSs := &appsv1.StatefulSet{}
@@ -1172,7 +1172,7 @@ var _ = Describe("security controller", func() {
 		By("Making sure that the ss gets deployed " + createdBrokerCrd.ObjectMeta.Name)
 		Eventually(func(g Gomega) {
 			g.Expect(k8sClient.Get(ctx, ssKey, createdSs)).Should(Succeed())
-		}, timeout, interval).Should(Succeed())
+		}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 		versionSsDeployed := createdSs.ObjectMeta.ResourceVersion
 		By("tracking cc resource version: " + versionSsDeployed)
