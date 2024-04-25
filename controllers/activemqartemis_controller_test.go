@@ -8438,4 +8438,40 @@ var _ = Describe("artemis controller", func() {
 		})
 
 	})
+
+	Context("owned resources watching", func() {
+		It("controller resource recover test", Label("controller-resource-recover-test"), func() {
+			By("deploy a broker cr")
+			_, crd := DeployCustomBroker(defaultNamespace, nil)
+
+			brokerKey := types.NamespacedName{
+				Name:      crd.Name,
+				Namespace: defaultNamespace,
+			}
+
+			brokerPropSecretName := crd.Name + "-props"
+			brokerPropSecretKey := types.NamespacedName{
+				Name:      brokerPropSecretName,
+				Namespace: defaultNamespace,
+			}
+			brokerPropSecret := corev1.Secret{}
+			var secretId types.UID
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, crd)).Should(Succeed())
+				g.Expect(k8sClient.Get(ctx, brokerPropSecretKey, &brokerPropSecret)).Should(Succeed())
+				secretId = brokerPropSecret.UID
+			}, timeout, interval).Should(Succeed())
+
+			By("delete the broker properties secret")
+			Expect(k8sClient.Delete(ctx, &brokerPropSecret)).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerPropSecretKey, &brokerPropSecret)).Should(Succeed())
+				newSecretId := brokerPropSecret.UID
+				g.Expect(newSecretId).ShouldNot(Equal(secretId))
+			}, timeout, interval).Should(Succeed())
+
+			CleanResource(crd, crd.Name, defaultNamespace)
+		})
+	})
 })
