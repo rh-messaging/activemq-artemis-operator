@@ -71,7 +71,7 @@ type QueueConfigurationType struct {
 type ActiveMQArtemisAddressStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	
+
 	// Current state of the resource
 	// Conditions represent the latest available observations of an object's state
 	//+optional

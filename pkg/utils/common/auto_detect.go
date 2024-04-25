@@ -16,9 +16,19 @@ limitations under the License.
 package common
 
 import (
+	"time"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+)
+
+const (
+	// defaultRetries is the number of times a resource discovery is retried
+	defaultRetries = 10
+
+	//defaultRetryInterval is the interval to wait before retring a resource discovery
+	defaultRetryInterval = 3 * time.Second
 )
 
 type AutoDetector struct {
@@ -37,12 +47,23 @@ func NewAutoDetect(mgr manager.Manager) (*AutoDetector, error) {
 
 func (b *AutoDetector) DetectOpenshift() error {
 	stateManager := GetStateManager()
-	isOpenshift, err := discovery.IsResourceEnabled(b.dc,
-		schema.GroupVersionResource{
-			Group:    "operator.openshift.io",
-			Version:  "v1",
-			Resource: "openshiftapiservers",
-		})
+
+	var err error
+	var isOpenshift bool
+	for i := 0; i < defaultRetries; i++ {
+		isOpenshift, err = discovery.IsResourceEnabled(b.dc,
+			schema.GroupVersionResource{
+				Group:    "operator.openshift.io",
+				Version:  "v1",
+				Resource: "openshiftapiservers",
+			})
+
+		if err == nil {
+			break
+		}
+
+		time.Sleep(defaultRetryInterval)
+	}
 
 	if err != nil {
 		return err

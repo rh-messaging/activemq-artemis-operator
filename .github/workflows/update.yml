@@ -60,7 +60,7 @@ jobs:
           sed -i "s~^VERSION ?=.*~VERSION ?= ${VERSION}~" Makefile
           sed -i "s~^OPERATOR_VERSION :=.*~OPERATOR_VERSION := ${VERSION}~" Makefile
           sed -i "s~^LABEL version=.*~LABEL version=\"${VERSION}\"~g" Dockerfile
-          make generate-deploy && make bundle && git status
+          make build && make generate-deploy && make bundle && git status
           git commit --all --message "Update version to ${VERSION}" || echo "nothing to commit"
 
       - name: Update related images
@@ -104,7 +104,7 @@ jobs:
               sed -i "/RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_${ACTIVEMQ_ARTEMIS_COMPACT_VERSION}/,/value:/ s~value:.*~value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@${ACTIVEMQ_ARTEMIS_BROKER_KUBERNETES_DIGEST}~" ${RELATED_IMAGES_FILE}
             fi
           done
-          make generate-deploy && make bundle && git status
+          make build && make generate-deploy && make bundle && git status
           git commit --all --message "Update related images to ${ACTIVEMQ_ARTEMIS_VERSION}" || echo "nothing to commit"
 
       - name: Push commits
