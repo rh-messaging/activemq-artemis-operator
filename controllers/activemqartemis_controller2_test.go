@@ -36,6 +36,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
@@ -88,6 +89,40 @@ var _ = Describe("artemis controller 2", func() {
 	})
 
 	Context("persistent volumes tests", Label("controller-2-test"), func() {
+		It("controller resource recover test", Label("controller-resource-recover-test"), func() {
+
+			By("deploy a broker cr")
+			_, crd := DeployCustomBroker(defaultNamespace, nil)
+
+			brokerKey := types.NamespacedName{
+				Name:      crd.Name,
+				Namespace: defaultNamespace,
+			}
+
+			brokerPropSecretName := crd.Name + "-props"
+			brokerPropSecretKey := types.NamespacedName{
+				Name:      brokerPropSecretName,
+				Namespace: defaultNamespace,
+			}
+			brokerPropSecret := corev1.Secret{}
+			var secretId types.UID
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, crd)).Should(Succeed())
+				g.Expect(k8sClient.Get(ctx, brokerPropSecretKey, &brokerPropSecret)).Should(Succeed())
+				secretId = brokerPropSecret.UID
+			}, timeout, interval).Should(Succeed())
+
+			By("delete the broker properties secret")
+			Expect(k8sClient.Delete(ctx, &brokerPropSecret)).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerPropSecretKey, &brokerPropSecret)).Should(Succeed())
+				newSecretId := brokerPropSecret.UID
+				g.Expect(newSecretId).ShouldNot(Equal(secretId))
+			}, timeout, interval).Should(Succeed())
+
+			CleanResource(crd, crd.Name, defaultNamespace)
+		})
 		It("external volumes attach", func() {
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 
