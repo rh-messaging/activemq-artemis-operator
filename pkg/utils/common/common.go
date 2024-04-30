@@ -29,10 +29,12 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	policyv1 "k8s.io/api/policy/v1"
 )
@@ -49,17 +51,23 @@ const (
 	// comments push this over the edge a little when dealing with white space
 	// as en env var it can be disabled by setting to "" or can be improved!
 	JaasConfigSyntaxMatchRegExDefault = `^(?:(\s*|(?://.*)|(?s:/\*.*\*/))*\S+\s*{(?:(\s*|(?://.*)|(?s:/\*.*\*/))*\S+\s+(?i:required|optional|sufficient|requisite)(?:\s*\S+\s*=((\s*\S+\s*)|("[^"]*")))*\s*;)+(\s*|(?://.*)|(?s:/\*.*\*/))*}\s*;)+\s*\z`
+
+	// defaultRetries is the number of times a resource discovery is retried
+	defaultRetries = 10
+
+	//defaultRetryInterval is the interval to wait before retring a resource discovery
+	defaultRetryInterval = 3 * time.Second
 )
 
 var lastStatusMap map[types.NamespacedName]olm.DeploymentStatus = make(map[types.NamespacedName]olm.DeploymentStatus)
-
-var theManager manager.Manager
 
 var resyncPeriod time.Duration = DEFAULT_RESYNC_PERIOD
 
 var jaasConfigSyntaxMatchRegEx = JaasConfigSyntaxMatchRegExDefault
 
 var ClusterDomain *string
+
+var isOpenshift *bool
 
 type Namers struct {
 	SsGlobalName                  string
@@ -148,14 +156,6 @@ func ToJson(obj interface{}) (string, error) {
 
 func FromJson(jsonStr *string, obj interface{}) error {
 	return json.Unmarshal([]byte(*jsonStr), obj)
-}
-
-func SetManager(mgr manager.Manager) {
-	theManager = mgr
-}
-
-func GetManager() manager.Manager {
-	return theManager
 }
 
 func NewTrue() *bool {
@@ -591,12 +591,12 @@ func GetDeploymentSize(cr *brokerv1beta1.ActiveMQArtemis) int32 {
 	return *cr.Spec.DeploymentPlan.Size
 }
 
-func GetDeployedResources(instance *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) (map[reflect.Type][]rtclient.Object, error) {
+func GetDeployedResources(instance *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, onOpenShift bool) (map[reflect.Type][]rtclient.Object, error) {
 	log := ctrl.Log.WithName("util_common")
 	reader := read.New(client).WithNamespace(instance.Namespace).WithOwnerObject(instance)
 	var resourceMap map[reflect.Type][]rtclient.Object
 	var err error
-	if isOpenshift, _ := DetectOpenshift(); isOpenshift {
+	if onOpenShift {
 		resourceMap, err = reader.ListAll(
 			&corev1.ServiceList{},
 			&appsv1.StatefulSetList{},
@@ -623,28 +623,43 @@ func GetDeployedResources(instance *brokerv1beta1.ActiveMQArtemis, client rtclie
 	return resourceMap, nil
 }
 
-func DetectOpenshift() (bool, error) {
-	log := ctrl.Log.WithName("util_common")
-	value, ok := os.LookupEnv("OPERATOR_OPENSHIFT")
-	if ok {
-		log.V(1).Info("Set by env-var 'OPERATOR_OPENSHIFT': " + value)
-		return strings.ToLower(value) == "true", nil
-	}
-
-	// Find out if we're on OpenShift or Kubernetes
-	stateManager := GetStateManager()
-	isOpenshift, keyExists := stateManager.GetState(OpenShiftAPIServerKind).(bool)
-
-	if keyExists {
-		if isOpenshift {
-			log.V(1).Info("environment is openshift")
-		} else {
-			log.V(1).Info("environment is not openshift")
+func DetectOpenshiftWith(config *rest.Config) (bool, error) {
+	if isOpenshift == nil {
+		value, ok := os.LookupEnv("OPERATOR_OPENSHIFT")
+		if ok {
+			ctrl.Log.V(1).Info("Set by env-var 'OPERATOR_OPENSHIFT': " + value)
+			return strings.ToLower(value) == "true", nil
 		}
 
-		return isOpenshift, nil
+		var err error
+		discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
+		if err != nil {
+			return false, err
+		}
+
+		var isOpenShiftResourcePresent bool
+		for i := 0; i < defaultRetries; i++ {
+			isOpenShiftResourcePresent, err = discovery.IsResourceEnabled(discoveryClient,
+				schema.GroupVersionResource{
+					Group:    "operator.openshift.io",
+					Version:  "v1",
+					Resource: "openshiftapiservers",
+				})
+
+			if err == nil {
+				break
+			}
+
+			time.Sleep(defaultRetryInterval)
+		}
+
+		if err != nil {
+			return false, err
+		}
+
+		isOpenshift = &isOpenShiftResourcePresent
 	}
-	return false, errors.New("environment not yet determined")
+	return *isOpenshift, nil
 }
 
 func ApplyAnnotations(objectMeta *metav1.ObjectMeta, annotations map[string]string) {

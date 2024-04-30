@@ -43,6 +43,7 @@ import (
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -118,8 +119,6 @@ var (
 	managerCancel context.CancelFunc
 	k8Manager     manager.Manager
 
-	stateManager *common.StateManager
-
 	brokerReconciler   *ActiveMQArtemisReconciler
 	securityReconciler *ActiveMQArtemisSecurityReconciler
 
@@ -172,7 +171,6 @@ func setUpEnvTest() {
 		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
 	}
-	testEnv.CRDInstallOptions.CleanUpAfterUse = true
 
 	var err error
 	restConfig, err = testEnv.Start()
@@ -184,13 +182,18 @@ func setUpEnvTest() {
 
 	setUpK8sClient()
 
+	isOpenshift, err = common.DetectOpenshiftWith(restConfig)
+	Expect(err).NotTo(HaveOccurred())
+
+	if isOpenshift {
+		kubeTool = "oc"
+	}
+
 	setUpIngress()
 
 	setUpNamespace()
 
 	setUpTestProxy()
-
-	stateManager = common.GetStateManager()
 
 	createControllerManagerForSuite()
 }
@@ -212,6 +215,7 @@ func setUpNamespace() {
 			testNamespaceKey := types.NamespacedName{Name: defaultNamespace}
 			g.Expect(k8sClient.Get(ctx, testNamespaceKey, &testNamespace)).Should(Succeed())
 			uidRange := testNamespace.Annotations["openshift.io/sa.scc.uid-range"]
+			g.Expect(uidRange).ShouldNot(BeEmpty())
 			uidRangeTokens := strings.Split(uidRange, "/")
 			defaultUid, err = strconv.ParseInt(uidRangeTokens[0], 10, 64)
 			g.Expect(err).Should(Succeed())
@@ -225,11 +229,9 @@ func setUpIngress() {
 	ingressConfigErr := k8sClient.Get(ctx, ingressConfigKey, ingressConfig)
 
 	if ingressConfigErr == nil {
-		isOpenshift = true
 		isIngressSSLPassthroughEnabled = true
 		clusterIngressHost = "ingress." + ingressConfig.Spec.Domain
 	} else {
-		isOpenshift = false
 		isIngressSSLPassthroughEnabled = false
 		clusterIngressHost = clusterUrl.Hostname()
 		ingressNginxControllerDeployment := &appsv1.Deployment{}
@@ -435,26 +437,7 @@ func createControllerManager(disableMetrics bool, watchNamespace string) {
 	k8Manager, err = ctrl.NewManager(restConfig, mgrOptions)
 	Expect(err).ToNot(HaveOccurred())
 
-	// Create and start a new auto detect process for this operator
-	autodetect, err := common.NewAutoDetect(k8Manager)
-	if err != nil {
-		ctrl.Log.Error(err, "failed to start the background process to auto-detect the operator capabilities")
-	} else {
-		autodetect.DetectOpenshift()
-	}
-
-	isOpenshift, err = common.DetectOpenshift()
-	Expect(err).NotTo(HaveOccurred())
-
-	if isOpenshift {
-		kubeTool = "oc"
-	}
-
-	brokerReconciler = &ActiveMQArtemisReconciler{
-		Client: k8Manager.GetClient(),
-		Scheme: k8Manager.GetScheme(),
-		log:    ctrl.Log,
-	}
+	brokerReconciler = NewActiveMQArtemisReconciler(k8Manager, ctrl.Log, isOpenshift)
 
 	if err = brokerReconciler.SetupWithManager(k8Manager); err != nil {
 		ctrl.Log.Error(err, "unable to create controller", "controller", "ActiveMQArtemisReconciler")
@@ -557,14 +540,8 @@ func uninstallOperator(deleteCrds bool, namespace string) error {
 	}
 
 	if deleteCrds {
-		//uninstall CRDs
-		ctrl.Log.Info("Uninstalling CRDs")
-		crds := []string{"../deploy/crds"}
-		options := envtest.CRDInstallOptions{
-			Paths:              crds,
-			ErrorIfPathMissing: false,
-		}
-		return envtest.UninstallCRDs(restConfig, options)
+		// the envtest UninstallCRDs function is flaky on ROSA
+		uninstallCRDs()
 	}
 
 	return nil
@@ -773,20 +750,49 @@ var _ = AfterSuite(func() {
 	} else {
 		shutdownControllerManager()
 
-		if stateManager != nil {
-			stateManager.Clear()
-		}
-
 		// scaledown controller lifecycle seems a little loose, it does not complete on signal hander like the others
 		for _, drainController := range controllers {
 			close(*drainController.GetStopCh())
 		}
 
+		// the envtest UninstallCRDs function is flaky on ROSA
+		uninstallCRDs()
+
 		err := testEnv.Stop()
 		Expect(err).NotTo(HaveOccurred())
 	}
-
 })
+
+func uninstallCRDs() {
+
+	crd := apiextensionsv1.CustomResourceDefinition{}
+
+	crdNames := [...]string{
+		"activemqartemises.broker.amq.io",
+		"activemqartemisaddresses.broker.amq.io",
+		"activemqartemisscaledowns.broker.amq.io",
+		"activemqartemissecurities.broker.amq.io",
+	}
+
+	for _, crdName := range crdNames {
+		Eventually(func(g Gomega) {
+			err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: crdName}, &crd)
+			g.Expect(err == nil || errors.IsNotFound(err)).To(BeTrue())
+
+			if !errors.IsNotFound(err) {
+				// delete CRD
+				err := k8sClient.Delete(context.TODO(), &crd)
+				g.Expect(err).NotTo(HaveOccurred())
+
+				// check CRD is not found
+				Eventually(func(g Gomega) {
+					err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: crdName}, &crd)
+					g.Expect(errors.IsNotFound(err)).To(BeTrue())
+				}, timeout, interval).Should(Succeed())
+			}
+		}, timeout, interval).Should(Succeed())
+	}
+}
 
 func StartCapturingLog() {
 	testWriter.Buffer = bytes.NewBuffer(nil)

@@ -166,9 +166,6 @@ var _ = Describe("Scale down controller", func() {
 	It("Toleration ok, verify scaledown", func() {
 
 		// some required services on crc get evicted which invalidates this test of taints
-		isOpenshift, err := common.DetectOpenshift()
-		Expect(err).Should(BeNil())
-
 		if !isOpenshift && os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 
 			By("Tainting the node with no schedule")

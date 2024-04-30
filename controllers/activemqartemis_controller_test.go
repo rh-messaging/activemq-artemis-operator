@@ -95,28 +95,28 @@ var _ = Describe("artemis controller", func() {
 			fmt.Println("Time with MicroSeconds: ", time.Now().Format("2006-01-02 15:04:05.000000"), " test:", CurrentSpecReport())
 		}
 
-		for _, li := range toWatch {
+		if verbose {
+			for _, li := range toWatch {
 
-			wc, err := client.NewWithWatch(testEnv.Config, client.Options{})
-			if err != nil {
-				fmt.Printf("Err on watch client:  %v\n", err)
-				return
-			}
+				wc, err := client.NewWithWatch(testEnv.Config, client.Options{})
+				if err != nil {
+					fmt.Printf("Err on watch client:  %v\n", err)
+					return
+				}
 
-			// see what changed
-			wi, err := wc.Watch(ctx, li, &client.ListOptions{})
-			if err != nil {
-				fmt.Printf("Err on watch:  %v\n", err)
-			}
-			wis.PushBack(wi)
+				// see what changed
+				wi, err := wc.Watch(ctx, li, &client.ListOptions{})
+				if err != nil {
+					fmt.Printf("Err on watch:  %v\n", err)
+				}
+				wis.PushBack(wi)
 
-			go func() {
-				for event := range wi.ResultChan() {
-					if verbose {
+				go func() {
+					for event := range wi.ResultChan() {
 						fmt.Printf("%v : Object: %v\n", event.Type, event.Object)
 					}
-				}
-			}()
+				}()
+			}
 		}
 	})
 
@@ -131,9 +131,6 @@ var _ = Describe("artemis controller", func() {
 	Context("tls secret reuse", Label("tls-secret-reuse"), func() {
 		It("console and acceptor share one secret", func() {
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
-
-				isOpenshift, err := common.DetectOpenshift()
-				Expect(err).To(BeNil())
 
 				commonSecretName := "common-amq-tls-secret"
 				commonSecret, err := CreateTlsSecret(commonSecretName, defaultNamespace, defaultPassword, defaultSanDnsNames)
@@ -1864,9 +1861,6 @@ var _ = Describe("artemis controller", func() {
 				crd.Spec.Console.SSLEnabled = true
 				crd.Spec.IngressDomain = defaultTestIngressDomain
 
-				isOpenshift, err := common.DetectOpenshift()
-				Expect(err).To(BeNil())
-
 				By("deploying well known secret name that the operator will look for")
 				consoleSecretName := crd.Name + "-console-secret"
 				consoleSecret, err := CreateTlsSecret(consoleSecretName, defaultNamespace, defaultPassword, defaultSanDnsNames)
@@ -1985,9 +1979,6 @@ var _ = Describe("artemis controller", func() {
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 
 				crd := generateArtemisSpec(defaultNamespace)
-
-				isOpenshift, err := common.DetectOpenshift()
-				Expect(err).To(BeNil())
 
 				By("deploying ssl secret")
 				sslSecretName := crd.Name + "-ssl-secret"
@@ -2653,8 +2644,6 @@ var _ = Describe("artemis controller", func() {
 					},
 				}
 			})
-
-			isOpenshift, _ := common.DetectOpenshift()
 
 			if isOpenshift {
 				By("check route is created for console")
@@ -3529,8 +3518,6 @@ var _ = Describe("artemis controller", func() {
 			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
 
 			// some required services on crc get evicted which invalidates this test of taints
-			isOpenshift, err := common.DetectOpenshift()
-			Expect(err).Should(BeNil())
 			if !isOpenshift && os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 
 				By("veryify pod started")
@@ -3729,7 +3716,8 @@ var _ = Describe("artemis controller", func() {
 			crd.Spec.Console.Expose = true
 			crd.Spec.Console.SSLEnabled = true
 
-			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(&crd, ctrl.Log, k8sClient.Scheme())
+			outer := NewActiveMQArtemisReconciler(k8Manager, ctrl.Log, isOpenshift)
+			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(&crd, outer)
 
 			defaultConsoleSecretName := crd.Name + "-console-secret"
 			tlsSecret, err := CreateTlsSecret(defaultConsoleSecretName, defaultNamespace, "password", nil)
@@ -3821,7 +3809,9 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(createdCrd.ResourceVersion).ShouldNot(BeEmpty())
 			}, timeout, interval).Should(Succeed())
 
-			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(&crd, ctrl.Log, k8sClient.Scheme())
+			outer := NewActiveMQArtemisReconciler(k8Manager, ctrl.Log, isOpenshift)
+			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(&crd, outer)
+
 			namer := MakeNamers(&crd)
 			defaultConsoleSecretName := crd.Name + "-console-secret"
 
@@ -3924,7 +3914,8 @@ var _ = Describe("artemis controller", func() {
 
 			}, timeout, interval).Should(Succeed())
 
-			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(&crd, ctrl.Log, k8sClient.Scheme())
+			outer := NewActiveMQArtemisReconciler(k8Manager, ctrl.Log, isOpenshift)
+			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(&crd, outer)
 			reconcilerImpl.deployed = make(map[reflect.Type][]client.Object)
 
 			namer := MakeNamers(&crd)
@@ -5302,8 +5293,8 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(Succeed())
 
 			By("checking deployed resources of valid CR")
-			deployedResources, err = common.GetDeployedResources(&validCrd, k8sClient)
-			Expect(err).Should(Succeed())
+			deployedResources, err = common.GetDeployedResources(&validCrd, k8sClient, isOpenshift)
+			Expect(err).ShouldNot(HaveOccurred())
 			Expect(deployedResources).ShouldNot(BeEmpty())
 
 			By("checking template labels of valid CR")
@@ -5317,7 +5308,7 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(deployedCrd.Name).Should(Equal(invalidCrd.ObjectMeta.Name))
 			}, timeout, interval).Should(Succeed())
 
-			deployedResources, err = common.GetDeployedResources(&invalidCrd, k8sClient)
+			deployedResources, err = common.GetDeployedResources(&invalidCrd, k8sClient, isOpenshift)
 			Expect(err).Should(Succeed())
 			Expect(deployedResources).Should(BeEmpty())
 
@@ -5352,8 +5343,8 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(Succeed())
 
 			By("checking deployed resources of updated invalid CR")
-			deployedResources, err = common.GetDeployedResources(&validCrd, k8sClient)
-			Expect(err).Should(Succeed())
+			deployedResources, err = common.GetDeployedResources(&validCrd, k8sClient, isOpenshift)
+			Expect(err).ShouldNot(HaveOccurred())
 			Expect(deployedResources).ShouldNot(BeEmpty())
 
 			By("checking template labels of updated invalid CR")
@@ -6795,8 +6786,6 @@ var _ = Describe("artemis controller", func() {
 		It("Checking acceptor service and route/ingress while toggle expose", func() {
 
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
-
-				isOpenshift, _ := common.DetectOpenshift()
 
 				By("By creating a new crd")
 				ctx := context.Background()

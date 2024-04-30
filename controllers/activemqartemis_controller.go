@@ -106,16 +106,18 @@ func (r *ActiveMQArtemisReconciler) AddBrokerConfigHandler(namespacedName types.
 // ActiveMQArtemisReconciler reconciles a ActiveMQArtemis object
 type ActiveMQArtemisReconciler struct {
 	rtclient.Client
-	Scheme *runtime.Scheme
-	events chan event.GenericEvent
-	log    logr.Logger
+	Scheme        *runtime.Scheme
+	events        chan event.GenericEvent
+	log           logr.Logger
+	isOnOpenShift bool
 }
 
-func NewActiveMQArtemisReconciler(client rtclient.Client, scheme *runtime.Scheme, logger logr.Logger) *ActiveMQArtemisReconciler {
+func NewActiveMQArtemisReconciler(mgr ctrl.Manager, logger logr.Logger, isOpenShift bool) *ActiveMQArtemisReconciler {
 	return &ActiveMQArtemisReconciler{
-		Client: client,
-		Scheme: scheme,
-		log:    logger,
+		isOnOpenShift: isOpenShift,
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		log:           logger,
 	}
 }
 
@@ -162,11 +164,11 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 	}
 
 	namer := MakeNamers(customResource)
-	reconciler := NewActiveMQArtemisReconcilerImpl(customResource, r.log, r.Scheme)
+	reconciler := NewActiveMQArtemisReconcilerImpl(customResource, r)
 
 	var requeueRequest bool = false
 	var valid bool = false
-	if valid, requeueRequest = validate(customResource, r.Client, *namer); valid {
+	if valid, requeueRequest = reconciler.validate(customResource, r.Client, *namer); valid {
 
 		err = reconciler.Process(customResource, *namer, r.Client, r.Scheme)
 
@@ -198,7 +200,7 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 	return result, err
 }
 
-func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namer common.Namers) (bool, retry bool) {
+func (r *ActiveMQArtemisReconcilerImpl) validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namer common.Namers) (bool, retry bool) {
 	// Do additional validation here
 	validationCondition := metav1.Condition{
 		Type:   brokerv1beta1.ValidConditionType,
@@ -254,7 +256,7 @@ func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Cli
 	}
 
 	if validationCondition.Status != metav1.ConditionFalse {
-		condition, retry = validateExposeModes(customResource)
+		condition, retry = r.validateExposeModes(customResource)
 		if condition != nil {
 			validationCondition = *condition
 		}
@@ -328,10 +330,9 @@ func validateAcceptorPorts(customResource *brokerv1beta1.ActiveMQArtemis) (*meta
 	return nil, false
 }
 
-func validateExposeModes(customResource *brokerv1beta1.ActiveMQArtemis) (*metav1.Condition, bool) {
-	isOpenshift, _ := common.DetectOpenshift()
+func (r *ActiveMQArtemisReconcilerImpl) validateExposeModes(customResource *brokerv1beta1.ActiveMQArtemis) (*metav1.Condition, bool) {
 
-	if !isOpenshift {
+	if !r.isOnOpenShift {
 		for _, acceptor := range customResource.Spec.Acceptors {
 			if acceptor.Expose && acceptor.ExposeMode != nil && *acceptor.ExposeMode == brokerv1beta1.ExposeModes.Route {
 				return &metav1.Condition{
@@ -366,7 +367,7 @@ func validateExposeModes(customResource *brokerv1beta1.ActiveMQArtemis) (*metav1
 	}
 
 	for _, acceptor := range customResource.Spec.Acceptors {
-		if acceptor.Expose && (acceptor.ExposeMode != nil && *acceptor.ExposeMode == brokerv1beta1.ExposeModes.Ingress || !isOpenshift) &&
+		if acceptor.Expose && (acceptor.ExposeMode != nil && *acceptor.ExposeMode == brokerv1beta1.ExposeModes.Ingress || !r.isOnOpenShift) &&
 			customResource.Spec.IngressDomain == "" && acceptor.IngressHost == "" {
 			return &metav1.Condition{
 				Type:    brokerv1beta1.ValidConditionType,
@@ -378,7 +379,7 @@ func validateExposeModes(customResource *brokerv1beta1.ActiveMQArtemis) (*metav1
 	}
 
 	for _, connector := range customResource.Spec.Connectors {
-		if connector.Expose && (connector.ExposeMode != nil && *connector.ExposeMode == brokerv1beta1.ExposeModes.Ingress || !isOpenshift) &&
+		if connector.Expose && (connector.ExposeMode != nil && *connector.ExposeMode == brokerv1beta1.ExposeModes.Ingress || !r.isOnOpenShift) &&
 			customResource.Spec.IngressDomain == "" && connector.IngressHost == "" {
 			return &metav1.Condition{
 				Type:    brokerv1beta1.ValidConditionType,
@@ -390,7 +391,7 @@ func validateExposeModes(customResource *brokerv1beta1.ActiveMQArtemis) (*metav1
 	}
 
 	console := customResource.Spec.Console
-	if console.Expose && (console.ExposeMode != nil && *console.ExposeMode == brokerv1beta1.ExposeModes.Ingress || !isOpenshift) &&
+	if console.Expose && (console.ExposeMode != nil && *console.ExposeMode == brokerv1beta1.ExposeModes.Ingress || !r.isOnOpenShift) &&
 		customResource.Spec.IngressDomain == "" && console.IngressHost == "" {
 		return &metav1.Condition{
 			Type:    brokerv1beta1.ValidConditionType,
@@ -731,14 +732,6 @@ func GetDefaultLabels(cr *brokerv1beta1.ActiveMQArtemis) map[string]string {
 	return defaultLabelData.Labels()
 }
 
-// only test uses this
-func NewReconcileActiveMQArtemis(c rtclient.Client, s *runtime.Scheme) ActiveMQArtemisReconciler {
-	return ActiveMQArtemisReconciler{
-		Client: c,
-		Scheme: s,
-	}
-}
-
 // SetupWithManager sets up the controller with the Manager.
 func (r *ActiveMQArtemisReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	builder := ctrl.NewControllerManagedBy(mgr).
@@ -751,7 +744,7 @@ func (r *ActiveMQArtemisReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&netv1.Ingress{}).
 		Owns(&policyv1.PodDisruptionBudget{})
 
-	if isOpenshift, err := common.DetectOpenshift(); err == nil && isOpenshift {
+	if r.isOnOpenShift {
 		builder.Owns(&routev1.Route{})
 	}
 

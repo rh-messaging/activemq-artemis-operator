@@ -223,19 +223,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create and start a new auto detect process for this operator
-	autodetect, err := common.NewAutoDetect(mgr)
-	if err != nil {
-		setupLog.Error(err, "failed to start the background process to auto-detect the operator capabilities")
-	} else {
-		if err := autodetect.DetectOpenshift(); err != nil {
-			setupLog.Error(err, "failed in detecting openshift")
-			os.Exit(1)
-		}
-	}
-
-	common.SetManager(mgr)
-
 	// Set the service account name for the drainer pod
 	// It will be broken without this as it won't have
 	// permission to list the endpoints in drain.sh
@@ -248,10 +235,16 @@ func main() {
 		setupAccountName(clnt, context.TODO(), oprNamespace, name)
 	}
 
+	isOpenshift, err := common.DetectOpenshiftWith(cfg)
+	if err != nil {
+		setupLog.Error(err, "can't determine api server type")
+		os.Exit(1)
+	}
+
 	brokerReconciler := controllers.NewActiveMQArtemisReconciler(
-		mgr.GetClient(),
-		mgr.GetScheme(),
-		ctrl.Log.WithName("ActiveMQArtemisReconciler"))
+		mgr,
+		ctrl.Log.WithName("ActiveMQArtemisReconciler"),
+		isOpenshift)
 
 	if err = brokerReconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ActiveMQArtemis")
