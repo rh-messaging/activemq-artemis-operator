@@ -83,31 +83,34 @@ func (r *ActiveMQArtemisAddressReconciler) Reconcile(ctx context.Context, reques
 	// Fetch the ActiveMQArtemisAddress instance
 	instance := &brokerv1beta1.ActiveMQArtemisAddress{}
 	err := r.Get(context.TODO(), request.NamespacedName, instance)
+
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// Delete action
 			if lookupSucceeded {
 				if addressInstance.AddressResource.Spec.RemoveFromBrokerOnDelete {
 					err = r.deleteQueue(&addressInstance, request, r.Client)
-					if err != nil {
-						reqLogger.Error(err, "Failed to delete the queue")
+					if err == nil {
+						reqLogger.V(1).Info("Address and queue deleted")
+					} else {
+						reqLogger.Error(err, "Error deleting address and queue")
+						return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
 					}
-				} else {
-					reqLogger.V(1).Info("Not to delete address as RemoveFromBrokerOnDelete is false")
 				}
 				delete(namespacedNameToAddressName, request.NamespacedName)
-				lsrcrs.DeleteLastSuccessfulReconciledCR(request.NamespacedName, "address", getAddressLabels(&addressInstance.AddressResource), r.Client)
+				lsrcrs.DeleteLastSuccessfulReconciledCR(request.NamespacedName,
+					"address", getAddressLabels(&addressInstance.AddressResource), r.Client)
 				reqLogger.V(1).Info("Address resource deleted")
+			} else {
+				// the lookup for a not found ActiveMQArtemisAddress CR should
+				// fail if the ActiveMQArtemisAddress CR is deleted before the
+				// first reconcile loop or after a successful deletion
+				reqLogger.Info("Address resource already deleted")
 			}
-			if err == nil {
-				// Request object not found, could have been deleted after reconcile request.
-				// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-				// Return and don't requeue
-				return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, nil
-			}
+			return ctrl.Result{}, nil
+		} else {
+			reqLogger.Error(err, "Error getting the request resource")
+			return ctrl.Result{}, err
 		}
-		reqLogger.Error(err, "Requeue the request for error")
-		return ctrl.Result{}, err
 	}
 
 	addressDeployment := AddressDeployment{
