@@ -13,9 +13,7 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/stretchr/testify/assert"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	appsv1 "k8s.io/api/apps/v1"
@@ -541,9 +539,7 @@ func TestProcess_TemplateIncludesLabelsServiceAndSecret(t *testing.T) {
 				}},
 		},
 	}
-	cfg, _ := config.GetConfig()
-	k8Manager, _ := ctrl.NewManager(cfg, manager.Options{})
-	outer := NewActiveMQArtemisReconciler(k8Manager, ctrl.Log.WithName("TestProcess_TemplateIncludesLabelsServiceAndSecret"), isOpenshift)
+	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("TestProcess_TemplateIncludesLabelsServiceAndSecret"), isOpenshift)
 	reconciler := NewActiveMQArtemisReconcilerImpl(cr, outer)
 
 	namer := MakeNamers(cr)
@@ -620,9 +616,7 @@ func TestProcess_TemplateIncludesLabelsSecretRegexp(t *testing.T) {
 		},
 	}
 
-	cfg, _ := config.GetConfig()
-	k8Manager, _ := ctrl.NewManager(cfg, manager.Options{})
-	outer := NewActiveMQArtemisReconciler(k8Manager, ctrl.Log.WithName("TestProcess_TemplateIncludesLabelsServiceAndSecret"), isOpenshift)
+	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("TestProcess_TemplateIncludesLabelsServiceAndSecret"), isOpenshift)
 	reconciler := NewActiveMQArtemisReconcilerImpl(cr, outer)
 
 	namer := MakeNamers(cr)
@@ -674,9 +668,7 @@ func TestProcess_TemplateDuplicateKeyReplacesOk(t *testing.T) {
 		},
 	}
 
-	cfg, _ := config.GetConfig()
-	k8Manager, _ := ctrl.NewManager(cfg, manager.Options{})
-	outer := NewActiveMQArtemisReconciler(k8Manager, k8Manager.GetLogger().WithName("TestProcess_TemplateDuplicateKeyReplacesOk"), isOpenshift)
+	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("TestProcess_TemplateDuplicateKeyReplacesOk"), isOpenshift)
 	reconciler := NewActiveMQArtemisReconcilerImpl(cr, outer)
 
 	namer := MakeNamers(cr)
@@ -736,9 +728,7 @@ func TestProcess_TemplateKeyValue(t *testing.T) {
 		},
 	}
 
-	cfg, _ := config.GetConfig()
-	k8Manager, _ := ctrl.NewManager(cfg, manager.Options{})
-	outer := NewActiveMQArtemisReconciler(k8Manager, ctrl.Log.WithName("test"), isOpenshift)
+	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("test"), isOpenshift)
 	reconciler := NewActiveMQArtemisReconcilerImpl(cr, outer)
 
 	namer := MakeNamers(cr)
@@ -827,9 +817,7 @@ func TestProcess_TemplateCustomAttributeIngress(t *testing.T) {
 		},
 	}
 
-	cfg, _ := config.GetConfig()
-	k8Manager, _ := ctrl.NewManager(cfg, manager.Options{})
-	outer := NewActiveMQArtemisReconciler(k8Manager, ctrl.Log.WithName("test"), isOpenshift)
+	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("test"), isOpenshift)
 	reconciler := NewActiveMQArtemisReconcilerImpl(cr, outer)
 
 	namer := MakeNamers(cr)
@@ -890,9 +878,7 @@ func TestProcess_TemplateCustomAttributeMisSpellingIngress(t *testing.T) {
 		},
 	}
 
-	cfg, _ := config.GetConfig()
-	k8Manager, _ := ctrl.NewManager(cfg, manager.Options{})
-	outer := NewActiveMQArtemisReconciler(k8Manager, ctrl.Log.WithName("test"), isOpenshift)
+	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("test"), isOpenshift)
 	reconciler := NewActiveMQArtemisReconcilerImpl(cr, outer)
 
 	namer := MakeNamers(cr)
@@ -942,9 +928,7 @@ func TestProcess_TemplateCustomAttributeContainerSecurityContext(t *testing.T) {
 		},
 	}
 
-	cfg, _ := config.GetConfig()
-	k8Manager, _ := ctrl.NewManager(cfg, manager.Options{})
-	outer := NewActiveMQArtemisReconciler(k8Manager, ctrl.Log.WithName("test"), isOpenshift)
+	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("test"), isOpenshift)
 	reconciler := NewActiveMQArtemisReconcilerImpl(cr, outer)
 
 	namer := MakeNamers(cr)
@@ -997,9 +981,7 @@ func TestProcess_TemplateCustomAttributePriorityClassName(t *testing.T) {
 		},
 	}
 
-	cfg, _ := config.GetConfig()
-	k8Manager, _ := ctrl.NewManager(cfg, manager.Options{})
-	outer := NewActiveMQArtemisReconciler(k8Manager, ctrl.Log.WithName("test"), isOpenshift)
+	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("test"), isOpenshift)
 	reconciler := NewActiveMQArtemisReconcilerImpl(cr, outer)
 
 	namer := MakeNamers(cr)
@@ -1047,9 +1029,7 @@ func TestNewPodTemplateSpecForCR_AppendsDebugArgs(t *testing.T) {
 		},
 	}
 
-	cfg, _ := config.GetConfig()
-	k8Manager, _ := ctrl.NewManager(cfg, manager.Options{})
-	outer := NewActiveMQArtemisReconciler(k8Manager, ctrl.Log.WithName("test"), isOpenshift)
+	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("test"), isOpenshift)
 	reconciler := NewActiveMQArtemisReconcilerImpl(cr, outer)
 
 	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
@@ -1076,9 +1056,7 @@ func TestNewPodTemplateSpecForCR_IncludesImagePullSecret(t *testing.T) {
 			},
 		},
 	}
-	cfg, _ := config.GetConfig()
-	k8Manager, _ := ctrl.NewManager(cfg, manager.Options{})
-	outer := NewActiveMQArtemisReconciler(k8Manager, ctrl.Log, isOpenshift)
+	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
 	reconciler := NewActiveMQArtemisReconcilerImpl(cr, outer)
 
 	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
@@ -1114,9 +1092,7 @@ func TestNewPodTemplateSpecForCR_IncludesTopologySpreadConstraints(t *testing.T)
 			},
 		},
 	}
-	cfg, _ := config.GetConfig()
-	k8Manager, _ := ctrl.NewManager(cfg, manager.Options{})
-	outer := NewActiveMQArtemisReconciler(k8Manager, ctrl.Log, isOpenshift)
+	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
 	reconciler := NewActiveMQArtemisReconcilerImpl(cr, outer)
 
 	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)

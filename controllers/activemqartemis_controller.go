@@ -34,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -112,11 +113,11 @@ type ActiveMQArtemisReconciler struct {
 	isOnOpenShift bool
 }
 
-func NewActiveMQArtemisReconciler(mgr ctrl.Manager, logger logr.Logger, isOpenShift bool) *ActiveMQArtemisReconciler {
+func NewActiveMQArtemisReconciler(cluster cluster.Cluster, logger logr.Logger, isOpenShift bool) *ActiveMQArtemisReconciler {
 	return &ActiveMQArtemisReconciler{
 		isOnOpenShift: isOpenShift,
-		Client:        mgr.GetClient(),
-		Scheme:        mgr.GetScheme(),
+		Client:        cluster.GetClient(),
+		Scheme:        cluster.GetScheme(),
 		log:           logger,
 	}
 }

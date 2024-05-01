@@ -28,6 +28,7 @@ import (
 	"io"
 	"math/big"
 	"math/rand"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
@@ -40,6 +41,7 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -52,6 +54,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -61,6 +64,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/tools/remotecommand"
 )
 
@@ -1069,4 +1073,38 @@ func UninstallClusteredIssuer(issuerName string) {
 	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 	CleanResource(currentIssuer, issuerName, defaultNamespace)
+}
+
+type NillCluster struct {
+}
+
+func (m *NillCluster) GetHTTPClient() *http.Client {
+	return nil
+}
+func (m *NillCluster) GetConfig() *rest.Config {
+	return nil
+}
+func (m *NillCluster) GetCache() cache.Cache {
+	return nil
+}
+func (m *NillCluster) GetScheme() *runtime.Scheme {
+	return nil
+}
+func (m *NillCluster) GetClient() client.Client {
+	return nil
+}
+func (m *NillCluster) GetFieldIndexer() client.FieldIndexer {
+	return nil
+}
+func (m *NillCluster) GetEventRecorderFor(name string) record.EventRecorder {
+	return nil
+}
+func (m *NillCluster) GetRESTMapper() meta.RESTMapper {
+	return nil
+}
+func (m *NillCluster) GetAPIReader() client.Reader {
+	return nil
+}
+func (m *NillCluster) Start(ctx context.Context) error {
+	return nil
 }
