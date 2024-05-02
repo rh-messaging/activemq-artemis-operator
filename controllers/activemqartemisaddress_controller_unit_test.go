@@ -23,12 +23,13 @@ import (
 
 	"github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,8 +49,6 @@ func testDeleteExistingAddress(t *testing.T, removeFromBrokerOnDelete bool) {
 
 	var result ctrl.Result
 	var err error
-
-	ctrl.SetLogger(zap.New())
 
 	addressExists := true
 	interceptorFuncs := interceptor.Funcs{
@@ -71,7 +70,7 @@ func testDeleteExistingAddress(t *testing.T, removeFromBrokerOnDelete bool) {
 	}
 	fakeClient := fake.NewClientBuilder().WithInterceptorFuncs(interceptorFuncs).Build()
 
-	r := NewActiveMQArtemisAddressReconciler(fakeClient, nil, ctrl.Log)
+	r := NewActiveMQArtemisAddressReconciler(fakeClient, nil, logr.New(log.NullLogSink{}))
 
 	result, err = r.Reconcile(context.TODO(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "test-namespace", Name: "test-name"}})
 
@@ -90,8 +89,6 @@ func testDeleteExistingAddress(t *testing.T, removeFromBrokerOnDelete bool) {
 
 func TestDeleteAddressWithNotFoundError(t *testing.T) {
 
-	ctrl.SetLogger(zap.New())
-
 	interceptorFuncs := interceptor.Funcs{
 		Get: func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 			return apierrors.NewNotFound(schema.GroupResource{}, "")
@@ -99,7 +96,7 @@ func TestDeleteAddressWithNotFoundError(t *testing.T) {
 	}
 	fakeClient := fake.NewClientBuilder().WithInterceptorFuncs(interceptorFuncs).Build()
 
-	r := NewActiveMQArtemisAddressReconciler(fakeClient, nil, ctrl.Log)
+	r := NewActiveMQArtemisAddressReconciler(fakeClient, nil, logr.New(log.NullLogSink{}))
 
 	result, err := r.Reconcile(context.TODO(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "test-namespace", Name: "test-name"}})
 
@@ -110,8 +107,6 @@ func TestDeleteAddressWithNotFoundError(t *testing.T) {
 
 func TestDeleteAddressWithInternalError(t *testing.T) {
 
-	ctrl.SetLogger(zap.New())
-
 	internalError := apierrors.NewInternalError(errors.New("internal-error"))
 
 	interceptorFuncs := interceptor.Funcs{
@@ -121,7 +116,7 @@ func TestDeleteAddressWithInternalError(t *testing.T) {
 	}
 	fakeClient := fake.NewClientBuilder().WithInterceptorFuncs(interceptorFuncs).Build()
 
-	r := NewActiveMQArtemisAddressReconciler(fakeClient, nil, ctrl.Log)
+	r := NewActiveMQArtemisAddressReconciler(fakeClient, nil, logr.New(log.NullLogSink{}))
 
 	result, err := r.Reconcile(context.TODO(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "test-namespace", Name: "test-name"}})
 
