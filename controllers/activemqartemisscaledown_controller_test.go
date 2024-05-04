@@ -22,7 +22,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -126,17 +125,11 @@ var _ = Describe("Scale down controller", func() {
 					// so the pod number will change from 1 to 2 and back to 1.
 					// checking message count on broker 0 to make sure scale down finally happens.
 					By("Checking messsage count on broker 0")
-					//./artemis queue stat --silent --url tcp://artemis-broker-ss-0:61616 --queueName DLQ
-					queryCmd := []string{"amq-broker/bin/artemis", "queue", "stat", "--silent", "--url", "tcp://" + podWithOrdinal0 + ":61616", "--queueName", "DLQ"}
-					stdout, err := RunCommandInPod(podWithOrdinal0, brokerName+"-container", queryCmd)
+					curlUrl := "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\",component=addresses,address=\"DLQ\",subcomponent=queues,routing-type=\"anycast\",queue=\"DLQ\"/MessageCount"
+					curlCmd := []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
+					result, err := RunCommandInPod(podWithOrdinal0, brokerName+"-container", curlCmd)
 					g.Expect(err).To(BeNil())
-					if verbose {
-						fmt.Printf("\nQSTAT_OUTPUT: %v\n", *stdout)
-					}
-					fields := strings.Split(*stdout, "|")
-					g.Expect(fields[4]).To(Equal("MESSAGE_COUNT"), *stdout)
-					g.Expect(strings.TrimSpace(fields[14])).To(Equal("1"), *stdout)
-
+					g.Expect(*result).To(ContainSubstring("\"value\":1"))
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("Receiving a message from 0")
