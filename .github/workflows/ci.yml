@@ -91,6 +91,9 @@ jobs:
           podman manifest push $IMAGE_NAME:dev.latest docker://quay.io/${{ secrets.QUAY_NAMESPACE }}/$IMAGE_NAME:$COMMIT_TAG
           podman manifest push $IMAGE_NAME:dev.latest docker://quay.io/${{ secrets.QUAY_NAMESPACE }}/$IMAGE_NAME:dev.latest
 
+      - name: Run scorecard tests
+        run: make scorecard | tee scorecard.log && ! grep 'Suggestions' scorecard.log
+
       - name: Build the bundle image
         run: podman build --file bundle.Dockerfile --label quay.expires-after=90d --label git-sha=$GITHUB_SHA --tag $IMAGE_NAME-bundle:dev.latest .
 
