@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM registry-proxy.engineering.redhat.com/rh-osbs/rhel8-go-toolset:1.20 as builder
+FROM registry.access.redhat.com/ubi8/go-toolset:1.20 as builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -39,9 +39,9 @@ RUN cp -r $REMOTE_SOURCE_DIR/app/* .
 # by leaving it empty we can ensure that the container and binary shipped on it will have the same platform.
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -ldflags="-X '${GO_MODULE}/version.BuildTimestamp=`date '+%Y-%m-%dT%H:%M:%S'`'" -o manager main.go
 
-FROM registry-proxy.engineering.redhat.com/rh-osbs/ubi8@sha256:83068ea81dd02717b8e39b55cdeb2c1b2c9a3db260f01381b991755d44b15073 as base-env
+FROM registry.access.redhat.com/ubi8:8.6-855 as base-env
 
-ENV BROKER_NAME=amq-broker
+ENV BROKER_NAME=activemq-artemis
 ENV USER_UID=1000
 ENV USER_NAME=${BROKER_NAME}-operator
 ENV USER_HOME=/home/${USER_NAME}
@@ -67,12 +67,7 @@ RUN dnf update -y --setopt=install_weak_deps=0 && rm -rf /var/cache/yum
 USER ${USER_UID}
 ENTRYPOINT ["${USER_HOME}/bin/entrypoint"]
 
-LABEL name="amq8/amq-broker-rhel8-operator"
-LABEL description="Red Hat AMQ Broker 8.0 Operator"
+LABEL name="artemiscloud/activemq-artemis-operator"
+LABEL description="ActiveMQ Artemis Broker Operator"
 LABEL maintainer="Roddie Kieley <rkieley@redhat.com>"
-LABEL version="8.0.0"
-LABEL summary="Red Hat AMQ Broker 8.0 Operator"
-LABEL amq.broker.version="8.0.0.OPR.1.SR1"
-LABEL com.redhat.component="amq-broker-rhel8-operator-container"
-LABEL io.k8s.display-name="Red Hat AMQ Broker 8.0 Operator"
-LABEL io.openshift.tags="messaging,amq,integration,operator,golang"
+LABEL version="1.2.1"
