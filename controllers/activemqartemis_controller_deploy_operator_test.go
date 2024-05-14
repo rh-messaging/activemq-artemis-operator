@@ -127,7 +127,7 @@ var _ = Describe("artemis controller", Label("do"), func() {
 				envMap := make(map[string]string)
 				envMap["ARGS"] = "--zap-log-level=error"
 				installOperator(envMap, defaultNamespace)
-				By("delploy a basic broker to produce some more log")
+				By("deploy a basic broker to produce some more log")
 				brokerCr, createdCr := DeployCustomBroker(defaultNamespace, nil)
 
 				By("wait for pod so enough log is generated")

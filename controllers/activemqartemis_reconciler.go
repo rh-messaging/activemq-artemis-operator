@@ -3143,7 +3143,7 @@ func checkProjectionStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Cl
 
 		if len(missingKeys) > 0 {
 			if strings.HasSuffix(secretProjection.Name, jaasConfigSuffix) {
-				err = errors.Errorf("out of sync on pod %s-%s, property files are not visible on the broker: %v. Reloadable JAAS LoginModule property files are only visible after the first login attempt that references them. If the property files are for by a third party LoginModule or not reloadable, prefix the property file names with an underscore to exclude them from this condition",
+				err = errors.Errorf("out of sync on pod %s-%s, property files are not visible on the broker: %v. Reloadable JAAS LoginModule property files are only visible after the first login attempt that references them. If the property files are for a third party LoginModule or not reloadable, prefix the property file names with an underscore to exclude them from this condition",
 					namer.CrToSS(cr.Name), jk.Ordinal, missingKeys)
 			} else {
 				err = errors.Errorf("out of sync on pod %s-%s, configuration property files are not visible on the broker: %v. A delay can occur before a volume mount projection is refreshed.",
