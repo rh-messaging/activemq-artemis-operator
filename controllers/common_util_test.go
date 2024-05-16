@@ -72,8 +72,14 @@ var chars = []rune("hgjkmnpqrtvwxyzslbcdaefiou")
 var defaultPassword string = "password"
 var defaultSanDnsNames = []string{"*.apps.artemiscloud.io", "*.tests.artemiscloud.io"}
 var okDefaultPwd = "okdefaultpassword"
+var helmCmd = GetHelmCmd()
 
-const helmCmd = "helm"
+func GetHelmCmd() string {
+	if localHelm, ok := os.LookupEnv("HELM"); ok {
+		return localHelm
+	}
+	return "helm"
+}
 
 type TestLogWriter struct {
 	unbufferedWriter bytes.Buffer
@@ -829,6 +835,8 @@ func WaitForPod(crName string, iPods ...int32) {
 }
 
 func InstallCertManager() error {
+	fmt.Printf("Installing cert-manager using %s\n", helmCmd)
+
 	cmd := exec.Command(helmCmd, "repo", "add", "jetstack", "https://charts.jetstack.io", "--force-update")
 	err := cmd.Run()
 	if err != nil {
