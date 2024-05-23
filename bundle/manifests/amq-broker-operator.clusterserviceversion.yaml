@@ -1,7 +1,7 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: amq-broker-operator.v7.10.6-opr-1
+  name: amq-broker-operator.v7.10.7-opr-1
   namespace: placeholder
   labels:
     operator-activemqartemis: "true"
@@ -110,13 +110,13 @@ metadata:
           }
       }]
 spec:
-  replaces: amq-broker-operator.v7.10.5-opr-1
+  replaces: amq-broker-operator.v7.10.6-opr-1
   displayName: Red Hat Integration - AMQ Broker for RHEL 8 (Multiarch)
   description: AMQ Broker Operator for RHEL 8 (Multiarch) provides the ability to deploy and manage stateful AMQ Broker broker clusters
   keywords:
     - activemqartemis
     - operator
-  version: 7.10.6-opr-1
+  version: 7.10.7-opr-1
   maturity: beta
   maintainers:
     - name: Red Hat
@@ -133,12 +133,12 @@ spec:
       mediatype: image/png
   labels:
     alm-owner-amq-broker: amq-broker-operator
-    operated-by: amq-broker-operator.v7.10.6-opr-1
+    operated-by: amq-broker-operator.v7.10.7-opr-1
   selector:
     matchLabels:
       ActiveMQArtemis: ex-aao
       application: ex-aao-app
-      operated-by: amq-broker-operator.v7.10.6-opr-1
+      operated-by: amq-broker-operator.v7.10.7-opr-1
   installModes:
     - type: OwnNamespace
       supported: true
@@ -2207,9 +2207,9 @@ spec:
                   name: amq-broker-operator
                   com.company: Red_Hat
                   rht.prod_name: Red_Hat_Integration
-                  rht.prod_ver: 2024.Q1
+                  rht.prod_ver: 2024.Q2
                   rht.comp: Broker_AMQ
-                  rht.comp_ver: 7.10.6
+                  rht.comp_ver: 7.10.7
                   rht.subcomp: broker-amq-operator
                   rht.subcomp_t: application
               spec:
