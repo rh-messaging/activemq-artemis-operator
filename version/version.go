@@ -10,15 +10,15 @@ var (
 
 const (
 	// LatestVersion product version supported
-	LatestVersion        = "7.10.6"
-	CompactLatestVersion = "7106"
+	LatestVersion        = "7.10.7"
+	CompactLatestVersion = "7107"
 	// LastMicroVersion product version supported
 	LastMicroVersion = "7.9.4"
 	// LastMinorVersion product version supported
 	LastMinorVersion = "7.7.0"
 
-	LatestKubeImage = "registry.redhat.io/amq7/amq-broker-rhel8:7.10.6"
-	LatestInitImage = "registry.redhat.io/amq7/amq-broker-init-rhel8:7.10.6"
+	LatestKubeImage = "registry.redhat.io/amq7/amq-broker-rhel8:7.10.7"
+	LatestInitImage = "registry.redhat.io/amq7/amq-broker-init-rhel8:7.10.7"
 )
 
 func DefaultImageName(archSpecificRelatedImageEnvVarName string) string {
@@ -115,6 +115,7 @@ var FullVersionFromCompactVersion map[string]string = map[string]string{
 	"7104": "7.10.4",
 	"7105": "7.10.5",
 	"7106": "7.10.6",
+	"7107": "7.10.7",
 }
 
 var MinorVersionFromFullVersion map[string]string = map[string]string{
@@ -152,6 +153,7 @@ var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
 	"7.10.4": "7.10.0",
 	"7.10.5": "7.10.0",
 	"7.10.6": "7.10.0",
+	"7.10.7": "7.10.0",
 }
 
 var YacfgProfileName string = "amq_broker"
