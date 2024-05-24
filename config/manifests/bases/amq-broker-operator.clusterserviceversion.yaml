@@ -18,12 +18,12 @@ metadata:
     features.operators.openshift.io/token-auth-aws: "false"
     features.operators.openshift.io/token-auth-azure: "false"
     features.operators.openshift.io/token-auth-gcp: "false"
+    olm.skipRange: 7.11.6-opr-1
     operators.openshift.io/valid-subscription: '["Red Hat Runtimes", "Red Hat Integration",
       "Red Hat Process Automation", "Red Hat AMQ"]'
     repository: https://github.com/rh-messaging/activemq-artemis-operator
     support: Red Hat
     tectonic-visibility: ocs
-    olm.skipRange: 7.11.6-opr-1
   labels:
     operator-activemqartemis: "true"
     operatorframework.io/arch.amd64: supported
