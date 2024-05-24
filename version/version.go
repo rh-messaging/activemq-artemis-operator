@@ -56,6 +56,7 @@ var FullVersionFromCompactVersion map[string]string = map[string]string{
 	"7105": "7.10.5",
 	"7115": "7.11.5",
 	"7116": "7.11.6",
+	"7106": "7.10.6",
 }
 
 // The yacfg profile to use for a given full version of broker
@@ -83,6 +84,7 @@ var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
 	"7.10.5": "7.10.0",
 	"7.11.5": "7.10.0",
 	"7.11.6": "7.10.0",
+	"7.10.6": "7.10.0",
 }
 
 var YacfgProfileName string = "amq_broker"
@@ -102,6 +104,7 @@ var SupportedActiveMQArtemisVersions = []string{
 	"7.10.5",
 	"7.11.5",
 	"7.11.6",
+	"7.10.6",
 }
 
 var ActiveMQArtemisVersionfromFullVersion map[string]string = map[string]string{
@@ -118,6 +121,7 @@ var ActiveMQArtemisVersionfromFullVersion map[string]string = map[string]string{
 	"7.10.5": "2.21.0.redhat-00046",
 	"7.11.5": "2.28.0.redhat-00016",
 	"7.11.6": "2.28.0.redhat-00019",
+	"7.10.6": "2.21.0.redhat-00048",
 }
 
 func CompactActiveMQArtemisVersion(version string) string {
