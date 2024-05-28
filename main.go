@@ -30,6 +30,7 @@ import (
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/client-go/rest"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -99,6 +100,14 @@ func init() {
 	utilruntime.Must(brokerv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(brokerv1beta1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
+}
+
+type TraceLogWarnings struct {
+	Log logr.Logger
+}
+
+func (l *TraceLogWarnings) HandleWarningHeader(code int, agent string, message string) {
+	l.Log.V(2).Info(message, "code", code, "agent", agent)
 }
 
 func main() {
@@ -183,6 +192,9 @@ func main() {
 		RetryPeriod:            &retryPeriod,
 		Logger:                 setupLog,
 	}
+
+	mgrOptions.Client.WarningHandler.SuppressWarnings = true
+	rest.SetDefaultWarningHandler(&TraceLogWarnings{Log: ctrl.Log})
 
 	isLocal, watchList := common.ResolveWatchNamespaceForManager(oprNamespace, watchNamespace)
 	if isLocal {
