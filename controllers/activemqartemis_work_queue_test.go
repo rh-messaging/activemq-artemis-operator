@@ -42,7 +42,7 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/version"
 )
 
-var _ = Describe("pub sub scale", func() {
+var _ = Describe("work queue", func() {
 
 	BeforeEach(func() {
 		BeforeEachSpec()
@@ -52,7 +52,7 @@ var _ = Describe("pub sub scale", func() {
 		AfterEachSpec()
 	})
 
-	Context("pub n sub, ha pub, partitioned sub", Label("slow"), func() {
+	Context("ha pub and ha competing sub, compromised total message order", Label("slow"), func() {
 		It("validation", func() {
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 
@@ -98,29 +98,36 @@ var _ = Describe("pub sub scale", func() {
 					 control-plane=passwd
 
 					 p=passwd
-					 c1=passwd
-					 c2=passwd
-					 c3=passwd
-					 c4=passwd`,
+					 c=passwd`,
 
 					"roles.properties": `
 					
 					# rbac
-					control-plane=control-plane,control-plane-0,control-plane-1
-					consumers=c1,c2,c3,c4
-					producers=p
-
-					# shard roles for connectionRouter partitioning
-					shard-consumers-broker-0=c1,c2
-					shard-consumers-broker-1=c3,c4
-					shard-producers=p`,
+					control-plane=control-plane
+					consumers=c
+					producers=p`,
 				}
 
 				By("Deploying the jaas secret " + jaasSecret.Name)
 				Expect(k8sClient.Create(ctx, jaasSecret)).Should(Succeed())
-
 				brokerCrd.Spec.DeploymentPlan.ExtraMounts.Secrets = []string{jaasSecret.Name}
 
+				By("deploying custom logging")
+				loggingConfigMapName := brokerCrd.Name + "-logging-config"
+				loggingData := make(map[string]string)
+				loggingData[LoggingConfigKey] = `appender.stdout.name = STDOUT
+			appender.stdout.type = Console
+			rootLogger = info, STDOUT
+			logger.activemq.name=org.apache.activemq.artemis.protocol.amqp.connect.federation.AMQPFederationQueueConsumer
+			logger.activemq.level=TRACE
+			logger.rest.name=org.apache.activemq.artemis.core
+			logger.rest.level=ERROR`
+
+				loggingConfigMap := configmaps.MakeConfigMap(defaultNamespace, loggingConfigMapName, loggingData)
+				Expect(k8sClient.Create(ctx, loggingConfigMap)).Should(Succeed())
+				brokerCrd.Spec.DeploymentPlan.ExtraMounts.ConfigMaps = []string{loggingConfigMapName}
+
+				// this env var can be used in properties, as it will be part of the broker POD env
 				brokerCrd.Spec.Env = []corev1.EnvVar{
 					{
 						Name: "CR_NAME",
@@ -129,39 +136,29 @@ var _ = Describe("pub sub scale", func() {
 								FieldPath: "metadata.labels['" + selectors.LabelResourceKey + "']"},
 						},
 					},
+					{
+						Name: "IGNORE_JAVA_ARGS_APPEND",
+
+						// brokerCrd.Spec.DeploymentPlan.EnableMetricsPlugin = part one
+						Value: "-Dwebconfig.bindings.artemis.apps.metrics.war=metrics.war -Dwebconfig.bindings.artemis.apps.metrics.url=metrics",
+					},
 				}
-
-				By("deploying custom logging for the broker")
-				loggingConfigMapName := "my-logging-config"
-				loggingData := make(map[string]string)
-				loggingData[LoggingConfigKey] = `appender.stdout.name = STDOUT
-			appender.stdout.type = Console
-			rootLogger = info, STDOUT
-			logger.activemq.name=org.apache.activemq.artemis.core.config.impl.ConfigurationImpl
-			logger.activemq.level=TRACE
-			logger.jaas.name=org.apache.activemq.artemis.spi.core.security.jaas
-			logger.jaas.level=TRACE
-			logger.rest.name=org.apache.activemq.artemis.core
-			logger.rest.level=INFO`
-
-				loggingConfigMap := configmaps.MakeConfigMap(defaultNamespace, loggingConfigMapName, loggingData)
-				Expect(k8sClient.Create(ctx, loggingConfigMap)).Should(Succeed())
-				brokerCrd.Spec.DeploymentPlan.ExtraMounts.ConfigMaps = []string{loggingConfigMapName}
 
 				By("configuring the broker")
 				brokerCrd.Spec.BrokerProperties = []string{
-					"addressConfigurations.COMMANDS.routingTypes=MULTICAST",
+					"addressConfigurations.JOBS.routingTypes=ANYCAST",
+					"addressConfigurations.JOBS.queueConfigs.JOBS.routingType=ANYCAST",
 
 					"# rbac",
-					"securityRoles.COMMANDS.producers.send=true",
-					"securityRoles.COMMANDS.consumers.consume=true",
-					"securityRoles.COMMANDS.consumers.createNonDurableQueue=true",
-					"securityRoles.COMMANDS.consumers.deleteNonDurableQueue=true",
+					"securityRoles.JOBS.producers.send=true",
+					"securityRoles.JOBS.consumers.consume=true",
+					"securityRoles.JOBS.consumers.createNonDurableQueue=true",
+					"securityRoles.JOBS.consumers.deleteNonDurableQueue=true",
 
 					"# control-plane rbac",
-					"securityRoles.COMMANDS.control-plane.createDurableQueue=true",
-					"securityRoles.COMMANDS.control-plane.consume=true",
-					"securityRoles.COMMANDS.control-plane.send=true",
+					"securityRoles.JOBS.control-plane.createDurableQueue=true",
+					"securityRoles.JOBS.control-plane.consume=true",
+					"securityRoles.JOBS.control-plane.send=true",
 
 					"securityRoles.$ACTIVEMQ_ARTEMIS_FEDERATION.control-plane.createNonDurableQueue=true",
 					"securityRoles.$ACTIVEMQ_ARTEMIS_FEDERATION.control-plane.consume=true",
@@ -174,30 +171,29 @@ var _ = Describe("pub sub scale", func() {
 					"securityRoles.#.control-plane.consume=true",
 					"securityRoles.#.control-plane.send=true",
 
-					// with properties update - can have this static with dns
-					"# federate the address, publish on N goes to [0..N]",
+					"# federate the queue in both directions",
 					"broker-0.AMQPConnections.target.uri=tcp://${CR_NAME}-ss-1.${CR_NAME}-hdls-svc:61616",
 					"broker-1.AMQPConnections.target.uri=tcp://${CR_NAME}-ss-0.${CR_NAME}-hdls-svc:61616",
-					// how to use TLS and sni here?
 
 					"# speed up mesh formation",
 					"AMQPConnections.target.retryInterval=1000",
 
-					// feature - service account
 					"AMQPConnections.target.user=control-plane",
 					"AMQPConnections.target.password=passwd",
 					"AMQPConnections.target.autostart=true",
 
-					"AMQPConnections.target.federations.peerN.localAddressPolicies.forCommands.includes.justCommands.addressMatch=COMMANDS",
+					"AMQPConnections.target.federations.peerN.localQueuePolicies.forJobs.includes.justJobs.queueMatch=JOBS",
 
-					"# routing",
-					"connectionRouters.partitionOnRole.keyType=ROLE_NAME",
-					"connectionRouters.partitionOnRole.localTargetFilter=NULL|producers|consumers-broker-${STATEFUL_SET_ORDINAL}",
+					// brokerCrd.Spec.DeploymentPlan.EnableMetricsPlugin = part two
+					// but needs the metrics plugin to become a broker plugin
+					// or we add the ability to set a property with any class instance
+					//"metricsPlugin.\"com.redhat.amq.broker.core.server.metrics.plugins.ArtemisPrometheusMetricsPlugin.class\".init=\"\"",
 
-					"# need to extract the single role that is used to partition, a `shard-` prefixed role",
-					"connectionRouters.partitionOnRole.keyFilter=(?<=^shard-).*", // match and strip the shard- prefix
-
-					"acceptorConfigurations.tcp.params.router=partitionOnRole", // matching spec.acceptor
+					"metricsConfiguration.logging=true",
+					"metricsConfiguration.processor=true",
+					"metricsConfiguration.uptime=true",
+					"metricsConfiguration.fileDescriptors=true",
+					"metricsConfiguration.jvmMemory=false",
 				}
 
 				brokerCrd.Spec.Acceptors = []brokerv1beta1.AcceptorType{{Name: "tcp", Port: 61616, Expose: true}}
@@ -211,23 +207,6 @@ var _ = Describe("pub sub scale", func() {
 				By("provisioning the broker")
 				Expect(k8sClient.Create(ctx, &brokerCrd)).Should(Succeed())
 
-				createdBrokerCrd := &brokerv1beta1.ActiveMQArtemis{}
-				createdBrokerCrdKey := types.NamespacedName{
-					Name:      brokerCrd.Name,
-					Namespace: defaultNamespace,
-				}
-
-				By("verifying broker started - not really necessary, can be async")
-				Eventually(func(g Gomega) {
-
-					g.Expect(k8sClient.Get(ctx, createdBrokerCrdKey, createdBrokerCrd)).Should(Succeed())
-					if verbose {
-						fmt.Printf("\nStatus:%v", createdBrokerCrd.Status)
-					}
-					g.Expect(meta.IsStatusConditionTrue(createdBrokerCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
-
-				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
-
 				By("provisioning loadbalanced service for this CR, for use within the cluster via dns")
 				svc := &corev1.Service{
 					TypeMeta: metav1.TypeMeta{
@@ -240,7 +219,7 @@ var _ = Describe("pub sub scale", func() {
 					},
 					Spec: corev1.ServiceSpec{
 						Selector: map[string]string{
-							selectors.LabelResourceKey: createdBrokerCrd.Name,
+							selectors.LabelResourceKey: brokerCrd.Name,
 						},
 						Ports: []corev1.ServicePort{
 							{
@@ -253,8 +232,38 @@ var _ = Describe("pub sub scale", func() {
 
 				Expect(k8sClient.Create(ctx, svc)).Should(Succeed())
 
+				createdBrokerCrd := &brokerv1beta1.ActiveMQArtemis{}
+				createdBrokerCrdKey := types.NamespacedName{
+					Name:      brokerCrd.Name,
+					Namespace: defaultNamespace,
+				}
+
+				By("verifying broker started")
+				Eventually(func(g Gomega) {
+
+					g.Expect(k8sClient.Get(ctx, createdBrokerCrdKey, createdBrokerCrd)).Should(Succeed())
+					if verbose {
+						fmt.Printf("\nStatus:%v", createdBrokerCrd.Status)
+					}
+					g.Expect(meta.IsStatusConditionTrue(createdBrokerCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
+
+				}, existingClusterTimeout*5, existingClusterInterval).Should(Succeed())
+
+				By("verifying out service has two endpoints so our consumers will get distributed")
+				Eventually(func(g Gomega) {
+
+					endpoints := &corev1.Endpoints{}
+					g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: svc.Name, Namespace: svc.Namespace}, endpoints)).Should(Succeed())
+					if verbose {
+						fmt.Printf("\nEndpoints:%v", endpoints.Subsets)
+					}
+					g.Expect(len(endpoints.Subsets)).Should(BeNumerically("==", 1))
+					g.Expect(len(endpoints.Subsets[0].Addresses)).Should(BeNumerically("==", 2))
+
+				}, existingClusterTimeout*5, existingClusterInterval).Should(Succeed())
+
 				By("provisioning an app, publisher and consumers, using the broker image to access the artemis client from within the cluster")
-				deploymentTemplate := func(name string, command []string) appsv1.Deployment {
+				deploymentTemplate := func(name string, replicas int32, command []string) appsv1.Deployment {
 					appLables := map[string]string{"app": name}
 					return appsv1.Deployment{
 
@@ -262,7 +271,7 @@ var _ = Describe("pub sub scale", func() {
 						ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: defaultNamespace, Labels: appLables},
 						Spec: appsv1.DeploymentSpec{
 							Selector: &metav1.LabelSelector{MatchLabels: appLables},
-							Replicas: common.Int32ToPtr(1),
+							Replicas: common.Int32ToPtr(replicas),
 							Template: corev1.PodTemplateSpec{ObjectMeta: metav1.ObjectMeta{Labels: appLables},
 								Spec: corev1.PodSpec{
 									Containers: []corev1.Container{
@@ -277,40 +286,33 @@ var _ = Describe("pub sub scale", func() {
 					}
 
 				}
-				By("deploying consumers")
 
 				serviceUrl := "tcp://" + brokerCrd.Name + ":62616"
 
-				// loop until successfully get messages as we expect rejection by the router
-				numMessagesToConsume := 10
-				scriptTemplate := "until /opt/amq/bin/artemis perf consumer --password passwd --user %s --url %s --silent --message-count %d topic://COMMANDS; do echo retry; sleep 1; done;"
-				commonCommand := []string{"/bin/sh", "-c"}
+				// consumers wil be restarted by deployment
+				numConsumers := 5
+				numMessagesToConsume := "50"
+				numMessagesToProduce := "1000"
 
-				consumer1 := deploymentTemplate(
-					"consumer1",
-					append(commonCommand, fmt.Sprintf(scriptTemplate, "c1", serviceUrl, numMessagesToConsume)),
-				)
-
-				consumer3 := deploymentTemplate(
-					"consumer3",
-					append(commonCommand, fmt.Sprintf(scriptTemplate, "c3", serviceUrl, numMessagesToConsume)),
-				)
-
-				Expect(k8sClient.Create(ctx, &consumer1)).Should(Succeed())
-				Expect(k8sClient.Create(ctx, &consumer3)).Should(Succeed())
-
-				By("deploying producer")
-
+				By("deploying single producer to send " + numMessagesToProduce + " to one broker and sleep!")
 				producer := deploymentTemplate(
 					"producer",
-					[]string{"/opt/amq/bin/artemis", "perf", "producer", "--user", "p", "--password", "passwd", "--url", serviceUrl, "--rate", "2", "--silent", "topic://COMMANDS"},
+					1,
+					[]string{"/bin/sh", "-c", "/opt/amq/bin/artemis perf producer --protocol=AMQP --user p --password passwd --url " + serviceUrl + " --message-count " + numMessagesToProduce + " queue://JOBS; sleep 300"},
 				)
 				Expect(k8sClient.Create(ctx, &producer)).Should(Succeed())
 
-				By("verifying - consumer on each broker, messages flowing..")
+				By("deploying  " + fmt.Sprintf("%d", numConsumers) + " to consume in batches of " + numMessagesToConsume)
+				consumers := deploymentTemplate(
+					"consumer",
+					int32(numConsumers),
+					[]string{"/opt/amq/bin/artemis", "perf", "consumer", "--protocol=AMQP", "--user", "c", "--password", "passwd", "--url", serviceUrl, "--message-count", numMessagesToConsume, "queue://JOBS"},
+				)
+				Expect(k8sClient.Create(ctx, &consumers)).Should(Succeed())
 
-				By("verifying metrics")
-				nonZeroRoutedMetricFor := func(g Gomega, ordinal string) bool {
+				By("verifying - messages flowing..")
+
+				metricsMessageCountCheck := func(g Gomega, ordinal string, routedNonZeroCheck bool) bool {
 					pod := &corev1.Pod{}
 					podName := namer.CrToSS(createdBrokerCrd.Name) + "-" + ordinal
 					podNamespacedName := types.NamespacedName{Name: podName, Namespace: defaultNamespace}
@@ -330,92 +332,56 @@ var _ = Describe("pub sub scale", func() {
 
 					var done = false
 					if verbose {
-						fmt.Printf("\nStart Metrics for COMMANDS on %v with Headers %v \n", ordinal, resp.Header)
+						fmt.Printf("\nStart Metrics for JOBS on %v with Headers %v \n", ordinal, resp.Header)
 					}
 					for _, line := range lines {
-						if strings.Contains(line, "COMMANDS") {
-							if verbose {
-								fmt.Printf("%s\n", line)
-							}
+						if verbose {
+							fmt.Printf("%s\n", line)
 						}
-						if strings.Contains(line, "artemis_routed_message_count{address=\"COMMANDS\",broker=\"amq-broker\",}") {
-							if !strings.Contains(line, "} 0.0") {
-								done = true
+
+						if routedNonZeroCheck {
+							if strings.Contains(line, "artemis_routed_message_count{address=\"JOBS\",broker=\"amq-broker\",}") {
+								if !strings.Contains(line, "} 0.0") {
+									done = true
+								}
 							}
+						} else if strings.Contains(line, "artemis_message_count{address=\"JOBS\",broker=\"amq-broker\",queue=\"JOBS\",} 0.0") {
+							done = true
 						}
 					}
 					return done
 				}
 
+				By("verifying artemis_routed_message_count metric")
+				doRoutedNonZeroCheck := true
 				Eventually(func(g Gomega) {
 
-					foundMetric0 := nonZeroRoutedMetricFor(g, "0")
-					foundMetric1 := nonZeroRoutedMetricFor(g, "1")
+					foundMetric0 := metricsMessageCountCheck(g, "0", doRoutedNonZeroCheck)
+					foundMetric1 := metricsMessageCountCheck(g, "1", doRoutedNonZeroCheck)
 
 					g.Expect(foundMetric0).Should(Equal(true))
 					g.Expect(foundMetric1).Should(Equal(true))
 
-				}, existingClusterTimeout*2, existingClusterInterval*5).Should(Succeed())
+				}, existingClusterTimeout, existingClusterInterval*5).Should(Succeed())
+
+				By("verifying artemis_message_count metric 0, all messaged consumed")
+				doRoutedNonZeroCheck = false
+				Eventually(func(g Gomega) {
+
+					foundMetric0 := metricsMessageCountCheck(g, "0", doRoutedNonZeroCheck)
+					foundMetric1 := metricsMessageCountCheck(g, "1", doRoutedNonZeroCheck)
+
+					g.Expect(foundMetric0).Should(Equal(true))
+					g.Expect(foundMetric1).Should(Equal(true))
+
+				}, existingClusterTimeout, existingClusterInterval*5).Should(Succeed())
 
 				CleanResource(&producer, producer.Name, defaultNamespace)
-				CleanResource(&consumer1, producer.Name, defaultNamespace)
-				CleanResource(&consumer3, producer.Name, defaultNamespace)
-
+				CleanResource(&consumers, consumers.Name, defaultNamespace)
 				CleanResource(createdBrokerCrd, createdBrokerCrd.Name, defaultNamespace)
 				CleanResource(jaasSecret, jaasSecret.Name, defaultNamespace)
 				CleanResource(loggingConfigMap, loggingConfigMap.Name, defaultNamespace)
 				CleanResource(svc, svc.Name, defaultNamespace)
-			}
-
-		})
-
-		It("from zero to hero", func() {
-
-			By("start with empty broker - don't want to depend on artemis create and defaults that may change version on version")
-			// feature: empty broker
-			// - needs to be env aware - container limits etc
-			// - control plane auth with service account
-
-			By("provision broker(s) for scale pub sub")
-			// new CR:
-			// provisionBrokers { type: pubSub - that name may be meaningless to anyone else!
-			// only need volume if consumers are durable (chicken and egg here!)
-			// persistence keyed of volume mount type?
-			// io -> iops
-			// mold empty broker into a broker for the 'pubSub' purpose - respecting the env.
-			// challenge - some of the env may not be known till deployment
-			//  }
-
-			By("onboard app one")
-
-			// new CR:
-			/* onboardApp {
-				// labels to match provisiond brokers
-				// inorder to reason about capacity, feedback - the labels have to have meaning/capacity/bounds
-				label: pubSub, zoneA, local disks?
-
-
-				producer on COMMANDS with role P // address, RBAC send P
-
-				consumer on COMMANDS2 with role A // non persistent multicast queue, rbac create, consume A
-				consumer on COMMANDS2 with role B and backlog 1M // // durable multicast queue, rbac create, consume B
-
-				TBD
-			}
-			*/
-
-			By("onboard app two")
-
-			By("decision - need to scale")
-			{
-				By("add new partition")
-
-				By("update mesh/cluster/collection of brokers")
-
-				// feature: mirror reload config required for partition 0
-				// feature: properties remove for scale down - to remove mirror to ordinal-N on broker-(N-1)
-				// mirror store and forward queue could be managed via properties, independent of the connection
-
 			}
 		})
 	})
