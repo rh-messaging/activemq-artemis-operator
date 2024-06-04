@@ -1881,7 +1881,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	fullVersionForAdditionalLabels := version.FullVersionFromCompactVersion[compactVersionForAdditionalLabels]
 	additionalLabels := pods.GetAdditionalLabels(fullVersionForAdditionalLabels)
 	if additionalLabels != nil {
-		reqLogger.Info("Adding additional Labels", "broker version", fullVersionForAdditionalLabels, "labels", additionalLabels)
+		reqLogger.V(1).Info("Adding additional Labels", "broker version", fullVersionForAdditionalLabels, "labels", additionalLabels)
 		for key, value := range additionalLabels {
 			labels[key] = value
 		}
