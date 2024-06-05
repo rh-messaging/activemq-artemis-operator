@@ -14,7 +14,7 @@ RUN go version
 RUN go build -v -o bin/${BROKER_NAME}-operator ${REMOTE_SOURCE_DIR}/app/main.go
 
 
-FROM registry-proxy.engineering.redhat.com/rh-osbs/ubi8@sha256:a424544997de1960a93466b57d12f1f3fac62be0f4cd35482435bae305a6ca27 AS base-env
+FROM registry-proxy.engineering.redhat.com/rh-osbs/ubi8@sha256:2a5d23450fb9b0cb266b4d465b36f1d1bc7c9b5a9b785528215b470b44f04209 AS base-env
 
 ENV BROKER_NAME=amq-broker
 ENV OPERATOR=/home/${BROKER_NAME}-operator/bin/${BROKER_NAME}-operator
