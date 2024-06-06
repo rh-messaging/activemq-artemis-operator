@@ -70,4 +70,4 @@ ENTRYPOINT ["${USER_HOME}/bin/entrypoint"]
 LABEL name="artemiscloud/activemq-artemis-operator"
 LABEL description="ActiveMQ Artemis Broker Operator"
 LABEL maintainer="Roddie Kieley <rkieley@redhat.com>"
-LABEL version="1.2.1"
+LABEL version="1.2.2"

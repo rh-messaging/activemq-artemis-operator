@@ -23,7 +23,7 @@ import (
 	"os"
 	"strings"
 
-	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -176,12 +176,14 @@ var _ = Describe("work queue", func() {
 					"broker-1.AMQPConnections.target.uri=tcp://${CR_NAME}-ss-0.${CR_NAME}-hdls-svc:61616",
 
 					"# speed up mesh formation",
-					"AMQPConnections.target.retryInterval=1000",
+					"AMQPConnections.target.retryInterval=500",
 
 					"AMQPConnections.target.user=control-plane",
 					"AMQPConnections.target.password=passwd",
 					"AMQPConnections.target.autostart=true",
 
+					"# in pull mode",
+					"AMQPConnections.target.federations.peerN.properties.amqpCredit=0",
 					"AMQPConnections.target.federations.peerN.localQueuePolicies.forJobs.includes.justJobs.queueMatch=JOBS",
 
 					// brokerCrd.Spec.DeploymentPlan.EnableMetricsPlugin = part two
@@ -263,15 +265,14 @@ var _ = Describe("work queue", func() {
 				}, existingClusterTimeout*5, existingClusterInterval).Should(Succeed())
 
 				By("provisioning an app, publisher and consumers, using the broker image to access the artemis client from within the cluster")
-				deploymentTemplate := func(name string, replicas int32, command []string) appsv1.Deployment {
+				jobTemplate := func(name string, replicas int32, command []string) batchv1.Job {
 					appLables := map[string]string{"app": name}
-					return appsv1.Deployment{
+					return batchv1.Job{
 
-						TypeMeta:   metav1.TypeMeta{Kind: "Deployment", APIVersion: "apps/v1"},
+						TypeMeta:   metav1.TypeMeta{Kind: "Job", APIVersion: "batch/v1"},
 						ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: defaultNamespace, Labels: appLables},
-						Spec: appsv1.DeploymentSpec{
-							Selector: &metav1.LabelSelector{MatchLabels: appLables},
-							Replicas: common.Int32ToPtr(replicas),
+						Spec: batchv1.JobSpec{
+							Parallelism: common.Int32ToPtr(replicas),
 							Template: corev1.PodTemplateSpec{ObjectMeta: metav1.ObjectMeta{Labels: appLables},
 								Spec: corev1.PodSpec{
 									Containers: []corev1.Container{
@@ -281,36 +282,38 @@ var _ = Describe("work queue", func() {
 											Command: command,
 										},
 									},
+									RestartPolicy: corev1.RestartPolicyOnFailure,
 								}},
 						},
 					}
 
 				}
 
-				serviceUrl := "tcp://" + brokerCrd.Name + ":62616"
+				// small prefetch to ensure messages are federated when there is demand even if the
+				// majority of consumers go to a single broker
+				serviceUrl := "tcp://" + brokerCrd.Name + ":62616?jms.prefetchPolicy.all=1"
 
-				// consumers wil be restarted by deployment
-				numConsumers := 5
-				numMessagesToConsume := "50"
+				numConsumers := 10
+				numMessagesToConsume := "100"
 				numMessagesToProduce := "1000"
 
 				By("deploying single producer to send " + numMessagesToProduce + " to one broker and sleep!")
-				producer := deploymentTemplate(
+				producer := jobTemplate(
 					"producer",
 					1,
-					[]string{"/bin/sh", "-c", "/opt/amq/bin/artemis perf producer --protocol=AMQP --user p --password passwd --url " + serviceUrl + " --message-count " + numMessagesToProduce + " queue://JOBS; sleep 300"},
+					[]string{"/bin/sh", "-c", "/opt/amq/bin/artemis producer --protocol=AMQP --user p --password passwd --url " + serviceUrl + " --message-count " + numMessagesToProduce + " --destination queue://JOBS; sleep 300"},
 				)
 				Expect(k8sClient.Create(ctx, &producer)).Should(Succeed())
 
 				By("deploying  " + fmt.Sprintf("%d", numConsumers) + " to consume in batches of " + numMessagesToConsume)
-				consumers := deploymentTemplate(
+				consumers := jobTemplate(
 					"consumer",
 					int32(numConsumers),
-					[]string{"/opt/amq/bin/artemis", "perf", "consumer", "--protocol=AMQP", "--user", "c", "--password", "passwd", "--url", serviceUrl, "--message-count", numMessagesToConsume, "queue://JOBS"},
+					[]string{"/bin/sh", "-c", "/opt/amq/bin/artemis consumer --protocol=AMQP --user c --password passwd --url " + serviceUrl + " --message-count " + numMessagesToConsume + " --destination queue://JOBS"},
 				)
 				Expect(k8sClient.Create(ctx, &consumers)).Should(Succeed())
 
-				By("verifying - messages flowing..")
+				By("verifying - messages flowing.. via routed_message_count")
 
 				metricsMessageCountCheck := func(g Gomega, ordinal string, routedNonZeroCheck bool) bool {
 					pod := &corev1.Pod{}
@@ -335,7 +338,8 @@ var _ = Describe("work queue", func() {
 						fmt.Printf("\nStart Metrics for JOBS on %v with Headers %v \n", ordinal, resp.Header)
 					}
 					for _, line := range lines {
-						if verbose {
+
+						if verbose && strings.Contains(line, "\"JOBS\"") {
 							fmt.Printf("%s\n", line)
 						}
 
@@ -352,7 +356,7 @@ var _ = Describe("work queue", func() {
 					return done
 				}
 
-				By("verifying artemis_routed_message_count metric")
+				By("verifying artemis_routed_message_count metric on JOBS")
 				doRoutedNonZeroCheck := true
 				Eventually(func(g Gomega) {
 
@@ -378,7 +382,7 @@ var _ = Describe("work queue", func() {
 
 				CleanResource(&producer, producer.Name, defaultNamespace)
 				CleanResource(&consumers, consumers.Name, defaultNamespace)
-				CleanResource(createdBrokerCrd, createdBrokerCrd.Name, defaultNamespace)
+				CleanResource(createdBrokerCrd, brokerCrd.Name, defaultNamespace)
 				CleanResource(jaasSecret, jaasSecret.Name, defaultNamespace)
 				CleanResource(loggingConfigMap, loggingConfigMap.Name, defaultNamespace)
 				CleanResource(svc, svc.Name, defaultNamespace)

@@ -899,7 +899,12 @@ func CertManagerInstalled() bool {
 }
 
 func InstallClusteredIssuer(issuerName string, customFunc func(*cmv1.ClusterIssuer)) *cmv1.ClusterIssuer {
-	issuer := cmv1.ClusterIssuer{
+	issuer := cmv1.ClusterIssuer{}
+	if k8sClient.Get(ctx, types.NamespacedName{Name: issuerName, Namespace: defaultNamespace}, &issuer) == nil {
+		CleanResource(&issuer, issuerName, defaultNamespace)
+	}
+
+	issuer = cmv1.ClusterIssuer{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "ClusterIssuer",
@@ -928,7 +933,12 @@ func InstallClusteredIssuer(issuerName string, customFunc func(*cmv1.ClusterIssu
 }
 
 func InstallCert(certName string, namespace string, customFunc func(candidate *cmv1.Certificate)) *cmv1.Certificate {
-	cmCert := cmv1.Certificate{
+	cmCert := cmv1.Certificate{}
+	if k8sClient.Get(ctx, types.NamespacedName{Name: certName, Namespace: defaultNamespace}, &cmCert) == nil {
+		CleanResource(&cmCert, certName, defaultNamespace)
+	}
+
+	cmCert = cmv1.Certificate{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Certificate",
@@ -968,7 +978,12 @@ func InstallCert(certName string, namespace string, customFunc func(candidate *c
 }
 
 func InstallCaBundle(name string, sourceSecret string, caFileName string) *tm.Bundle {
-	bundle := tm.Bundle{
+	bundle := tm.Bundle{}
+	if k8sClient.Get(ctx, types.NamespacedName{Name: name, Namespace: defaultNamespace}, &bundle) == nil {
+		CleanResource(&bundle, name, defaultNamespace)
+	}
+
+	bundle = tm.Bundle{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "trust.cert-manager.io/v1alpha1",
 			Kind:       "Bundle",
