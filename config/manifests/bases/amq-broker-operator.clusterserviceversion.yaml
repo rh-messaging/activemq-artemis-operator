@@ -2594,4 +2594,5 @@ spec:
   provider:
     name: Red Hat
     url: https://www.redhat.com/
+  replaces: amq-broker-operator.v7.12.0-opr-1
   version: 0.0.0

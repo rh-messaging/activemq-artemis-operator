@@ -297,7 +297,7 @@ metadata:
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
     operatorframework.io/os.linux: supported
-  name: amq-broker-operator.v7.12.0-opr-1
+  name: amq-broker-operator.v7.12.0-opr-2
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -3320,4 +3320,5 @@ spec:
     name: ""
   - image: registry.redhat.io/amq7/amq-broker-rhel8@sha256:1f7a173924ad77d018300d4109b91c45896407c13d6a70b37d8993a95e363521
     name: ""
-  version: 7.12.0-opr-1
+  replaces: amq-broker-operator.v7.12.0-opr-1
+  version: 7.12.0-opr-2
