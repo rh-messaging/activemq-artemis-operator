@@ -1426,11 +1426,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(customResource
 		}
 	}
 
-	var currenCount int
-	for index := range reconciler.deployed {
-		currenCount += len(reconciler.deployed[index])
-	}
-	reqLogger.V(1).Info("Processing resources", "num requested", len(reconciler.requestedResources), "num current", currenCount)
+	reqLogger.V(1).Info("Processing resources", "num requested", countOfRequested(reconciler), "num current", countOfDeployed(reconciler))
 
 	requested := compare.NewMapBuilder().Add(common.ToResourceList(reconciler.requestedResources)...).ResourceMap()
 	comparator := compare.NewMapComparator()
@@ -1505,6 +1501,20 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(customResource
 		// using %q(uote) to keep errors separate
 		return fmt.Errorf("%q", compositeError)
 	}
+}
+
+func countOfRequested(reconciler *ActiveMQArtemisReconcilerImpl) (total int) {
+	for _, v := range reconciler.requestedResources {
+		total += len(v)
+	}
+	return total
+}
+
+func countOfDeployed(reconciler *ActiveMQArtemisReconcilerImpl) (total int) {
+	for _, v := range reconciler.deployed {
+		total += len(v)
+	}
+	return total
 }
 
 // resourceTemplate means we can modify labels and annotatins so we need to

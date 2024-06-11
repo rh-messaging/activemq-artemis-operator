@@ -1015,7 +1015,7 @@ func QueueStatAssertionInPod(brokerCrName string, podName string, namespace stri
 		if err != nil {
 			fmt.Printf("error while creating remote command executor: %v", err)
 		}
-		Expect(err).To(BeNil())
+		g.Expect(err).To(BeNil())
 		var capturedOut bytes.Buffer
 
 		err = exec.StreamWithContext(ctx, remotecommand.StreamOptions{
