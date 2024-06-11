@@ -238,11 +238,11 @@ func GetSslArgumentsFromSecret(sslSecret *corev1.Secret, trustStoreType string, 
 
 	if isBundleSecret {
 		if trustStoreType != "" {
-			if trustStoreType != "PEM" {
-				return nil, fmt.Errorf("ca bundle secret must have PEM trust store type")
+			if trustStoreType != "PEMCA" {
+				return nil, fmt.Errorf("ca bundle secret must have PEMCA trust store type")
 			}
 		}
-		sslArgs.TrustStoreType = "PEM"
+		sslArgs.TrustStoreType = "PEMCA"
 	} else {
 		if trustStoreType != "" {
 			sslArgs.TrustStoreType = trustStoreType
