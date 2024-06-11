@@ -844,7 +844,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 						{Secret: &tm.SourceObjectKeySelector{Name: clientFooIssuerCertSecretName, KeySelector: tm.KeySelector{Key: "tls.crt"}}},
 						{Secret: &tm.SourceObjectKeySelector{Name: clientBarIssuerCertSecretName, KeySelector: tm.KeySelector{Key: "tls.crt"}}},
 					},
-					Target: tm.BundleTarget{Secret: &tm.KeySelector{Key: "root-certs.pem"}},
+					Target: tm.BundleTarget{Secret: &tm.KeySelector{Key: "root-certs.crt"}},
 				},
 			}
 			Expect(k8sClient.Create(ctx, &bundle)).Should(Succeed())
@@ -880,6 +880,25 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 			// uncomment the following line to enable javax net debug
 			activeMQArtemis.Spec.Env = []corev1.EnvVar{{Name: "JAVA_ARGS_APPEND", Value: "-Djavax.net.debug=all"}}
 			Expect(k8sClient.Create(ctx, &activeMQArtemis)).Should(Succeed())
+
+			By("checking deployed condition")
+			Eventually(func(g Gomega) {
+				activeMQArtemisKey := types.NamespacedName{Name: activeMQArtemis.Name, Namespace: activeMQArtemis.Namespace}
+				g.Expect(k8sClient.Get(ctx, activeMQArtemisKey, &activeMQArtemis)).Should(Succeed())
+
+				condition := meta.FindStatusCondition(activeMQArtemis.Status.Conditions, brokerv1beta1.DeployedConditionType)
+				g.Expect(condition).NotTo(BeNil())
+				g.Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+				g.Expect(condition.Reason).To(Equal(brokerv1beta1.DeployedConditionCrudKindErrorReason))
+				g.Expect(condition.Message).To(ContainSubstring(bundleName))
+			}, timeout, interval).Should(Succeed())
+
+			By("updating bundle: " + bundleName)
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: bundleName}, &bundle)).Should(Succeed())
+				bundle.Spec.Target.Secret.Key = "root-certs.pem"
+				g.Expect(k8sClient.Update(ctx, &bundle)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
 
 			podName := activeMQArtemis.Name + "-ss-0"
 			trustStorePath := "/etc/" + brokerCertSecretName + "-volume/tls.crt"

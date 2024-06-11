@@ -160,14 +160,17 @@ func isSecretFromBundle(secret *corev1.Secret) bool {
 	return exist
 }
 
-func getBundleNameFromSecret(secret *corev1.Secret) string {
-	//extract the key of the secret's only entry
-	bundleName := ""
+func getBundleNameFromSecret(secret *corev1.Secret) (string, error) {
+	//extract the bundle target secret key that ends with .pem
+	//the bundle target secret could include keys for additional formats jks/pkcs12
 	for key := range secret.Data {
-		bundleName = key
-		break
+		//the bundle target secret key must ends with .pem
+		if strings.HasSuffix(key, ".pem") {
+			return key, nil
+		}
 	}
-	return bundleName
+
+	return "", fmt.Errorf("no keys with the suffix .pem found in the secret %s", secret.Name)
 }
 
 func GetSslArgumentsFromSecret(sslSecret *corev1.Secret, trustStoreType string, trustSecret *corev1.Secret, isConsole bool) (*SslArguments, error) {
@@ -253,7 +256,10 @@ func GetSslArgumentsFromSecret(sslSecret *corev1.Secret, trustStoreType string, 
 	trustVolumeDir := sep + "etc" + sep + trustSecret.Name + "-volume"
 
 	if isBundleSecret {
-		bundleName := getBundleNameFromSecret(trustSecret)
+		bundleName, bundleErr := getBundleNameFromSecret(trustSecret)
+		if bundleErr != nil {
+			return nil, bundleErr
+		}
 		sslArgs.TrustStorePath = trustVolumeDir + sep + bundleName
 	} else {
 		//old user Secret
