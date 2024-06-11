@@ -1881,6 +1881,22 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	for key, value := range namer.LabelBuilder.Labels() {
 		labels[key] = value
 	}
+
+	// Add additional labels
+	compactVersionForAdditionalLabels, versionError := common.DetermineCompactVersionToUse(customResource)
+	if versionError != nil {
+		reqLogger.Error(versionError, "failed to get compact version", "Spec.Version", customResource.Spec.Version)
+		return nil, versionError
+	}
+	fullVersionForAdditionalLabels := version.FullVersionFromCompactVersion[compactVersionForAdditionalLabels]
+	additionalLabels := pods.GetAdditionalLabels(fullVersionForAdditionalLabels)
+	if additionalLabels != nil {
+		reqLogger.V(1).Info("Adding additional Labels", "broker version", fullVersionForAdditionalLabels, "labels", additionalLabels)
+		for key, value := range additionalLabels {
+			labels[key] = value
+		}
+	}
+
 	if customResource.Spec.DeploymentPlan.Labels != nil {
 		for key, value := range customResource.Spec.DeploymentPlan.Labels {
 			labels[key] = value
@@ -3036,6 +3052,8 @@ func AssertBrokerImageVersion(cr *brokerv1beta1.ActiveMQArtemis, client rtclient
 
 	// The ResolveBrokerVersionFromCR should never fail because validation succeeded
 	resolvedFullVersion, _ := common.ResolveBrokerVersionFromCR(cr)
+
+	resolvedFullVersion = version.ActiveMQArtemisVersionfromFullVersion[resolvedFullVersion]
 
 	statusError := checkStatus(cr, client, func(brokerStatus *brokerStatus, jk *jolokia_client.JkInfo) ArtemisError {
 
