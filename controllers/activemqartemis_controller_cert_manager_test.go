@@ -328,6 +328,10 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 
 	Context("certificate rotation", Label("certificate"), func() {
 		It("broker certificate rotation", func() {
+			if os.Getenv("USE_EXISTING_CLUSTER") != "true" {
+				Skip("Existing cluster required")
+			}
+
 			activeMQArtemis := generateArtemisSpec(defaultNamespace)
 
 			rootIssuerName := activeMQArtemis.Name + "-root-issuer"
@@ -464,6 +468,10 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 		})
 
 		It("broker issuer certificate rotation", func() {
+			if os.Getenv("USE_EXISTING_CLUSTER") != "true" {
+				Skip("Existing cluster required")
+			}
+
 			activeMQArtemis := generateArtemisSpec(defaultNamespace)
 
 			rootIssuerName := activeMQArtemis.Name + "-root-issuer"
@@ -672,6 +680,10 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 
 	Context("certificate bundle", Label("certificate"), func() {
 		It("mutual authentication", func() {
+			if os.Getenv("USE_EXISTING_CLUSTER") != "true" {
+				Skip("Existing cluster required")
+			}
+
 			activeMQArtemis := generateArtemisSpec(defaultNamespace)
 
 			selfsignedIssuerName := activeMQArtemis.Name + "-selfsigned-issuer"
