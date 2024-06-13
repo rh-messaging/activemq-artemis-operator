@@ -1113,7 +1113,7 @@ func testConfiguredWithCertAndBundle(certSecret string, caSecret string) {
 		g.Expect(connectorCfg["sslEnabled"]).To(Equal("true"))
 		g.Expect(connectorCfg["host"]).To(Equal(pod0Name))
 		g.Expect(connectorCfg["trustStorePath"]).To(Equal("/etc/" + caBundleName + "-volume/" + caPemTrustStoreName))
-		g.Expect(connectorCfg["trustStoreType"]).To(Equal("PEM"))
+		g.Expect(connectorCfg["trustStoreType"]).To(Equal("PEMCA"))
 		g.Expect(connectorCfg["keyStorePath"]).To(Equal("/etc/secret-server-cert-secret-pemcfg/" + certSecret + ".pemcfg"))
 	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
