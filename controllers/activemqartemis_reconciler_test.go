@@ -1350,3 +1350,92 @@ func TestGetBrokerHost(t *testing.T) {
 	ingressHost = formatTemplatedString(&cr, specIngressHost, "2", "my-console", "abc")
 	assert.Equal(t, "test-test-ns-my-console-2-abc.my-domain.com", ingressHost)
 }
+
+func TestParseBrokerPropertyWithOrdinal(t *testing.T) {
+	var matches []string
+
+	matches = ParseBrokerPropertyWithOrdinal("broker-0.maxDiskUsage")
+	assert.Equal(t, 3, len(matches))
+	assert.Equal(t, "broker-0.maxDiskUsage", matches[0])
+	assert.Equal(t, "broker-0", matches[1])
+	assert.Equal(t, "maxDiskUsage", matches[2])
+
+	matches = ParseBrokerPropertyWithOrdinal("broker-999.maxDiskUsage=97")
+	assert.Equal(t, 3, len(matches))
+	assert.Equal(t, "broker-999.maxDiskUsage=97", matches[0])
+	assert.Equal(t, "broker-999", matches[1])
+	assert.Equal(t, "maxDiskUsage=97", matches[2])
+
+	matches = ParseBrokerPropertyWithOrdinal("maxDiskUsage=97")
+	assert.Equal(t, 0, len(matches))
+
+	matches = ParseBrokerPropertyWithOrdinal("a.broker-0.maxDiskUsage")
+	assert.Equal(t, 0, len(matches))
+
+	matches = ParseBrokerPropertyWithOrdinal("broker-0-maxDiskUsage")
+	assert.Equal(t, 0, len(matches))
+
+	matches = ParseBrokerPropertyWithOrdinal("broker-a.maxDiskUsage")
+	assert.Equal(t, 0, len(matches))
+}
+
+func TestBrokerPropertiesData(t *testing.T) {
+
+	data := BrokerPropertiesData([]string{
+		"maxDiskUsage=97",
+		"minDiskFree=5",
+	})
+
+	assert.Equal(t, 1, len(data))
+
+	assert.True(t, strings.Contains(data[BrokerPropertiesName], "maxDiskUsage=97"))
+	assert.True(t, strings.Contains(data[BrokerPropertiesName], "minDiskFree=5"))
+}
+
+func TestBrokerPropertiesDataWithOrdinal(t *testing.T) {
+
+	data := BrokerPropertiesData([]string{
+		"broker-0.maxDiskUsage=98",
+		"broker-0.minDiskFree=6",
+		"broker-999.maxDiskUsage=99",
+		"broker-999.minDiskFree=7",
+	})
+
+	assert.Equal(t, 3, len(data))
+
+	assert.False(t, strings.Contains(data[BrokerPropertiesName], "maxDiskUsage"))
+	assert.False(t, strings.Contains(data[BrokerPropertiesName], "minDiskFree"))
+
+	broker0BrokerPropertiesName := "broker-0" + OrdinalPrefixSep + BrokerPropertiesName
+	assert.True(t, strings.Contains(data[broker0BrokerPropertiesName], "maxDiskUsage=98"))
+	assert.True(t, strings.Contains(data[broker0BrokerPropertiesName], "minDiskFree=6"))
+
+	broker999BrokerPropertiesName := "broker-999" + OrdinalPrefixSep + BrokerPropertiesName
+	assert.True(t, strings.Contains(data[broker999BrokerPropertiesName], "maxDiskUsage=99"))
+	assert.True(t, strings.Contains(data[broker999BrokerPropertiesName], "minDiskFree=7"))
+}
+
+func TestBrokerPropertiesDataWithAndWithoutOrdinal(t *testing.T) {
+
+	data := BrokerPropertiesData([]string{
+		"maxDiskUsage=97",
+		"minDiskFree=5",
+		"broker-0.maxDiskUsage=98",
+		"broker-0.minDiskFree=6",
+		"broker-999.maxDiskUsage=99",
+		"broker-999.minDiskFree=7",
+	})
+
+	assert.Equal(t, 3, len(data))
+
+	assert.True(t, strings.Contains(data[BrokerPropertiesName], "maxDiskUsage=97"))
+	assert.True(t, strings.Contains(data[BrokerPropertiesName], "minDiskFree=5"))
+
+	broker0BrokerPropertiesName := "broker-0" + OrdinalPrefixSep + BrokerPropertiesName
+	assert.True(t, strings.Contains(data[broker0BrokerPropertiesName], "maxDiskUsage=98"))
+	assert.True(t, strings.Contains(data[broker0BrokerPropertiesName], "minDiskFree=6"))
+
+	broker999BrokerPropertiesName := "broker-999" + OrdinalPrefixSep + BrokerPropertiesName
+	assert.True(t, strings.Contains(data[broker999BrokerPropertiesName], "maxDiskUsage=99"))
+	assert.True(t, strings.Contains(data[broker999BrokerPropertiesName], "minDiskFree=7"))
+}

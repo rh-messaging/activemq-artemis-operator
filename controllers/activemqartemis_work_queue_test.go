@@ -137,9 +137,8 @@ var _ = Describe("work queue", func() {
 						},
 					},
 					{
-						Name: "IGNORE_JAVA_ARGS_APPEND",
-
-						// brokerCrd.Spec.DeploymentPlan.EnableMetricsPlugin = part one
+						Name: "JAVA_ARGS_APPEND",
+						// brokerCrd.Spec.DeploymentPlan.EnableMetricsPlugin
 						Value: "-Dwebconfig.bindings.artemis.apps.metrics.war=metrics.war -Dwebconfig.bindings.artemis.apps.metrics.url=metrics",
 					},
 				}
@@ -186,11 +185,9 @@ var _ = Describe("work queue", func() {
 					"AMQPConnections.target.federations.peerN.properties.amqpCredit=0",
 					"AMQPConnections.target.federations.peerN.localQueuePolicies.forJobs.includes.justJobs.queueMatch=JOBS",
 
-					// brokerCrd.Spec.DeploymentPlan.EnableMetricsPlugin = part two
-					// but needs the metrics plugin to become a broker plugin
-					// or we add the ability to set a property with any class instance
-					//"metricsPlugin.\"com.redhat.amq.broker.core.server.metrics.plugins.ArtemisPrometheusMetricsPlugin.class\".init=\"\"",
-
+					// brokerCrd.Spec.DeploymentPlan.EnableMetricsPlugin
+					"metricsConfiguration.plugin=com.redhat.amq.broker.core.server.metrics.plugins.ArtemisPrometheusMetricsPlugin.class",
+					"metricsConfiguration.plugin.init=",
 					"metricsConfiguration.logging=true",
 					"metricsConfiguration.processor=true",
 					"metricsConfiguration.uptime=true",
@@ -200,7 +197,7 @@ var _ = Describe("work queue", func() {
 
 				brokerCrd.Spec.Acceptors = []brokerv1beta1.AcceptorType{{Name: "tcp", Port: 61616, Expose: true}}
 
-				brokerCrd.Spec.DeploymentPlan.EnableMetricsPlugin = &boolTrue
+				brokerCrd.Spec.DeploymentPlan.EnableMetricsPlugin = &boolFalse // configured via properties
 
 				if !isOpenshift {
 					brokerCrd.Spec.IngressDomain = defaultTestIngressDomain

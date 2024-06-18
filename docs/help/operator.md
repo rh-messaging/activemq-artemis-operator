@@ -1263,7 +1263,7 @@ Note: this feature currently is experimental. Feedback is welcomed.
 
 The operator provides options in the custom resource that utilizes cert-manager x509 certificates to configure SSL/TLS transports for brokers. It also works with [trust-manager](https://github.com/cert-manager/trust-manager) to distribute trust CA bundles.
 
-Before configuring a broker you need to have the certificates and bundles ready. In the following example a self-signed isser is used as a root CA.
+Before configuring a broker you need to have the certificates and bundles ready. The bundle target secret key must end with `.pem`. In the following example a self-signed isser is used as a root CA.
 
 Step 1 - create the root self-signed issuer
 
@@ -1330,7 +1330,7 @@ spec:
     kind: ClusterIssuer
 ```
 
-Step 5 - create the ca bundle from the root CA using trust-manager
+Step 5 - create the ca bundle from the root CA using trust-manager and setting a target secret key that ends with `.pem`
 
 ```yaml
 apiVersion: trust.cert-manager.io/v1alpha1

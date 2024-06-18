@@ -19,73 +19,29 @@ As usual, we start with the necessary imports. We also define some utility varia
 package controllers
 
 import (
-	"container/list"
-	"fmt"
 	"os"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/volumes"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 
-	"time"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	appsv1 "k8s.io/api/apps/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/watch"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 )
 
 var _ = Describe("artemis controller 2", func() {
 
-	// see what has changed from the controllers perspective, what we watch
-	toWatch := []client.ObjectList{&brokerv1beta1.ActiveMQArtemisList{}, &appsv1.StatefulSetList{}, &corev1.PodList{}}
-	wis := list.New()
 	BeforeEach(func() {
-
 		BeforeEachSpec()
-
-		if verbose {
-			fmt.Println("Time with MicroSeconds: ", time.Now().Format("2006-01-02 15:04:05.000000"), " test:", CurrentSpecReport())
-		}
-
-		if verbose {
-			for _, li := range toWatch {
-
-				wc, err := client.NewWithWatch(testEnv.Config, client.Options{})
-				if err != nil {
-					fmt.Printf("Err on watch client:  %v\n", err)
-					return
-				}
-
-				// see what changed
-				wi, err := wc.Watch(ctx, li, &client.ListOptions{})
-				if err != nil {
-					fmt.Printf("Err on watch:  %v\n", err)
-				}
-				wis.PushBack(wi)
-
-				go func() {
-					for event := range wi.ResultChan() {
-						fmt.Printf("%v : Object: %v\n", event.Type, event.Object)
-
-					}
-				}()
-			}
-		}
 	})
 
 	AfterEach(func() {
-		for e := wis.Front(); e != nil; e = e.Next() {
-			e.Value.(watch.Interface).Stop()
-		}
-
 		AfterEachSpec()
 	})
 

@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"bytes"
+	"container/list"
 	"context"
 	"crypto/tls"
 	"fmt"
@@ -39,6 +40,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/watch"
 
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	. "github.com/onsi/ginkgo/v2"
@@ -138,18 +140,25 @@ var (
 
 	artemisGvk = schema.GroupVersionKind{Group: "broker", Version: "v1beta1", Kind: "ActiveMQArtemis"}
 
-	isOpenshift                    = false
-	isIngressSSLPassthroughEnabled = false
-	verbose                        = false
-	kubeTool                       = "kubectl"
-	defaultOperatorInstalled       = true
-	defaultUid                     = int64(185)
+	isOpenshift                               = false
+	isIngressSSLPassthroughEnabled            = false
+	verbose                                   = false
+	verboseWithWatch                          = false
+	kubeTool                                  = "kubectl"
+	defaultOperatorInstalled                  = true
+	defaultUid                                = int64(185)
+	watchClientList                *list.List = nil
 )
 
 func init() {
 	if isVerboseStr, defined := os.LookupEnv("TEST_VERBOSE"); defined {
 		if isVerbose, err := strconv.ParseBool(isVerboseStr); err == nil {
 			verbose = isVerbose
+		}
+	}
+	if isVerboseStr, defined := os.LookupEnv("TEST_VERBOSE_WITH_WATCH"); defined {
+		if isVerbose, err := strconv.ParseBool(isVerboseStr); err == nil {
+			verboseWithWatch = isVerbose
 		}
 	}
 }
@@ -686,7 +695,7 @@ func setUpK8sClient() {
 
 	//+kubebuilder:scaffold:scheme
 
-	k8sClient, err = client.New(restConfig, client.Options{Scheme: scheme.Scheme})
+	k8sClient, err = client.NewWithWatch(restConfig, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 }
@@ -824,9 +833,44 @@ func BeforeEachSpec() {
 	fmt.Printf("\n\033[1m\033[32mSpec %d running: %s \033[33m[%s]\033[0m\n%s:%d",
 		specCount, currentSpecReport.FullText(), CurrentSpecShortName(),
 		currentSpecReport.LeafNodeLocation.FileName, currentSpecReport.LeafNodeLocation.LineNumber)
+
+	if verboseWithWatch && os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+		watchClientList = list.New()
+
+		// see what has changed from the controllers perspective, what we watch
+		toWatch := []client.ObjectList{&brokerv1beta1.ActiveMQArtemisList{}, &appsv1.StatefulSetList{}, &corev1.PodList{}}
+		for _, li := range toWatch {
+
+			wc, ok := k8sClient.(client.WithWatch)
+			if !ok {
+				fmt.Printf("k8sClient is not a WithWatch:  %v\n", k8sClient)
+				return
+			}
+			// see what changed
+			wi, err := wc.Watch(ctx, li, &client.ListOptions{})
+			if err != nil {
+				fmt.Printf("Err on watch:  %v\n", err)
+			}
+			watchClientList.PushBack(wi)
+
+			go func() {
+				for event := range wi.ResultChan() {
+					fmt.Printf("%v : Object: %v\n", event.Type, event.Object)
+				}
+			}()
+		}
+	}
 }
 
 func AfterEachSpec() {
+
+	if watchClientList != nil {
+		for e := watchClientList.Front(); e != nil; e = e.Next() {
+			e.Value.(watch.Interface).Stop()
+		}
+	}
+
 	//Print ran spec
 	currentSpecReport := CurrentSpecReport()
 	fmt.Printf("\n\033[1m\033[32mSpec %d ran in %f seconds \033[0m\n",

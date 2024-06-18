@@ -130,6 +130,19 @@ var _ = Describe("jdbc fast failover", func() {
 
 				Expect(k8sClient.Create(ctx, &dbService)).Should(Succeed())
 
+				By("verifying dbservice has a jdbc endpoint, db is ready!")
+				Eventually(func(g Gomega) {
+
+					endpoints := &corev1.Endpoints{}
+					g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: dbService.Name, Namespace: dbService.Namespace}, endpoints)).Should(Succeed())
+					if verbose {
+						fmt.Printf("\nDB endpoints:%v", endpoints.Subsets)
+					}
+					g.Expect(len(endpoints.Subsets)).Should(BeNumerically("==", 1))
+					g.Expect(len(endpoints.Subsets[0].Addresses)).Should(BeNumerically("==", 1))
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
 				By("deploying artemis")
 
 				peerLabel := "fast-ha-peer"
@@ -165,6 +178,8 @@ var _ = Describe("jdbc fast failover", func() {
 					"storeConfiguration=DATABASE",
 					"storeConfiguration.jdbcDriverClassName=org.postgresql.Driver",
 					"storeConfiguration.jdbcConnectionUrl=jdbc:postgresql://" + dbName + ".default" + ":" + fmt.Sprintf("%d", dbPort) + "/postgres?user=postgres&password=postgres",
+					"storeConfiguration.jdbcLockRenewPeriodMillis=2000",
+					"storeConfiguration.jdbcLockExpirationMillis=6000",
 				}
 
 				By("patching ss to add init container to download jdbc jar")
@@ -195,6 +210,11 @@ var _ = Describe("jdbc fast failover", func() {
 														"mountPath": "/amq/init/config",
 													},
 												},
+												// need to fill in defaults as this is a full overwrite
+												// that will loop in reconcile with server side applied absent defaults
+												"terminationMessagePath":   "/dev/termination-log",
+												"terminationMessagePolicy": "File",
+												"imagePullPolicy":          "IfNotPresent",
 											},
 										},
 									},
@@ -254,7 +274,7 @@ var _ = Describe("jdbc fast failover", func() {
 					TimeoutSeconds:      5,
 					PeriodSeconds:       5,
 					SuccessThreshold:    1,
-					FailureThreshold:    1,
+					FailureThreshold:    2,
 				}
 
 				By("cloning peer")

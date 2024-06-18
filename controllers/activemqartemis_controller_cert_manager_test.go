@@ -328,6 +328,10 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 
 	Context("certificate rotation", Label("certificate"), func() {
 		It("broker certificate rotation", func() {
+			if os.Getenv("USE_EXISTING_CLUSTER") != "true" {
+				Skip("Existing cluster required")
+			}
+
 			activeMQArtemis := generateArtemisSpec(defaultNamespace)
 
 			rootIssuerName := activeMQArtemis.Name + "-root-issuer"
@@ -464,6 +468,10 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 		})
 
 		It("broker issuer certificate rotation", func() {
+			if os.Getenv("USE_EXISTING_CLUSTER") != "true" {
+				Skip("Existing cluster required")
+			}
+
 			activeMQArtemis := generateArtemisSpec(defaultNamespace)
 
 			rootIssuerName := activeMQArtemis.Name + "-root-issuer"
@@ -526,7 +534,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 			Expect(k8sClient.Create(ctx, &afterIssuerCert)).Should(Succeed())
 
 			beforeIssuerName := activeMQArtemis.Name + "-before-issuer"
-			By("Creating issuer: " + beforeIssuerName)
+			By("Creating before issuer: " + beforeIssuerName)
 			beforeIssuer := cmv1.ClusterIssuer{}
 			if k8sClient.Get(ctx, types.NamespacedName{Name: beforeIssuerName}, &beforeIssuer) == nil {
 				CleanResource(&beforeIssuer, beforeIssuerName, "")
@@ -543,7 +551,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 			Expect(k8sClient.Create(ctx, &beforeIssuer)).Should(Succeed())
 
 			afterIssuerName := activeMQArtemis.Name + "-after-issuer"
-			By("Creating issuer: " + afterIssuerName)
+			By("Creating after issuer: " + afterIssuerName)
 			afterIssuer := cmv1.ClusterIssuer{}
 			if k8sClient.Get(ctx, types.NamespacedName{Name: afterIssuerName}, &afterIssuer) == nil {
 				CleanResource(&afterIssuer, afterIssuerName, "")
@@ -553,7 +561,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 				ObjectMeta: metav1.ObjectMeta{Name: afterIssuerName},
 				Spec: cmv1.IssuerSpec{
 					IssuerConfig: cmv1.IssuerConfig{
-						CA: &cmv1.CAIssuer{SecretName: beforeIssuerCertSecretName},
+						CA: &cmv1.CAIssuer{SecretName: afterIssuerCertSecretName},
 					},
 				},
 			}
@@ -666,6 +674,290 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 			// when the corresponding Certificate resource is deleted
 			if k8sClient.Get(ctx, types.NamespacedName{Name: certSecretName, Namespace: defaultNamespace}, certSecret) == nil {
 				CleanResource(certSecret, certSecretName, defaultNamespace)
+			}
+		})
+	})
+
+	Context("certificate bundle", Label("certificate"), func() {
+		It("mutual authentication", func() {
+			if os.Getenv("USE_EXISTING_CLUSTER") != "true" {
+				Skip("Existing cluster required")
+			}
+
+			activeMQArtemis := generateArtemisSpec(defaultNamespace)
+
+			selfsignedIssuerName := activeMQArtemis.Name + "-selfsigned-issuer"
+			By("Creating root issuer: " + selfsignedIssuerName)
+			selfsignedIssuer := cmv1.ClusterIssuer{}
+			if k8sClient.Get(ctx, types.NamespacedName{Name: selfsignedIssuerName}, &selfsignedIssuer) == nil {
+				CleanResource(&selfsignedIssuer, selfsignedIssuerName, "")
+			}
+			selfsignedIssuer = cmv1.ClusterIssuer{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "ClusterIssuer"},
+				ObjectMeta: metav1.ObjectMeta{Name: selfsignedIssuerName},
+				Spec: cmv1.IssuerSpec{
+					IssuerConfig: cmv1.IssuerConfig{
+						SelfSigned: &cmv1.SelfSignedIssuer{},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, &selfsignedIssuer)).Should(Succeed())
+
+			brokerCertName := activeMQArtemis.Name + "-broker-cert"
+			brokerCertSecretName := brokerCertName + "-secret"
+			By("Creating broker certificate: " + brokerCertName)
+			brokerCert := cmv1.Certificate{}
+			if k8sClient.Get(ctx, types.NamespacedName{Name: brokerCertName, Namespace: defaultNamespace}, &brokerCert) == nil {
+				CleanResource(&brokerCert, brokerCertName, defaultNamespace)
+			}
+			brokerCert = cmv1.Certificate{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Certificate"},
+				ObjectMeta: metav1.ObjectMeta{Name: brokerCertName, Namespace: defaultNamespace},
+				Spec: cmv1.CertificateSpec{
+					IsCA:       true,
+					SecretName: brokerCertSecretName,
+					IssuerRef:  cmmetav1.ObjectReference{Name: selfsignedIssuerName, Kind: "ClusterIssuer"},
+					CommonName: "ArtemisCloud Broker",
+					DNSNames:   []string{"broker.artemiscloud.io"},
+					Subject:    &cmv1.X509Subject{Organizations: []string{"ArtemisCloud"}},
+				},
+			}
+			Expect(k8sClient.Create(ctx, &brokerCert)).Should(Succeed())
+
+			clientFooIssuerCertName := activeMQArtemis.Name + "-client-foo-issuer-cert"
+			clientFooIssuerCertSecretName := clientFooIssuerCertName + "-secret"
+			By("Creating client foo issuer certificate: " + clientFooIssuerCertName)
+			clientFooIssuerCert := cmv1.Certificate{}
+			if k8sClient.Get(ctx, types.NamespacedName{Name: clientFooIssuerCertName, Namespace: rootCertNamespce}, &clientFooIssuerCert) == nil {
+				CleanResource(&clientFooIssuerCert, clientFooIssuerCertName, rootCertNamespce)
+			}
+			clientFooIssuerCert = cmv1.Certificate{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Certificate"},
+				ObjectMeta: metav1.ObjectMeta{Name: clientFooIssuerCertName, Namespace: rootCertNamespce},
+				Spec: cmv1.CertificateSpec{
+					IsCA:       true,
+					SecretName: clientFooIssuerCertSecretName,
+					IssuerRef:  cmmetav1.ObjectReference{Name: rootIssuerName, Kind: "ClusterIssuer"},
+					CommonName: "ArtemisCloud Client Foo Issuer",
+					DNSNames:   []string{"client-foo.issuer.artemiscloud.io"},
+					Subject:    &cmv1.X509Subject{Organizations: []string{"ArtemisCloud"}},
+				},
+			}
+			Expect(k8sClient.Create(ctx, &clientFooIssuerCert)).Should(Succeed())
+
+			clientFooIssuerName := activeMQArtemis.Name + "-client-foo-issuer"
+			By("Creating client foo issuer: " + clientFooIssuerName)
+			clientFooIssuer := cmv1.ClusterIssuer{}
+			if k8sClient.Get(ctx, types.NamespacedName{Name: clientFooIssuerName}, &clientFooIssuer) == nil {
+				CleanResource(&clientFooIssuer, clientFooIssuerName, "")
+			}
+			clientFooIssuer = cmv1.ClusterIssuer{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "ClusterIssuer"},
+				ObjectMeta: metav1.ObjectMeta{Name: clientFooIssuerName},
+				Spec: cmv1.IssuerSpec{
+					IssuerConfig: cmv1.IssuerConfig{
+						CA: &cmv1.CAIssuer{SecretName: clientFooIssuerCertSecretName},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, &clientFooIssuer)).Should(Succeed())
+
+			clientBarIssuerCertName := activeMQArtemis.Name + "-client-bar-issuer-cert"
+			clientBarIssuerCertSecretName := clientBarIssuerCertName + "-secret"
+			By("Creating client bar issuer certificate: " + clientBarIssuerCertName)
+			clientBarIssuerCert := cmv1.Certificate{}
+			if k8sClient.Get(ctx, types.NamespacedName{Name: clientBarIssuerCertName, Namespace: rootCertNamespce}, &clientBarIssuerCert) == nil {
+				CleanResource(&clientBarIssuerCert, clientBarIssuerCertName, rootCertNamespce)
+			}
+			clientBarIssuerCert = cmv1.Certificate{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Certificate"},
+				ObjectMeta: metav1.ObjectMeta{Name: clientBarIssuerCertName, Namespace: rootCertNamespce},
+				Spec: cmv1.CertificateSpec{
+					IsCA:       true,
+					SecretName: clientBarIssuerCertSecretName,
+					IssuerRef:  cmmetav1.ObjectReference{Name: rootIssuerName, Kind: "ClusterIssuer"},
+					CommonName: "ArtemisCloud Client Bar Issuer",
+					DNSNames:   []string{"client-bar.issuer.artemiscloud.io"},
+					Subject:    &cmv1.X509Subject{Organizations: []string{"ArtemisCloud"}},
+				},
+			}
+			Expect(k8sClient.Create(ctx, &clientBarIssuerCert)).Should(Succeed())
+
+			clientBarIssuerName := activeMQArtemis.Name + "-client-bar-issuer"
+			By("Creating client bar issuer: " + clientBarIssuerName)
+			clientBarIssuer := cmv1.ClusterIssuer{}
+			if k8sClient.Get(ctx, types.NamespacedName{Name: clientBarIssuerName}, &clientBarIssuer) == nil {
+				CleanResource(&clientBarIssuer, clientBarIssuerName, "")
+			}
+			clientBarIssuer = cmv1.ClusterIssuer{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "ClusterIssuer"},
+				ObjectMeta: metav1.ObjectMeta{Name: clientBarIssuerName},
+				Spec: cmv1.IssuerSpec{
+					IssuerConfig: cmv1.IssuerConfig{
+						CA: &cmv1.CAIssuer{SecretName: clientBarIssuerCertSecretName},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, &clientBarIssuer)).Should(Succeed())
+
+			clientFooCertName := activeMQArtemis.Name + "-client-foo-cert"
+			clientFooCertSecretName := clientFooCertName + "-secret"
+			By("Creating client foo certificate: " + clientFooCertName)
+			clientFooCert := cmv1.Certificate{}
+			if k8sClient.Get(ctx, types.NamespacedName{Name: clientFooCertName, Namespace: defaultNamespace}, &clientFooCert) == nil {
+				CleanResource(&clientFooCert, clientFooCertName, defaultNamespace)
+			}
+			clientFooCert = cmv1.Certificate{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Certificate"},
+				ObjectMeta: metav1.ObjectMeta{Name: clientFooCertName, Namespace: defaultNamespace},
+				Spec: cmv1.CertificateSpec{
+					IsCA:       true,
+					SecretName: clientFooCertSecretName,
+					IssuerRef:  cmmetav1.ObjectReference{Name: clientFooIssuerName, Kind: "ClusterIssuer"},
+					CommonName: "ArtemisCloud Client Foo",
+					DNSNames:   []string{"client-foo.artemiscloud.io"},
+					Subject:    &cmv1.X509Subject{Organizations: []string{"ArtemisCloud"}},
+				},
+			}
+			Expect(k8sClient.Create(ctx, &clientFooCert)).Should(Succeed())
+
+			clientBarCertName := activeMQArtemis.Name + "-client-bar-cert"
+			clientBarCertSecretName := clientBarCertName + "-secret"
+			By("Creating client bar certificate: " + clientBarCertName)
+			clientBarCert := cmv1.Certificate{}
+			if k8sClient.Get(ctx, types.NamespacedName{Name: clientBarCertName, Namespace: defaultNamespace}, &clientBarCert) == nil {
+				CleanResource(&clientBarCert, clientBarCertName, defaultNamespace)
+			}
+			clientBarCert = cmv1.Certificate{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Certificate"},
+				ObjectMeta: metav1.ObjectMeta{Name: clientBarCertName, Namespace: defaultNamespace},
+				Spec: cmv1.CertificateSpec{
+					IsCA:       true,
+					SecretName: clientBarCertSecretName,
+					IssuerRef:  cmmetav1.ObjectReference{Name: clientBarIssuerName, Kind: "ClusterIssuer"},
+					CommonName: "ArtemisCloud Client Bar",
+					DNSNames:   []string{"client-bar.artemiscloud.io"},
+					Subject:    &cmv1.X509Subject{Organizations: []string{"ArtemisCloud"}},
+				},
+			}
+			Expect(k8sClient.Create(ctx, &clientBarCert)).Should(Succeed())
+
+			bundleName := activeMQArtemis.Name + "-bundle"
+			By("Creating bundle: " + bundleName)
+			bundle := tm.Bundle{}
+			if k8sClient.Get(ctx, types.NamespacedName{Name: bundleName}, &bundle) == nil {
+				CleanResource(&bundle, bundleName, "")
+			}
+			bundle = tm.Bundle{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "v1alpha1", Kind: "Bundle"},
+				ObjectMeta: metav1.ObjectMeta{Name: bundleName},
+				Spec: tm.BundleSpec{
+					Sources: []tm.BundleSource{
+						{Secret: &tm.SourceObjectKeySelector{Name: clientFooIssuerCertSecretName, KeySelector: tm.KeySelector{Key: "tls.crt"}}},
+						{Secret: &tm.SourceObjectKeySelector{Name: clientBarIssuerCertSecretName, KeySelector: tm.KeySelector{Key: "tls.crt"}}},
+					},
+					Target: tm.BundleTarget{Secret: &tm.KeySelector{Key: "root-certs.crt"}},
+				},
+			}
+			Expect(k8sClient.Create(ctx, &bundle)).Should(Succeed())
+
+			clientKeyStoreSecretName := activeMQArtemis.Name + "-client-keystore-secret"
+			By("Creating client keystore secret: " + bundleName)
+			clientKeyStoreSecret := corev1.Secret{}
+			if k8sClient.Get(ctx, types.NamespacedName{Name: clientKeyStoreSecretName, Namespace: defaultNamespace}, &clientKeyStoreSecret) == nil {
+				CleanResource(&clientKeyStoreSecret, clientKeyStoreSecretName, defaultNamespace)
+			}
+			clientKeyStoreSecret = corev1.Secret{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
+				ObjectMeta: metav1.ObjectMeta{Name: clientKeyStoreSecretName, Namespace: defaultNamespace},
+				StringData: map[string]string{
+					"client-foo.pemcfg": "source.key=/amq/extra/secrets/" + clientFooCertSecretName + "/tls.key\nsource.cert=/amq/extra/secrets/" + clientFooCertSecretName + "/tls.crt\n",
+					"client-bar.pemcfg": "source.key=/amq/extra/secrets/" + clientBarCertSecretName + "/tls.key\nsource.cert=/amq/extra/secrets/" + clientBarCertSecretName + "/tls.crt\n",
+				},
+			}
+			Expect(k8sClient.Create(ctx, &clientKeyStoreSecret)).Should(Succeed())
+
+			By("Creating ActiveMQArtemis: " + activeMQArtemis.Name)
+			activeMQArtemis.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+				{
+					Name:           "tls-acceptor",
+					Port:           61617,
+					NeedClientAuth: true,
+					SSLEnabled:     true,
+					SSLSecret:      brokerCertSecretName,
+					TrustSecret:    &bundleName,
+				},
+			}
+			activeMQArtemis.Spec.DeploymentPlan.ExtraMounts.Secrets = []string{clientFooCertSecretName, clientBarCertSecretName, clientKeyStoreSecretName}
+			// uncomment the following line to enable javax net debug
+			activeMQArtemis.Spec.Env = []corev1.EnvVar{{Name: "JAVA_ARGS_APPEND", Value: "-Djavax.net.debug=all"}}
+			Expect(k8sClient.Create(ctx, &activeMQArtemis)).Should(Succeed())
+
+			By("checking deployed condition")
+			Eventually(func(g Gomega) {
+				activeMQArtemisKey := types.NamespacedName{Name: activeMQArtemis.Name, Namespace: activeMQArtemis.Namespace}
+				g.Expect(k8sClient.Get(ctx, activeMQArtemisKey, &activeMQArtemis)).Should(Succeed())
+
+				condition := meta.FindStatusCondition(activeMQArtemis.Status.Conditions, brokerv1beta1.DeployedConditionType)
+				g.Expect(condition).NotTo(BeNil())
+				g.Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+				g.Expect(condition.Reason).To(Equal(brokerv1beta1.DeployedConditionCrudKindErrorReason))
+				g.Expect(condition.Message).To(ContainSubstring(bundleName))
+			}, timeout, interval).Should(Succeed())
+
+			By("updating bundle: " + bundleName)
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: bundleName}, &bundle)).Should(Succeed())
+				bundle.Spec.Target.Secret.Key = "root-certs.pem"
+				g.Expect(k8sClient.Update(ctx, &bundle)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			podName := activeMQArtemis.Name + "-ss-0"
+			trustStorePath := "/etc/" + brokerCertSecretName + "-volume/tls.crt"
+
+			By("Checking tls-acceptor with client foo")
+			Eventually(func(g Gomega) {
+				keyStorePath := "/amq/extra/secrets/" + clientKeyStoreSecretName + "/client-foo.pemcfg"
+				checkCommand := []string{"/home/jboss/amq-broker/bin/artemis", "check", "node", "--up", "--url",
+					"tcp://" + podName + ":61617?sslEnabled=true&sniHost=broker.artemiscloud.io&keyStoreType=PEMCFG&keyStorePath=" + keyStorePath + "&trustStoreType=PEM&trustStorePath=" + trustStorePath}
+
+				stdOutContent := ExecOnPod(podName, activeMQArtemis.Name, defaultNamespace, checkCommand, g)
+				g.Expect(stdOutContent).Should(ContainSubstring("Checks run: 1"))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("Checking tls-acceptor with client bar")
+			Eventually(func(g Gomega) {
+				keyStorePath := "/amq/extra/secrets/" + clientKeyStoreSecretName + "/client-bar.pemcfg"
+				checkCommand := []string{"/home/jboss/amq-broker/bin/artemis", "check", "node", "--up", "--url",
+					"tcp://" + podName + ":61617?sslEnabled=true&sniHost=broker.artemiscloud.io&keyStoreType=PEMCFG&keyStorePath=" + keyStorePath + "&trustStoreType=PEM&trustStorePath=" + trustStorePath}
+
+				stdOutContent := ExecOnPod(podName, activeMQArtemis.Name, defaultNamespace, checkCommand, g)
+				g.Expect(stdOutContent).Should(ContainSubstring("Checks run: 1"))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			CleanResource(&activeMQArtemis, activeMQArtemis.Name, defaultNamespace)
+			CleanResource(&clientKeyStoreSecret, clientKeyStoreSecret.Name, defaultNamespace)
+			CleanResource(&clientBarCert, clientBarCert.Name, defaultNamespace)
+			CleanResource(&clientFooCert, clientFooCert.Name, defaultNamespace)
+			CleanResource(&bundle, bundle.Name, defaultNamespace)
+			CleanResource(&clientBarIssuer, clientBarIssuer.Name, defaultNamespace)
+			CleanResource(&clientBarIssuerCert, clientBarIssuerCert.Name, defaultNamespace)
+			CleanResource(&clientFooIssuer, clientFooIssuer.Name, defaultNamespace)
+			CleanResource(&clientFooIssuerCert, clientFooIssuerCert.Name, defaultNamespace)
+			CleanResource(&brokerCert, brokerCert.Name, defaultNamespace)
+			CleanResource(&selfsignedIssuer, selfsignedIssuer.Name, defaultNamespace)
+
+			certSecret := &corev1.Secret{}
+			// by default, cert-manager does not delete the Secret resource containing the signed certificate
+			// when the corresponding Certificate resource is deleted
+			if k8sClient.Get(ctx, types.NamespacedName{Name: brokerCertSecretName, Namespace: defaultNamespace}, certSecret) == nil {
+				CleanResource(certSecret, brokerCertSecretName, defaultNamespace)
+			}
+			if k8sClient.Get(ctx, types.NamespacedName{Name: clientFooIssuerCertSecretName, Namespace: defaultNamespace}, certSecret) == nil {
+				CleanResource(certSecret, clientFooIssuerCertSecretName, defaultNamespace)
+			}
+			if k8sClient.Get(ctx, types.NamespacedName{Name: clientBarIssuerCertSecretName, Namespace: defaultNamespace}, certSecret) == nil {
+				CleanResource(certSecret, clientBarIssuerCertSecretName, defaultNamespace)
 			}
 		})
 	})
@@ -821,7 +1113,7 @@ func testConfiguredWithCertAndBundle(certSecret string, caSecret string) {
 		g.Expect(connectorCfg["sslEnabled"]).To(Equal("true"))
 		g.Expect(connectorCfg["host"]).To(Equal(pod0Name))
 		g.Expect(connectorCfg["trustStorePath"]).To(Equal("/etc/" + caBundleName + "-volume/" + caPemTrustStoreName))
-		g.Expect(connectorCfg["trustStoreType"]).To(Equal("PEM"))
+		g.Expect(connectorCfg["trustStoreType"]).To(Equal("PEMCA"))
 		g.Expect(connectorCfg["keyStorePath"]).To(Equal("/etc/secret-server-cert-secret-pemcfg/" + certSecret + ".pemcfg"))
 	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 

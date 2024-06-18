@@ -15,24 +15,19 @@ toc: true
 
 # Building the operator
 
-## General environment requirements
+## Prerequisites
 
-### A kubernetes cluster
+### Go
 
-Currently the operator is tested against kubernetes v1.25 and above.
-You can install a [Minikube](https://minikube.sigs.k8s.io/docs/) or a [CodeReady Containers(CRC)](https://developers.redhat.com/products/codeready-containers/overview) to deploy the operator.
+Download the Go version v1.20.13 from the [download page](https://go.dev/dl/) and install it following the [installation instructions](https://go.dev/doc/install).
+
+### Operator SDK
+
+Install [Operator SDK](https://sdk.operatorframework.io/) version [v1.28.0](https://github.com/operator-framework/operator-sdk/releases/tag/v1.28.0) following the [installation instructions from a GitHub release](https://sdk.operatorframework.io/docs/installation/#install-from-github-release).
 
 ### Docker
 
-Current version being used is v23.0.3. Checkout [this page](https://docs.docker.com/get-docker/) for help on installing docker on your specific operating system.
-
-### Go v1.19
-
-Install Go version v1.19 following [this guide](https://go.dev/doc/install).
-
-### operator-sdk v1.28.0
-
-Install [operator-sdk](https://sdk.operatorframework.io/) following [this guide](https://sdk.operatorframework.io/docs/installation/).
+Install Docker following the [installation instructions](https://docs.docker.com/get-docker/).
 
 ## Get the code
 
@@ -86,4 +81,4 @@ or use the make target **docker-push**
 make OPERATOR_IMAGE_REPO=<your repo> OPERATOR_VERSION=<tag> docker-push
 ```
 
-Now follow the [quickstart]({{< ref "../getting-started/quick-start.md" >}}) to deploy the operator.
+Now follow the [quickstart](../getting-started/quick-start.md) to deploy the operator.
