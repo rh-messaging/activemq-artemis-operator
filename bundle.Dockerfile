@@ -23,9 +23,9 @@ COPY bundle/tests/scorecard /tests/scorecard/
 LABEL name="amq7/amq-broker-rhel8-operator-bundle"
 LABEL description="Red Hat AMQ Broker 7.12 Operator Bundle"
 LABEL maintainer="Roddie Kieley <rkieley@redhat.com>"
-LABEL version="7.12.0"
+LABEL version="7.12.1"
 LABEL summary="Red Hat AMQ Broker 7.12 Operator Bundle"
-LABEL amq.broker.version="7.12.0.OPR.2.CR1"
+LABEL amq.broker.version="7.12.1.OPR.1.SR1"
 LABEL com.redhat.component="amq-broker-rhel8-operator-bundle-container"
 LABEL com.redhat.delivery.backport=false
 LABEL com.redhat.delivery.operator.bundle=true
