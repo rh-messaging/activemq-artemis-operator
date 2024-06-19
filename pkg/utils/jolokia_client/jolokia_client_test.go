@@ -86,6 +86,7 @@ var _ = Describe("JolokiaClient", func() {
 
 			})
 		})
+
 		Context("with a valid target", func() {
 			It("should return a Jolokia client", func() {
 				replicas := int32(2)
@@ -128,6 +129,64 @@ var _ = Describe("JolokiaClient", func() {
 				Expect(infos).Should(HaveLen(1))
 				Expect(infos[0].IP).To(Equal("broker-ss-0.broker-hdls-svc.some-ns.svc.cluster.local"))
 				Expect(infos[0].Artemis).NotTo(BeNil())
+				Expect(infos[0].Artemis.GetJolokia().GetProtocol()).To(Equal("http"))
+			})
+		})
+
+		Context("with pem tls console", Label("jolokia-pem-tls-test"), func() {
+			It("should return a Jolokia client", func() {
+				replicas := int32(2)
+				objs := []client.Object{
+					&appsv1.StatefulSet{
+						ObjectMeta: v1.ObjectMeta{
+							Name:      "broker-ss",
+							Namespace: "some-ns",
+							Labels: map[string]string{
+								"label1": "value1",
+							},
+						},
+						Spec: appsv1.StatefulSetSpec{
+							Replicas: &replicas,
+						},
+					},
+					&corev1.Pod{
+						ObjectMeta: v1.ObjectMeta{
+							Name:      "broker-ss-0",
+							Namespace: "some-ns",
+						},
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name: "broker-ss-container",
+									Env: []corev1.EnvVar{
+										{
+											Name:  "AMQ_NAME",
+											Value: "my-broker",
+										},
+										{
+											Name:  "JAVA_ARGS_APPEND",
+											Value: "-Dwebconfig.bindings.artemis.keyStorePath=/etc/secret-server-cert-secret-pemcfg/server-cert-secret.pemcfg -Dwebconfig.bindings.artemis.keyStoreType=PEMCFG -Dwebconfig.bindings.artemis.uri=https://FQ_HOST_NAME:8161",
+										},
+									},
+								},
+							},
+						},
+						Status: corev1.PodStatus{
+							PodIP: "1.2.3.4",
+						},
+					},
+				}
+				client := fake.NewClientBuilder().WithObjects(objs...).Build()
+				brokerRef := types.NamespacedName{
+					Name:      "broker",
+					Namespace: "some-ns",
+				}
+				ssInfos := ss.GetDeployedStatefulSetNames(client, brokerRef.Namespace, []types.NamespacedName{brokerRef})
+				Expect(len(ssInfos)).To(Equal(1))
+				infos := jolokia_client.GetBrokers(brokerRef, ssInfos, client)
+				Expect(infos).Should(HaveLen(1))
+				Expect(infos[0].Artemis).NotTo(BeNil())
+				Expect(infos[0].Artemis.GetJolokia().GetProtocol()).To(Equal("https"))
 			})
 		})
 	})

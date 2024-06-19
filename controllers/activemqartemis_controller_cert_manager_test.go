@@ -134,6 +134,11 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 				testConfiguredWithCertAndBundle(serverCert+"-secret", caBundleName)
 			}
 		})
+		It("test console cert broker status access", Label("console-tls-broker-status-access"), func() {
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+				testConsoleAccessWithCert(serverCert + "-secret")
+			}
+		})
 		It("test ssl args with keystore secrets only", func() {
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 				certKey := types.NamespacedName{Name: serverCert + "-secret", Namespace: defaultNamespace}
@@ -1115,6 +1120,45 @@ func testConfiguredWithCertAndBundle(certSecret string, caSecret string) {
 		g.Expect(connectorCfg["trustStorePath"]).To(Equal("/etc/" + caBundleName + "-volume/" + caPemTrustStoreName))
 		g.Expect(connectorCfg["trustStoreType"]).To(Equal("PEMCA"))
 		g.Expect(connectorCfg["keyStorePath"]).To(Equal("/etc/secret-server-cert-secret-pemcfg/" + certSecret + ".pemcfg"))
+	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+	CleanResource(createdBrokerCr, brokerCr.Name, createdBrokerCr.Namespace)
+}
+
+func testConsoleAccessWithCert(certSecret string) {
+	By("Deploying the broker cr")
+	brokerCrName := brokerCrNameBase + "0"
+	brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+
+		candidate.Name = brokerCrName
+
+		candidate.Spec.DeploymentPlan.Size = common.Int32ToPtr(1)
+		candidate.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
+			InitialDelaySeconds: 1,
+			PeriodSeconds:       1,
+			TimeoutSeconds:      5,
+		}
+		candidate.Spec.Console.Expose = true
+		candidate.Spec.Console.SSLEnabled = true
+		candidate.Spec.Console.SSLSecret = certSecret
+		candidate.Spec.IngressDomain = defaultTestIngressDomain
+	})
+
+	By("Checking the broker status reflect the truth")
+	Eventually(func(g Gomega) {
+		crdRef := types.NamespacedName{
+			Namespace: brokerCr.Namespace,
+			Name:      brokerCr.Name,
+		}
+		g.Expect(k8sClient.Get(ctx, crdRef, createdBrokerCr)).Should(Succeed())
+
+		condition := meta.FindStatusCondition(createdBrokerCr.Status.Conditions, brokerv1beta1.BrokerVersionAlignedConditionType)
+		g.Expect(condition).NotTo(BeNil())
+		g.Expect(condition.Status).Should(Equal(metav1.ConditionTrue))
+
+		condition = meta.FindStatusCondition(createdBrokerCr.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType)
+		g.Expect(condition).NotTo(BeNil())
+		g.Expect(condition.Status).Should(Equal(metav1.ConditionTrue))
 	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 	CleanResource(createdBrokerCr, brokerCr.Name, createdBrokerCr.Namespace)

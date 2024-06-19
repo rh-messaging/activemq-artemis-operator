@@ -66,6 +66,10 @@ func GetArtemis(_ip string, _jolokiaPort string, _name string, _user string, _pa
 	return &artemis
 }
 
+func (artemis *Artemis) GetJolokia() jolokia.IJolokia {
+	return artemis.jolokia
+}
+
 func (artemis *Artemis) Uptime() (*jolokia.ResponseData, error) {
 
 	uptimeURL := "org.apache.activemq.artemis:broker=\"" + artemis.name + "\"/Uptime"
@@ -76,6 +80,7 @@ func (artemis *Artemis) Uptime() (*jolokia.ResponseData, error) {
 
 func (artemis *Artemis) GetStatus() (string, error) {
 	url := "org.apache.activemq.artemis:broker=\"" + artemis.name + "\"/Status"
+
 	resp, err := artemis.jolokia.Read(url)
 	if err != nil || resp == nil {
 		return "", err
