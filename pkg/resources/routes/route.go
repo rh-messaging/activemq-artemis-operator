@@ -9,35 +9,21 @@ import (
 
 func NewRouteDefinitionForCR(existing *routev1.Route, namespacedName types.NamespacedName, labels map[string]string, targetServiceName string, targetPortName string, passthroughTLS bool, domain string, brokerHost string) *routev1.Route {
 
-	var desired *routev1.Route = nil
-	if existing == nil {
+	desired := existing
+	if desired == nil {
 		desired = &routev1.Route{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "v1",
 				Kind:       "Route",
 			},
-			ObjectMeta: metav1.ObjectMeta{
-				Labels:    labels,
-				Name:      targetServiceName + "-rte",
-				Namespace: namespacedName.Namespace,
-			},
-			Spec: routev1.RouteSpec{},
-		}
-
-	} else {
-		desired = &routev1.Route{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Route",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Labels:    existing.Labels,
-				Name:      existing.Name,
-				Namespace: namespacedName.Namespace,
-			},
-			Spec: existing.Spec,
+			ObjectMeta: metav1.ObjectMeta{},
+			Spec:       routev1.RouteSpec{},
 		}
 	}
+	//apply desired
+	desired.ObjectMeta.Labels = labels
+	desired.ObjectMeta.Name = targetServiceName + "-rte"
+	desired.ObjectMeta.Namespace = namespacedName.Namespace
 
 	if brokerHost != "" {
 		desired.Spec.Host = brokerHost

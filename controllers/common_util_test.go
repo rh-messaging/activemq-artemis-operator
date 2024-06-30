@@ -1127,3 +1127,11 @@ func (m *NillCluster) GetAPIReader() client.Reader {
 func (m *NillCluster) Start(ctx context.Context) error {
 	return nil
 }
+
+func CloneStringMap(original map[string]string) map[string]string {
+	copy := make(map[string]string)
+	for key, value := range original {
+		copy[key] = value
+	}
+	return copy
+}
