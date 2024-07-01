@@ -5481,6 +5481,10 @@ var _ = Describe("artemis controller", func() {
 		})
 
 		It("with ingress in openshift", Label("with-ing-in-openshift"), func() {
+			if os.Getenv("USE_EXISTING_CLUSTER") != "true" || !isOpenshift {
+				Skip("Existing OpenShift cluster required")
+			}
+
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 				ingressType := reflect.TypeOf(netv1.Ingress{})
 				By("creating valid crd")
@@ -5507,7 +5511,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(k8sClient.Get(ctx, crdKey, deployed)).Should(Succeed())
 					g.Expect(deployed.Name).Should(Equal(crd.Name))
 
-					deployedResources, err := common.GetDeployedResources(deployed, k8sClient)
+					deployedResources, err := common.GetDeployedResources(deployed, k8sClient, true)
 					g.Expect(err).Should(Succeed())
 					g.Expect(deployedResources).ShouldNot(BeEmpty())
 					listOfIngress := deployedResources[ingressType]
