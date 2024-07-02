@@ -31,9 +31,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	"go.uber.org/zap/zapcore"
+	"golang.org/x/crypto/ssh"
 
 	"path/filepath"
 	"testing"
@@ -148,6 +150,7 @@ var (
 	defaultOperatorInstalled                  = true
 	defaultUid                                = int64(185)
 	watchClientList                *list.List = nil
+	testProxyLog                   logr.Logger
 )
 
 func init() {
@@ -217,7 +220,7 @@ func setUpNamespace() {
 	}
 
 	err := k8sClient.Create(ctx, &testNamespace)
-	Expect(err == nil || errors.IsConflict(err))
+	Expect(err == nil || errors.IsAlreadyExists(err)).To(BeTrue())
 
 	if isOpenshift {
 		Eventually(func(g Gomega) {
@@ -272,16 +275,20 @@ func setUpIngress() {
 // Set up test-proxy for external http requests
 func setUpTestProxy() {
 
-	var err error
-	testProxyPort := int32(3129)
+	testProxyPort := int32(44322)
 	testProxyDeploymentReplicas := int32(1)
 	testProxyName := "test-proxy"
 	testProxyNamespace := "default"
 	testProxyHost := testProxyName + ".tests.artemiscloud.io"
 	testProxyLabels := map[string]string{"app": "test-proxy"}
-	testProxyScript := fmt.Sprintf("openssl req -newkey rsa:2048 -nodes -keyout %[1]s -x509 -days 365 -out %[2]s -subj '/CN=test-proxy' && "+
-		"echo 'https_port %[3]d tls-cert=%[2]s tls-key=%[1]s' >> %[4]s && "+"entrypoint.sh -f %[4]s -NYC",
-		"/etc/squid/key.pem", "/etc/squid/certificate.pem", 3129, "/etc/squid/squid.conf")
+	testProxyScript := fmt.Sprintf("yum -y install openssh-server openssl stunnel && "+
+		"adduser --system -u 1000 tunnel && echo secret | passwd tunnel --stdin && "+
+		"sed -i 's/#Port.*$/Port 2022/' /etc/ssh/sshd_config && ssh-keygen -A && "+
+		"echo -e 'cert=%[1]s \n[ssh]\naccept=44322\nconnect=2022' > %[2]s && "+
+		"openssl req -new -x509 -days 365 -nodes -subj '/CN=test-proxy' -keyout %[1]s -out %[1]s && "+
+		"stunnel %[2]s && /usr/sbin/sshd -eD", "/etc/stunnel/stunnel.pem", "/etc/stunnel/stunnel.conf")
+
+	testProxyLog = ctrl.Log.WithName(testProxyName)
 
 	testProxyDeployment := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -300,13 +307,26 @@ func setUpTestProxy() {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:    "ningx",
-							Image:   "docker.io/ubuntu/squid:edge",
+							Name:    testProxyName + "-con",
+							Image:   "registry.access.redhat.com/ubi8/ubi:8.9",
 							Command: []string{"sh", "-c", testProxyScript},
+							Env: []corev1.EnvVar{
+								{Name: "HTTP_PROXY", Value: os.Getenv("HTTP_PROXY")},
+								{Name: "HTTPS_PROXY", Value: os.Getenv("HTTPS_PROXY")},
+								{Name: "http_proxy", Value: os.Getenv("http_proxy")},
+								{Name: "https_proxy", Value: os.Getenv("https_proxy")},
+							},
 							Ports: []corev1.ContainerPort{
 								{
 									ContainerPort: testProxyPort,
 									Protocol:      "TCP",
+								},
+							},
+							SecurityContext: &corev1.SecurityContext{
+								Capabilities: &corev1.Capabilities{
+									Add: []corev1.Capability{
+										"SYS_CHROOT",
+									},
 								},
 							},
 						},
@@ -315,9 +335,7 @@ func setUpTestProxy() {
 			},
 		},
 	}
-
-	err = k8sClient.Create(ctx, &testProxyDeployment)
-	Expect(err != nil || errors.IsConflict(err))
+	createOrOverwriteResource(&testProxyDeployment)
 
 	testProxyService := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -334,31 +352,66 @@ func setUpTestProxy() {
 			},
 		},
 	}
-
-	err = k8sClient.Create(ctx, &testProxyService)
-	Expect(err != nil || errors.IsConflict(err))
+	createOrOverwriteResource(&testProxyService)
 
 	testProxyIngress := ingresses.NewIngressForCRWithSSL(
 		nil, types.NamespacedName{Name: testProxyName, Namespace: testProxyNamespace},
 		map[string]string{}, testProxyName+"-dep-svc", strconv.FormatInt(int64(testProxyPort), 10),
 		true, "", testProxyHost, isOpenshift)
-
-	err = k8sClient.Create(ctx, testProxyIngress)
-	Expect(err != nil || errors.IsConflict(err))
-
-	proxyUrl, err := url.Parse(fmt.Sprintf("https://%s:%d", testProxyHost, 443))
-	Expect(err).NotTo(HaveOccurred())
+	createOrOverwriteResource(testProxyIngress)
 
 	http.DefaultTransport = &http.Transport{
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-			if strings.HasPrefix(addr, testProxyHost) {
-				addr = clusterIngressHost + ":443"
+			tlsConn, tlsErr := tls.Dial("tcp", clusterIngressHost+":443",
+				&tls.Config{ServerName: testProxyHost, InsecureSkipVerify: true})
+			if tlsErr != nil {
+				testProxyLog.V(1).Info("Error creating tls connection", "addr", addr, "error", tlsErr)
+				return nil, tlsErr
 			}
-			return (&net.Dialer{}).DialContext(ctx, network, addr)
+
+			sshConn, sshChans, sshReqs, sshErr := ssh.NewClientConn(tlsConn, "127.0.0.1:2022", &ssh.ClientConfig{
+				User:            "tunnel",
+				Auth:            []ssh.AuthMethod{ssh.Password("secret")},
+				HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+			})
+			if sshErr != nil {
+				testProxyLog.V(1).Info("Error creating SSH connection", "addr", addr, "error", sshErr)
+				fmt.Printf("\nError creating SSH tunnel to %s: %v", addr, sshErr)
+				tlsConn.Close()
+				return nil, sshErr
+			}
+
+			sshClient := ssh.NewClient(sshConn, sshChans, sshReqs)
+
+			sshClientConn, sshClientErr := sshClient.DialContext(ctx, network, addr)
+			if sshClientErr != nil {
+				testProxyLog.V(1).Info("Error creating SSH tunnel", "addr", addr, "error", sshClientErr)
+				sshClient.Close()
+				sshConn.Close()
+				tlsConn.Close()
+				return nil, sshClientErr
+			}
+
+			testProxyLog.V(1).Info("Opened SSH tunnel", "addr", addr)
+			return &testProxyConn{sshClientConn, addr, sshClient, &sshConn, tlsConn}, nil
 		},
-		Proxy:           http.ProxyURL(proxyUrl),
-		TLSClientConfig: &tls.Config{ServerName: testProxyHost, InsecureSkipVerify: true},
 	}
+}
+
+type testProxyConn struct {
+	net.Conn
+	addr      string
+	sshClient *ssh.Client
+	sshConn   *ssh.Conn
+	tlsConn   *tls.Conn
+}
+
+func (w *testProxyConn) Close() error {
+	testProxyLog.V(1).Info("Closed SSH tunnel", "addr", w.addr)
+	w.Conn.Close()
+	(*w.sshClient).Close()
+	(*w.sshConn).Close()
+	return (*w.tlsConn).Close()
 }
 
 func cleanUpTestProxy() {
@@ -375,7 +428,7 @@ func cleanUpTestProxy() {
 	}
 
 	err = k8sClient.Delete(ctx, &testProxyDeployment)
-	Expect(err != nil || errors.IsNotFound(err))
+	Expect(err == nil || errors.IsNotFound(err)).To(BeTrue())
 
 	testProxyService := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -385,7 +438,7 @@ func cleanUpTestProxy() {
 	}
 
 	err = k8sClient.Delete(ctx, &testProxyService)
-	Expect(err != nil || errors.IsNotFound(err))
+	Expect(err == nil || errors.IsNotFound(err)).To(BeTrue())
 
 	testProxyIngress := netv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
@@ -395,7 +448,20 @@ func cleanUpTestProxy() {
 	}
 
 	err = k8sClient.Delete(ctx, &testProxyIngress)
-	Expect(err != nil || errors.IsNotFound(err))
+	Expect(err == nil || errors.IsNotFound(err)).To(BeTrue())
+}
+
+func createOrOverwriteResource(res client.Object) {
+	err := k8sClient.Create(ctx, res)
+	if errors.IsAlreadyExists(err) {
+		k8sClient.Delete(ctx, res)
+
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Create(ctx, res)).To(Succeed())
+		}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+	} else {
+		Expect(err).To(Succeed())
+	}
 }
 
 func createControllerManagerForSuite() {

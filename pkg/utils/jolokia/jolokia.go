@@ -39,6 +39,7 @@ func (j *JolokiaError) Error() string {
 type IJolokia interface {
 	Read(path string) (*ResponseData, error)
 	Exec(path, postJsonString string) (*ResponseData, error)
+	GetProtocol() string
 }
 
 type Jolokia struct {
@@ -77,21 +78,25 @@ func GetJolokia(_ip string, _port string, _path string, _user string, _password 
 	return &j
 }
 
+func (j *Jolokia) GetProtocol() string {
+	return j.protocol
+}
+
 func (j *Jolokia) getClient() *http.Client {
+	httpClient := http.Client{
+		Transport: http.DefaultTransport,
+		Timeout:   time.Second * 2,
+	}
+
 	if j.protocol == "https" {
-		return &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true,
-					ServerName:         j.ip,
-				},
-			},
-			Timeout: time.Second * 2, //Maximum of 2 seconds
+		httpClientTransport := httpClient.Transport.(*http.Transport)
+		httpClientTransport.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true,
+			ServerName:         j.ip,
 		}
 	}
-	return &http.Client{
-		Timeout: time.Second * 2, // Maximum of 2 seconds
-	}
+
+	return &httpClient
 }
 
 func (j *Jolokia) Read(_path string) (*ResponseData, error) {
@@ -109,7 +114,6 @@ func (j *Jolokia) Read(_path string) (*ResponseData, error) {
 			break
 		}
 		req.Header.Set("User-Agent", "activemq-artemis-management")
-
 		res, err := jolokiaClient.Do(req)
 
 		if err != nil {

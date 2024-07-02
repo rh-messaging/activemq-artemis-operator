@@ -5312,6 +5312,46 @@ var _ = Describe("artemis controller", func() {
 			Expect(k8sClient.Delete(ctx, &validCrd)).Should(Succeed())
 			Expect(k8sClient.Delete(ctx, &invalidCrd)).Should(Succeed())
 		})
+
+		It("with ingress in openshift", Label("with-ing-in-openshift"), func() {
+			if os.Getenv("USE_EXISTING_CLUSTER") != "true" || !isOpenshift {
+				Skip("Existing OpenShift cluster required")
+			}
+			ingressType := reflect.TypeOf(netv1.Ingress{})
+			By("creating valid crd")
+			acceptorName := "acceptor0"
+			_, crd := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				candidate.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+					{
+						Name:        acceptorName,
+						Expose:      true,
+						ExposeMode:  &brokerv1beta1.ExposeModes.Ingress,
+						IngressHost: "ing.$(ITEM_NAME).$(CR_NAME)-$(BROKER_ORDINAL).$(CR_NAMESPACE).$(INGRESS_DOMAIN)",
+						Port:        5555,
+						Protocols:   "ALL",
+					},
+				}
+				candidate.Spec.DeploymentPlan.Size = common.Int32ToPtr(1)
+				candidate.Spec.IngressDomain = "apps-crc.testing"
+			})
+
+			By("checking the ingress has been tracked")
+			deployed := &brokerv1beta1.ActiveMQArtemis{}
+			crdKey := types.NamespacedName{Name: crd.Name, Namespace: defaultNamespace}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, crdKey, deployed)).Should(Succeed())
+				g.Expect(deployed.Name).Should(Equal(crd.Name))
+
+				deployedResources, err := common.GetDeployedResources(deployed, k8sClient, true)
+				g.Expect(err).Should(Succeed())
+				g.Expect(deployedResources).ShouldNot(BeEmpty())
+				listOfIngress := deployedResources[ingressType]
+				g.Expect(len(listOfIngress)).To(Equal(1))
+				g.Expect(listOfIngress[0].GetName()).To(Equal(crd.Name + "-" + acceptorName + "-0-svc-ing"))
+			}, timeout, interval).Should(Succeed())
+			By("clean up")
+			Expect(k8sClient.Delete(ctx, deployed)).Should(Succeed())
+		})
 	})
 
 	Context("Env var updates TRIGGERED_ROLL_COUNT checksum", func() {

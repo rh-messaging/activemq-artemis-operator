@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
@@ -139,12 +140,12 @@ func resolveJolokiaRequestParams(namespace string,
 		for _, oneVar := range envVars {
 			if !userDefined && oneVar.Name == "AMQ_USER" {
 				jolokiaUser = getEnvVarValue(&oneVar, &podNamespacedName, client, nil)
-			}
-			if !userDefined && oneVar.Name == "AMQ_PASSWORD" {
+			} else if !userDefined && oneVar.Name == "AMQ_PASSWORD" {
 				jolokiaPassword = getEnvVarValue(&oneVar, &podNamespacedName, client, nil)
-			}
-			if oneVar.Name == "AMQ_CONSOLE_ARGS" {
+			} else if oneVar.Name == "AMQ_CONSOLE_ARGS" {
 				jolokiaProtocol = getEnvVarValue(&oneVar, &podNamespacedName, client, nil)
+			} else if oneVar.Name == "JAVA_ARGS_APPEND" {
+				jolokiaProtocol = getProtocolFromJavaArgs(oneVar.Value)
 			}
 			if jolokiaUser != "" && jolokiaPassword != "" && jolokiaProtocol != "" {
 				break
@@ -159,6 +160,23 @@ func resolveJolokiaRequestParams(namespace string,
 	}
 
 	return jolokiaUser, jolokiaPassword, jolokiaProtocol
+}
+
+// When console is secured with PEM cert, the following JAVA_ARGS_APPEND is like:
+// JAVA_ARGS_APPEND=... -Dwebconfig.bindings.artemis.uri=https://FQ_HOST_NAME:8161
+func getProtocolFromJavaArgs(envValue string) string {
+	protocol := ""
+	varKey := "-Dwebconfig.bindings.artemis.uri="
+	if envValue != "" {
+		idx := strings.Index(envValue, varKey)
+		if idx != -1 {
+			uriPart := envValue[idx+len(varKey):]
+			uriPart = strings.Split(uriPart, " ")[0]
+			subParts := strings.Split(uriPart, ":")
+			protocol = subParts[0]
+		}
+	}
+	return protocol
 }
 
 func getEnvVarValue(envVar *corev1.EnvVar, namespace *types.NamespacedName, client rtclient.Client, labels map[string]string) string {

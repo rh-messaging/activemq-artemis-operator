@@ -604,6 +604,7 @@ func GetDeployedResources(instance *brokerv1beta1.ActiveMQArtemis, client rtclie
 			&corev1.SecretList{},
 			&corev1.ConfigMapList{},
 			&policyv1.PodDisruptionBudgetList{},
+			&netv1.IngressList{},
 		)
 	} else {
 		resourceMap, err = reader.ListAll(

@@ -92,6 +92,10 @@ func (m *MockIJolokia) Read(path string) (*ResponseData, error) {
 	return ret0, ret1
 }
 
+func (m *MockIJolokia) GetProtocol() string {
+	return "http"
+}
+
 // Read indicates an expected call of Read.
 func (mr *MockIJolokiaMockRecorder) Read(path interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
