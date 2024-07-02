@@ -1,34 +1,12 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  labels:
-    control-plane: controller-manager
-  name: activemq-artemis-controller-manager
+  name: controller-manager
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      control-plane: controller-manager
-      name: activemq-artemis-operator
-  strategy:
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 1
-    type: RollingUpdate
   template:
-    metadata:
-      labels:
-        control-plane: controller-manager
-        name: activemq-artemis-operator
     spec:
       containers:
-      - args:
-        - --zap-log-level=info
-        - --zap-encoder=console
-        - --zap-time-encoding=iso8601
-        - --leader-elect
-        command:
-        - /home/activemq-artemis-operator/bin/entrypoint
+      - name: manager
         env:
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2150
           value: quay.io/artemiscloud/activemq-artemis-broker-init:0.2.2
@@ -78,80 +56,51 @@ spec:
           value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:2895b2cf6292c951a0cdde78e755514f5d7cb43ce9f7b6e7dc381d8dfeec31ab
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2280
           value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:42230ce9d11a1949a5bb73b6ee218b1581f585bcd553485ee438e1c5b50fcf8b
+
+        # 2.29.0
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2290
           value: quay.io/artemiscloud/activemq-artemis-broker-init@sha256:56bae938a6b4cd87f9f5284931f440f9b9d116cda3b63b13f83a4b1c6c641959
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2290
           value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:4be60cfa2a300b2eef9b5f10ea756bd3f55d75fbd8890232d907f8d64080449b
+
+        # 2.30.0
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2300
           value: quay.io/artemiscloud/activemq-artemis-broker-init@sha256:88a0098a628fe43a9b422f8ebb774086fb65ed389a195e2779482a4a63447e28
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2300
           value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:8fbdd1ba728058d5f437186b9055ca28596140068ebc69ecff4fa52717b19a82
+
+        # 2.31.0
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2310
           value: quay.io/artemiscloud/activemq-artemis-broker-init@sha256:e438bcacf099a92b143793e88c00c6ac0afb31effe4b0eed49a935c9265ad943
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2310
           value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:4bba8828e72fd7c9d38c22ba1c2a4f7130817a4e7eac8fb63c13e86465a8e1e7
+
+        # 2.31.2
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2312
           value: quay.io/artemiscloud/activemq-artemis-broker-init@sha256:ddaf00914e3a412d21ec3a814e24f3d4cc382b5c4d6c21e9b1b94dde16ddf194
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2312
           value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:81590ec33b2f00775d3c6596f610887b670de7c0b89148b09eab7584f5b0b0ec
+
+        # 2.32.0
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2320
           value: quay.io/artemiscloud/activemq-artemis-broker-init@sha256:3bbfb6177e4839087f615a01ee54f9e06a95acaddbb083e11851b6af9315dbf0
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2320
           value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:52f337cd5d7d5d199eebf4fc722f8c5279f652506f009efbc0f8f6de88e18718
+
+        # 2.33.0
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2330
           value: quay.io/artemiscloud/activemq-artemis-broker-init@sha256:93168fd8cd4fb32f041795afb8fb0e21cf81081d6cc463a44356e153dc1ad032
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2330
           value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:b293c1269166cc6181f68b8d803fdfcf20fdbd5df2787ed0453724b22e298fb2
+
+        # 2.34.0
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2340
           value: quay.io/artemiscloud/activemq-artemis-broker-init@sha256:1fd99a46758cd29fce846d0d590021758b2a7a3efedb817bb205359caa7d4f67
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2340
           value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:6f2da9ecd8f5021964d0dfa85144830efcfbd0462d18f18f036971e5f17b3bb6
+
+        # 2.35.0
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2350
           value: quay.io/artemiscloud/activemq-artemis-broker-init@sha256:1f0f60f3a54086fce3fa8868cc0eb283dc0e8ff4ff1c5543f224490307d54326
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2350
           value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:2ece18bbf72fecb7abe0cf8688867e40871f876c535274c2a39b5790dadbd96a
-        - name: OPERATOR_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.labels['name']
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: WATCH_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        - name: ENABLE_WEBHOOKS
-          value: "false"
-        image: quay.io/artemiscloud/activemq-artemis-operator:1.2.3
-        livenessProbe:
-          httpGet:
-            path: /healthz
-            port: 8081
-          initialDelaySeconds: 15
-          periodSeconds: 20
-        name: manager
-        ports:
-        - containerPort: 8383
-          name: http-metrics
-        readinessProbe:
-          httpGet:
-            path: /readyz
-            port: 8081
-          initialDelaySeconds: 5
-          periodSeconds: 10
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-          runAsNonRoot: true
-          seccompProfile:
-            type: RuntimeDefault
-      securityContext:
-        runAsNonRoot: true
-        seccompProfile:
-          type: RuntimeDefault
-      serviceAccountName: activemq-artemis-controller-manager
-      terminationGracePeriodSeconds: 10
