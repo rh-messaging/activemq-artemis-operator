@@ -2853,7 +2853,7 @@ spec:
                 rht.comp: Broker_AMQ
                 rht.comp_ver: 7.12.1
                 rht.prod_name: Red_Hat_Integration
-                rht.prod_ver: 2024.Q2
+                rht.prod_ver: 2024.Q3
                 rht.subcomp: broker-amq-operator
                 rht.subcomp_t: application
             spec:
