@@ -63,7 +63,7 @@ spec:
               fieldPath: metadata.namespace
         - name: ENABLE_WEBHOOKS
           value: "false"
-        image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:0f2eae2bea3698264d2158d00813e67719ffb8918b6de71618ef0c4489835966
+        image: registry.redhat.io/amq7/amq-broker-rhel8-operator@sha256:19816bd0f3a9b35ec342aae78dc9fabf9054e60057b3aaaac23e30cd2b144388
         # imagePullPolicy: Always
         name: manager
         ports:
