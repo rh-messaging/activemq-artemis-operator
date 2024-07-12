@@ -815,6 +815,7 @@ const (
 	ValidConditionFailedInvalidIngressSettings       = "InvalidIngressSettings"
 	ValidConditionInvalidCertSecretReason            = "InvalidCertSecret"
 	ValidConditionFailedDuplicateBrokerPropertiesKey = "DuplicateBrokerPropertiesKey"
+	ValidConditionInvalidInternalVarUsage            = "InvalidInternalVarUsage"
 
 	ReadyConditionType      = "Ready"
 	ReadyConditionReason    = "ResourceReady"
