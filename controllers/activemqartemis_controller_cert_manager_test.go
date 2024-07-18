@@ -26,11 +26,13 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/certutil"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	tm "github.com/cert-manager/trust-manager/pkg/apis/trust/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -110,6 +112,135 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 				installedCertManager = false
 			}
 		}
+	})
+
+	Context("cert-manager cert with java store", Label("cert-mgr-cert-as-java-store"), func() {
+		var cert *cmv1.Certificate
+		var passwdSec *corev1.Secret
+		var trustSec *corev1.Secret
+		var certSecret = corev1.Secret{}
+
+		BeforeEach(func() {
+			var err error
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+				By("creating a password secret")
+				_, passwdSec = DeploySecret(defaultNamespace, func(candidate *corev1.Secret) {
+					candidate.StringData = make(map[string]string)
+					candidate.StringData["pkcs12-password"] = "password"
+				})
+
+				By("creating tls secret as pkcs12 truststore")
+				trustSec, err = CreateTlsSecret("ca-trust-secret", defaultNamespace, "password", []string{"core-client-0"})
+				Expect(err).To(BeNil())
+				Expect(k8sClient.Create(ctx, trustSec)).Should(Succeed())
+
+				By("installing the cert with pkcs12 option")
+				cert = InstallCert(serverCert, defaultNamespace, func(candidate *cmv1.Certificate) {
+					candidate.Spec.DNSNames = []string{brokerCrNameBase + "0-ss-0"}
+					candidate.Spec.IssuerRef = cmmetav1.ObjectReference{
+						Name: caIssuer.Name,
+						Kind: "ClusterIssuer",
+					}
+					candidate.Spec.SecretName = "tls-legacy-secret"
+					candidate.Spec.Keystores = &cmv1.CertificateKeystores{
+						PKCS12: &cmv1.PKCS12Keystore{
+							Create: true,
+							PasswordSecretRef: cmmetav1.SecretKeySelector{
+								Key: "pkcs12-password",
+								LocalObjectReference: cmmetav1.LocalObjectReference{
+									Name: passwdSec.Name,
+								},
+							},
+						},
+					}
+				})
+
+				By("updating the tls secret with default legacy secret contents")
+
+				certSecretKey := types.NamespacedName{Name: cert.Spec.SecretName, Namespace: defaultNamespace}
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, certSecretKey, &certSecret)).Should(Succeed())
+
+					certSecret.Data["keyStorePassword"] = []byte("password")
+					certSecret.Data["trustStorePassword"] = []byte("password")
+					certSecret.Data["trustStorePath"] = []byte("/amq/extra/secrets/" + trustSec.Name + "/client.ts")
+					certSecret.Data["keyStorePath"] = []byte("/etc/" + certSecret.Name + "-volume/keystore.p12")
+
+					g.Expect(k8sClient.Update(ctx, &certSecret)).Should(Succeed())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("checking cert secret get updated")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, certSecretKey, &certSecret)).Should(Succeed())
+					g.Expect(certSecret.Data["keyStorePassword"]).To(Equal([]byte("password")))
+					g.Expect(certSecret.Data["trustStorePassword"]).To(Equal([]byte("password")))
+					g.Expect(certSecret.Data["trustStorePath"]).To(Equal([]byte("/amq/extra/secrets/" + trustSec.Name + "/client.ts")))
+					g.Expect(certSecret.Data["keyStorePath"]).To(Equal([]byte("/etc/" + certSecret.Name + "-volume/keystore.p12")))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
+		})
+
+		AfterEach(func() {
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+				UninstallCert(cert.Name, cert.Namespace)
+				CleanResource(&certSecret, certSecret.Name, certSecret.Namespace)
+				CleanResource(trustSec, trustSec.Name, trustSec.Namespace)
+				CleanResource(passwdSec, passwdSec.Name, passwdSec.Namespace)
+			}
+		})
+
+		It("test configured with cert secret as legacy one", func() {
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+				By("deploying the broker")
+				_, brokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+					candidate.Name = brokerCrNameBase + "0"
+					candidate.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+						{
+							Name:             "amqps",
+							EnabledProtocols: "TLSv1.2,TLSv1.3",
+							Expose:           false,
+							Port:             5671,
+							Protocols:        "amqp,core",
+							SSLEnabled:       true,
+							SSLSecret:        cert.Spec.SecretName,
+							NeedClientAuth:   true,
+						},
+					}
+					candidate.Spec.DeploymentPlan.Size = common.Int32ToPtr(1)
+					candidate.Spec.DeploymentPlan.ExtraMounts.Secrets = []string{
+						trustSec.Name,
+					}
+				})
+
+				By("verify pod is up and acceptor is working")
+				ssKey := types.NamespacedName{
+					Name:      namer.CrToSS(brokerCr.Name),
+					Namespace: defaultNamespace,
+				}
+				currentSS := &appsv1.StatefulSet{}
+				podKey := types.NamespacedName{Name: namer.CrToSS(brokerCr.Name) + "-0", Namespace: defaultNamespace}
+				pod := &corev1.Pod{}
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, ssKey, currentSS)).Should(Succeed())
+					g.Expect(currentSS.Status.ReadyReplicas).To(Equal(int32(1)))
+					g.Expect(k8sClient.Get(ctx, podKey, pod)).Should(Succeed())
+					g.Expect(len(pod.Status.ContainerStatuses)).Should(Equal(1))
+					g.Expect(pod.Status.ContainerStatuses[0].State.Running).ShouldNot(BeNil())
+					CheckAcceptorStarted(pod.Name, brokerCr.Name, "amqps", g)
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("check messaging should work")
+				keyStorePath := "/amq/extra/secrets/" + trustSec.Name + "/broker.ks"
+				trustStorePath := "/etc/" + certSecret.Name + "-volume/truststore.p12"
+				password := "password"
+				Eventually(func(g Gomega) {
+					checkMessagingInPodWithJavaStore(pod.Name, brokerCr.Name, "5671", trustStorePath, password, &keyStorePath, &password, g)
+				}, timeout, interval).Should(Succeed())
+
+				By("clean up")
+				CleanResource(brokerCr, brokerCr.Name, brokerCr.Namespace)
+			}
+		})
 	})
 
 	Context("tls exposure with cert manager", func() {
@@ -992,6 +1123,19 @@ func getConnectorConfig(podName string, crName string, connectorName string, g G
 	return nil
 }
 
+func CheckAcceptorStarted(podName string, crName string, acceptorName string, g Gomega) {
+	curlUrl := "http://" + podName + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\",component=acceptors,name=\"" + acceptorName + "\"/Started"
+	command := []string{"curl", "-k", "-s", "-u", "testuser:testpassword", curlUrl}
+
+	result := ExecOnPod(podName, crName, defaultNamespace, command, g)
+
+	var rootMap map[string]any
+	g.Expect(json.Unmarshal([]byte(result), &rootMap)).To(Succeed())
+
+	rootMapValue := rootMap["value"]
+	g.Expect(rootMapValue).Should(BeTrue())
+}
+
 func checkReadPodStatus(podName string, crName string, g Gomega) {
 	curlUrl := "https://" + podName + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/Status"
 	command := []string{"curl", "-k", "-s", "-u", "testuser:testpassword", curlUrl}
@@ -1005,6 +1149,19 @@ func checkReadPodStatus(podName string, crName string, g Gomega) {
 	serverInfo := valueMap["server"].(map[string]any)
 	serverState := serverInfo["state"].(string)
 	g.Expect(serverState).To(Equal("STARTED"))
+}
+
+func checkMessagingInPodWithJavaStore(podName string, crName string, portNumber string, trustStoreLoc string, trustStorePassword string, keyStoreLoc *string, keyStorePassword *string, g Gomega) {
+	tcpUrl := "tcp://" + podName + ":" + portNumber + "?sslEnabled=true&trustStorePath=" + trustStoreLoc + "&trustStorePassword=" + trustStorePassword
+	if keyStoreLoc != nil {
+		tcpUrl += "&keyStorePath=" + *keyStoreLoc + "&keyStorePassword=" + *keyStorePassword
+	}
+	sendCommand := []string{"amq-broker/bin/artemis", "producer", "--user", "testuser", "--password", "testpassword", "--url", tcpUrl, "--message-count", "1", "--destination", "queue://DLQ", "--verbose"}
+	result := ExecOnPod(podName, crName, defaultNamespace, sendCommand, g)
+	g.Expect(result).To(ContainSubstring("Produced: 1 messages"))
+	receiveCommand := []string{"amq-broker/bin/artemis", "consumer", "--user", "testuser", "--password", "testpassword", "--url", tcpUrl, "--message-count", "1", "--destination", "queue://DLQ", "--verbose"}
+	result = ExecOnPod(podName, crName, defaultNamespace, receiveCommand, g)
+	g.Expect(result).To(ContainSubstring("Consumed: 1 messages"))
 }
 
 func checkMessagingInPod(podName string, crName string, portNumber string, trustStoreLoc string, g Gomega) {
