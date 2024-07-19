@@ -1960,21 +1960,16 @@ func configureLivenessProbe(container *corev1.Container, probeFromCr *corev1.Pro
 		applyNonDefaultedValues(livenessProbe, probeFromCr)
 
 		// not complete in this case!
-		if probeFromCr.Exec == nil && probeFromCr.HTTPGet == nil && probeFromCr.TCPSocket == nil {
+		if probeFromCr.GRPC == nil && probeFromCr.Exec == nil && probeFromCr.HTTPGet == nil && probeFromCr.TCPSocket == nil {
 			clog.V(1).Info("Adding default TCP check")
 			livenessProbe.ProbeHandler = corev1.ProbeHandler{
 				TCPSocket: &corev1.TCPSocketAction{
 					Port: intstr.FromInt(TCPLivenessPort),
 				},
 			}
-		} else if probeFromCr.TCPSocket != nil {
-			clog.V(1).Info("Using user specified TCPSocket")
-			livenessProbe.ProbeHandler = corev1.ProbeHandler{
-				TCPSocket: probeFromCr.TCPSocket,
-			}
 		} else {
-			clog.V(1).Info("Using user provided Liveness Probe Exec " + probeFromCr.Exec.String())
-			livenessProbe.Exec = probeFromCr.Exec
+			clog.V(1).Info("Using user provided Liveness Probe Handler" + probeFromCr.ProbeHandler.String())
+			livenessProbe.ProbeHandler = probeFromCr.ProbeHandler
 		}
 	} else {
 		clog.V(1).Info("Creating Default Liveness Probe")
@@ -2016,7 +2011,7 @@ func configureReadinessProbe(container *corev1.Container, probeFromCr *corev1.Pr
 
 	if probeFromCr != nil {
 		applyNonDefaultedValues(readinessProbe, probeFromCr)
-		if probeFromCr.Exec == nil && probeFromCr.HTTPGet == nil && probeFromCr.TCPSocket == nil {
+		if probeFromCr.GRPC == nil && probeFromCr.Exec == nil && probeFromCr.HTTPGet == nil && probeFromCr.TCPSocket == nil {
 			clog.V(1).Info("adding default handler to user provided readiness Probe")
 
 			// respect existing command where already deployed

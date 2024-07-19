@@ -52,6 +52,7 @@ import (
 
 	"github.com/artemiscloud/activemq-artemis-operator/version"
 	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
 
 	corev1 "k8s.io/api/core/v1"
@@ -4343,6 +4344,99 @@ var _ = Describe("artemis controller", func() {
 
 			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
+
+		It("Override Liveness Probe Default HTTPGet", func() {
+			By("By creating a crd with Liveness Probe")
+			ctx := context.Background()
+			_, createdCrd := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				httpGetAction := corev1.HTTPGetAction{
+					Port: intstr.FromInt(8161),
+				}
+				livenessProbe := corev1.Probe{}
+				livenessProbe.FailureThreshold = 3
+				livenessProbe.HTTPGet = &httpGetAction
+				livenessProbe.PeriodSeconds = 10
+				livenessProbe.SuccessThreshold = 1
+				livenessProbe.TimeoutSeconds = 5
+
+				candidate.Spec.DeploymentPlan.LivenessProbe = &livenessProbe
+			})
+
+			createdSs := &appsv1.StatefulSet{}
+
+			By("Checking that Stateful Set is Created with the Liveness Probe")
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: defaultNamespace}
+
+				err := k8sClient.Get(ctx, key, createdSs)
+
+				if err != nil {
+					return false
+				}
+				return createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.HTTPGet != nil
+			}, timeout, interval).Should(Equal(true))
+
+			By("Making sure the Liveness probe is correct")
+			Expect(len(createdSs.Spec.Template.Spec.Containers) == 1).Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.ProbeHandler.HTTPGet.Port.String() == "8161").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.FailureThreshold).Should(BeEquivalentTo(3))
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds).Should(BeEquivalentTo(10))
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.SuccessThreshold).Should(BeEquivalentTo(1))
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds).Should(BeEquivalentTo(5))
+
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
+		})
+
+		It("Override Liveness Probe Default GRPC", func() {
+			discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(discoveryClient).NotTo(BeNil())
+			serverVersion, err := discoveryClient.ServerVersion()
+			Expect(err).NotTo(HaveOccurred())
+			if serverVersion.Major < "1" || serverVersion.Major == "1" && serverVersion.Minor < "23" {
+				Skip("GRPC requires server version >= 1.23")
+			}
+
+			By("By creating a crd with Liveness Probe")
+			ctx := context.Background()
+			_, createdCrd := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				grpcAction := corev1.GRPCAction{
+					Port: 4321,
+				}
+				livenessProbe := corev1.Probe{}
+				livenessProbe.FailureThreshold = 3
+				livenessProbe.GRPC = &grpcAction
+				livenessProbe.PeriodSeconds = 10
+				livenessProbe.SuccessThreshold = 1
+				livenessProbe.TimeoutSeconds = 5
+
+				candidate.Spec.DeploymentPlan.LivenessProbe = &livenessProbe
+			})
+
+			createdSs := &appsv1.StatefulSet{}
+
+			By("Checking that Stateful Set is Created with the Liveness Probe")
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: defaultNamespace}
+
+				err := k8sClient.Get(ctx, key, createdSs)
+
+				if err != nil {
+					return false
+				}
+				return createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.GRPC != nil
+			}, timeout, interval).Should(Equal(true))
+
+			By("Making sure the Liveness probe is correct")
+			Expect(len(createdSs.Spec.Template.Spec.Containers) == 1).Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.ProbeHandler.GRPC.Port == 4321).Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.FailureThreshold).Should(BeEquivalentTo(3))
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds).Should(BeEquivalentTo(10))
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.SuccessThreshold).Should(BeEquivalentTo(1))
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds).Should(BeEquivalentTo(5))
+
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
+		})
 	})
 
 	Context("Readiness Probe Tests", func() {
@@ -4429,6 +4523,55 @@ var _ = Describe("artemis controller", func() {
 			By("Making sure the Readiness probe is correct")
 			Expect(len(createdSs.Spec.Template.Spec.Containers) == 1).Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.ProbeHandler.Exec.Command[0] == "/broker/bin/artemis check node").Should(BeTrue())
+
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
+		})
+
+		It("Override Readiness Probe GRPC", func() {
+			discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(discoveryClient).NotTo(BeNil())
+			serverVersion, err := discoveryClient.ServerVersion()
+			Expect(err).NotTo(HaveOccurred())
+			if serverVersion.Major < "1" || serverVersion.Major == "1" && serverVersion.Minor < "23" {
+				Skip("GRPC requires server version >= 1.23")
+			}
+
+			By("By creating a crd with Readiness Probe")
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+			grpcAction := corev1.GRPCAction{
+				Port: 4321,
+			}
+			readinessProbe := corev1.Probe{}
+			readinessProbe.GRPC = &grpcAction
+			crd.Spec.DeploymentPlan.ReadinessProbe = &readinessProbe
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+			createdSs := &appsv1.StatefulSet{}
+			By("Deploying the CRD")
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			By("Making sure that the CRD gets deployed")
+			Eventually(func() bool {
+				return getPersistedVersionedCrd(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
+
+			By("Checking that Stateful Set is Created with the Readiness Probe")
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: defaultNamespace}
+
+				err := k8sClient.Get(ctx, key, createdSs)
+
+				if err != nil {
+					return false
+				}
+				return createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.GRPC != nil
+			}, timeout, interval).Should(Equal(true))
+
+			By("Making sure the Readiness probe is correct")
+			Expect(len(createdSs.Spec.Template.Spec.Containers) == 1).Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.ProbeHandler.GRPC.Port == 4321).Should(BeTrue())
 
 			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
