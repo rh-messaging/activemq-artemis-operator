@@ -20,6 +20,7 @@ package controllers
 
 import (
 	"os"
+	"reflect"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/volumes"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
@@ -29,10 +30,12 @@ import (
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/types"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
+	routev1 "github.com/openshift/api/route/v1"
 )
 
 var _ = Describe("artemis controller 2", func() {
@@ -49,7 +52,18 @@ var _ = Describe("artemis controller 2", func() {
 		It("controller resource recover test", Label("controller-resource-recover-test"), func() {
 
 			By("deploy a broker cr")
-			_, crd := DeployCustomBroker(defaultNamespace, nil)
+			acceptorName := "amqp"
+			_, crd := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				candidate.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+					{
+						Name:      acceptorName,
+						Protocols: "amqp",
+						Port:      5672,
+						Expose:    true,
+					},
+				}
+				candidate.Spec.IngressDomain = "artemiscloud.io"
+			})
 
 			brokerKey := types.NamespacedName{
 				Name:      crd.Name,
@@ -78,8 +92,83 @@ var _ = Describe("artemis controller 2", func() {
 				g.Expect(newSecretId).ShouldNot(Equal(secretId))
 			}, timeout, interval).Should(Succeed())
 
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" && isOpenshift {
+				By("modify route labels")
+				routeKey := types.NamespacedName{
+					Name:      crd.Name + "-" + acceptorName + "-0-" + "svc-rte",
+					Namespace: defaultNamespace,
+				}
+
+				acceptorRoute := routev1.Route{}
+				var originalLables map[string]string
+				// compare resource version as there will be an update
+				var routeVersion string
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, routeKey, &acceptorRoute)).Should(Succeed())
+					originalLables = CloneStringMap(acceptorRoute.Labels)
+					routeVersion = acceptorRoute.ResourceVersion
+					g.Expect(len(acceptorRoute.Labels) > 0).To(BeTrue())
+					for k, v := range acceptorRoute.Labels {
+						acceptorRoute.Labels[k] = v + "change"
+					}
+					g.Expect(k8sClient.Update(ctx, &acceptorRoute)).Should(Succeed())
+				}, timeout, interval).Should(Succeed())
+
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, routeKey, &acceptorRoute)).Should(Succeed())
+					newRouteVersion := acceptorRoute.ResourceVersion
+					g.Expect(newRouteVersion).ShouldNot(Equal(routeVersion))
+					g.Expect(reflect.DeepEqual(originalLables, acceptorRoute.Labels)).Should(BeTrue())
+				}, timeout, interval).Should(Succeed())
+			} else {
+				By("modify ingress labels")
+				ingKey := types.NamespacedName{
+					Name:      crd.Name + "-" + acceptorName + "-0-" + "svc-ing",
+					Namespace: defaultNamespace,
+				}
+
+				acceptorIng := netv1.Ingress{}
+				var originalLables map[string]string
+				// compare resource version as there will be an update
+				var ingVersion string
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, ingKey, &acceptorIng)).Should(Succeed())
+					originalLables = CloneStringMap(acceptorIng.Labels)
+					ingVersion = acceptorIng.ResourceVersion
+					g.Expect(len(acceptorIng.Labels) > 0).To(BeTrue())
+					for k, v := range acceptorIng.Labels {
+						acceptorIng.Labels[k] = v + "change"
+					}
+					g.Expect(k8sClient.Update(ctx, &acceptorIng)).Should(Succeed())
+				}, timeout, interval).Should(Succeed())
+
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, ingKey, &acceptorIng)).Should(Succeed())
+					newIngVersion := acceptorIng.ResourceVersion
+					g.Expect(newIngVersion).ShouldNot(Equal(ingVersion))
+					g.Expect(reflect.DeepEqual(originalLables, acceptorIng.Labels)).Should(BeTrue())
+				}, timeout, interval).Should(Succeed())
+
+				By("modifying ingress host")
+				originalHost := ""
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, ingKey, &acceptorIng)).Should(Succeed())
+					originalHost = acceptorIng.Spec.Rules[0].Host
+					ingVersion = acceptorIng.ResourceVersion
+					acceptorIng.Spec.Rules[0].Host = originalHost + "s"
+					g.Expect(k8sClient.Update(ctx, &acceptorIng)).Should(Succeed())
+				}, timeout, interval).Should(Succeed())
+
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, ingKey, &acceptorIng)).Should(Succeed())
+					newIngVersion := acceptorIng.ResourceVersion
+					g.Expect(newIngVersion).ShouldNot(Equal(ingVersion))
+					g.Expect(acceptorIng.Spec.Rules[0].Host).Should(Equal(originalHost))
+				}, timeout, interval).Should(Succeed())
+			}
 			CleanResource(crd, crd.Name, defaultNamespace)
 		})
+
 		It("external volumes attach", func() {
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 

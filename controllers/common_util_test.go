@@ -123,7 +123,11 @@ func randString() string {
 }
 
 func CleanResourceWithTimeouts(res client.Object, name string, namespace string, cleanTimeout time.Duration, cleanInterval time.Duration) {
-	Expect(k8sClient.Delete(ctx, res)).Should(Succeed())
+	err := k8sClient.Delete(ctx, res)
+	if errors.IsNotFound(err) {
+		return
+	}
+	Expect(err).To(BeNil())
 	By("make sure resource is gone")
 	Eventually(func(g Gomega) {
 		err := k8sClient.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, res)
@@ -549,7 +553,7 @@ func ExecOnPod(podWithOrdinal string, brokerName string, namespace string, comma
 		Stderr: &errBuffer,
 		Tty:    false,
 	})
-	g.Expect(err).To(BeNil(), errBuffer.String())
+	g.Expect(err).To(BeNil(), "stderr:", errBuffer.String(), "stdout:", outPutbuffer.String())
 
 	g.Eventually(func(g Gomega) {
 		By("Checking for output from " + fmt.Sprintf(" command: %v", command))
@@ -1130,4 +1134,12 @@ func (m *NillCluster) GetAPIReader() client.Reader {
 }
 func (m *NillCluster) Start(ctx context.Context) error {
 	return nil
+}
+
+func CloneStringMap(original map[string]string) map[string]string {
+	copy := make(map[string]string)
+	for key, value := range original {
+		copy[key] = value
+	}
+	return copy
 }

@@ -1,0 +1,19 @@
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: artemis-with-metrics
+spec:
+  deploymentPlan:
+    enableMetricsPlugin: true
+    size: 2
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: artemis-with-metrics-monitor
+spec:
+  selector:
+    matchLabels:
+      application: artemis-with-metrics-app
+  endpoints:
+  - port: console-jolokia

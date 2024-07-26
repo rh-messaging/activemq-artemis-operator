@@ -140,6 +140,15 @@ func (s *SslArguments) ToFlags() string {
 }
 
 func IsSecretFromCert(secret *corev1.Secret) (bool, bool) {
+
+	if _, exist := secret.Data["keyStorePassword"]; exist {
+		return false, true
+	}
+
+	if _, exist := secret.Data["trustStorePassword"]; exist {
+		return false, true
+	}
+
 	if strings.HasSuffix(secret.Name, Cert_provided_secret_suffix) {
 		return true, true
 	}

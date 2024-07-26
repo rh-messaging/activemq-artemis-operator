@@ -174,6 +174,7 @@ var _ = Describe("jdbc fast failover", func() {
 					"addressConfigurations.JOBS.routingTypes=ANYCAST",
 					"addressConfigurations.JOBS.queueConfigs.JOBS.routingType=ANYCAST",
 
+					"criticalAnalyzer=false",
 					"HAPolicyConfiguration=SHARED_STORE_PRIMARY",
 					"storeConfiguration=DATABASE",
 					"storeConfiguration.jdbcDriverClassName=org.postgresql.Driver",

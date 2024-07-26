@@ -515,7 +515,7 @@ spec:
   deploymentPlan:
     livenessProbe:
       tcpSocket:
-        port: 8181
+        port: 8161
       initialDelaySeconds: 30,
       timeoutSeconds:      5,
 ```
@@ -993,14 +993,12 @@ In addition, you need to expose the console, for example
 apiVersion: broker.amq.io/v1beta1
 kind: ActiveMQArtemis
 metadata:
-  name: ex-aao
+  name: artemis-with-metrics
 spec:
-  deploymentPlan:
-    size: 1
-    enableMetricsPlugin: true
-    image: placeholder
   console:
     expose: true
+  deploymentPlan:
+    enableMetricsPlugin: true
 ```
 
 ### Enable JVM metrics
@@ -1011,12 +1009,11 @@ JVM memory metrics are enabled by default. Use the `spec.brokerProperties` field
 apiVersion: broker.amq.io/v1beta1
 kind: ActiveMQArtemis
 metadata:
-  name: artemis-jvm
+  name: artemis-with-metrics
 spec:
   console:
     expose: true
   deploymentPlan:
-    size: 1
     enableMetricsPlugin: true
   brokerProperties:
     - "metricsConfiguration.jvmGc=true"
@@ -1026,22 +1023,22 @@ spec:
 
 ### Monitor broker metrics by using Prometheus
 
-The operator will expose a containerPort named **wsconj** for the Prometheus to monitor. The following
+The operator will expose a port named **console-jolokia** for the Prometheus to monitor. The following
 is a sample Prometheus ServiceMonitor resource
 
 ```yaml
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: example-app
+  name: artemis-with-metrics-monitor
   labels:
     team: prometheus
 spec:
   selector:
     matchLabels:
-      application: ex-aao-app
+      application: artemis-with-metrics-app
   endpoints:
-  - port: wconsj
+  - port: console-jolokia
 ```
 For a complete example please refer to this [artemiscloud example](https://github.com/artemiscloud/artemiscloud-examples/tree/main/operator/prometheus).
 

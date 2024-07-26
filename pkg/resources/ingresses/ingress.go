@@ -11,23 +11,21 @@ func NewIngressForCRWithSSL(existing *netv1.Ingress, namespacedName types.Namesp
 
 	pathType := netv1.PathTypePrefix
 
-	var desired *netv1.Ingress
-	if existing == nil {
+	var desired *netv1.Ingress = existing
+	if desired == nil {
 		desired = &netv1.Ingress{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "networking.k8s.io/v1",
 				Kind:       "Ingress",
 			},
-			ObjectMeta: metav1.ObjectMeta{
-				Labels:    labels,
-				Name:      targetServiceName + "-ing",
-				Namespace: namespacedName.Namespace,
-			},
-			Spec: netv1.IngressSpec{},
+			ObjectMeta: metav1.ObjectMeta{},
+			Spec:       netv1.IngressSpec{},
 		}
-	} else {
-		desired = existing
 	}
+	//apply desired
+	desired.ObjectMeta.Labels = labels
+	desired.ObjectMeta.Name = targetServiceName + "-ing"
+	desired.ObjectMeta.Namespace = namespacedName.Namespace
 
 	desired.Spec.Rules = []netv1.IngressRule{
 		{

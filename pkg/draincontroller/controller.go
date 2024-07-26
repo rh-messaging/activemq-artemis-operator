@@ -848,6 +848,16 @@ func (c *Controller) newPod(sts *appsv1.StatefulSet, ordinal int) (*corev1.Pod, 
 		})
 	}
 
+	drainerHost := corev1.EnvVar{
+		Name: "DRAINER_HOST",
+		ValueFrom: &corev1.EnvVarSource{
+			FieldRef: &corev1.ObjectFieldSelector{
+				FieldPath: "status.podIP",
+			},
+		},
+	}
+	pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, drainerHost)
+
 	pod.Spec.SecurityContext = sts.Spec.Template.Spec.SecurityContext
 	for i := 0; i < len(pod.Spec.Containers); i++ {
 		pod.Spec.Containers[i].SecurityContext = sts.Spec.Template.Spec.Containers[0].SecurityContext
