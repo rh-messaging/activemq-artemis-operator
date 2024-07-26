@@ -9512,21 +9512,29 @@ var _ = Describe("artemis controller", func() {
 					org.apache.activemq.jaas.properties.role="roles.properties";
 
 			};`,
-				"users.properties": `tom=tom`,
-				"roles.properties": `toms=tom`,
+				"users.properties": `
+					tom=tom
+					foo=foo
+				`,
+				"roles.properties": `
+					toms=tom
+					the\ foos=foo
+				`,
 			}
 
 			crd.Spec.DeploymentPlan.ExtraMounts.Secrets = []string{secret.Name}
 
 			// avoiding SecurityCR and AddressCR
 			crd.Spec.BrokerProperties = []string{
-				"# create tom's work queue",
-				"addressConfigurations.TOMS_WORK_QUEUE.queueConfigs.TOMS_WORK_QUEUE.routingType=ANYCAST",
-				"addressConfigurations.TOMS_WORK_QUEUE.queueConfigs.TOMS_WORK_QUEUE.durable=true",
+				`# create tom's work queue`,
+				`addressConfigurations.TOMS_WORK_QUEUE.queueConfigs.TOMS_WORK_QUEUE.routingType=ANYCAST`,
+				`addressConfigurations.TOMS_WORK_QUEUE.queueConfigs.TOMS_WORK_QUEUE.durable=true`,
 
-				"# rbac, give tom's role send/consume access",
-				"securityRoles.TOMS_WORK_QUEUE.toms.send=true",
-				"securityRoles.TOMS_WORK_QUEUE.toms.consume=true",
+				`# rbac, give tom's role send/consume access`,
+				`securityRoles.TOMS_WORK_QUEUE.toms.send=true`,
+				`securityRoles.TOMS_WORK_QUEUE.toms.consume=true`,
+				`securityRoles.TOMS_WORK_QUEUE."the\ foos".send=true`,
+				`securityRoles.TOMS_WORK_QUEUE."the\ foos".consume=true`,
 			}
 
 			By("Deploying the jaas secret " + secret.ObjectMeta.Name)
@@ -9552,20 +9560,22 @@ var _ = Describe("artemis controller", func() {
 				By("tom doing his thing")
 
 				podWithOrdinal := namer.CrToSS(crd.Name) + "-0"
-				command := []string{"amq-broker/bin/artemis", "producer", "--user", "tom", "--password", "tom", "--url", "tcp://" + podWithOrdinal + ":61616", "--message-count", "1", "--destination", "queue://TOMS_WORK_QUEUE", "--verbose"}
 
-				By("producing")
-				Eventually(func(g Gomega) {
-					stdOutContent := ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
-					g.Expect(stdOutContent).Should(ContainSubstring("Produced: 1 messages"))
-				}, existingClusterTimeout, existingClusterInterval*2).Should(Succeed())
+				for _, user := range []string{"tom", "foo"} {
+					command := []string{"amq-broker/bin/artemis", "producer", "--user", user, "--password", user, "--url", "tcp://" + podWithOrdinal + ":61616", "--message-count", "1", "--destination", "queue://TOMS_WORK_QUEUE", "--verbose"}
+					By(user + " producing")
+					Eventually(func(g Gomega) {
+						stdOutContent := ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+						g.Expect(stdOutContent).Should(ContainSubstring("Produced: 1 messages"))
+					}, existingClusterTimeout, existingClusterInterval*2).Should(Succeed())
 
-				By("consuming")
-				command = []string{"amq-broker/bin/artemis", "consumer", "--user", "tom", "--password", "tom", "--url", "tcp://" + podWithOrdinal + ":61616", "--message-count", "1", "--destination", "queue://TOMS_WORK_QUEUE", "--receive-timeout", "10000", "--break-on-null", "--verbose"}
-				Eventually(func(g Gomega) {
-					stdOutContent := ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
-					g.Expect(stdOutContent).Should(ContainSubstring("JMS Message ID:"))
-				}, existingClusterTimeout, existingClusterInterval*2).Should(Succeed())
+					By(user + " consuming")
+					command = []string{"amq-broker/bin/artemis", "consumer", "--user", user, "--password", user, "--url", "tcp://" + podWithOrdinal + ":61616", "--message-count", "1", "--destination", "queue://TOMS_WORK_QUEUE", "--receive-timeout", "10000", "--break-on-null", "--verbose"}
+					Eventually(func(g Gomega) {
+						stdOutContent := ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+						g.Expect(stdOutContent).Should(ContainSubstring("JMS Message ID:"))
+					}, existingClusterTimeout, existingClusterInterval*2).Should(Succeed())
+				}
 
 				Eventually(func(g Gomega) {
 					By("verifying jaas status")
