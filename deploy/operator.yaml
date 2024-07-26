@@ -35,6 +35,33 @@ spec:
         - --leader-elect
         command:
         - /home/amq-broker-operator/bin/entrypoint
+        env:
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_800
+          value: registry.redhat.io/amq8/amq-broker-init-rhel8@sha256:2cf6b43f6dfc963dba385cf262e2dca62ea9520f4f2faaf2bbcf8b49a7151e9f
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_800
+          value: registry.redhat.io/amq8/amq-broker-rhel8@sha256:a1178be6722e6e324c00130b12f8b119966ce8ce5c706284c471067001a48ca3
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_800_ppc64le
+          value: registry.redhat.io/amq8/amq-broker-init-rhel8@sha256:2cf6b43f6dfc963dba385cf262e2dca62ea9520f4f2faaf2bbcf8b49a7151e9f
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_800_ppc64le
+          value: registry.redhat.io/amq8/amq-broker-rhel8@sha256:a1178be6722e6e324c00130b12f8b119966ce8ce5c706284c471067001a48ca3
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_800_s390x
+          value: registry.redhat.io/amq8/amq-broker-init-rhel8@sha256:2cf6b43f6dfc963dba385cf262e2dca62ea9520f4f2faaf2bbcf8b49a7151e9f
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_800_s390x
+          value: registry.redhat.io/amq8/amq-broker-rhel8@sha256:a1178be6722e6e324c00130b12f8b119966ce8ce5c706284c471067001a48ca3
+        - name: OPERATOR_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['name']
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: WATCH_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: ENABLE_WEBHOOKS
+          value: "false"
         image: registry.redhat.io/amq0/amq-broker-rhel8-operator@sha256:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         livenessProbe:
           httpGet:
