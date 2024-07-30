@@ -75,18 +75,22 @@ const (
 	cfgMapPathBase = "/amq/extra/configmaps/"
 	secretPathBase = "/amq/extra/secrets/"
 
-	OrdinalPrefix         = "broker-"
-	OrdinalPrefixSep      = "."
-	UncheckedPrefix       = "_"
-	PropertiesSuffix      = ".properties"
-	BrokerPropertiesName  = "broker" + PropertiesSuffix
-	JaasConfigKey         = "login.config"
-	LoggingConfigKey      = "logging" + PropertiesSuffix
-	PodNameLabelKey       = "statefulset.kubernetes.io/pod-name"
-	ServiceTypePostfix    = "svc"
-	RouteTypePostfix      = "rte"
-	IngressTypePostfix    = "ing"
-	RemoveKeySpecialValue = "-"
+	OrdinalPrefix            = "broker-"
+	OrdinalPrefixSep         = "."
+	UncheckedPrefix          = "_"
+	PropertiesSuffix         = ".properties"
+	BrokerPropertiesName     = "broker" + PropertiesSuffix
+	JaasConfigKey            = "login.config"
+	LoggingConfigKey         = "logging" + PropertiesSuffix
+	PodNameLabelKey          = "statefulset.kubernetes.io/pod-name"
+	ServiceTypePostfix       = "svc"
+	RouteTypePostfix         = "rte"
+	IngressTypePostfix       = "ing"
+	RemoveKeySpecialValue    = "-"
+	javaArgsAppendEnvVarName = "JAVA_ARGS_APPEND"
+	debugArgsEnvVarName      = "DEBUG_ARGS"
+	javaOptsEnvVarName       = "JAVA_OPTS"
+	jdkJavaOptionsEnvVarName = "JDK_JAVA_OPTIONS"
 )
 
 var defaultMessageMigration bool = true
@@ -471,7 +475,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessConsole(customResource *
 func (reconciler *ActiveMQArtemisReconcilerImpl) appendSystemPropertiesForConsole(currentSS *appsv1.StatefulSet, systemArgs string) {
 	reconciler.log.V(1).Info("Appending console system prop", "value", systemArgs)
 	consoleProps := corev1.EnvVar{
-		Name:  "JAVA_ARGS_APPEND",
+		Name:  javaArgsAppendEnvVarName,
 		Value: systemArgs,
 	}
 	environments.CreateOrAppend(currentSS.Spec.Template.Spec.Containers, &consoleProps)
@@ -1981,7 +1985,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	// JAAS Config
 	if jaasConfigPath, found := getJaasConfigExtraMountPath(customResource); found {
 		debugArgs := corev1.EnvVar{
-			Name:  "DEBUG_ARGS",
+			Name:  debugArgsEnvVarName,
 			Value: fmt.Sprintf("-Djava.security.auth.login.config=%v", jaasConfigPath),
 		}
 		environments.CreateOrAppend(podSpec.Containers, &debugArgs)
@@ -1989,7 +1993,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 
 	if loggingConfigPath, found := getLoggingConfigExtraMountPath(customResource); found {
 		loggerOpts := corev1.EnvVar{
-			Name:  "JAVA_ARGS_APPEND",
+			Name:  javaArgsAppendEnvVarName,
 			Value: fmt.Sprintf("-Dlog4j2.configurationFile=%v", loggingConfigPath),
 		}
 		environments.CreateOrAppend(podSpec.Containers, &loggerOpts)
@@ -2118,17 +2122,17 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 
 	// only use init container JAVA_OPTS on existing deployments and migrate to JDK_JAVA_OPTIONS for independence
 	// from init containers and broker run scripts
-	if environments.Retrieve(podSpec.InitContainers, "JAVA_OPTS") != nil {
+	if environments.Retrieve(podSpec.InitContainers, javaOptsEnvVarName) != nil {
 		// this depends on init container passing --java-opts to artemis create via launch.sh *and* it
 		// not getting munged on the way. We CreateOrAppend to any value from spec.Env
 		javaOpts := corev1.EnvVar{
-			Name:  "JAVA_OPTS",
+			Name:  javaOptsEnvVarName,
 			Value: brokerPropsValue,
 		}
 		environments.CreateOrAppend(podSpec.InitContainers, &javaOpts)
 	} else {
 		jdkJavaOpts := corev1.EnvVar{
-			Name:  "JDK_JAVA_OPTIONS",
+			Name:  jdkJavaOptionsEnvVarName,
 			Value: brokerPropsValue,
 		}
 		environments.CreateOrAppend(podSpec.Containers, &jdkJavaOpts)

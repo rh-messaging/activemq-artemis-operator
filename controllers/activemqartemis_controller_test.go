@@ -6033,6 +6033,209 @@ var _ = Describe("artemis controller", func() {
 	})
 
 	Context("LoggerProperties", Label("LoggerProperties-test"), func() {
+
+		It("test validate can pick up all internal vars misusage", Label("all-misused-internal-vars"), func() {
+			By("creating a cr with all internal vars used")
+			fakeSecretName := "envSecret"
+			crd, createdCrd := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				candidate.Spec.Env = []corev1.EnvVar{
+					{
+						Name: javaArgsAppendEnvVarName,
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: fakeSecretName,
+								},
+								Key: "anyKey",
+							},
+						},
+					},
+					{
+						Name: javaOptsEnvVarName,
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: fakeSecretName,
+								},
+								Key: "anyKey1",
+							},
+						},
+					},
+					{
+						Name: debugArgsEnvVarName,
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: fakeSecretName,
+								},
+								Key: "anyKey2",
+							},
+						},
+					},
+				}
+			})
+			Eventually(func(g Gomega) {
+				g.Expect(getPersistedVersionedCrd(crd.Name, defaultNamespace, createdCrd)).To(BeTrue())
+				deployCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)
+				g.Expect(deployCondition).NotTo(BeNil())
+				g.Expect(deployCondition.Status).To(Equal(metav1.ConditionFalse))
+				g.Expect(deployCondition.Reason).To(Equal(brokerv1beta1.ValidConditionInvalidInternalVarUsage))
+				g.Expect(deployCondition.Message).To(ContainSubstring("Don't use valueFrom on env vars that the operator can mutate"))
+				g.Expect(deployCondition.Message).To(ContainSubstring(javaArgsAppendEnvVarName))
+				g.Expect(deployCondition.Message).To(ContainSubstring(javaOptsEnvVarName))
+				g.Expect(deployCondition.Message).To(ContainSubstring(debugArgsEnvVarName))
+			}, timeout, interval).Should(Succeed())
+
+		})
+
+		It("validate user directly using internal env vars", Label("invalid-internal-var-usage"), func() {
+			By("By creatinging a new config map for logging")
+			ctx := context.Background()
+
+			loggingConfigMapName := "my-logging-config"
+
+			loggingData := make(map[string]string)
+
+			loggingData[LoggingConfigKey] = "rootLogger.level=INFO"
+
+			configMap := configmaps.MakeConfigMap(defaultNamespace, loggingConfigMapName, loggingData)
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Create(ctx, configMap, &client.CreateOptions{})).To(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			By("creating a secret containing the env var")
+			envSecretName := "java-args-append-secret"
+			secret, _ := DeploySecret(defaultNamespace, func(candidate *corev1.Secret) {
+				candidate.Name = envSecretName
+				candidate.StringData = map[string]string{
+					"anyKey": "-Dlog4j2.debug=true",
+				}
+			})
+			By("creating a new crd having a JAVA_ARGS_APPEND directly defined in env")
+			crd, createdCrd := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				candidate.Spec.DeploymentPlan.ExtraMounts.ConfigMaps = []string{loggingConfigMapName}
+				candidate.Spec.Env = []corev1.EnvVar{
+					{
+						Name: javaArgsAppendEnvVarName,
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: envSecretName,
+								},
+								Key: "anyKey",
+							},
+						},
+					},
+				}
+			})
+
+			Eventually(func(g Gomega) {
+				g.Expect(getPersistedVersionedCrd(crd.Name, defaultNamespace, createdCrd)).To(BeTrue())
+				deployCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)
+				g.Expect(deployCondition).NotTo(BeNil())
+				g.Expect(deployCondition.Status).To(Equal(metav1.ConditionFalse))
+				g.Expect(deployCondition.Reason).To(Equal(brokerv1beta1.ValidConditionInvalidInternalVarUsage))
+				g.Expect(deployCondition.Message).To(ContainSubstring("Don't use valueFrom on env vars that the operator can mutate"))
+				g.Expect(deployCondition.Message).To(ContainSubstring(javaArgsAppendEnvVarName))
+				g.Expect(deployCondition.Message).NotTo(ContainSubstring(javaOptsEnvVarName))
+				g.Expect(deployCondition.Message).NotTo(ContainSubstring(debugArgsEnvVarName))
+			}, timeout, interval).Should(Succeed())
+
+			By("deleteing the env secret")
+			CleanResource(secret, envSecretName, defaultNamespace)
+			By("deleting the logging configmap")
+			CleanResource(configMap, loggingConfigMapName, defaultNamespace)
+			By("deleting the CR")
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
+		})
+
+		It("custom logging not to override JAVA_ARGS_APPEND", Label("test-java-overriden"), func() {
+
+			By("By creatinging a new config map for logging")
+			ctx := context.Background()
+
+			loggingConfigMapName := "my-logging-config"
+
+			loggingData := make(map[string]string)
+
+			loggingData[LoggingConfigKey] = "rootLogger.level=INFO" + "\n" +
+				"rootLogger.appenderRef.console.ref=console" + "\n" +
+				"appender.console.type=Console" + "\n" +
+				"appender.console.name=console" + "\n" +
+				"appender.console.layout.type=PatternLayout" + "\n" +
+				"appender.console.layout.pattern=%-5level i-am-here [%logger] %msg%n"
+
+			configMap := configmaps.MakeConfigMap(defaultNamespace, loggingConfigMapName, loggingData)
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Create(ctx, configMap, &client.CreateOptions{})).To(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			By("creating a secret containing the env var")
+			envSecretName := "java-args-append-secret"
+			secret, _ := DeploySecret(defaultNamespace, func(candidate *corev1.Secret) {
+				candidate.Name = envSecretName
+				candidate.StringData = map[string]string{
+					"anyKey": "-Dlog4j2.debug=true",
+				}
+			})
+			By("creating a new crd having a JAVA_ARGS_APPEND defined in env")
+			crd, createdCrd := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				candidate.Spec.DeploymentPlan.ExtraMounts.ConfigMaps = []string{loggingConfigMapName}
+				candidate.Spec.Env = []corev1.EnvVar{
+					{
+						Name: "ENV_FROM_X",
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: envSecretName,
+								},
+								Key: "anyKey",
+							},
+						},
+					},
+					{
+						Name:  javaArgsAppendEnvVarName,
+						Value: "$(ENV_FROM_X)",
+					},
+				}
+			})
+
+			Eventually(func(g Gomega) {
+				g.Expect(getPersistedVersionedCrd(crd.Name, defaultNamespace, createdCrd)).To(BeTrue())
+				validCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)
+				g.Expect(validCondition).NotTo(BeNil())
+				g.Expect(validCondition.Status).To(Equal(metav1.ConditionTrue))
+			}, timeout, interval).Should(Succeed())
+
+			By("checking JAVA_ARGS_APPEND has the right value")
+			Eventually(func(g Gomega) {
+				if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+					podWithOrdinal := namer.CrToSS(crd.Name) + "-0"
+					command := []string{"env"}
+					//the real value is expanded in the container
+					result := ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+					hasEnv := false
+					for _, line := range strings.Split(result, "\n") {
+						if strings.HasPrefix(line, "JAVA_ARGS_APPEND") {
+							hasEnv = true
+							g.Expect(result).Should(ContainSubstring("-Dlog4j2.debug=true -Dlog4j2.configurationFile=/amq/extra/configmaps/my-logging-config/logging.properties"))
+						}
+					}
+					g.Expect(hasEnv).To(BeTrue())
+
+					podLogs := LogsOfPod(podWithOrdinal, crd.Name, defaultNamespace, g)
+					g.Expect(podLogs).Should(ContainSubstring("i-am-here"))
+				}
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("deleteing the env secret")
+			CleanResource(secret, envSecretName, defaultNamespace)
+			By("deleting the logging configmap")
+			CleanResource(configMap, loggingConfigMapName, defaultNamespace)
+			By("deleting the CR")
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
+		})
+
 		It("logging configmap validation", func() {
 
 			By("By creatinging a new config map with wrong key")
@@ -6202,7 +6405,7 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(k8sClient.Get(ctx, key, createdSs)).To(Succeed())
 
 				brokerContainer := createdSs.Spec.Template.Spec.Containers[0]
-				loggingPropName := "JAVA_ARGS_APPEND"
+				loggingPropName := javaArgsAppendEnvVarName
 				loggingPropValue := ""
 				expectedLoggingPropValue := "-Dlog4j2.configurationFile=/amq/extra/configmaps/my-logging-config/logging.properties"
 				for _, env := range brokerContainer.Env {
@@ -6269,7 +6472,7 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(k8sClient.Get(ctx, key, createdSs)).To(Succeed())
 
 				brokerContainer := createdSs.Spec.Template.Spec.Containers[0]
-				loggingPropName := "JAVA_ARGS_APPEND"
+				loggingPropName := javaArgsAppendEnvVarName
 				loggingPropValue := ""
 				expectedLoggingPropValue := "-Dlog4j2.configurationFile=/amq/extra/secrets/my-secret-logging-config/logging.properties"
 				for _, env := range brokerContainer.Env {
@@ -9256,21 +9459,29 @@ var _ = Describe("artemis controller", func() {
 					org.apache.activemq.jaas.properties.role="roles.properties";
 
 			};`,
-				"users.properties": `tom=tom`,
-				"roles.properties": `toms=tom`,
+				"users.properties": `
+					tom=tom
+					foo=foo
+				`,
+				"roles.properties": `
+					toms=tom
+					the\ foos=foo
+				`,
 			}
 
 			crd.Spec.DeploymentPlan.ExtraMounts.Secrets = []string{secret.Name}
 
 			// avoiding SecurityCR and AddressCR
 			crd.Spec.BrokerProperties = []string{
-				"# create tom's work queue",
-				"addressConfigurations.TOMS_WORK_QUEUE.queueConfigs.TOMS_WORK_QUEUE.routingType=ANYCAST",
-				"addressConfigurations.TOMS_WORK_QUEUE.queueConfigs.TOMS_WORK_QUEUE.durable=true",
+				`# create tom's work queue`,
+				`addressConfigurations.TOMS_WORK_QUEUE.queueConfigs.TOMS_WORK_QUEUE.routingType=ANYCAST`,
+				`addressConfigurations.TOMS_WORK_QUEUE.queueConfigs.TOMS_WORK_QUEUE.durable=true`,
 
-				"# rbac, give tom's role send/consume access",
-				"securityRoles.TOMS_WORK_QUEUE.toms.send=true",
-				"securityRoles.TOMS_WORK_QUEUE.toms.consume=true",
+				`# rbac, give tom's role send/consume access`,
+				`securityRoles.TOMS_WORK_QUEUE.toms.send=true`,
+				`securityRoles.TOMS_WORK_QUEUE.toms.consume=true`,
+				`securityRoles.TOMS_WORK_QUEUE."the\ foos".send=true`,
+				`securityRoles.TOMS_WORK_QUEUE."the\ foos".consume=true`,
 			}
 
 			By("Deploying the jaas secret " + secret.ObjectMeta.Name)
@@ -9296,20 +9507,22 @@ var _ = Describe("artemis controller", func() {
 				By("tom doing his thing")
 
 				podWithOrdinal := namer.CrToSS(crd.Name) + "-0"
-				command := []string{"amq-broker/bin/artemis", "producer", "--user", "tom", "--password", "tom", "--url", "tcp://" + podWithOrdinal + ":61616", "--message-count", "1", "--destination", "queue://TOMS_WORK_QUEUE", "--verbose"}
 
-				By("producing")
-				Eventually(func(g Gomega) {
-					stdOutContent := ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
-					g.Expect(stdOutContent).Should(ContainSubstring("Produced: 1 messages"))
-				}, existingClusterTimeout, existingClusterInterval*2).Should(Succeed())
+				for _, user := range []string{"tom", "foo"} {
+					command := []string{"amq-broker/bin/artemis", "producer", "--user", user, "--password", user, "--url", "tcp://" + podWithOrdinal + ":61616", "--message-count", "1", "--destination", "queue://TOMS_WORK_QUEUE", "--verbose"}
+					By(user + " producing")
+					Eventually(func(g Gomega) {
+						stdOutContent := ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+						g.Expect(stdOutContent).Should(ContainSubstring("Produced: 1 messages"))
+					}, existingClusterTimeout, existingClusterInterval*2).Should(Succeed())
 
-				By("consuming")
-				command = []string{"amq-broker/bin/artemis", "consumer", "--user", "tom", "--password", "tom", "--url", "tcp://" + podWithOrdinal + ":61616", "--message-count", "1", "--destination", "queue://TOMS_WORK_QUEUE", "--receive-timeout", "10000", "--break-on-null", "--verbose"}
-				Eventually(func(g Gomega) {
-					stdOutContent := ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
-					g.Expect(stdOutContent).Should(ContainSubstring("JMS Message ID:"))
-				}, existingClusterTimeout, existingClusterInterval*2).Should(Succeed())
+					By(user + " consuming")
+					command = []string{"amq-broker/bin/artemis", "consumer", "--user", user, "--password", user, "--url", "tcp://" + podWithOrdinal + ":61616", "--message-count", "1", "--destination", "queue://TOMS_WORK_QUEUE", "--receive-timeout", "10000", "--break-on-null", "--verbose"}
+					Eventually(func(g Gomega) {
+						stdOutContent := ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+						g.Expect(stdOutContent).Should(ContainSubstring("JMS Message ID:"))
+					}, existingClusterTimeout, existingClusterInterval*2).Should(Succeed())
+				}
 
 				Eventually(func(g Gomega) {
 					By("verifying jaas status")
@@ -9748,7 +9961,7 @@ var _ = Describe("artemis controller", func() {
 			crd.Spec.DeploymentPlan.ExtraMounts.ConfigMaps = []string{configMap.Name}
 			crd.Spec.Env = []corev1.EnvVar{
 				{Name: "LOG4J_SIMPLELOG_SHOW_SHORT_LOGNAME", Value: "false"},
-				{Name: "JAVA_ARGS_APPEND", Value: "-Dlog4j2.configurationFile=file:/amq/extra/configmaps/" + configMap.Name + "/" + customLogFilePropertiesFileName},
+				{Name: javaArgsAppendEnvVarName, Value: "-Dlog4j2.configurationFile=file:/amq/extra/configmaps/" + configMap.Name + "/" + customLogFilePropertiesFileName},
 			}
 
 			By("Deploying the configMap " + configMap.ObjectMeta.Name)

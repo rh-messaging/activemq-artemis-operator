@@ -263,6 +263,13 @@ func (r *ActiveMQArtemisReconcilerImpl) validate(customResource *brokerv1beta1.A
 		}
 	}
 
+	if validationCondition.Status != metav1.ConditionFalse {
+		condition, retry = r.validateEnvVars(customResource)
+		if condition != nil {
+			validationCondition = *condition
+		}
+	}
+
 	validationCondition.ObservedGeneration = customResource.Generation
 	meta.SetStatusCondition(&customResource.Status.Conditions, validationCondition)
 
@@ -402,6 +409,35 @@ func (r *ActiveMQArtemisReconcilerImpl) validateExposeModes(customResource *brok
 		}, false
 	}
 
+	return nil, false
+}
+
+func (r *ActiveMQArtemisReconcilerImpl) validateEnvVars(customResource *brokerv1beta1.ActiveMQArtemis) (*metav1.Condition, bool) {
+
+	internalVarNames := map[string]string{
+		debugArgsEnvVarName:      debugArgsEnvVarName,
+		javaOptsEnvVarName:       javaOptsEnvVarName,
+		javaArgsAppendEnvVarName: javaArgsAppendEnvVarName,
+	}
+
+	invalidVars := []string{}
+
+	for _, envVar := range customResource.Spec.Env {
+		if _, ok := internalVarNames[envVar.Name]; ok {
+			if envVar.ValueFrom != nil {
+				invalidVars = append(invalidVars, envVar.Name)
+			}
+		}
+	}
+
+	if len(invalidVars) > 0 {
+		return &metav1.Condition{
+			Type:    brokerv1beta1.ValidConditionType,
+			Status:  metav1.ConditionFalse,
+			Reason:  brokerv1beta1.ValidConditionInvalidInternalVarUsage,
+			Message: fmt.Sprintf("Don't use valueFrom on env vars that the operator can mutate: %v. Instead use a different var and refernece it in its value field.", invalidVars),
+		}, false
+	}
 	return nil, false
 }
 

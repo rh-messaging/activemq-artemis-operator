@@ -818,8 +818,34 @@ spec:
       value: -XshowSettings:system
 
 ```
+---
+**NOTE**
 
-Note: you are configuring an array of [envVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#envvar-v1-core) which is a very powerfull concept. Proceed with care, taking due respect to any environment the operator may set and depend on. For full documentation see the [Kubernetes Documentation](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/)
+You are configuring an array of [envVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#envvar-v1-core) which is a very powerfull concept. Proceed with care, taking due respect to any environment the operator may set and depend on. For full documentation see the [Kubernetes Documentation](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/)
+
+There are a few well-known environment variables that are used by the operator internally to configure brokers, as shown below
+
+* JAVA_ARGS_APPEND
+* JAVA_OPTS
+* DEBUG_ARGS
+
+If you want to add some values to any of them, make sure you define it in **spec.env** using `value` field. If you use `valueFrom` for the env var you will get validation error condition in your CR's status.
+
+If you really need `valueFrom` to define the values for the above env vars you can use a different var and then reference it in the internal var's `value` field.
+
+For example:
+
+```yaml
+  env:
+    - name: ENV_FROM_X
+      valueFrom:
+        secretKeyRef:
+          key: JAVA_ARGS_APPEND
+          name: amq-broker-dev-java-args-append
+    - name: JAVA_ARGS_APPEND
+      value: $(ENV_FROM_X)
+```
+Reference: [define-interdependent-environment-variables](https://kubernetes.io/docs/tasks/inject-data-application/define-interdependent-environment-variables/)
 
 ## Configuring brokerProperties
 
