@@ -250,7 +250,7 @@ var _ = Describe("artemis controller 2", func() {
 				})
 
 				By("waiting for pod ready")
-				WaitForPod(brokerCr.Name, 0)
+				WaitForPod(brokerCr.Name)
 
 				By("writing some files to the volume")
 				podWithOrdinal := namer.CrToSS(brokerCr.Name) + "-0"
@@ -295,7 +295,7 @@ var _ = Describe("artemis controller 2", func() {
 				})
 
 				By("waiting for pod ready")
-				WaitForPod(brokerCr.Name, 0)
+				WaitForPod(brokerCr.Name)
 
 				By("checking the file still exist on volumes")
 				lsCmd = []string{"ls", "/opt/common"}
@@ -364,7 +364,7 @@ var _ = Describe("artemis controller 2", func() {
 				defaultMoutPath := volumes.GetDefaultExternalPVCMountPath("mydata")
 
 				By("waiting for pod ready")
-				WaitForPod(brokerCr.Name, 0)
+				WaitForPod(brokerCr.Name)
 
 				By("writing some files to the volume")
 				podWithOrdinal := namer.CrToSS(brokerCr.Name) + "-0"
@@ -419,7 +419,7 @@ var _ = Describe("artemis controller 2", func() {
 				})
 
 				By("waiting 2 pods ready")
-				WaitForPod(brokerCr.Name, 0, 1)
+				WaitForPods(brokerCr.Name, 0, 1)
 
 				By("checking the file exists on pod 0")
 				lsCmd = []string{"ls", mountPath}

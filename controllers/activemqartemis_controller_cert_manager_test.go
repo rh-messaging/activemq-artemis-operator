@@ -32,7 +32,6 @@ import (
 	tm "github.com/cert-manager/trust-manager/pkg/apis/trust/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -213,20 +212,10 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 				})
 
 				By("verify pod is up and acceptor is working")
-				ssKey := types.NamespacedName{
-					Name:      namer.CrToSS(brokerCr.Name),
-					Namespace: defaultNamespace,
-				}
-				currentSS := &appsv1.StatefulSet{}
-				podKey := types.NamespacedName{Name: namer.CrToSS(brokerCr.Name) + "-0", Namespace: defaultNamespace}
-				pod := &corev1.Pod{}
+				WaitForPod(brokerCr.Name)
+				podName := namer.CrToSSOrdinal(brokerCr.Name, 0)
 				Eventually(func(g Gomega) {
-					g.Expect(k8sClient.Get(ctx, ssKey, currentSS)).Should(Succeed())
-					g.Expect(currentSS.Status.ReadyReplicas).To(Equal(int32(1)))
-					g.Expect(k8sClient.Get(ctx, podKey, pod)).Should(Succeed())
-					g.Expect(len(pod.Status.ContainerStatuses)).Should(Equal(1))
-					g.Expect(pod.Status.ContainerStatuses[0].State.Running).ShouldNot(BeNil())
-					CheckAcceptorStarted(pod.Name, brokerCr.Name, "amqps", g)
+					CheckAcceptorStarted(podName, brokerCr.Name, "amqps", g)
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("check messaging should work")
@@ -234,7 +223,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 				trustStorePath := "/etc/" + certSecret.Name + "-volume/truststore.p12"
 				password := "password"
 				Eventually(func(g Gomega) {
-					checkMessagingInPodWithJavaStore(pod.Name, brokerCr.Name, "5671", trustStorePath, password, &keyStorePath, &password, g)
+					checkMessagingInPodWithJavaStore(podName, brokerCr.Name, "5671", trustStorePath, password, &keyStorePath, &password, g)
 				}, timeout, interval).Should(Succeed())
 
 				By("clean up")

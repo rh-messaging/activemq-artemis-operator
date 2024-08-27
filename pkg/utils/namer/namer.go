@@ -66,6 +66,10 @@ func CrToSS(crName string) string {
 	return crName + "-ss"
 }
 
+func CrToSSOrdinal(crName string, ordinal int) string {
+	return CrToSS(crName) + "-" + strconv.Itoa(ordinal)
+}
+
 func SSToCr(ssName string) string {
 	return strings.TrimSuffix(ssName, "-ss")
 }
