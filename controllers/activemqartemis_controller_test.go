@@ -22,6 +22,7 @@ import (
 	"container/list"
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -152,21 +153,8 @@ var _ = Describe("artemis controller", func() {
 					}
 				})
 
-				ssKey := types.NamespacedName{
-					Name:      namer.CrToSS(brokerCr.Name),
-					Namespace: defaultNamespace,
-				}
-
 				By("verify pod is up")
-				currentSS := &appsv1.StatefulSet{}
-				podKey := types.NamespacedName{Name: namer.CrToSS(brokerCr.Name) + "-0", Namespace: defaultNamespace}
-				pod := &corev1.Pod{}
-				Eventually(func(g Gomega) {
-					g.Expect(k8sClient.Get(ctx, ssKey, currentSS)).Should(Succeed())
-					g.Expect(k8sClient.Get(ctx, podKey, pod)).Should(Succeed())
-					g.Expect(len(pod.Status.ContainerStatuses)).Should(Equal(1))
-					g.Expect(pod.Status.ContainerStatuses[0].State.Running).ShouldNot(BeNil())
-				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				WaitForPod(brokerCr.Name)
 
 				By("checking service is created for console")
 				serviceName := brokerCr.Name + "-amqp-ssl-0-svc"
@@ -1843,6 +1831,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
+				WaitForPod(crd.Name)
 				ssKey := types.NamespacedName{
 					Name:      namer.CrToSS(crd.Name),
 					Namespace: defaultNamespace,
@@ -1853,13 +1842,7 @@ var _ = Describe("artemis controller", func() {
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("verify pod is up")
-				podKey := types.NamespacedName{Name: namer.CrToSS(crd.Name) + "-0", Namespace: defaultNamespace}
-				Eventually(func(g Gomega) {
-					pod := &corev1.Pod{}
-					g.Expect(k8sClient.Get(ctx, podKey, pod)).Should(Succeed())
-					g.Expect(pod.Status.ContainerStatuses).Should(HaveLen(1))
-					g.Expect(pod.Status.ContainerStatuses[0].State.Running).Should(Not(BeNil()))
-				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				WaitForPod(crd.Name)
 
 				var host string
 
@@ -2012,13 +1995,7 @@ var _ = Describe("artemis controller", func() {
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("verify pod is up")
-				podKey := types.NamespacedName{Name: namer.CrToSS(crd.Name) + "-0", Namespace: defaultNamespace}
-				Eventually(func(g Gomega) {
-					pod := &corev1.Pod{}
-					g.Expect(k8sClient.Get(ctx, podKey, pod)).Should(Succeed())
-					g.Expect(pod.Status.ContainerStatuses).Should(HaveLen(1))
-					g.Expect(pod.Status.ContainerStatuses[0].State.Running).Should(Not(BeNil()))
-				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				WaitForPod(crd.Name)
 
 				if isOpenshift {
 					By("check console acceptor is created")
@@ -2194,13 +2171,7 @@ var _ = Describe("artemis controller", func() {
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("verify pod is up")
-				podKey := types.NamespacedName{Name: namer.CrToSS(crd.Name) + "-0", Namespace: defaultNamespace}
-				Eventually(func(g Gomega) {
-					pod := &corev1.Pod{}
-					g.Expect(k8sClient.Get(ctx, podKey, pod)).Should(Succeed())
-					g.Expect(len(pod.Status.ContainerStatuses)).Should(Equal(1))
-					g.Expect(pod.Status.ContainerStatuses[0].State.Running).Should(Not(BeNil()))
-				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				WaitForPod(crd.Name)
 
 				if isOpenshift {
 					By("check route is created")
@@ -2897,14 +2868,7 @@ var _ = Describe("artemis controller", func() {
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("verify ready status of pod with correct image")
-				Eventually(func(g Gomega) {
-					pod := &corev1.Pod{}
-					g.Expect(k8sClient.Get(ctx, podKey, pod)).Should(Succeed())
-
-					By("verify running status of pod")
-					g.Expect(len(pod.Status.ContainerStatuses)).Should(Equal(1))
-					g.Expect(pod.Status.ContainerStatuses[0].State.Running).Should(Not(BeNil()))
-				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				WaitForPod(crd.Name)
 			}
 
 			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
@@ -9820,6 +9784,117 @@ var _ = Describe("artemis controller", func() {
 			Expect(k8sClient.Delete(ctx, &crd)).To(Succeed())
 		})
 
+		It("extraSecret with JSON broker properties -bp suffix", func() {
+
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+
+			secret := &corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "k8s.io.api.core.v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "x-bp",
+					Namespace: crd.ObjectMeta.Namespace,
+				},
+			}
+
+			addressJsonMap := map[string]interface{}{
+				"bla": "bla",
+			}
+
+			addressJsonBytes, err := json.Marshal(addressJsonMap)
+			Expect(err).Should(Succeed())
+
+			acceptorJsonMap := map[string]interface{}{
+				"acceptorConfigurations": map[string]interface{}{
+					"artemis": map[string]interface{}{
+						"params": map[string]interface{}{
+							"router": "autoShard",
+						},
+					},
+				},
+			}
+
+			acceptorJsonBytes, err := json.Marshal(acceptorJsonMap)
+			Expect(err).Should(Succeed())
+
+			secret.Data = map[string][]byte{
+				"address.json":  addressJsonBytes,
+				"acceptor.json": acceptorJsonBytes,
+			}
+
+			crd.Spec.DeploymentPlan.Size = common.Int32ToPtr(1)
+			crd.Spec.DeploymentPlan.ExtraMounts.Secrets = []string{secret.Name}
+
+			By("Deploying the -bp secret " + secret.ObjectMeta.Name)
+			Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
+
+			By("Deploying the CRD " + crd.ObjectMeta.Name)
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+				brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+
+					condition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType)
+					g.Expect(condition).NotTo(BeNil())
+
+					g.Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+
+					g.Expect(condition.Reason).Should(Equal(brokerv1beta1.ConfigAppliedConditionSynchedWithErrorReason))
+					g.Expect(condition.Message).Should(ContainSubstring("bla"))
+
+					// find some reference to the secret source
+					g.Expect(condition.Message).Should(ContainSubstring("x-bp"))
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("fix -bp secret via update")
+				createdSecret := &corev1.Secret{}
+				secretKey := types.NamespacedName{
+					Name:      secret.ObjectMeta.Name,
+					Namespace: defaultNamespace,
+				}
+
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, secretKey, createdSecret)).To(Succeed())
+
+					addressJsonMap := map[string]interface{}{
+						"addressesSettings": map[string]interface{}{
+							"#": map[string]interface{}{
+								"redeliveryMultiplier": "2.3",
+							},
+						},
+					}
+
+					addressJsonBytes, err := json.Marshal(addressJsonMap)
+					Expect(err).Should(Succeed())
+
+					createdSecret.Data["address.json"] = addressJsonBytes
+					g.Expect(k8sClient.Update(ctx, createdSecret)).Should(Succeed())
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("verify status ok")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+
+					condition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType)
+					g.Expect(condition).NotTo(BeNil())
+					g.Expect(condition.Status).To(Equal(metav1.ConditionTrue))
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
+
+			Expect(k8sClient.Delete(ctx, secret)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, &crd)).To(Succeed())
+		})
+
 		It("-bp suffix secret broker-n support", Label("broker-n-bp-secret"), func() {
 
 			ctx := context.Background()
@@ -9894,6 +9969,111 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(*result).To(ContainSubstring("broker-1.globalMem.properties"))
 					g.Expect(*result).To(ContainSubstring("journal2.properties"))
 					g.Expect(*result).NotTo(ContainSubstring("broker-0.globalMem.properties"))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				curlUrl = "http://" + podWithOrdinal1 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/GlobalMaxSize"
+				curlCmd = []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
+				Eventually(func(g Gomega) {
+					result, err := RunCommandInPod(podWithOrdinal1, crd.Name+"-container", curlCmd)
+					g.Expect(err).To(BeNil())
+					// 12M = 12 * 1024 * 1024
+					g.Expect(*result).To(ContainSubstring("\"value\":12582912"))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+				brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
+
+				By("verify status ok")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+
+					condition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType)
+					g.Expect(condition).NotTo(BeNil())
+					g.Expect(condition.Status).To(Equal(metav1.ConditionTrue))
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			}
+
+			Expect(k8sClient.Delete(ctx, crd)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, bpSecret1)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, bpSecret2)).To(Succeed())
+		})
+
+		It("-bp suffix secret broker-n JSON support", Label("broker-n-bp-secret"), func() {
+
+			ctx := context.Background()
+
+			_, bpSecret1 := DeploySecret(defaultNamespace, func(candidate *corev1.Secret) {
+				candidate.Name = "config-1-bp"
+				candidate.StringData = map[string]string{
+					"journal1.json":           `{"journalFileSize":12345}`,
+					"broker-0.globalMem.json": `{"globalMaxSize":"512M"}`,
+				}
+			})
+
+			_, bpSecret2 := DeploySecret(defaultNamespace, func(candidate *corev1.Secret) {
+				candidate.Name = "config-2-bp"
+				candidate.StringData = map[string]string{
+					"journal2.json":           `{"journalMinFiles":3}`,
+					"broker-1.globalMem.json": `{"globalMaxSize":"12M"}`,
+				}
+			})
+
+			By("Deploying the CRD")
+			_, crd := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				candidate.Spec.DeploymentPlan.Size = common.Int32ToPtr(2)
+				candidate.Spec.DeploymentPlan.ExtraMounts.Secrets = []string{bpSecret1.Name, bpSecret2.Name}
+			})
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+				ssKey := types.NamespacedName{
+					Name:      namer.CrToSS(crd.Name),
+					Namespace: defaultNamespace,
+				}
+
+				By("checking statefulset is ready")
+				currentSS := &appsv1.StatefulSet{}
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, ssKey, currentSS)).Should(Succeed())
+					g.Expect(currentSS.Status.ReadyReplicas).To(Equal(int32(2)))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("checking pod 0 status that has properties applied")
+				podWithOrdinal0 := namer.CrToSS(crd.Name) + "-0"
+
+				curlUrl := "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/Status"
+				curlCmd := []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
+				Eventually(func(g Gomega) {
+					result, err := RunCommandInPod(podWithOrdinal0, crd.Name+"-container", curlCmd)
+					g.Expect(err).To(BeNil())
+					g.Expect(*result).To(ContainSubstring("journal1.json"))
+					g.Expect(*result).To(ContainSubstring("broker-0.globalMem.json"))
+					g.Expect(*result).To(ContainSubstring("journal2.json"))
+					g.Expect(*result).NotTo(ContainSubstring("broker-1.globalMem.json"))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				curlUrl = "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/GlobalMaxSize"
+				curlCmd = []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
+				Eventually(func(g Gomega) {
+					result, err := RunCommandInPod(podWithOrdinal0, crd.Name+"-container", curlCmd)
+					g.Expect(err).To(BeNil())
+					// 512M = 512 * 1024 * 1024
+					g.Expect(*result).To(ContainSubstring("\"value\":536870912"))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("checking pod 1 status that has properties applied")
+				podWithOrdinal1 := namer.CrToSS(crd.Name) + "-1"
+
+				curlUrl = "http://" + podWithOrdinal1 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/Status"
+				curlCmd = []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
+				Eventually(func(g Gomega) {
+					result, err := RunCommandInPod(podWithOrdinal1, crd.Name+"-container", curlCmd)
+					g.Expect(err).To(BeNil())
+					g.Expect(*result).To(ContainSubstring("journal1.json"))
+					g.Expect(*result).To(ContainSubstring("broker-1.globalMem.json"))
+					g.Expect(*result).To(ContainSubstring("journal2.json"))
+					g.Expect(*result).NotTo(ContainSubstring("broker-0.globalMem.json"))
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				curlUrl = "http://" + podWithOrdinal1 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/GlobalMaxSize"

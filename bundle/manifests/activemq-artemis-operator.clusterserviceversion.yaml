@@ -2893,6 +2893,14 @@ spec:
                   value: quay.io/artemiscloud/activemq-artemis-broker-init@sha256:de82344daa0caeabc6559656da0af285436a687e8f371744c0c51bdbc309167d
                 - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2350
                   value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:49f34122ab46ab5d7ead094b6e40817b62c75b6a809f67db07d68bce750da51e
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2360
+                  value: quay.io/artemiscloud/activemq-artemis-broker-init@sha256:ffa0d7cb4068df84319776dbfb66210297da1b8466ccd5451318fc3de79736c3
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2360
+                  value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:9e1fefc9a94d72a7b5a3f4e2d53ebd23e5ab221df17a5afde42ce973277838f6
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2370
+                  value: quay.io/artemiscloud/activemq-artemis-broker-init@sha256:e2a761725d5b029e5d33221f701438744ea0fb16a4890cd857e43aa0b5eea71c
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2370
+                  value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:cd9a01cfe791451d12144a418dbe50221c739151ecda1f22ffdbd2d10009fc82
                 - name: OPERATOR_NAME
                   valueFrom:
                     fieldRef:
@@ -3288,4 +3296,12 @@ spec:
     name: activemq-artemis-broker-init-2350
   - image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:49f34122ab46ab5d7ead094b6e40817b62c75b6a809f67db07d68bce750da51e
     name: activemq-artemis-broker-kubernetes-2350
+  - image: quay.io/artemiscloud/activemq-artemis-broker-init@sha256:ffa0d7cb4068df84319776dbfb66210297da1b8466ccd5451318fc3de79736c3
+    name: activemq-artemis-broker-init-2360
+  - image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:9e1fefc9a94d72a7b5a3f4e2d53ebd23e5ab221df17a5afde42ce973277838f6
+    name: activemq-artemis-broker-kubernetes-2360
+  - image: quay.io/artemiscloud/activemq-artemis-broker-init@sha256:e2a761725d5b029e5d33221f701438744ea0fb16a4890cd857e43aa0b5eea71c
+    name: activemq-artemis-broker-init-2370
+  - image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:cd9a01cfe791451d12144a418dbe50221c739151ecda1f22ffdbd2d10009fc82
+    name: activemq-artemis-broker-kubernetes-2370
   version: 1.2.4

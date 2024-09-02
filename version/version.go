@@ -15,8 +15,8 @@ var (
 
 const (
 	// LatestVersion product version supported
-	LatestVersion        = "2.35.0"
-	CompactLatestVersion = "2350"
+	LatestVersion        = "2.37.0"
+	CompactLatestVersion = "2370"
 
 	LatestKubeImage = "quay.io/artemiscloud/activemq-artemis-broker-kubernetes:artemis." + LatestVersion
 	LatestInitImage = "quay.io/artemiscloud/activemq-artemis-broker-init:artemis." + LatestVersion
@@ -47,6 +47,8 @@ var FullVersionFromCompactVersion map[string]string = map[string]string{
 	"2330": "2.33.0",
 	"2340": "2.34.0",
 	"2350": "2.35.0",
+	"2360": "2.36.0",
+	"2370": "2.37.0",
 }
 
 // The yacfg profile to use for a given full version of broker
@@ -67,6 +69,8 @@ var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
 	"2.33.0": "2.21.0",
 	"2.34.0": "2.21.0",
 	"2.35.0": "2.21.0",
+	"2.36.0": "2.21.0",
+	"2.37.0": "2.21.0",
 }
 
 var YacfgProfileName string = "artemis"
@@ -89,6 +93,8 @@ var SupportedActiveMQArtemisVersions = []string{
 	"2.33.0",
 	"2.34.0",
 	"2.35.0",
+	"2.36.0",
+	"2.37.0",
 }
 
 func CompactActiveMQArtemisVersion(version string) string {

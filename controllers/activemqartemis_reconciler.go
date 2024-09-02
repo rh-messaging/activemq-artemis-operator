@@ -79,6 +79,7 @@ const (
 	OrdinalPrefixSep         = "."
 	UncheckedPrefix          = "_"
 	PropertiesSuffix         = ".properties"
+	JsonSuffix               = ".json"
 	BrokerPropertiesName     = "broker" + PropertiesSuffix
 	JaasConfigKey            = "login.config"
 	LoggingConfigKey         = "logging" + PropertiesSuffix
@@ -3214,9 +3215,41 @@ func getConfigMappedJaasProperties(cr *brokerv1beta1.ActiveMQArtemis, client rtc
 func newProjectionFromByteValues(resourceMeta metav1.ObjectMeta, configKeyValue map[string][]byte) *projection {
 	projection := projection{Name: resourceMeta.Name, ResourceVersion: resourceMeta.ResourceVersion, Generation: resourceMeta.Generation, Files: map[string]propertyFile{}}
 	for prop_file_name, data := range configKeyValue {
-		projection.Files[prop_file_name] = propertyFile{Alder32: alder32FromData(data)}
+		if strings.HasSuffix(prop_file_name, JsonSuffix) {
+			dataMap := map[string]interface{}{}
+			if err := json.Unmarshal(data, &dataMap); err == nil {
+				keyValuePairs := []string{}
+				SortedKeyValuePairsFromMap(dataMap, &keyValuePairs)
+				projection.Files[prop_file_name] = propertyFile{Alder32: alder32StringValue(alder32Of(keyValuePairs))}
+			}
+		} else {
+			projection.Files[prop_file_name] = propertyFile{Alder32: alder32FromData(data)}
+		}
 	}
 	return &projection
+}
+
+func SortedKeyValuePairsFromMap(dataMap map[string]interface{}, pairs *[]string) {
+	KeyValuePairsFromMap("", dataMap, pairs)
+
+	sort.Slice(*pairs, func(i, j int) bool {
+		return (*pairs)[i] < (*pairs)[j]
+	})
+
+}
+
+func KeyValuePairsFromMap(parentKey string, dataMap map[string]interface{}, pairs *[]string) {
+	for k, v := range dataMap {
+		if strings.Contains(k, ".") {
+			k = "\"" + k + "\""
+		}
+		propertyKey := parentKey + k
+		if reflect.ValueOf(v).Kind() == reflect.Map {
+			KeyValuePairsFromMap(propertyKey+".", v.(map[string]interface{}), pairs)
+		} else {
+			*pairs = append(*pairs, propertyKey+"="+fmt.Sprint(v))
+		}
+	}
 }
 
 func alder32FromData(data []byte) string {

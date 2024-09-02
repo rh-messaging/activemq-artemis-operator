@@ -817,7 +817,11 @@ func DeployCustomPVC(name string, targetNamespace string, customFunc func(candid
 	return &pvc, &createdPvc
 }
 
-func WaitForPod(crName string, iPods ...int32) {
+func WaitForPod(crName string) {
+	WaitForPods(crName, 0)
+}
+
+func WaitForPods(crName string, iPods ...int32) {
 	ssKey := types.NamespacedName{
 		Name:      namer.CrToSS(crName),
 		Namespace: defaultNamespace,
@@ -826,12 +830,15 @@ func WaitForPod(crName string, iPods ...int32) {
 	currentSS := &appsv1.StatefulSet{}
 
 	for podOrdinal := range iPods {
-		podKey := types.NamespacedName{Name: namer.CrToSS(crName) + "-" + strconv.Itoa(podOrdinal), Namespace: defaultNamespace}
+		podKey := types.NamespacedName{Name: namer.CrToSSOrdinal(crName, podOrdinal), Namespace: defaultNamespace}
 		pod := &corev1.Pod{}
 		Eventually(func(g Gomega) {
 			g.Expect(k8sClient.Get(ctx, ssKey, currentSS)).Should(Succeed())
 			g.Expect(k8sClient.Get(ctx, podKey, pod)).Should(Succeed())
 			g.Expect(len(pod.Status.ContainerStatuses)).Should(Equal(1))
+			if verbose {
+				fmt.Printf("container status for pod %s in %v\n", podKey.Name, pod.Status.ContainerStatuses[0])
+			}
 			g.Expect(pod.Status.ContainerStatuses[0].State.Running).ShouldNot(BeNil())
 		}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
