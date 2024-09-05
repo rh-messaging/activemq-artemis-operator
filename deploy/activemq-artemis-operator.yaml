@@ -6944,7 +6944,7 @@ spec:
           value: ''
         - name: ENABLE_WEBHOOKS
           value: "false"
-        image: quay.io/artemiscloud/activemq-artemis-operator:1.2.4
+        image: quay.io/artemiscloud/activemq-artemis-operator:1.2.5
         livenessProbe:
           httpGet:
             path: /healthz

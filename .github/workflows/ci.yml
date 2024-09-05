@@ -22,6 +22,11 @@ on:
         required: false
         default: false
         type: boolean
+      skipTutorials:
+        description: 'Skip Tutorials'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
 
@@ -78,6 +83,10 @@ jobs:
       - name: Execute do tests
         if: ${{ github.event_name != 'workflow_dispatch' || !inputs.skipDOTests }}
         run: make test-mk-do-v
+
+      - name: Run the tutorials
+        if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' && !inputs.skipTutorials }}
+        run: go run test/utils/tutorials/tester.go
 
       - name: Set up Node.js
         uses: actions/setup-node@v4

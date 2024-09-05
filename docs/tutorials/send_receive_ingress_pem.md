@@ -18,31 +18,44 @@ running on your laptop will do fine.
 
 #### Start minikube with a parametrized dns domain name
 
-```console
-$ minikube start --dns-domain='demo.artemiscloud.io'
-😄  minikube v1.32.0 on Fedora 39
-🎉  minikube 1.33.1 is available! Download it: https://github.com/kubernetes/minikube/releases/tag/v1.33.1
-💡  To disable this notice, run: 'minikube config set WantUpdateNotification false'
-
-✨  Automatically selected the kvm2 driver. Other choices: qemu2, ssh
-👍  Starting control plane node minikube in cluster minikube
-🔥  Creating kvm2 VM (CPUs=2, Memory=6000MB, Disk=20000MB) ...
-🐳  Preparing Kubernetes v1.28.3 on Docker 24.0.7 ...
-    ▪ Generating certificates and keys ...
-    ▪ Booting up control plane ...
-    ▪ Configuring RBAC rules ...
-🔗  Configuring bridge CNI (Container Networking Interface) ...
-    ▪ Using image gcr.io/k8s-minikube/storage-provisioner:v5
-🔎  Verifying Kubernetes components...
-🌟  Enabled addons: storage-provisioner, default-storageclass
-🏄  Done! kubectl is now configured to use "minikube" cluster and "default" namespace by default
+```{"stage":"init", "id":"minikube_start"}
+minikube start --profile tutorialtester
+minikube profile tutorialtester
+```
+```shell tutorial_tester
+* [tutorialtester] minikube v1.32.0 on Fedora 40
+* Automatically selected the docker driver. Other choices: kvm2, qemu2, ssh
+* Using Docker driver with root privileges
+* Starting control plane node tutorialtester in cluster tutorialtester
+* Pulling base image ...
+* Creating docker container (CPUs=2, Memory=15900MB) ...
+* Preparing Kubernetes v1.28.3 on Docker 24.0.7 ...
+  - Generating certificates and keys ...
+  - Booting up control plane ...
+  - Configuring RBAC rules ...
+* Configuring bridge CNI (Container Networking Interface) ...
+  - Using image gcr.io/k8s-minikube/storage-provisioner:v5
+* Verifying Kubernetes components...
+* Enabled addons: storage-provisioner, default-storageclass
+* Done! kubectl is now configured to use "tutorialtester" cluster and "default" namespace by default
+* minikube profile was successfully set to tutorialtester
 ```
 
 #### Enable nginx and ssl passthrough for minikube
 
-```console
-$ minikube addons enable ingress
-$ minikube kubectl -- patch deployment -n ingress-nginx ingress-nginx-controller --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value":"--enable-ssl-passthrough"}]'
+```{"stage":"init"}
+minikube addons enable ingress
+minikube kubectl -- patch deployment -n ingress-nginx ingress-nginx-controller --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value":"--enable-ssl-passthrough"}]'
+```
+```shell tutorial_tester
+* ingress is an addon maintained by Kubernetes. For any concerns contact minikube on GitHub.
+You can view the list of minikube maintainers at: https://github.com/kubernetes/minikube/blob/master/OWNERS
+  - Using image registry.k8s.io/ingress-nginx/kube-webhook-certgen:v20231011-8b53cabe0
+  - Using image registry.k8s.io/ingress-nginx/kube-webhook-certgen:v20231011-8b53cabe0
+  - Using image registry.k8s.io/ingress-nginx/controller:v1.9.4
+* Verifying ingress addon...
+* The 'ingress' addon is enabled
+deployment.apps/ingress-nginx-controller patched
 ```
 
 #### Make sure the domain of your cluster is resolvable
@@ -51,24 +64,51 @@ If you are running your OpenShift cluster locally, you might not be able to
 resolve the urls to IPs out of the blue. Follow [this guide]({{< ref
 "/docs/help/hostname_resolution" >}} "set up dnsmasq") to configure your setup.
 
+This tutorial will follow the simple /etc/hosts approach, but feel free to use
+the most appropriate one for you.
+
 ### Deploy the operator
 
 #### create the namespace
 
-```console
-$ kubectl create namespace send-receive-project
-$ kubectl config set-context --current --namespace=send-receive-project
+```{"stage":"init"}
+kubectl create namespace send-receive-project
+kubectl config set-context --current --namespace=send-receive-project
+```
+```shell tutorial_tester
+namespace/send-receive-project created
+Context "tutorialtester" modified.
 ```
 
 Go to the root of the operator repo and install it:
 
-```console
-$ ./deploy/install_opr.sh
+```{"stage":"init", "rootdir":"$operator"}
+./deploy/install_opr.sh
+```
+```shell tutorial_tester
+Deploying operator to watch single namespace
+Client Version: 4.15.0-0.okd-2024-01-27-070424
+Kustomize Version: v5.0.4-0.20230601165947-6ce0bf390ce3
+Kubernetes Version: v1.28.3
+customresourcedefinition.apiextensions.k8s.io/activemqartemises.broker.amq.io created
+customresourcedefinition.apiextensions.k8s.io/activemqartemisaddresses.broker.amq.io created
+customresourcedefinition.apiextensions.k8s.io/activemqartemisscaledowns.broker.amq.io created
+customresourcedefinition.apiextensions.k8s.io/activemqartemissecurities.broker.amq.io created
+serviceaccount/activemq-artemis-controller-manager created
+role.rbac.authorization.k8s.io/activemq-artemis-operator-role created
+rolebinding.rbac.authorization.k8s.io/activemq-artemis-operator-rolebinding created
+role.rbac.authorization.k8s.io/activemq-artemis-leader-election-role created
+rolebinding.rbac.authorization.k8s.io/activemq-artemis-leader-election-rolebinding created
+deployment.apps/activemq-artemis-controller-manager created
 ```
 
 Wait for the Operator to start (status: `running`).
-```console
-$ kubectl get pod --namespace send-receive-project --watch
+
+```{"stage":"init"}
+kubectl wait pod --all --for=condition=Ready --namespace=send-receive-project --timeout=600s
+```
+```shell tutorial_tester
+pod/activemq-artemis-controller-manager-55b8c479df-st8zz condition met
 ```
 
 ### Create the chain of trust with Cert manager
@@ -77,20 +117,71 @@ $ kubectl get pod --namespace send-receive-project --watch
 
 [Follow the official documentation.](https://cert-manager.io/docs/installation/)
 
-```console
-$ kubectl get pod --namespace cert-manager --watch
-NAME                                       READY   STATUS              RESTARTS   AGE
-cert-manager-7ddd8cdb9f-fx9mw              1/1     Running             0          13s
-cert-manager-cainjector-57cd76c845-zg45d   1/1     Running             0          13s
-cert-manager-webhook-cf8f9f895-kkj5r       0/1     ContainerCreating   0          13s
-cert-manager-webhook-cf8f9f895-kkj5r       0/1     Running             0          17s
-cert-manager-webhook-cf8f9f895-kkj5r       1/1     Running             0          21s
+```{"stage":"cert-manager"}
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.15.1/cert-manager.yaml
+```
+```shell tutorial_tester
+namespace/cert-manager created
+customresourcedefinition.apiextensions.k8s.io/certificaterequests.cert-manager.io created
+customresourcedefinition.apiextensions.k8s.io/certificates.cert-manager.io created
+customresourcedefinition.apiextensions.k8s.io/challenges.acme.cert-manager.io created
+customresourcedefinition.apiextensions.k8s.io/clusterissuers.cert-manager.io created
+customresourcedefinition.apiextensions.k8s.io/issuers.cert-manager.io created
+customresourcedefinition.apiextensions.k8s.io/orders.acme.cert-manager.io created
+serviceaccount/cert-manager-cainjector created
+serviceaccount/cert-manager created
+serviceaccount/cert-manager-webhook created
+clusterrole.rbac.authorization.k8s.io/cert-manager-cainjector created
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-issuers created
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-clusterissuers created
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-certificates created
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-orders created
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-challenges created
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-ingress-shim created
+clusterrole.rbac.authorization.k8s.io/cert-manager-cluster-view created
+clusterrole.rbac.authorization.k8s.io/cert-manager-view created
+clusterrole.rbac.authorization.k8s.io/cert-manager-edit created
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-approve:cert-manager-io created
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-certificatesigningrequests created
+clusterrole.rbac.authorization.k8s.io/cert-manager-webhook:subjectaccessreviews created
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-cainjector created
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-issuers created
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-clusterissuers created
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-certificates created
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-orders created
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-challenges created
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-ingress-shim created
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-approve:cert-manager-io created
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-certificatesigningrequests created
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-webhook:subjectaccessreviews created
+role.rbac.authorization.k8s.io/cert-manager-cainjector:leaderelection created
+role.rbac.authorization.k8s.io/cert-manager:leaderelection created
+role.rbac.authorization.k8s.io/cert-manager-webhook:dynamic-serving created
+rolebinding.rbac.authorization.k8s.io/cert-manager-cainjector:leaderelection created
+rolebinding.rbac.authorization.k8s.io/cert-manager:leaderelection created
+rolebinding.rbac.authorization.k8s.io/cert-manager-webhook:dynamic-serving created
+service/cert-manager created
+service/cert-manager-webhook created
+deployment.apps/cert-manager-cainjector created
+deployment.apps/cert-manager created
+deployment.apps/cert-manager-webhook created
+mutatingwebhookconfiguration.admissionregistration.k8s.io/cert-manager-webhook created
+validatingwebhookconfiguration.admissionregistration.k8s.io/cert-manager-webhook created
+```
+
+```{"stage":"cert-manager"}
+kubectl wait pod --all --for=condition=Ready --namespace=cert-manager --timeout=240s
+```
+```shell tutorial_tester
+pod/cert-manager-5798486f6b-4m822 condition met
+pod/cert-manager-cainjector-7666685ff5-6wd64 condition met
+pod/cert-manager-webhook-5f594df789-2nrjq condition met
 ```
 
 #### Create the root issuer
 
-```console
-$ kubectl apply -f - <<EOF
+```bash {"stage":"cert-manager", "HereTag":"EOF", "runtime":"bash", "label":"create root issuer"}
+kubectl apply -f - <<EOF
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
@@ -100,17 +191,25 @@ spec:
   selfSigned: {}
 EOF
 ```
+```shell tutorial_tester
+issuer.cert-manager.io/send-receive-root-issuer created
+```
 
-```console
-$ kubectl get issuers  -n send-receive-project -o wide send-receive-root-issuer --watch
-NAME                       READY   STATUS   AGE
-send-receive-root-issuer   True             45s
+```{"stage":"cert-manager"}
+kubectl wait issuer send-receive-root-issuer  --for=condition=Ready --namespace=send-receive-project
+```
+```shell tutorial_tester
+issuer.cert-manager.io/send-receive-root-issuer condition met
 ```
 
 #### Create the issuer certificate
 
-```console
-$ kubectl apply -f - <<EOF
+```bash {"stage":"etc", "runtime":"bash", "label":"get the cluster ip"}
+export CLUSTER_IP=$(minikube ip)
+```
+
+```bash {"stage":"cert-manager", "HereTag":"EOF", "runtime":"bash", "label":"create issuer certificate"}
+kubectl apply -f - <<EOF
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -120,7 +219,7 @@ spec:
   isCA: true
   commonName: ArtemiseCloud send-receive issuer
   dnsNames:
-    - issuer.demo.artemiscloud.io
+    - ${CLUSTER_IP}.nip.io
   secretName: send-receive-issuer-cert-secret
   privateKey:
     algorithm: ECDSA
@@ -130,18 +229,21 @@ spec:
     kind: Issuer
 EOF
 ```
-
-```console
-$ kubectl get certificates  -n send-receive-project --watch
-NAME                       READY   SECRET                            AGE
-send-receive-issuer-cert   True    send-receive-issuer-cert-secret   24s
+```shell tutorial_tester
+certificate.cert-manager.io/send-receive-issuer-cert created
 ```
 
+```{"stage":"cert-manager"}
+kubectl wait certificate send-receive-issuer-cert --for=condition=Ready --namespace=send-receive-project
+```
+```shell tutorial_tester
+certificate.cert-manager.io/send-receive-issuer-cert condition met
+```
 
 #### Create the issuer
 
-```console
-$ kubectl apply -f - <<EOF
+```bash {"stage":"cert-manager", "HereTag":"EOF", "runtime":"bash", "label":"create issuer"}
+kubectl apply -f - <<EOF
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
@@ -152,12 +254,15 @@ spec:
     secretName: send-receive-issuer-cert-secret
 EOF
 ```
+```shell tutorial_tester
+issuer.cert-manager.io/send-receive-issuer created
+```
 
-```console
-$ kubectl get issuer  -n send-receive-project --watch
-NAME                       READY   AGE
-send-receive-issuer        True    10s
-send-receive-root-issuer   True    50s
+```{"stage":"cert-manager"}
+kubectl wait issuer send-receive-issuer --for=condition=Ready --namespace=send-receive-project
+```
+```shell tutorial_tester
+issuer.cert-manager.io/send-receive-issuer condition met
 ```
 
 #### Download the issuer's CA
@@ -176,29 +281,10 @@ broker's certificate. The issuer is signing the generated certs with its CA:
 generated certs.
 
 The issuer CA can be found in the `send-receive-issuer-cert-secret ` secret:
-```console
-$ kubectl get secrets send-receive-issuer-cert-secret -o json | jq -r '.data."tls.crt"' | base64 -d
------BEGIN CERTIFICATE-----
-MIIClzCCAj2gAwIBAgIRAMM9CevyAwrXP/KTKZdUA40wCgYIKoZIzj0EAwIwLDEq
-MCgGA1UEAxMhQXJ0ZW1pc2VDbG91ZCBzZW5kLXJlY2VpdmUgaXNzdWVyMB4XDTI0
-MDUxNDEwMzI1MVoXDTI0MDgxMjEwMzI1MVowADCCASIwDQYJKoZIhvcNAQEBBQAD
-ggEPADCCAQoCggEBAPQMxPdW+9N6rLfw7Wg8d4mSWOWKiNtSWlG2eyIXmrCnwjdo
-pghihq91MjRxVCbQBsUVFc34NQ1IsOMPetWeqXjwAIXl8hvKgyKwcS644dHOKl1U
-36etHZpm1Zb0lH+0yL1HSTmP0KwKr3FbqM3QfZ83KfDrmjMU3PrmENs4HwRmD9r5
-3Qy7AFSJo9tMkMASsXbSKuJWCp44dRzD/mC9Mu+jsUUNafIeVznTBlSSxQUsvZhE
-FvLWMIgTpV8RKijuDut/YaYmBmY0C9JKgCBbKUUA4bvIIxmdeJybYqJWDoiPzvZc
-j9Z/FByaIlFFrmv+VMjEG5LZLwKbwcZYgCoRi0MCAwEAAaOBoDCBnTAOBgNVHQ8B
-Af8EBAMCBaAwDAYDVR0TAQH/BAIwADAfBgNVHSMEGDAWgBRb8dir/2ibdJQUUliM
-ft4ZT5WbpDBcBgNVHREBAf8EUjBQgk5zZW5kLXJlY2VpdmUtc3MtMC5zZW5kLXJl
-Y2VpdmUtaGRscy1zdmMuc2VuZC1yZWNlaXZlLXByb2plY3Quc3ZjLmNsdXN0ZXIu
-bG9jYWwwCgYIKoZIzj0EAwIDSAAwRQIgXNd/dVEZ+E9qFPvWg3qlwNTnPGPXO5cg
-7aXMPOKK60UCIQDMt3N/FZWJKMeRZImkXob4+9iSgusly6pPdWwDr2IV8w==
------END CERTIFICATE-----
-```
 
 Store the output in the `/tmp/IssuerCA.pem` file:
-```console
-$ kubectl get secrets send-receive-issuer-cert-secret -o json | jq -r '.data."tls.crt"' | base64 -d > /tmp/IssuerCA.pem
+```bash {"stage":"cert-manager", "runtime":"bash", "label":"dowload certificate"}
+kubectl get secrets send-receive-issuer-cert-secret -o json | jq -r '.data."tls.crt"' | base64 -d > /tmp/IssuerCA.pem
 ```
 
 ### Deploy the ActiveMQ Artemis Broker
@@ -236,15 +322,18 @@ properties. Two queues are setup, one called `APP.JOBS` that is of type
 
 #### Apply the configuration and start the broker
 
-```console
-$ kubectl apply -f - <<'EOF'
+Get minikube's ip
+
+```bash {"stage":"deploy", "HereTag":"EOF", "runtime":"bash", "label":"deploy the broker"}
+INGRESS_HOST='ing.$(ITEM_NAME).$(CR_NAME)-$(BROKER_ORDINAL).$(CR_NAMESPACE).$(INGRESS_DOMAIN)'
+cat <<EOF > deploy.yml
 apiVersion: broker.amq.io/v1beta1
 kind: ActiveMQArtemis
 metadata:
   name: send-receive
   namespace: send-receive-project
 spec:
-  ingressDomain: demo.artemiscloud.io
+  ingressDomain: ${CLUSTER_IP}.nip.io
   acceptors:
     - name: sslacceptor
       port: 62626
@@ -252,7 +341,7 @@ spec:
       expose: true
       exposeMode: ingress
       sslSecret: send-receive-sslacceptor-0-svc-ing-ptls
-      ingressHost: ing.$(ITEM_NAME).$(CR_NAME)-$(BROKER_ORDINAL).$(CR_NAMESPACE).$(INGRESS_DOMAIN)
+      ingressHost: ${INGRESS_HOST}
   resourceTemplates:
     - selector:
         kind: Ingress
@@ -264,30 +353,36 @@ spec:
         spec:
           tls:
             - hosts:
-                - ing.sslacceptor.send-receive-0.send-receive-project.demo.artemiscloud.io
+                - ing.sslacceptor.send-receive-0.send-receive-project.${CLUSTER_IP}.nip.io
               secretName: send-receive-sslacceptor-0-svc-ing-ptls
   brokerProperties:
     - addressConfigurations."APP.JOBS".routingTypes=ANYCAST
     - addressConfigurations."APP.JOBS".queueConfigs."APP.JOBS".routingType=ANYCAST
     - addressConfigurations."APP.COMMANDS".routingTypes=MULTICAST
 EOF
+kubectl apply -f deploy.yml
+```
+```shell tutorial_tester
+activemqartemis.broker.amq.io/send-receive created
 ```
 
 Wait for the Broker to be ready:
 
-```console
-$ kubectl get ActivemqArtemis  --watch
-NAME           READY   AGE
-send-receive   True    51s
+```{"stage":"deploy"}
+kubectl wait ActiveMQArtemis send-receive --for=condition=Ready --namespace=send-receive-project --timeout=240s
+```
+```shell tutorial_tester
+activemqartemis.broker.amq.io/send-receive condition met
 ```
 
 Check that the ingress is available and has an IP address:
 
-```console
-$ kubectl get ingress --show-labels
-NAME                                 CLASS   HOSTS                                                                     ADDRESS         PORTS     AGE   LABELS
-send-receive-sslacceptor-0-svc-ing   nginx   ing.sslacceptor.send-receive-0.send-receive-project.demo.artemiscloud.io  192.168.39.68   80, 443   18s   ActiveMQArtemis=send-receive,application=send-receive-app,statefulset.kubernetes.io/pod-name=send-receive-ss-0
-
+```{"stage":"deploy"}
+kubectl get ingress --show-labels
+```
+```shell tutorial_tester
+NAME                                 CLASS   HOSTS                                                                     ADDRESS   PORTS     AGE   LABELS
+send-receive-sslacceptor-0-svc-ing   nginx   ing.sslacceptor.send-receive-0.send-receive-project.192.168.49.2.nip.io             80, 443   41s   ActiveMQArtemis=send-receive,application=send-receive-app,statefulset.kubernetes.io/pod-name=send-receive-ss-0
 ```
 
 ### Exchange messages between a producer and a consumer
@@ -310,42 +405,68 @@ open a working connection:
   will provide a round robin load balancing when multiple brokers can be
   reached.
 
+```bash {"stage":"test_setup", "rootdir":"$tmpdir.1", "runtime":"bash", "label":"download artemis"}
+wget --quiet https://dlcdn.apache.org/activemq/activemq-artemis/2.36.0/apache-artemis-2.36.0-bin.tar.gz
+tar -zxf apache-artemis-2.36.0-bin.tar.gz apache-artemis-2.36.0/
+```
+
+#### Figure out the broker endpoint
+
+Recover the ingress url
+
+```bash {"stage":"test_setup", "runtime":"bash", "label":"get the ingress host"}
+export INGRESS_URL=$(kubectl get ingress send-receive-sslacceptor-0-svc-ing -o json | jq -r '.spec.rules[] | .host')
+```
+
+Craft the broker url for artemis
+
+```bash {"stage":"test_setup", "runtime":"bash", "label":"compute the broker url"}
+export BROKER_URL="tcp://${INGRESS_URL}:443?sslEnabled=true&trustStorePath=/tmp/IssuerCA.pem&trustStoreType=PEM&useTopologyForLoadBalancing=false"
+```
+
 ##### Test the connection
 
-```console
-$ ./artemis check queue --name TEST --produce 10 --browse 10 --consume 10 --url 'tcp://ing.sslacceptor.send-receive-0.send-receive-project.demo.artemiscloud.io:443?sslEnabled=true&trustStorePath=/tmp/IssuerCA.pem&trustStoreType=PEM&useTopologyForLoadBalancing=false' --verbose
-Executing org.apache.activemq.artemis.cli.commands.check.QueueCheck check queue --name TEST --produce 10 --browse 10 --consume 10 --url tcp://send-receive-ss-0.send-receive-hdls-svc.send-receive-project.svc.demo.artemiscloud.io:443?sslEnabled=true&trustStorePath=/tmp/IssuerCA.pem&trustStoreType=PEM --verbose 
-Home::/home/tlavocat/dev/activemq-artemis/artemis-distribution/target/apache-artemis-2.34.0-SNAPSHOT-bin/apache-artemis-2.34.0-SNAPSHOT, Instance::null
-Connection brokerURL = tcp://ing.sslacceptor.send-receive-0.send-receive-project.demo.artemiscloud.io:443?sslEnabled=true&trustStorePath=/tmp/IssuerCA.pem&trustStoreType=PEM
+```bash {"stage":"test0", "rootdir":"$tmpdir.1/apache-artemis-2.36.0/bin/", "runtime":"bash", "label":"test connection"}
+./artemis check queue --name TEST --produce 10 --browse 10 --consume 10 --url ${BROKER_URL} --verbose
+```
+```shell tutorial_tester
+Executing org.apache.activemq.artemis.cli.commands.check.QueueCheck check queue --name TEST --produce 10 --browse 10 --consume 10 --url tcp://ing.sslacceptor.send-receive-0.send-receive-project.192.168.49.2.nip.io:443?sslEnabled=true&trustStorePath=/tmp/IssuerCA.pem&trustStoreType=PEM&useTopologyForLoadBalancing=false --verbose 
+Home::/tmp/1757791309/apache-artemis-2.36.0, Instance::null
+Connection brokerURL = tcp://ing.sslacceptor.send-receive-0.send-receive-project.192.168.49.2.nip.io:443?sslEnabled=true&trustStorePath=/tmp/IssuerCA.pem&trustStoreType=PEM&useTopologyForLoadBalancing=false
 Running QueueCheck
 Checking that a producer can send 10 messages to the queue TEST ... success
 Checking that a consumer can browse 10 messages from the queue TEST ... success
 Checking that a consumer can consume 10 messages from the queue TEST ... success
-Checks run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 6.402 sec - QueueCheck
+Checks run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.423 sec - QueueCheck
 ```
 
 #### ANYCAST
 
 For this use case, run first the producer, then the consumer.
 
-```console
-$ ./artemis producer --destination queue://APP.JOBS --url "tcp://ing.sslacceptor.send-receive-0.send-receive-project.demo.artemiscloud.io:443?sslEnabled=true&trustStorePath=/tmp/IssuerCA.pem&trustStoreType=PEM&useTopologyForLoadBalancing=false"
+```bash {"stage":"test1", "rootdir":"$tmpdir.1/apache-artemis-2.36.0/bin/", "runtime":"bash", "label":"anycast: produce 1000 messages"}
+./artemis producer --destination queue://APP.JOBS --url ${BROKER_URL}
+```
+```shell tutorial_tester
+Connection brokerURL = tcp://ing.sslacceptor.send-receive-0.send-receive-project.192.168.49.2.nip.io:443?sslEnabled=true&trustStorePath=/tmp/IssuerCA.pem&trustStoreType=PEM&useTopologyForLoadBalancing=false
 Producer ActiveMQQueue[APP.JOBS], thread=0 Started to calculate elapsed time ...
 
 Producer ActiveMQQueue[APP.JOBS], thread=0 Produced: 1000 messages
 Producer ActiveMQQueue[APP.JOBS], thread=0 Elapsed time in second : 9 s
-Producer ActiveMQQueue[APP.JOBS], thread=0 Elapsed time in milli second : 9104 milli seconds
+Producer ActiveMQQueue[APP.JOBS], thread=0 Elapsed time in milli second : 9376 milli seconds
 ```
 
-```console
-$ ./artemis consumer --destination queue://APP.JOBS --url "tcp://ing.sslacceptor.send-receive-0.send-receive-project.demo.artemiscloud.io:443?sslEnabled=true&trustStorePath=/tmp/IssuerCA.pem&trustStoreType=PEM&useTopologyForLoadBalancing=false"
-Connection brokerURL = tcp://ing.sslacceptor.send-receive-0.send-receive-project.demo.artemiscloud.io:443?sslEnabled=true&trustStorePath=/home/tlavocat/IssuerCA.pem&trustStoreType=PEM
+```bash {"stage":"test1", "rootdir":"$tmpdir.1/apache-artemis-2.36.0/bin/", "runtime":"bash", "label":"anycast: consume 1000 messages"}
+./artemis consumer --destination queue://APP.JOBS --url ${BROKER_URL}
+```
+```shell tutorial_tester
+Connection brokerURL = tcp://ing.sslacceptor.send-receive-0.send-receive-project.192.168.49.2.nip.io:443?sslEnabled=true&trustStorePath=/tmp/IssuerCA.pem&trustStoreType=PEM&useTopologyForLoadBalancing=false
 Consumer:: filter = null
 Consumer ActiveMQQueue[APP.JOBS], thread=0 wait until 1000 messages are consumed
 Received 1000
 Consumer ActiveMQQueue[APP.JOBS], thread=0 Consumed: 1000 messages
 Consumer ActiveMQQueue[APP.JOBS], thread=0 Elapsed time in second : 0 s
-Consumer ActiveMQQueue[APP.JOBS], thread=0 Elapsed time in milli second : 116 milli seconds
+Consumer ActiveMQQueue[APP.JOBS], thread=0 Elapsed time in milli second : 120 milli seconds
 Consumer ActiveMQQueue[APP.JOBS], thread=0 Consumed: 1000 messages
 Consumer ActiveMQQueue[APP.JOBS], thread=0 Consumer thread finished
 ```
@@ -357,26 +478,47 @@ For this use case, run first the consumer(s), then the producer.
 
 1. in `n` other terminal(s) connect `n` consumer(s):
 
-```console
-$ ./artemis consumer --destination topic://APP.COMMANDS --url "tcp://ing.sslacceptor.send-receive-0.send-receive-project.demo.artemiscloud.io:443?sslEnabled=true&trustStorePath=/tmp/IssuerCA.pem&trustStoreType=PEM&useTopologyForLoadBalancing=false"
+```bash {"stage":"test2", "rootdir":"$tmpdir.1/apache-artemis-2.36.0/bin/", "parallel": true, "runtime":"bash", "env":["BROKER_URL"], "label":"multicast: consume 1000 messages"}
+./artemis consumer --destination topic://APP.COMMANDS --url ${BROKER_URL}
+```
+```shell tutorial_tester
+Connection brokerURL = tcp://ing.sslacceptor.send-receive-0.send-receive-project.192.168.49.2.nip.io:443?sslEnabled=true&trustStorePath=/tmp/IssuerCA.pem&trustStoreType=PEM&useTopologyForLoadBalancing=false
 Consumer:: filter = null
 Consumer ActiveMQTopic[APP.COMMANDS], thread=0 wait until 1000 messages are consumed
 Received 1000
 Consumer ActiveMQTopic[APP.COMMANDS], thread=0 Consumed: 1000 messages
-Consumer ActiveMQTopic[APP.COMMANDS], thread=0 Elapsed time in second : 8 s
-Consumer ActiveMQTopic[APP.COMMANDS], thread=0 Elapsed time in milli second : 8434 milli seconds
+Consumer ActiveMQTopic[APP.COMMANDS], thread=0 Elapsed time in second : 5 s
+Consumer ActiveMQTopic[APP.COMMANDS], thread=0 Elapsed time in milli second : 5331 milli seconds
 Consumer ActiveMQTopic[APP.COMMANDS], thread=0 Consumed: 1000 messages
 Consumer ActiveMQTopic[APP.COMMANDS], thread=0 Consumer thread finished
 ```
 
 2. connect the producer to start broadcasting messages.
 
-```console
-$ ./artemis producer --destination topic://APP.COMMANDS --url "tcp://ing.sslacceptor.send-receive-0.send-receive-project.demo.artemiscloud.io:443?sslEnabled=true&trustStorePath=/tmp/IssuerCA.pem&trustStoreType=PEM&useTopologyForLoadBalancing=false"
+```bash {"stage":"test2", "rootdir":"$tmpdir.1/apache-artemis-2.36.0/bin/", "parallel": true, "runtime":"bash", "env":["BROKER_URL"], "label":"multicast: produce 1000 messages"}
+sleep 5s
+./artemis producer --destination topic://APP.COMMANDS --url ${BROKER_URL}
+```
+```shell tutorial_tester
+Connection brokerURL = tcp://ing.sslacceptor.send-receive-0.send-receive-project.192.168.49.2.nip.io:443?sslEnabled=true&trustStorePath=/tmp/IssuerCA.pem&trustStoreType=PEM&useTopologyForLoadBalancing=false
 Producer ActiveMQTopic[APP.COMMANDS], thread=0 Started to calculate elapsed time ...
 
 Producer ActiveMQTopic[APP.COMMANDS], thread=0 Produced: 1000 messages
 Producer ActiveMQTopic[APP.COMMANDS], thread=0 Elapsed time in second : 0 s
-Producer ActiveMQTopic[APP.COMMANDS], thread=0 Elapsed time in milli second : 653 milli seconds
+Producer ActiveMQTopic[APP.COMMANDS], thread=0 Elapsed time in milli second : 550 milli seconds
 ```
 
+### cleanup
+
+To leave a pristine environment after executing this tutorial you can simply,
+delete the minikube cluster and clean the `/etc/hosts` file.
+
+```{"stage":"teardown", "requires":"init/minikube_start"}
+minikube delete --profile tutorialtester
+```
+```shell tutorial_tester
+* Deleting "tutorialtester" in docker ...
+* Deleting container "tutorialtester" ...
+* Removing /home/tlavocat/.minikube/machines/tutorialtester ...
+* Removed all traces of the "tutorialtester" cluster.
+```
