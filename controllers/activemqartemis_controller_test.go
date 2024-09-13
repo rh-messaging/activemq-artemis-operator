@@ -1400,6 +1400,10 @@ var _ = Describe("artemis controller", func() {
 			Expect(matchErr).To(BeNil())
 			Expect(hasMatch).To(BeFalse())
 
+			hasMatch, matchErr = MatchCapturedLog("The secret " + secret.Name + " is ignored because its onwer references doesn't include ActiveMQArtemis/" + brokerCr.Name)
+			Expect(matchErr).To(BeNil())
+			Expect(hasMatch).To(BeTrue())
+
 			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
 			CleanResource(secret, secret.Name, defaultNamespace)
 		})

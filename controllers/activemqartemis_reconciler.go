@@ -612,6 +612,10 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customRe
 				}
 			}
 		}
+
+		if !desired {
+			log.V(1).Info("The secret " + secretName + " is ignored because its onwer references doesn't include ActiveMQArtemis/" + customResource.Name)
+		}
 	}
 
 	if desired {
