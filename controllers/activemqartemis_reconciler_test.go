@@ -19,7 +19,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -160,9 +159,16 @@ func TestMapComparatorForStatefulSet(t *testing.T) {
 	deployed[ssType] = deployedSets
 
 	requested := compare.NewMapBuilder().Add(requestedResources...).ResourceMap()
-	comparator := compare.NewMapComparator()
+	comparator := compare.MapComparator{
+		Comparator: compare.SimpleComparator(),
+	}
 
-	comparator.Comparator.SetDefaultComparator(semanticEquals)
+	reconciler := &ActiveMQArtemisReconcilerImpl{
+		log:            ctrl.Log.WithName("test"),
+		customResource: nil,
+	}
+
+	comparator.Comparator.SetComparator(reflect.TypeOf(appsv1.StatefulSet{}), reconciler.CompareMetaAndSpec)
 	deltas := comparator.Compare(deployed, requested)
 
 	for resourceType, delta := range deltas {
@@ -194,8 +200,27 @@ func TestMapComparatorForStatefulSet(t *testing.T) {
 	}
 }
 
-func semanticEquals(a client.Object, b client.Object) bool {
-	return equality.Semantic.DeepEqual(a, b)
+func TestComparatorMetaAndSpec(t *testing.T) {
+
+	reconciler := &ActiveMQArtemisReconcilerImpl{
+		log:            ctrl.Log.WithName("test"),
+		customResource: nil,
+	}
+
+	ss0 := &appsv1.StatefulSet{}
+	equal := reconciler.CompareMetaAndSpec(ss0, ss0)
+
+	if !equal {
+		t.Errorf("expect equal on same instance!")
+	}
+
+	ss1 := &appsv1.StatefulSet{}
+	ss1.Annotations = map[string]string{"A": "B"}
+	equal = reconciler.CompareMetaAndSpec(ss0, ss1)
+
+	if equal {
+		t.Errorf("expect not equal on differnet annotations")
+	}
 }
 
 func TestGetSingleStatefulSetStatus(t *testing.T) {

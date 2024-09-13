@@ -1,6 +1,7 @@
 package common
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -339,7 +340,7 @@ func ProcessStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, na
 
 	ValidCondition := getValidCondition(cr)
 	meta.SetStatusCondition(&cr.Status.Conditions, ValidCondition)
-	meta.SetStatusCondition(&cr.Status.Conditions, getDeploymentCondition(cr, podStatus, ValidCondition.Status != metav1.ConditionFalse, reconcileError))
+	meta.SetStatusCondition(&cr.Status.Conditions, getDeploymentCondition(cr, client, podStatus, ValidCondition.Status != metav1.ConditionFalse, reconcileError))
 
 	if !reflect.DeepEqual(podStatus, cr.Status.PodStatus) {
 		reqLogger.V(1).Info("Pods status updated")
@@ -541,7 +542,7 @@ func GetSingleStatefulSetStatus(ss *appsv1.StatefulSet, cr *brokerv1beta1.Active
 	}
 }
 
-func getDeploymentCondition(cr *brokerv1beta1.ActiveMQArtemis, podStatus olm.DeploymentStatus, valid bool, reconcileError error) metav1.Condition {
+func getDeploymentCondition(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, podStatus olm.DeploymentStatus, valid bool, reconcileError error) metav1.Condition {
 
 	if !valid {
 		return metav1.Condition{
@@ -570,18 +571,60 @@ func getDeploymentCondition(cr *brokerv1beta1.ActiveMQArtemis, podStatus olm.Dep
 		}
 	}
 	if len(podStatus.Ready) != int(deploymentSize) {
-		return metav1.Condition{
+		crReadyCondition := metav1.Condition{
 			Type:    brokerv1beta1.DeployedConditionType,
 			Status:  metav1.ConditionFalse,
 			Reason:  brokerv1beta1.DeployedConditionNotReadyReason,
 			Message: fmt.Sprintf("%d/%d pods ready", len(podStatus.Ready), deploymentSize),
 		}
+		for _, startingPodName := range podStatus.Starting {
+			podNamespacedName := types.NamespacedName{Namespace: cr.Namespace, Name: startingPodName}
+			pod := &corev1.Pod{}
+			if err := client.Get(context.TODO(), podNamespacedName, pod); err == nil {
+				ctrl.Log.V(1).Info("Pod "+startingPodName, "starting status", pod.Status)
+				crReadyCondition.Message = fmt.Sprintf("%s %s", crReadyCondition.Message, PodStartingStatusDigestMessage(startingPodName, pod.Status))
+			}
+		}
+		return crReadyCondition
 	}
 	return metav1.Condition{
 		Type:   brokerv1beta1.DeployedConditionType,
 		Reason: brokerv1beta1.DeployedConditionReadyReason,
 		Status: metav1.ConditionTrue,
 	}
+}
+
+// take useful diagnostic info from the PodStatus for a free form Message string
+func PodStartingStatusDigestMessage(podName string, status corev1.PodStatus) string {
+	buf := &bytes.Buffer{}
+
+	fmt.Fprintf(buf, "{%s", podName) // open curly 1
+
+	if status.Phase != "" {
+		fmt.Fprintf(buf, ": %s", status.Phase)
+	}
+
+	if len(status.Conditions) > 0 {
+		fmt.Fprintf(buf, " [") // open square
+	}
+	for _, condition := range status.Conditions {
+		fmt.Fprintf(buf, "{%s", condition.DeepCopy().Type) // open curly 2
+		if condition.Status != "" {
+			fmt.Fprintf(buf, "=%s", condition.Status)
+		}
+		if condition.Reason != "" {
+			fmt.Fprintf(buf, " %s", condition.Reason)
+		}
+		if condition.Message != "" {
+			fmt.Fprintf(buf, " %s", condition.Message)
+		}
+		fmt.Fprintf(buf, "}") // close curly 2
+	}
+	if len(status.Conditions) > 0 {
+		fmt.Fprintf(buf, "]") // close square
+	}
+	fmt.Fprintf(buf, "}") // close curly 1
+	return buf.String()
 }
 
 func GetDeploymentSize(cr *brokerv1beta1.ActiveMQArtemis) int32 {

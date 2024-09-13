@@ -613,6 +613,10 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customRe
 				}
 			}
 		}
+
+		if !desired {
+			log.V(1).Info("The secret " + secretName + " is ignored because its onwer references doesn't include ActiveMQArtemis/" + customResource.Name)
+		}
 	}
 
 	if desired {
@@ -1434,46 +1438,12 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(customResource
 	reqLogger.V(1).Info("Processing resources", "num requested", countOfRequested(reconciler), "num current", countOfDeployed(reconciler))
 
 	requested := compare.NewMapBuilder().Add(common.ToResourceList(reconciler.requestedResources)...).ResourceMap()
-	comparator := compare.NewMapComparator()
-
-	comparator.Comparator.SetComparator(reflect.TypeOf(appsv1.StatefulSet{}), func(deployed, requested rtclient.Object) (isEqual bool) {
-		deployedSs := deployed.(*appsv1.StatefulSet)
-		requestedSs := requested.(*appsv1.StatefulSet)
-		isEqual = equality.Semantic.DeepEqual(deployedSs.Spec, requestedSs.Spec)
-		if isEqual {
-			isEqual = equalObjectMeta(&deployedSs.ObjectMeta, &requestedSs.ObjectMeta)
-		}
-		if !isEqual {
-			reqLogger.V(2).Info("unequal", "depoyed", deployedSs, "requested", requestedSs)
-		}
-		return isEqual
-	})
-
-	comparator.Comparator.SetComparator(reflect.TypeOf(netv1.Ingress{}), func(deployed, requested rtclient.Object) (isEqual bool) {
-		deployedIngress := deployed.(*netv1.Ingress)
-		requestedIngress := requested.(*netv1.Ingress)
-		isEqual = equality.Semantic.DeepEqual(deployedIngress.Spec, requestedIngress.Spec)
-		if isEqual {
-			isEqual = equalObjectMeta(&deployedIngress.ObjectMeta, &requestedIngress.ObjectMeta)
-		}
-		if !isEqual {
-			reqLogger.V(2).Info("unequal", "depoyed", deployedIngress, "requested", requestedIngress)
-		}
-		return isEqual
-	})
-
-	comparator.Comparator.SetComparator(reflect.TypeOf(policyv1.PodDisruptionBudget{}), func(deployed, requested rtclient.Object) (isEqual bool) {
-		deployedPdb := deployed.(*policyv1.PodDisruptionBudget)
-		requestedPdb := requested.(*policyv1.PodDisruptionBudget)
-		isEqual = equality.Semantic.DeepEqual(deployedPdb.Spec, requestedPdb.Spec)
-		if isEqual {
-			isEqual = equalObjectMeta(&deployedPdb.ObjectMeta, &requestedPdb.ObjectMeta)
-		}
-		if !isEqual {
-			reqLogger.V(2).Info("unequal", "depoyed", deployedPdb, "requested", requestedPdb)
-		}
-		return isEqual
-	})
+	comparator := compare.MapComparator{
+		Comparator: compare.SimpleComparator(),
+	}
+	comparator.Comparator.SetDefaultComparator(reconciler.CompareMetaAndSpec)
+	comparator.Comparator.SetComparator(reflect.TypeOf(corev1.Secret{}), reconciler.CompareSecret)
+	comparator.Comparator.SetComparator(reflect.TypeOf(corev1.ConfigMap{}), reconciler.CompareConfigMap)
 
 	var compositeError []error
 	deltas := comparator.Compare(reconciler.deployed, requested)
@@ -1522,12 +1492,67 @@ func countOfDeployed(reconciler *ActiveMQArtemisReconcilerImpl) (total int) {
 	return total
 }
 
+func (reconciler *ActiveMQArtemisReconcilerImpl) CompareMetaAndSpec(deployed, requested rtclient.Object) bool {
+
+	isEqual := equalObjectMeta(deployed, requested) &&
+		equality.Semantic.DeepEqual(specOf(deployed), specOf(requested))
+	if !isEqual {
+		reconciler.log.V(2).Info("unequal", "deployed", deployed, "requested", requested)
+	}
+	return isEqual
+}
+
+func (reconciler *ActiveMQArtemisReconcilerImpl) CompareSecret(deployed, requested rtclient.Object) bool {
+
+	isEqual := equalObjectMeta(deployed, requested)
+	if isEqual {
+		deployedSecret := deployed.(*corev1.Secret)
+		requestedSecret := requested.(*corev1.Secret)
+		// TODO - remove all use of SecretData, just use Data and we can do away with this merge
+		deployedSecret = mergeSecretStringDataToData(deployedSecret)
+		requestedSecret = mergeSecretStringDataToData(requestedSecret)
+		var pairs [][2]interface{}
+		pairs = append(pairs, [2]interface{}{deployedSecret.Data, requestedSecret.Data})
+		isEqual = compare.EqualPairs(pairs)
+	}
+
+	if !isEqual {
+		reconciler.log.V(2).Info("unequal secret", "deployed", deployed, "requested", requested)
+	}
+	return isEqual
+}
+
+func (reconciler *ActiveMQArtemisReconcilerImpl) CompareConfigMap(deployed, requested rtclient.Object) bool {
+	// our single configMap is immutable, the name indicates a change
+	return deployed.GetName() == requested.GetName()
+}
+
+func mergeSecretStringDataToData(secret *corev1.Secret) *corev1.Secret {
+	s := secret.DeepCopy()
+	// StringData overwrites Data
+	if len(s.StringData) > 0 {
+		if s.Data == nil {
+			s.Data = map[string][]byte{}
+		}
+		for k, v := range s.StringData {
+			s.Data[k] = []byte(v)
+		}
+	}
+	return s
+}
+
+func specOf(somethingWithSpec rtclient.Object) interface{} {
+	v := reflect.ValueOf(somethingWithSpec)
+	specField := reflect.Indirect(v).FieldByName("Spec")
+	return specField.Interface()
+}
+
 // resourceTemplate means we can modify labels and annotatins so we need to
 // respect those in our comparison logic
-func equalObjectMeta(deployed *metav1.ObjectMeta, requested *metav1.ObjectMeta) (isEqual bool) {
+func equalObjectMeta(deployed, requested rtclient.Object) (isEqual bool) {
 	var pairs [][2]interface{}
-	pairs = append(pairs, [2]interface{}{deployed.Labels, requested.Labels})
-	pairs = append(pairs, [2]interface{}{deployed.Annotations, requested.Annotations})
+	pairs = append(pairs, [2]interface{}{deployed.GetLabels(), requested.GetLabels()})
+	pairs = append(pairs, [2]interface{}{deployed.GetAnnotations(), requested.GetAnnotations()})
 	isEqual = compare.EqualPairs(pairs)
 	return isEqual
 }
@@ -2410,7 +2435,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) addResourceForBrokerProperties(
 
 	// fetch and do idempotent transform based on CR
 
-	// deal with upgrade to immutable secret, only upgrade to mutable on not found
+	// deal with upgrade to mutable secret, only upgrade to mutable on not found
 	alder32Bytes := alder32Of(customResource.Spec.BrokerProperties)
 	shaOfMap := hex.EncodeToString(alder32Bytes)
 	resourceName := types.NamespacedName{

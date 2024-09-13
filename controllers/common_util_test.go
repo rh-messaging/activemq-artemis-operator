@@ -128,9 +128,12 @@ func CleanResourceWithTimeouts(res client.Object, name string, namespace string,
 		return
 	}
 	Expect(err).To(BeNil())
-	By("make sure resource is gone")
 	Eventually(func(g Gomega) {
 		err := k8sClient.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, res)
+		By("eventually make sure resource is gone")
+		if err != nil && !errors.IsNotFound(err) {
+			fmt.Printf("Error from get %v is %v\n", namespace+"/"+name, err)
+		}
 		g.Expect(errors.IsNotFound(err)).To(BeTrue())
 	}, cleanTimeout, cleanInterval).Should(Succeed())
 }

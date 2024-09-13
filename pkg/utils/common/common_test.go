@@ -39,6 +39,5 @@ var _ = Describe("Common Resync Test", func() {
 		}
 
 		Expect(GetReconcileResyncPeriod()).To(Equal(currentPeriod))
-
 	})
 })

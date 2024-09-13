@@ -35,10 +35,8 @@ func NewRouteDefinitionForCR(existing *routev1.Route, namespacedName types.Names
 		TargetPort: intstr.FromString(targetPortName),
 	}
 
-	desired.Spec.To = routev1.RouteTargetReference{
-		Kind: "Service",
-		Name: targetServiceName,
-	}
+	desired.Spec.To.Kind = "Service"
+	desired.Spec.To.Name = targetServiceName
 
 	if passthroughTLS {
 		desired.Spec.TLS = &routev1.TLSConfig{

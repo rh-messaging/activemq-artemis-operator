@@ -21,12 +21,14 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestConditions(t *testing.T) {
 	RegisterFailHandler(Fail)
+	RunSpecs(t, "common suite")
 }
 
 var _ = Describe("Common Conditions", func() {
@@ -215,6 +217,135 @@ var _ = Describe("Common Conditions", func() {
 			}
 
 			Expect(IsConditionPresentAndEqual(conditions, other)).To(BeTrue())
+		})
+	})
+
+	Describe("IsConditionPresentAndEqualsIgnoreMessage", func() {
+
+		It("returns false when there are no conditions to compare with", func() {
+			Expect(IsConditionPresentAndEqualIgnoringMessage([]metav1.Condition{}, metav1.Condition{})).To(BeFalse())
+		})
+		It("returns true when message field is different", func() {
+			current := metav1.Condition{
+				Type:               "TestCondition",
+				Status:             metav1.ConditionFalse,
+				Reason:             "TestHasErrors",
+				Message:            "Test",
+				LastTransitionTime: metav1.Now(),
+			}
+			other := *current.DeepCopy()
+			other.Message = "OtherMessage"
+			conditions := []metav1.Condition{
+				{
+					Type:   "BazCondition",
+					Status: metav1.ConditionTrue,
+					Reason: "BazIsOK",
+				},
+				newReadyCondition(),
+				current,
+			}
+
+			Expect(IsConditionPresentAndEqualIgnoringMessage(conditions, other)).To(BeTrue())
+		})
+		It("returns True when only time is different", func() {
+			current := metav1.Condition{
+				Type:               "TestCondition",
+				Status:             metav1.ConditionFalse,
+				Reason:             "TestHasErrors",
+				Message:            "Test",
+				LastTransitionTime: metav1.Now(),
+			}
+			other := *current.DeepCopy()
+			other.LastTransitionTime = metav1.NewTime(current.LastTransitionTime.Add(5 * time.Hour))
+			conditions := []metav1.Condition{
+				current,
+				{
+					Type:   "BarCondition",
+					Status: metav1.ConditionTrue,
+					Reason: "BarIsOK",
+				},
+				{
+					Type:   "BazCondition",
+					Status: metav1.ConditionTrue,
+					Reason: "BazIsOK",
+				},
+				newReadyCondition(),
+			}
+
+			Expect(IsConditionPresentAndEqualIgnoringMessage(conditions, other)).To(BeTrue())
+		})
+	})
+
+	Describe("PodStartingStatusDigestMessage", func() {
+
+		It("ok on empty", func() {
+			Expect(PodStartingStatusDigestMessage("empty", corev1.PodStatus{})).To(Equal("{empty}"))
+		})
+		It("ok on no conditions", func() {
+			Expect(PodStartingStatusDigestMessage("empty", corev1.PodStatus{Phase: corev1.PodPending})).To(Equal("{empty: Pending}"))
+		})
+		It("ok on simple conditions no status", func() {
+			Expect(PodStartingStatusDigestMessage("s",
+				corev1.PodStatus{
+					Phase: corev1.PodPending, Conditions: []corev1.PodCondition{
+						{
+							Type: "c",
+						},
+					}})).To(Equal("{s: Pending [{c}]}"))
+		})
+
+		It("ok on simple condition status reason", func() {
+			Expect(PodStartingStatusDigestMessage("s",
+				corev1.PodStatus{
+					Phase: corev1.PodPending, Conditions: []corev1.PodCondition{
+						{
+							Type:   "b",
+							Status: corev1.ConditionTrue,
+							Reason: "BazIsOK",
+						},
+					}})).To(Equal("{s: Pending [{b=True BazIsOK}]}"))
+		})
+
+		It("ok on simple condition status reason message", func() {
+			Expect(PodStartingStatusDigestMessage("s",
+				corev1.PodStatus{
+					Phase: corev1.PodPending, Conditions: []corev1.PodCondition{
+						{
+							Type:    "b",
+							Status:  corev1.ConditionTrue,
+							Reason:  "BazIsOK",
+							Message: "m",
+						},
+					}})).To(Equal("{s: Pending [{b=True BazIsOK m}]}"))
+		})
+
+		It("ok on simple condition status message", func() {
+			Expect(PodStartingStatusDigestMessage("s",
+				corev1.PodStatus{
+					Phase: corev1.PodPending, Conditions: []corev1.PodCondition{
+						{
+							Type:    "b",
+							Status:  corev1.ConditionTrue,
+							Message: "m",
+						},
+					}})).To(Equal("{s: Pending [{b=True m}]}"))
+		})
+
+		It("ok on twp condition status message", func() {
+			Expect(PodStartingStatusDigestMessage("s",
+				corev1.PodStatus{
+					Phase: corev1.PodPending, Conditions: []corev1.PodCondition{
+						{
+							Type:    "b",
+							Status:  corev1.ConditionTrue,
+							Message: "m",
+						},
+						{
+							Type:    "c",
+							Status:  corev1.ConditionTrue,
+							Message: "m2",
+						},
+					}})).To(Equal("{s: Pending [{b=True m}{c=True m2}]}"))
 		})
 	})
 })

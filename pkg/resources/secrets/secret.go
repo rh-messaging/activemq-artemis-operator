@@ -3,7 +3,6 @@ package secrets
 import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/random"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,42 +15,6 @@ import (
 var CredentialsNameBuilder namer.NamerData
 var ConsoleNameBuilder namer.NamerData
 var NettyNameBuilder namer.NamerData
-
-func MakeStringDataMap(keyName string, valueName string, key string, value string) map[string]string {
-
-	if 0 == len(key) {
-		key = random.GenerateRandomString(8)
-	}
-
-	if 0 == len(value) {
-		value = random.GenerateRandomString(8)
-	}
-
-	stringDataMap := map[string]string{
-		keyName:   key,
-		valueName: value,
-	}
-
-	return stringDataMap
-}
-
-func MakeSecretWithData(namespacedName types.NamespacedName, secretName string, data map[string][]byte, labels map[string]string) *corev1.Secret {
-
-	secretDefinition := corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Secret",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Labels:    labels,
-			Name:      secretName,
-			Namespace: namespacedName.Namespace,
-		},
-		Data: data,
-	}
-
-	return &secretDefinition
-}
 
 func MakeSecret(namespacedName types.NamespacedName, stringData map[string]string, labels map[string]string) corev1.Secret {
 

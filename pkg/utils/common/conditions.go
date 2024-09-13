@@ -57,6 +57,17 @@ func IsConditionPresentAndEqual(conditions []metav1.Condition, condition metav1.
 	return false
 }
 
+func IsConditionPresentAndEqualIgnoringMessage(conditions []metav1.Condition, condition metav1.Condition) bool {
+	for _, c := range conditions {
+		if condition.Type == c.Type &&
+			condition.Reason == c.Reason &&
+			condition.Status == c.Status {
+			return true
+		}
+	}
+	return false
+}
+
 func newReadyCondition() metav1.Condition {
 	return metav1.Condition{
 		Type:   brokerv1beta1.ReadyConditionType,

@@ -1,6 +1,6 @@
 module github.com/artemiscloud/activemq-artemis-operator
 
-go 1.20
+go 1.21
 
 require (
 	github.com/Azure/go-amqp v0.17.4

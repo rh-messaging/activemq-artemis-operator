@@ -21,6 +21,7 @@ package controllers
 import (
 	"os"
 	"reflect"
+	"strconv"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/volumes"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
@@ -29,8 +30,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -402,5 +405,94 @@ var _ = Describe("artemis controller 2", func() {
 				CleanResource(createdPvc, pvc.Name, pvc.Namespace)
 			}
 		})
+	})
+
+	It("route reconcile", func() {
+
+		if isOpenshift && os.Getenv("USE_EXISTING_CLUSTER") == "true" && os.Getenv("DEPLOY_OPERATOR") == "false" {
+
+			By("start to capture test log needs local operator")
+			StartCapturingLog()
+			defer StopCapturingLog()
+
+			By("deploy a broker cr")
+			acceptorName := "amqp"
+			_, crd := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				candidate.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+					{
+						Name:      acceptorName,
+						Protocols: "amqp",
+						Port:      5672,
+						Expose:    true,
+					},
+				}
+				// no brokerHost or domain, openshift will annotate the route host.generated
+				//candidate.Spec.IngressDomain = "artemiscloud.io"
+			})
+
+			routeKey := types.NamespacedName{
+				Name:      crd.Name + "-" + acceptorName + "-0-" + "svc-rte",
+				Namespace: defaultNamespace,
+			}
+
+			acceptorRoute := routev1.Route{}
+			var routeVersion string
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, routeKey, &acceptorRoute)).Should(Succeed())
+				routeVersion = acceptorRoute.ResourceVersion
+				g.Expect(routeVersion).ShouldNot(Equal(""))
+			}, timeout, interval).Should(Succeed())
+
+			By("verify no route change, ver: " + acceptorRoute.ResourceVersion + ", gen: " + strconv.FormatInt(acceptorRoute.Generation, 10))
+
+			By("force another reconcole with new env var, verify no change to route version")
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+			newEnvName := "GG"
+			Eventually(func(g Gomega) {
+				g.Expect(getPersistedVersionedCrd(crd.Name, defaultNamespace, createdCrd)).Should(BeTrue())
+				createdCrd.Spec.Env = []corev1.EnvVar{{Name: newEnvName, Value: newEnvName}}
+				g.Expect(k8sClient.Update(ctx, createdCrd)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			By("Checking SS has new env var")
+			Eventually(func(g Gomega) {
+				key := types.NamespacedName{Name: namer.CrToSS(crd.Name), Namespace: defaultNamespace}
+				sfsFound := &appsv1.StatefulSet{}
+
+				g.Expect(k8sClient.Get(ctx, key, sfsFound)).Should(Succeed())
+				found := false
+				for _, e := range sfsFound.Spec.Template.Spec.Containers[0].Env {
+					By("checking env: " + e.Name)
+					if e.Name == newEnvName {
+						found = true
+					}
+				}
+				g.Expect(found).Should(BeTrue())
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("wait for ready")
+			Eventually(func(g Gomega) {
+				g.Expect(getPersistedVersionedCrd(crd.Name, defaultNamespace, createdCrd)).Should(BeTrue())
+				g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+				g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
+				g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
+			}, timeout, interval).Should(Succeed())
+
+			By("checking route not updated")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, routeKey, &acceptorRoute)).Should(Succeed())
+
+				By("verify no route change, ver: " + acceptorRoute.ResourceVersion + ", gen: " + strconv.FormatInt(acceptorRoute.Generation, 10))
+
+				g.Expect(routeVersion).Should(Equal(acceptorRoute.ResourceVersion))
+			}, timeout, interval).Should(Succeed())
+
+			By("finding no Updating v1.Route ")
+			matches, err := FindAllFromCapturedLog(`Updating \*v1.Route`)
+			Expect(err).To(BeNil())
+			Expect(len(matches)).To(Equal(0))
+
+			CleanResource(crd, crd.Name, defaultNamespace)
+		}
 	})
 })

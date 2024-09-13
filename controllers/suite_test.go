@@ -875,15 +875,15 @@ func StartCapturingLog() {
 }
 
 func MatchCapturedLog(pattern string) (matched bool, err error) {
-	return regexp.Match(pattern, testWriter.Buffer.Bytes())
+	return regexp.Match(pattern, TestLogWrapper.unbufferedWriter.Bytes())
 }
 
-func FindAllFromCapturedLog(pattern string) []string {
+func FindAllFromCapturedLog(pattern string) ([]string, error) {
 	re, err := regexp.Compile(pattern)
 	if err == nil {
-		return re.FindAllString(testWriter.Buffer.String(), -1)
+		return re.FindAllString(TestLogWrapper.unbufferedWriter.String(), -1), nil
 	}
-	return nil
+	return nil, err
 }
 
 func StopCapturingLog() {

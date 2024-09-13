@@ -63,7 +63,7 @@ func Update(client client.Client, clientObject client.Object) error {
 
 	reqLogger := ctrl.Log.WithName("k8s_actions").WithValues("ActiveMQArtemis Name", clientObject.GetName(), "Namespace", clientObject.GetNamespace())
 	objectTypeString := reflect.TypeOf(clientObject.(runtime.Object)).String()
-	reqLogger.V(1).Info("Updating "+objectTypeString, "obj", clientObject)
+	reqLogger.V(1).Info("Updating "+objectTypeString, "resource version", clientObject.GetResourceVersion(), "gen", clientObject.GetGeneration(), "obj", clientObject)
 
 	var err error = nil
 	if err = client.Update(context.TODO(), clientObject); err != nil {
