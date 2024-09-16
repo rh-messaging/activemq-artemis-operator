@@ -1392,15 +1392,16 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(newVarFound).To(BeTrue())
 			}, timeout, interval).Should(Succeed())
 
-			hasMatch, matchErr := MatchCapturedLog("Failed to create new \\*v1\\.Secret")
+			hasMatch, matchErr := MatchInCapturingLog("Failed to create new \\*v1\\.Secret")
 			Expect(matchErr).To(BeNil())
 			Expect(hasMatch).To(BeFalse())
 
-			hasMatch, matchErr = MatchCapturedLog("ERROR")
+			//To check....
+			hasMatch, matchErr = MatchInCapturingLog("ERROR")
 			Expect(matchErr).To(BeNil())
 			Expect(hasMatch).To(BeFalse())
 
-			hasMatch, matchErr = MatchCapturedLog("The secret " + secret.Name + " is ignored because its onwer references doesn't include ActiveMQArtemis/" + brokerCr.Name)
+			hasMatch, matchErr = MatchInCapturingLog("The secret " + secret.Name + " is ignored because its onwer references doesn't include ActiveMQArtemis/" + brokerCr.Name)
 			Expect(matchErr).To(BeNil())
 			Expect(hasMatch).To(BeTrue())
 
@@ -3287,7 +3288,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
-				unequalEntries := FindAllFromCapturedLog("Unequal")
+				unequalEntries, _ := FindAllInCapturingLog("Unequal")
 				Expect(len(unequalEntries)).Should(BeNumerically("==", 0))
 
 				Expect(k8sClient.Delete(ctx, deployedCrd)).Should(Succeed())
@@ -8091,7 +8092,7 @@ var _ = Describe("artemis controller", func() {
 			g.Expect(len(createdCrd.Status.PodStatus.Stopped)).Should(BeEquivalentTo(1))
 		}, timeout, interval).Should(Succeed())
 
-		Expect(MatchCapturedLog("Failed to create new \\*v1.Secret")).Should(BeFalse())
+		Expect(MatchInCapturingLog("Failed to create new \\*v1.Secret")).Should(BeFalse())
 
 		// cleanup
 		k8sClient.Delete(ctx, &crd)

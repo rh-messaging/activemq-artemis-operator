@@ -171,13 +171,13 @@ var _ = Describe("security controller", func() {
 
 			By("checking the log")
 			Eventually(func(g Gomega) {
-				isMatch, err := MatchPattern(TestLogWrapper.unbufferedWriter.String(), "resource successfully reconciled")
+				isMatch, err := MatchInCapturingLog("resource successfully reconciled")
 				g.Expect(err).To(BeNil())
 				g.Expect(isMatch).To(BeTrue())
 			}, timeout, interval).Should(Succeed())
-			hasMatch, matchErr := MatchPattern(TestLogWrapper.unbufferedWriter.String(), okDefaultPwd)
+			hasMatch, matchErr := MatchInCapturingLog(okDefaultPwd)
 			Expect(matchErr).To(BeNil())
-			Expect(hasMatch).To(BeFalse(), TestLogWrapper.unbufferedWriter.String())
+			Expect(hasMatch).To(BeFalse())
 
 			CleanResource(createdBrokerCr, createdBrokerCr.Name, defaultNamespace)
 			CleanResource(createdSecurityCr, createdSecurityCr.Name, defaultNamespace)
