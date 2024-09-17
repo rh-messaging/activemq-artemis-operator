@@ -224,7 +224,7 @@ var _ = Describe("artemis controller 2", func() {
 					}
 					candidate.Spec.Resources = corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
-							corev1.ResourceStorage: resource.MustParse("1Mi"),
+							corev1.ResourceStorage: resource.MustParse("16Mi"),
 						},
 					}
 				})
@@ -328,7 +328,7 @@ var _ = Describe("artemis controller 2", func() {
 					}
 					candidate.Spec.Resources = corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
-							corev1.ResourceStorage: resource.MustParse("2Mi"),
+							corev1.ResourceStorage: resource.MustParse("16Mi"),
 						},
 					}
 				})
@@ -353,7 +353,7 @@ var _ = Describe("artemis controller 2", func() {
 								},
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
-										corev1.ResourceName(corev1.ResourceStorage): resource.MustParse("2Mi"),
+										corev1.ResourceName(corev1.ResourceStorage): resource.MustParse("16Mi"),
 									},
 								},
 							},
@@ -404,7 +404,7 @@ var _ = Describe("artemis controller 2", func() {
 								},
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
-										corev1.ResourceName(corev1.ResourceStorage): resource.MustParse("2Mi"),
+										corev1.ResourceName(corev1.ResourceStorage): resource.MustParse("16Mi"),
 									},
 								},
 							},

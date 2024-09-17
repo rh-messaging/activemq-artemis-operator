@@ -227,19 +227,20 @@ func setUpNamespace() {
 }
 
 func setUpIngress() {
+	isIngressSSLPassthroughEnabled = isOpenshift
+	clusterIngressHost = clusterUrl.Hostname()
+
 	ingressConfig := &configv1.Ingress{}
 	ingressConfigKey := types.NamespacedName{Name: "cluster"}
 	ingressConfigErr := k8sClient.Get(ctx, ingressConfigKey, ingressConfig)
 
 	if ingressConfigErr == nil {
-		isIngressSSLPassthroughEnabled = true
 		clusterIngressHost = "ingress." + ingressConfig.Spec.Domain
 	} else {
-		isIngressSSLPassthroughEnabled = false
-		clusterIngressHost = clusterUrl.Hostname()
 		ingressNginxControllerDeployment := &appsv1.Deployment{}
 		ingressNginxControllerDeploymentKey := types.NamespacedName{Name: "ingress-nginx-controller", Namespace: "ingress-nginx"}
 		err := k8sClient.Get(ctx, ingressNginxControllerDeploymentKey, ingressNginxControllerDeployment)
+
 		if err == nil {
 			if len(ingressNginxControllerDeployment.Spec.Template.Spec.Containers) > 0 {
 				ingressNginxControllerContainer := &ingressNginxControllerDeployment.Spec.Template.Spec.Containers[0]
