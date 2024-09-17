@@ -138,7 +138,7 @@ var (
 	}
 	managerChannel chan struct{}
 
-	testWriter = common.BufferWriter{}
+	capturingLogWriter = common.BufferWriter{}
 
 	artemisGvk = schema.GroupVersionKind{Group: "broker", Version: "v1beta1", Kind: "ActiveMQArtemis"}
 
@@ -769,7 +769,7 @@ func setUpK8sClient() {
 var _ = BeforeSuite(func() {
 	opts := zap.Options{
 		Development: true,
-		DestWriter:  &TestLogWrapper,
+		DestWriter:  GinkgoWriter,
 		TimeEncoder: zapcore.ISO8601TimeEncoder,
 	}
 
@@ -779,7 +779,7 @@ var _ = BeforeSuite(func() {
 		GinkgoWriter.TeeTo(os.Stderr)
 	}
 
-	GinkgoWriter.TeeTo(testWriter)
+	GinkgoWriter.TeeTo(&capturingLogWriter)
 
 	ctx, cancel = context.WithCancel(context.TODO())
 
@@ -870,25 +870,23 @@ func uninstallCRDs() {
 }
 
 func StartCapturingLog() {
-	testWriter.Buffer = bytes.NewBuffer(nil)
-	TestLogWrapper.StartLogging()
+	capturingLogWriter.Buffer = bytes.NewBuffer(nil)
 }
 
-func MatchCapturedLog(pattern string) (matched bool, err error) {
-	return regexp.Match(pattern, TestLogWrapper.unbufferedWriter.Bytes())
+func MatchInCapturingLog(pattern string) (matched bool, err error) {
+	return regexp.Match(pattern, capturingLogWriter.Buffer.Bytes())
 }
 
-func FindAllFromCapturedLog(pattern string) ([]string, error) {
+func FindAllInCapturingLog(pattern string) ([]string, error) {
 	re, err := regexp.Compile(pattern)
 	if err == nil {
-		return re.FindAllString(TestLogWrapper.unbufferedWriter.String(), -1), nil
+		return re.FindAllString(capturingLogWriter.Buffer.String(), -1), nil
 	}
 	return nil, err
 }
 
 func StopCapturingLog() {
-	testWriter.Buffer = nil
-	TestLogWrapper.StopLogging()
+	capturingLogWriter.Buffer = nil
 }
 
 func BeforeEachSpec() {

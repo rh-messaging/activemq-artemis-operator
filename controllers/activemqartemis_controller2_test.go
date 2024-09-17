@@ -488,7 +488,7 @@ var _ = Describe("artemis controller 2", func() {
 			}, timeout, interval).Should(Succeed())
 
 			By("finding no Updating v1.Route ")
-			matches, err := FindAllFromCapturedLog(`Updating \*v1.Route`)
+			matches, err := FindAllInCapturingLog(`Updating \*v1.Route`)
 			Expect(err).To(BeNil())
 			Expect(len(matches)).To(Equal(0))
 
