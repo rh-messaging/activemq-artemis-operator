@@ -44,7 +44,7 @@ type QueueConfigurationType struct {
 	FilterString                *string `json:"filterString,omitempty"`
 	Durable                     *bool   `json:"durable,omitempty"`
 	User                        *string `json:"user,omitempty"`
-	MaxConsumers                *int32  `json:"maxConsumers"`
+	MaxConsumers                *int32  `json:"maxConsumers,omitempty"`
 	Exclusive                   *bool   `json:"exclusive,omitempty"`
 	GroupRebalance              *bool   `json:"groupRebalance,omitempty"`
 	GroupRebalancePauseDispatch *bool   `json:"groupRebalancePauseDispatch,omitempty"`
@@ -53,7 +53,7 @@ type QueueConfigurationType struct {
 	LastValue                   *bool   `json:"lastValue,omitempty"`
 	LastValueKey                *string `json:"lastValueKey,omitempty"`
 	NonDestructive              *bool   `json:"nonDestructive,omitempty"`
-	PurgeOnNoConsumers          *bool   `json:"purgeOnNoConsumers"`
+	PurgeOnNoConsumers          *bool   `json:"purgeOnNoConsumers,omitempty"`
 	Enabled                     *bool   `json:"enabled,omitempty"`
 	ConsumersBeforeDispatch     *int32  `json:"consumersBeforeDispatch,omitempty"`
 	DelayBeforeDispatch         *int64  `json:"delayBeforeDispatch,omitempty"`
