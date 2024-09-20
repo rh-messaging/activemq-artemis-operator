@@ -38,6 +38,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
+	"github.com/artemiscloud/activemq-artemis-operator/api/v2alpha1"
+	"github.com/artemiscloud/activemq-artemis-operator/api/v2alpha2"
+	"github.com/artemiscloud/activemq-artemis-operator/api/v2alpha3"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/jolokia"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
@@ -953,6 +956,47 @@ var _ = Describe("Address controller tests", func() {
 				CleanResource(crd2, crd2.Name, defaultNamespace)
 			}
 
+		})
+	})
+
+	Context("Address conversion test", Label("address-conversion-test"), func() {
+		It("convert empty address CR", func() {
+			v1beta1AddressCR := brokerv1beta1.ActiveMQArtemisAddress{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ActiveMQArtemisAddress",
+					APIVersion: brokerv1beta1.GroupVersion.Identifier(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      NextSpecResourceName(),
+					Namespace: defaultNamespace,
+				},
+			}
+			Expect(k8sClient.Create(ctx, &v1beta1AddressCR)).Should(Succeed())
+
+			addressCRKey := types.NamespacedName{Name: v1beta1AddressCR.Name, Namespace: v1beta1AddressCR.Namespace}
+
+			Eventually(func(g Gomega) {
+				v1beta1CreatedAddressCR := &brokerv1beta1.ActiveMQArtemisAddress{}
+				g.Expect(k8sClient.Get(ctx, addressCRKey, v1beta1CreatedAddressCR)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				v2alpha3AddressCR := &v2alpha3.ActiveMQArtemisAddress{}
+				g.Expect(k8sClient.Get(ctx, addressCRKey, v2alpha3AddressCR)).Should(Succeed())
+				g.Expect(k8sClient.Update(ctx, v2alpha3AddressCR)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				v2alpha2AddressCR := &v2alpha2.ActiveMQArtemisAddress{}
+				g.Expect(k8sClient.Get(ctx, addressCRKey, v2alpha2AddressCR)).Should(Succeed())
+				g.Expect(k8sClient.Update(ctx, v2alpha2AddressCR)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				v2alpha1AddressCR := &v2alpha1.ActiveMQArtemisAddress{}
+				g.Expect(k8sClient.Get(ctx, addressCRKey, v2alpha1AddressCR)).Should(Succeed())
+				g.Expect(k8sClient.Update(ctx, v2alpha1AddressCR)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
 		})
 	})
 })
