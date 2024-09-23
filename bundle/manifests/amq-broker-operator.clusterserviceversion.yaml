@@ -3352,5 +3352,9 @@ spec:
     name: ""
   - image: registry.redhat.io/amq7/amq-broker-rhel8@sha256:dc13871dfed52402c40fd192900fc3cb5a49da4fa08e4ec4d0e23a879e83db25
     name: ""
-  replaces: amq-broker-operator.v7.12.2-opr-1
+  replaces: amq-broker-operator.v7.12.0-opr-1
+  skips:
+   - amq-broker-operator.v7.12.0-opr-2
+   - amq-broker-operator.v7.12.1-opr-1
+   - amq-broker-operator.v7.12.2-opr-1
   version: 7.12.3-opr-1
