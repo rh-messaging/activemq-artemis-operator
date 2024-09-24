@@ -997,6 +997,12 @@ var _ = Describe("Address controller tests", func() {
 				g.Expect(k8sClient.Get(ctx, addressCRKey, v2alpha1AddressCR)).Should(Succeed())
 				g.Expect(k8sClient.Update(ctx, v2alpha1AddressCR)).Should(Succeed())
 			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				v1beta1CreatedAddressCR := &brokerv1beta1.ActiveMQArtemisAddress{}
+				g.Expect(k8sClient.Get(ctx, addressCRKey, v1beta1CreatedAddressCR)).Should(Succeed())
+				g.Expect(k8sClient.Delete(ctx, v1beta1CreatedAddressCR)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
 		})
 	})
 })
