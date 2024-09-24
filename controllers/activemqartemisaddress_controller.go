@@ -229,7 +229,11 @@ func createAddressResource(a *jc.JkInfo, addressRes *brokerv1beta1.ActiveMQArtem
 	//Now checking if create queue or address
 	if addressRes.Spec.QueueName == nil || *addressRes.Spec.QueueName == "" {
 		//create address
-		response, err := a.Artemis.CreateAddress(addressRes.Spec.AddressName, *addressRes.Spec.RoutingType)
+		routingType := ""
+		if addressRes.Spec.RoutingType != nil {
+			routingType = *addressRes.Spec.RoutingType
+		}
+		response, err := a.Artemis.CreateAddress(addressRes.Spec.AddressName, routingType)
 		if nil != err {
 			if mgmt.GetCreationError(response) == mgmt.ADDRESS_ALREADY_EXISTS {
 				log.V(1).Info("Address already exists, no retry", "address", addressRes.Spec.AddressName)
