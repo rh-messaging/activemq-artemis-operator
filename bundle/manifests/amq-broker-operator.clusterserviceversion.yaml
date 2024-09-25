@@ -3354,7 +3354,7 @@ spec:
     name: ""
   replaces: amq-broker-operator.v7.12.0-opr-1
   skips:
-   - amq-broker-operator.v7.12.0-opr-2
-   - amq-broker-operator.v7.12.1-opr-1
-   - amq-broker-operator.v7.12.2-opr-1
+  - amq-broker-operator.v7.12.0-opr-2
+  - amq-broker-operator.v7.12.1-opr-1
+  - amq-broker-operator.v7.12.2-opr-1
   version: 7.12.3-opr-1
