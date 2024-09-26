@@ -163,16 +163,11 @@ var _ = Describe("pub sub scale", func() {
 					"securityRoles.COMMANDS.control-plane.consume=true",
 					"securityRoles.COMMANDS.control-plane.send=true",
 
-					"securityRoles.$ACTIVEMQ_ARTEMIS_FEDERATION.control-plane.createNonDurableQueue=true",
-					"securityRoles.$ACTIVEMQ_ARTEMIS_FEDERATION.control-plane.consume=true",
-					"securityRoles.$ACTIVEMQ_ARTEMIS_FEDERATION.control-plane.send=true",
-
-					// federation uses a dynamic event address that needs a prefix as it has a uuid at the end
-					// to cover that permission, we need the wildcard permisison set for control-plane
-					"securityRoles.#.control-plane.createNonDurableQueue=true",
-					"securityRoles.#.control-plane.createAddress=true",
-					"securityRoles.#.control-plane.consume=true",
-					"securityRoles.#.control-plane.send=true",
+					"# federation internal links etc use the ACTIVEMQ_ARTEMIS_FEDERATION prefix",
+					"securityRoles.\"$ACTIVEMQ_ARTEMIS_FEDERATION.#\".control-plane.createNonDurableQueue=true",
+					"securityRoles.\"$ACTIVEMQ_ARTEMIS_FEDERATION.#\".control-plane.createAddress=true",
+					"securityRoles.\"$ACTIVEMQ_ARTEMIS_FEDERATION.#\".control-plane.consume=true",
+					"securityRoles.\"$ACTIVEMQ_ARTEMIS_FEDERATION.#\".control-plane.send=true",
 
 					// with properties update - can have this static with dns
 					"# federate the address, publish on N goes to [0..N]",

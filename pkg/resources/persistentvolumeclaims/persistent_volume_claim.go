@@ -2,57 +2,38 @@ package persistentvolumeclaims
 
 import (
 	"github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 )
 
-func NewPersistentVolumeClaim(namespace string, spec *v1beta1.VolumeClaimTemplate) *corev1.PersistentVolumeClaim {
+func PersistentVolumeClaim(namespace string, existing *corev1.PersistentVolumeClaim, templateFromCr *v1beta1.VolumeClaimTemplate) *corev1.PersistentVolumeClaim {
 
-	pvc := &corev1.PersistentVolumeClaim{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "PersistentVolumeClaim",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        spec.Name,
-			Namespace:   namespace,
-			Annotations: spec.Annotations,
-			Labels:      spec.Labels,
-		},
-		Spec: spec.Spec,
-	}
-
-	return pvc
-}
-
-func NewPersistentVolumeClaimWithCapacityAndStorageClassName(namespacedName types.NamespacedName, capacity string, labels map[string]string, storageClassName string, accessModes []corev1.PersistentVolumeAccessMode) *corev1.PersistentVolumeClaim {
-
-	pvc := &corev1.PersistentVolumeClaim{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "PersistentVolumeClaim",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: nil,
-			Labels:      labels,
-			Name:        namespacedName.Name,
-			Namespace:   namespacedName.Namespace,
-		},
-		Spec: corev1.PersistentVolumeClaimSpec{
-			AccessModes: accessModes,
-			Resources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceName(corev1.ResourceStorage): resource.MustParse(capacity),
-				},
+	var desired *corev1.PersistentVolumeClaim = existing
+	if desired == nil {
+		desired = &corev1.PersistentVolumeClaim{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "PersistentVolumeClaim",
 			},
-		},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      templateFromCr.Name,
+				Namespace: namespace,
+			},
+			Spec: corev1.PersistentVolumeClaimSpec{},
+		}
+	}
+	//apply desired
+	desired.ObjectMeta.Labels = templateFromCr.Labels
+	common.ApplyAnnotations(&desired.ObjectMeta, templateFromCr.Annotations)
+
+	// apply defaults
+	defaultVolumeMode := corev1.PersistentVolumeFilesystem
+	if templateFromCr.Spec.VolumeMode == nil {
+		templateFromCr.Spec.VolumeMode = &defaultVolumeMode
 	}
 
-	if storageClassName != "" {
-		pvc.Spec.StorageClassName = &storageClassName
-	}
+	desired.Spec = templateFromCr.Spec
 
-	return pvc
+	return desired
 }

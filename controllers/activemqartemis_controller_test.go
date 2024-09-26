@@ -3241,7 +3241,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
-				unequalEntries, _ := FindAllInCapturingLog("Unequal")
+				unequalEntries, _ := FindAllInCapturingLog("unequal")
 				Expect(len(unequalEntries)).Should(BeNumerically("==", 0))
 
 				Expect(k8sClient.Delete(ctx, deployedCrd)).Should(Succeed())
@@ -6726,6 +6726,100 @@ var _ = Describe("artemis controller", func() {
 
 			// cleanup
 			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
+		})
+	})
+
+	Context("With update persistence=true single reconcile", func() {
+		It("check reconcole loop", func() {
+			By("By creating a crd persistence")
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+
+			crd.Spec.DeploymentPlan.PersistenceEnabled = true
+			if !isOpenshift {
+				crd.Spec.IngressDomain = defaultTestIngressDomain
+			}
+
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				brokerKey := types.NamespacedName{Name: crd.ObjectMeta.Name, Namespace: crd.ObjectMeta.Namespace}
+				createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+				By("wait for ready indication")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					if verbose {
+						fmt.Printf("\nSTATUS: %v\n", createdCrd.Status)
+					}
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				createdSs := &appsv1.StatefulSet{}
+				By("finding ss resource version")
+				Eventually(func(g Gomega) {
+					key := types.NamespacedName{Name: namer.CrToSS(crd.Name), Namespace: defaultNamespace}
+					g.Expect(k8sClient.Get(ctx, key, createdSs)).Should(Succeed())
+					g.Expect(createdSs.ObjectMeta.ResourceVersion).NotTo(Equal(""))
+				}, timeout, interval).Should(Succeed())
+
+				initialVersion := createdSs.ObjectMeta.ResourceVersion
+
+				if os.Getenv("DEPLOY_OPERATOR") == "false" {
+
+					By("start to capture test log needs local operator")
+					StartCapturingLog()
+					defer StopCapturingLog()
+
+					By("updating the crd to expose console - verify no ss mod")
+					Eventually(func(g Gomega) {
+						g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+						createdCrd.Spec.Console.Expose = true
+						createdCrd.Spec.Console.ExposeMode = &brokerv1beta1.ExposeModes.Ingress
+						g.Expect(k8sClient.Update(ctx, createdCrd)).Should(Succeed())
+					}, timeout, interval).Should(Succeed())
+
+					By("check ingress is created for console")
+					ingKey := types.NamespacedName{
+						Name:      createdCrd.Name + "-wconsj-0-svc-ing",
+						Namespace: defaultNamespace,
+					}
+					ingress := netv1.Ingress{}
+					Eventually(func(g Gomega) {
+						g.Expect(k8sClient.Get(ctx, ingKey, &ingress)).To(Succeed())
+					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+					By("wait for ready indication")
+					Eventually(func(g Gomega) {
+						g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+						if verbose {
+							fmt.Printf("\nSTATUS: %v\n", createdCrd.Status)
+						}
+						g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
+						g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
+
+					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+					By("Making sure that the ss does not get redeployed " + crd.ObjectMeta.Name)
+					Eventually(func(g Gomega) {
+						key := types.NamespacedName{Name: namer.CrToSS(crd.Name), Namespace: defaultNamespace}
+						g.Expect(k8sClient.Get(ctx, key, createdSs)).Should(Succeed())
+						g.Expect(initialVersion).To(Equal(createdSs.ObjectMeta.ResourceVersion))
+					}, timeout, interval).Should(Succeed())
+
+					By("finding no Updating v1.StatefulSet ")
+					matches, err := FindAllInCapturingLog(`Updating \*v1.StatefulSet`)
+					Expect(err).To(BeNil())
+					Expect(len(matches)).To(Equal(0))
+				}
+
+			}
+
+			// cleanup
+			CleanResource(&crd, crd.Name, defaultNamespace)
 		})
 	})
 

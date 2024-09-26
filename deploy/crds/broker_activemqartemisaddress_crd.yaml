@@ -224,10 +224,6 @@ spec:
                 type: string
               routingType:
                 type: string
-            required:
-            - addressName
-            - queueName
-            - routingType
             type: object
           status:
             description: ActiveMQArtemisAddressStatus defines the observed state of ActiveMQArtemisAddress
@@ -308,11 +304,6 @@ spec:
                 type: boolean
               routingType:
                 type: string
-            required:
-            - addressName
-            - queueName
-            - removeFromBrokerOnDelete
-            - routingType
             type: object
           status:
             description: ActiveMQArtemisAddressStatus defines the observed state of ActiveMQArtemisAddress
@@ -455,9 +446,6 @@ spec:
                     type: boolean
                   user:
                     type: string
-                required:
-                - maxConsumers
-                - purgeOnNoConsumers
                 type: object
               queueName:
                 type: string

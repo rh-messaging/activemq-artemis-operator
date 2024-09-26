@@ -531,7 +531,7 @@ func TestNewPodTemplateSpecForCR_IncludesDebugArgs(t *testing.T) {
 		customResource: cr,
 	}
 
-	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
+	newSpec, err := reconciler.PodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, newSpec)
@@ -1057,7 +1057,7 @@ func TestNewPodTemplateSpecForCR_AppendsDebugArgs(t *testing.T) {
 	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("test"), isOpenshift)
 	reconciler := NewActiveMQArtemisReconcilerImpl(cr, outer)
 
-	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
+	newSpec, err := reconciler.PodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, newSpec)
@@ -1084,7 +1084,7 @@ func TestNewPodTemplateSpecForCR_IncludesImagePullSecret(t *testing.T) {
 	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
 	reconciler := NewActiveMQArtemisReconcilerImpl(cr, outer)
 
-	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
+	newSpec, err := reconciler.PodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
 	assert.NoError(t, err)
 	assert.NotNil(t, newSpec)
 	expectedPullSecret := []v1.LocalObjectReference{
@@ -1120,7 +1120,7 @@ func TestNewPodTemplateSpecForCR_IncludesTopologySpreadConstraints(t *testing.T)
 	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
 	reconciler := NewActiveMQArtemisReconcilerImpl(cr, outer)
 
-	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
+	newSpec, err := reconciler.PodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
 	assert.NoError(t, err)
 	assert.NotNil(t, newSpec)
 	expectedTopologySpreadConstraints := []v1.TopologySpreadConstraint{
@@ -1150,7 +1150,7 @@ func TestNewPodTemplateSpecForCR_IncludesContainerSecurityContext(t *testing.T) 
 		customResource: cr,
 	}
 
-	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
+	newSpec, err := reconciler.PodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, newSpec)

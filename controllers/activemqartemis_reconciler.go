@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -265,7 +266,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(customResour
 	}
 
 	reqLogger.V(2).Info("Reconciling desired statefulset", "name", ssNamespacedName, "current", currentStatefulSet)
-	currentStatefulSet, err = reconciler.NewStatefulSetForCR(customResource, namer, currentStatefulSet, client)
+	currentStatefulSet, err = reconciler.StatefulSetForCR(customResource, namer, currentStatefulSet, client)
 	if err != nil {
 		reqLogger.Error(err, "Error creating new stafulset")
 		return nil, err
@@ -1497,7 +1498,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) CompareMetaAndSpec(deployed, re
 	isEqual := equalObjectMeta(deployed, requested) &&
 		equality.Semantic.DeepEqual(specOf(deployed), specOf(requested))
 	if !isEqual {
-		reconciler.log.V(2).Info("unequal", "deployed", deployed, "requested", requested)
+		reconciler.log.V(2).Info("unequal", "deployed", &deployed, "requested", &requested)
 	}
 	return isEqual
 }
@@ -1894,7 +1895,7 @@ func MakeContainerPorts(cr *brokerv1beta1.ActiveMQArtemis) []corev1.ContainerPor
 	return containerPorts
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, current *corev1.PodTemplateSpec, client rtclient.Client) (*corev1.PodTemplateSpec, error) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) PodTemplateSpecForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, current *corev1.PodTemplateSpec, client rtclient.Client) (*corev1.PodTemplateSpec, error) {
 
 	reqLogger := reconciler.log.WithName(customResource.Name)
 
@@ -2293,7 +2294,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureStartupProbe(container
 			startupProbe = &corev1.Probe{}
 		}
 
-		applyNonDefaultedValues(startupProbe, probeFromCr)
+		conditionallyApplyValuesToPreserveDefaults(startupProbe, probeFromCr)
 		startupProbe.ProbeHandler = probeFromCr.ProbeHandler
 	} else {
 		startupProbe = nil
@@ -2311,7 +2312,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureLivenessProbe(containe
 	}
 
 	if probeFromCr != nil {
-		applyNonDefaultedValues(livenessProbe, probeFromCr)
+		conditionallyApplyValuesToPreserveDefaults(livenessProbe, probeFromCr)
 
 		// not complete in this case!
 		if probeFromCr.GRPC == nil && probeFromCr.Exec == nil && probeFromCr.HTTPGet == nil && probeFromCr.TCPSocket == nil {
@@ -2363,7 +2364,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureReadinessProbe(contain
 	}
 
 	if probeFromCr != nil {
-		applyNonDefaultedValues(readinessProbe, probeFromCr)
+		conditionallyApplyValuesToPreserveDefaults(readinessProbe, probeFromCr)
 		if probeFromCr.GRPC == nil && probeFromCr.Exec == nil && probeFromCr.HTTPGet == nil && probeFromCr.TCPSocket == nil {
 			reconciler.log.V(2).Info("adding default handler to user provided readiness Probe")
 
@@ -2402,8 +2403,9 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureReadinessProbe(contain
 	return readinessProbe
 }
 
-func applyNonDefaultedValues(readinessProbe *corev1.Probe, probeFromCr *corev1.Probe) {
-	//copy the probe, but only for non default (init values)
+// when the CR has a full Spec, the intent is that the Spec is fully formed, such that there are not server side defaults in the mix.
+// For probes, we historically allow a partial spec, so we need to be careful to not overide server side applied defaults with empty values
+func conditionallyApplyValuesToPreserveDefaults(readinessProbe *corev1.Probe, probeFromCr *corev1.Probe) {
 	if probeFromCr.InitialDelaySeconds > 0 {
 		readinessProbe.InitialDelaySeconds = probeFromCr.InitialDelaySeconds
 	}
@@ -2705,7 +2707,7 @@ func ParseBrokerPropertyWithOrdinal(property string) []string {
 	return brokerPropertyWithOrdinalRegex.FindStringSubmatch(property)
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) NewStatefulSetForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, currentStateFullSet *appsv1.StatefulSet, client rtclient.Client) (*appsv1.StatefulSet, error) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) StatefulSetForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, currentStateFullSet *appsv1.StatefulSet, client rtclient.Client) (*appsv1.StatefulSet, error) {
 
 	reqLogger := reconciler.log.WithName(customResource.Name)
 
@@ -2716,56 +2718,75 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewStatefulSetForCR(customResou
 	replicas := common.GetDeploymentSize(customResource)
 	currentStateFullSet = ss.MakeStatefulSet(currentStateFullSet, namer.SsNameBuilder.Name(), namer.SvcHeadlessNameBuilder.Name(), namespacedName, nil, namer.LabelBuilder.Labels(), &replicas)
 
-	podTemplateSpec, err := reconciler.NewPodTemplateSpecForCR(customResource, namer, &currentStateFullSet.Spec.Template, client)
+	podTemplateSpec, err := reconciler.PodTemplateSpecForCR(customResource, namer, &currentStateFullSet.Spec.Template, client)
 	if err != nil {
-		reqLogger.Error(err, "Error creating new pod template")
+		reqLogger.Error(err, "error creating pod template")
 		return nil, err
 	}
-
-	if customResource.Spec.DeploymentPlan.PersistenceEnabled || len(customResource.Spec.DeploymentPlan.ExtraVolumeClaimTemplates) > 0 {
-		currentStateFullSet.Spec.VolumeClaimTemplates = *reconciler.NewPersistentVolumeClaimArrayForCR(customResource, namer, 1)
-	}
 	currentStateFullSet.Spec.Template = *podTemplateSpec
+
+	currentStateFullSet.Spec.VolumeClaimTemplates = reconciler.PersistentVolumeClaimArrayForCR(customResource, namer, currentStateFullSet.Spec)
 
 	return currentStateFullSet, nil
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) NewPersistentVolumeClaimArrayForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, arrayLength int) *[]corev1.PersistentVolumeClaim {
+func (reconciler *ActiveMQArtemisReconcilerImpl) PersistentVolumeClaimArrayForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, spec appsv1.StatefulSetSpec) []corev1.PersistentVolumeClaim {
 
-	var pvc *corev1.PersistentVolumeClaim = nil
-
-	capacity := "2Gi"
-	pvcArray := make([]corev1.PersistentVolumeClaim, 0, arrayLength)
-	storageClassName := ""
+	var existing, current *corev1.PersistentVolumeClaim
+	pvcArray := make([]corev1.PersistentVolumeClaim, 0)
 
 	if customResource.Spec.DeploymentPlan.PersistenceEnabled {
-
-		namespacedName := types.NamespacedName{
-			Name:      customResource.Name,
-			Namespace: customResource.Namespace,
-		}
-
+		capacity := "2Gi"
 		if customResource.Spec.DeploymentPlan.Storage.Size != "" {
 			capacity = customResource.Spec.DeploymentPlan.Storage.Size
 		}
 
+		tempateClaim := &brokerv1beta1.VolumeClaimTemplate{
+			ObjectMeta: brokerv1beta1.ObjectMeta{
+				Name:   customResource.Name,
+				Labels: namer.LabelBuilder.Labels(),
+			},
+			Spec: corev1.PersistentVolumeClaimSpec{
+				AccessModes: []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
+				Resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceName(corev1.ResourceStorage): resource.MustParse(capacity),
+					},
+				},
+			},
+		}
 		if customResource.Spec.DeploymentPlan.Storage.StorageClassName != "" {
-			storageClassName = customResource.Spec.DeploymentPlan.Storage.StorageClassName
+			tempateClaim.Spec.StorageClassName = &customResource.Spec.DeploymentPlan.Storage.StorageClassName
 		}
 
-		for i := 0; i < arrayLength; i++ {
-			pvc = persistentvolumeclaims.NewPersistentVolumeClaimWithCapacityAndStorageClassName(namespacedName, capacity, namer.LabelBuilder.Labels(), storageClassName, []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"})
-			reconciler.applyTemplates(pvc)
-			pvcArray = append(pvcArray, *pvc)
-		}
+		existing = findExistingByName(spec.VolumeClaimTemplates, tempateClaim)
+		current = persistentvolumeclaims.PersistentVolumeClaim(customResource.Namespace, existing, tempateClaim)
+		pvcArray = append(pvcArray, *current)
 	}
 
 	for _, epvc := range customResource.Spec.DeploymentPlan.ExtraVolumeClaimTemplates {
-		pvc = persistentvolumeclaims.NewPersistentVolumeClaim(customResource.Namespace, &epvc)
-		pvcArray = append(pvcArray, *pvc)
+		existing = findExistingByName(spec.VolumeClaimTemplates, &epvc)
+		current = persistentvolumeclaims.PersistentVolumeClaim(customResource.Namespace, existing, &epvc)
+		pvcArray = append(pvcArray, *current)
 	}
 
-	return &pvcArray
+	for index := range pvcArray {
+		reconciler.applyTemplates(&pvcArray[index])
+	}
+
+	if len(pvcArray) > 0 {
+		return pvcArray
+	}
+	return nil
+}
+
+func findExistingByName(persistentVolumeClaim []corev1.PersistentVolumeClaim, tempateClaim *brokerv1beta1.VolumeClaimTemplate) *corev1.PersistentVolumeClaim {
+	for index, claim := range persistentVolumeClaim {
+		if claim.Name == tempateClaim.Name {
+			return &persistentVolumeClaim[index]
+		}
+	}
+	return nil
 }
 
 func MakeEnvVarArrayForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers) []corev1.EnvVar {

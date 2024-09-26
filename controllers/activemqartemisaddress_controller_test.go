@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -38,6 +39,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
+	"github.com/artemiscloud/activemq-artemis-operator/api/v2alpha1"
+	"github.com/artemiscloud/activemq-artemis-operator/api/v2alpha2"
+	"github.com/artemiscloud/activemq-artemis-operator/api/v2alpha3"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/jolokia"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
@@ -506,6 +510,52 @@ var _ = Describe("Address controller tests", func() {
 			}
 
 		})
+
+		It("create address with name only", func() {
+			crd := generateArtemisSpec(defaultNamespace)
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			addressName := "my-address"
+			addressCrd := brokerv1beta1.ActiveMQArtemisAddress{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ActiveMQArtemisAddress",
+					APIVersion: brokerv1beta1.GroupVersion.Identifier(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      NextSpecResourceName(),
+					Namespace: defaultNamespace,
+				},
+				Spec: brokerv1beta1.ActiveMQArtemisAddressSpec{
+					AddressName: addressName,
+				},
+			}
+			Expect(k8sClient.Create(ctx, &addressCrd)).Should(Succeed())
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+				createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+				brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
+
+				By("Verifying started via Status")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("Verifying address is created")
+				podWithOrdinal := namer.CrToSS(crd.Name) + "-0"
+				command = []string{"amq-broker/bin/artemis", "address", "show", "--url", "tcp://" + podWithOrdinal + ":61616"}
+
+				Eventually(func(g Gomega) {
+					stdOutContent := ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+					g.Expect(stdOutContent).Should(ContainSubstring(addressName))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
+
+			// cleanup
+			Expect(k8sClient.Delete(ctx, &addressCrd)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
+		})
 	})
 
 	Context("Address CR with console agent", func() {
@@ -953,6 +1003,53 @@ var _ = Describe("Address controller tests", func() {
 				CleanResource(crd2, crd2.Name, defaultNamespace)
 			}
 
+		})
+	})
+
+	Context("Address conversion test", Label("address-conversion-test"), func() {
+		It("convert empty address CR", func() {
+			v1beta1AddressCR := brokerv1beta1.ActiveMQArtemisAddress{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ActiveMQArtemisAddress",
+					APIVersion: brokerv1beta1.GroupVersion.Identifier(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      NextSpecResourceName(),
+					Namespace: defaultNamespace,
+				},
+			}
+			Expect(k8sClient.Create(ctx, &v1beta1AddressCR)).Should(Succeed())
+
+			addressCRKey := types.NamespacedName{Name: v1beta1AddressCR.Name, Namespace: v1beta1AddressCR.Namespace}
+
+			Eventually(func(g Gomega) {
+				v1beta1CreatedAddressCR := &brokerv1beta1.ActiveMQArtemisAddress{}
+				g.Expect(k8sClient.Get(ctx, addressCRKey, v1beta1CreatedAddressCR)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				v2alpha3AddressCR := &v2alpha3.ActiveMQArtemisAddress{}
+				g.Expect(k8sClient.Get(ctx, addressCRKey, v2alpha3AddressCR)).Should(Succeed())
+				g.Expect(k8sClient.Update(ctx, v2alpha3AddressCR)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				v2alpha2AddressCR := &v2alpha2.ActiveMQArtemisAddress{}
+				g.Expect(k8sClient.Get(ctx, addressCRKey, v2alpha2AddressCR)).Should(Succeed())
+				g.Expect(k8sClient.Update(ctx, v2alpha2AddressCR)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				v2alpha1AddressCR := &v2alpha1.ActiveMQArtemisAddress{}
+				g.Expect(k8sClient.Get(ctx, addressCRKey, v2alpha1AddressCR)).Should(Succeed())
+				g.Expect(k8sClient.Update(ctx, v2alpha1AddressCR)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				v1beta1CreatedAddressCR := &brokerv1beta1.ActiveMQArtemisAddress{}
+				g.Expect(k8sClient.Get(ctx, addressCRKey, v1beta1CreatedAddressCR)).Should(Succeed())
+				g.Expect(k8sClient.Delete(ctx, v1beta1CreatedAddressCR)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
 		})
 	})
 })

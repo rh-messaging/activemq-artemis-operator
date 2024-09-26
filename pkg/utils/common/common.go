@@ -685,9 +685,9 @@ func DetectOpenshiftWith(config *rest.Config) (bool, error) {
 		for i := 0; i < defaultRetries; i++ {
 			isOpenShiftResourcePresent, err = discovery.IsResourceEnabled(discoveryClient,
 				schema.GroupVersionResource{
-					Group:    "operator.openshift.io",
+					Group:    "route.openshift.io",
 					Version:  "v1",
-					Resource: "openshiftapiservers",
+					Resource: "routes",
 				})
 
 			if err == nil {

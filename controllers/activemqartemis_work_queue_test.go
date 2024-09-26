@@ -159,16 +159,11 @@ var _ = Describe("work queue", func() {
 					"securityRoles.JOBS.control-plane.consume=true",
 					"securityRoles.JOBS.control-plane.send=true",
 
-					"securityRoles.$ACTIVEMQ_ARTEMIS_FEDERATION.control-plane.createNonDurableQueue=true",
-					"securityRoles.$ACTIVEMQ_ARTEMIS_FEDERATION.control-plane.consume=true",
-					"securityRoles.$ACTIVEMQ_ARTEMIS_FEDERATION.control-plane.send=true",
-
-					// federation uses a dynamic event address that needs a prefix as it has a uuid at the end
-					// to cover that permission, we need the wildcard permisison set for control-plane
-					"securityRoles.#.control-plane.createNonDurableQueue=true",
-					"securityRoles.#.control-plane.createAddress=true",
-					"securityRoles.#.control-plane.consume=true",
-					"securityRoles.#.control-plane.send=true",
+					"# federation internal links etc use the ACTIVEMQ_ARTEMIS_FEDERATION prefix",
+					"securityRoles.\"$ACTIVEMQ_ARTEMIS_FEDERATION.#\".control-plane.createNonDurableQueue=true",
+					"securityRoles.\"$ACTIVEMQ_ARTEMIS_FEDERATION.#\".control-plane.createAddress=true",
+					"securityRoles.\"$ACTIVEMQ_ARTEMIS_FEDERATION.#\".control-plane.consume=true",
+					"securityRoles.\"$ACTIVEMQ_ARTEMIS_FEDERATION.#\".control-plane.send=true",
 
 					"# federate the queue in both directions",
 					"broker-0.AMQPConnections.target.uri=tcp://${CR_NAME}-ss-1.${CR_NAME}-hdls-svc:61616",
@@ -181,8 +176,10 @@ var _ = Describe("work queue", func() {
 					"AMQPConnections.target.password=passwd",
 					"AMQPConnections.target.autostart=true",
 
-					"# in pull mode",
+					"# in pull mode, batch=100",
 					"AMQPConnections.target.federations.peerN.properties.amqpCredit=0",
+					"AMQPConnections.target.federations.peerN.properties.amqpPullConsumerCredits=100",
+
 					"AMQPConnections.target.federations.peerN.localQueuePolicies.forJobs.includes.justJobs.queueMatch=JOBS",
 
 					// brokerCrd.Spec.DeploymentPlan.EnableMetricsPlugin

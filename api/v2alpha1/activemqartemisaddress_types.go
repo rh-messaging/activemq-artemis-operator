@@ -28,9 +28,9 @@ type ActiveMQArtemisAddressSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	AddressName string `json:"addressName"`
-	QueueName   string `json:"queueName"`
-	RoutingType string `json:"routingType"`
+	AddressName string `json:"addressName,omitempty"`
+	QueueName   string `json:"queueName,omitempty"`
+	RoutingType string `json:"routingType,omitempty"`
 }
 
 // ActiveMQArtemisAddressStatus defines the observed state of ActiveMQArtemisAddress
