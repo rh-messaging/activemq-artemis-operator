@@ -205,7 +205,7 @@ issuer.cert-manager.io/send-receive-root-issuer condition met
 #### Create the issuer certificate
 
 ```bash {"stage":"etc", "runtime":"bash", "label":"get the cluster ip"}
-export CLUSTER_IP=$(minikube ip)
+export CLUSTER_IP=$(minikube ip --profile tutorialtester)
 ```
 
 ```bash {"stage":"cert-manager", "HereTag":"EOF", "runtime":"bash", "label":"create issuer certificate"}

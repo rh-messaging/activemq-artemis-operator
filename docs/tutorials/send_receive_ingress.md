@@ -61,7 +61,7 @@ deployment.apps/ingress-nginx-controller patched
 #### Get minikube's ip
 
 ```{"stage":"init", "runtime":"bash", "label":"get the cluster ip"}
-export CLUSTER_IP=$(minikube ip)
+export CLUSTER_IP=$(minikube ip --profile tutorialtester)
 ```
 
 #### Make sure the domain of your cluster is resolvable
@@ -141,7 +141,7 @@ to configure the certificates.
 >   name `send-receive` and the acceptor name `sselacceptor`
 
 ```{"stage":"etc", "runtime":"bash", "label":"get the cluster ip"}
-export CLUSTER_IP=$(minikube ip)
+export CLUSTER_IP=$(minikube ip --profile tutorialtester)
 ```
 
 ```{"stage":"cert-creation", "rootdir":"$tmpdir.1", "runtime":"bash", "label":"generate cert"}
