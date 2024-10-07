@@ -25,8 +25,6 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	netv1 "k8s.io/api/networking/v1"
-	policyv1 "k8s.io/api/policy/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,10 +37,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	"github.com/artemiscloud/activemq-artemis-operator/version"
-	routev1 "github.com/openshift/api/route/v1"
 	"github.com/pkg/errors"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
@@ -589,17 +585,7 @@ func (r *ActiveMQArtemisReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	builder := ctrl.NewControllerManagedBy(mgr).
 		For(&brokerv1beta1.ActiveMQArtemis{}).
 		Owns(&appsv1.StatefulSet{}).
-		Owns(&corev1.Pod{}).
-		Owns(&corev1.Secret{}).
-		Owns(&corev1.ConfigMap{}).
-		Owns(&corev1.Service{}).
-		Owns(&netv1.Ingress{}).
-		Owns(&policyv1.PodDisruptionBudget{})
-
-	if isOpenshift, err := environments.DetectOpenshift(); err == nil && isOpenshift {
-		builder.Owns(&routev1.Route{})
-	}
-
+		Owns(&corev1.Pod{})
 	var err error
 	controller, err := builder.Build(r)
 	if err == nil {
