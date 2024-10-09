@@ -135,6 +135,8 @@ func resolveJolokiaRequestParams(namespace string,
 			jolokiaPassword = *jolokiaPasswordFromSecret
 		}
 	}
+
+	jolokiaProtocol = "http"
 	if len(*containers) == 1 {
 		envVars := (*containers)[0].Env
 		for _, oneVar := range envVars {
@@ -143,40 +145,21 @@ func resolveJolokiaRequestParams(namespace string,
 			} else if !userDefined && oneVar.Name == "AMQ_PASSWORD" {
 				jolokiaPassword = getEnvVarValue(&oneVar, &podNamespacedName, client, nil)
 			} else if oneVar.Name == "AMQ_CONSOLE_ARGS" {
-				jolokiaProtocol = getEnvVarValue(&oneVar, &podNamespacedName, client, nil)
+				consoleArgs := getEnvVarValue(&oneVar, &podNamespacedName, client, nil)
+				if strings.Contains(consoleArgs, "--ssl") {
+					jolokiaProtocol = "https"
+				}
 			} else if oneVar.Name == "JAVA_ARGS_APPEND" {
-				jolokiaProtocol = getProtocolFromJavaArgs(oneVar.Value)
-			}
-			if jolokiaUser != "" && jolokiaPassword != "" && jolokiaProtocol != "" {
-				break
+				// When console is secured with PEM cert, the following JAVA_ARGS_APPEND is like:
+				// JAVA_ARGS_APPEND=... -Dwebconfig.bindings.artemis.uri=https://FQ_HOST_NAME:8161
+				if strings.Contains(oneVar.Value, "-Dwebconfig.bindings.artemis.uri=https") {
+					jolokiaProtocol = "https"
+				}
 			}
 		}
-	}
-
-	if jolokiaProtocol == "" {
-		jolokiaProtocol = "http"
-	} else {
-		jolokiaProtocol = "https"
 	}
 
 	return jolokiaUser, jolokiaPassword, jolokiaProtocol
-}
-
-// When console is secured with PEM cert, the following JAVA_ARGS_APPEND is like:
-// JAVA_ARGS_APPEND=... -Dwebconfig.bindings.artemis.uri=https://FQ_HOST_NAME:8161
-func getProtocolFromJavaArgs(envValue string) string {
-	protocol := ""
-	varKey := "-Dwebconfig.bindings.artemis.uri="
-	if envValue != "" {
-		idx := strings.Index(envValue, varKey)
-		if idx != -1 {
-			uriPart := envValue[idx+len(varKey):]
-			uriPart = strings.Split(uriPart, " ")[0]
-			subParts := strings.Split(uriPart, ":")
-			protocol = subParts[0]
-		}
-	}
-	return protocol
 }
 
 func getEnvVarValue(envVar *corev1.EnvVar, namespace *types.NamespacedName, client rtclient.Client, labels map[string]string) string {

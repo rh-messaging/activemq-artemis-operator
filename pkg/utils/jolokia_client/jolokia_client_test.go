@@ -189,6 +189,119 @@ var _ = Describe("JolokiaClient", func() {
 				Expect(infos[0].Artemis.GetJolokia().GetProtocol()).To(Equal("https"))
 			})
 		})
-	})
 
+		Context("with jks tls console", Label("jolokia-pem-tls-test"), func() {
+			It("should return a Jolokia client", func() {
+				replicas := int32(2)
+				objs := []client.Object{
+					&appsv1.StatefulSet{
+						ObjectMeta: v1.ObjectMeta{
+							Name:      "broker-ss",
+							Namespace: "some-ns",
+							Labels: map[string]string{
+								"label1": "value1",
+							},
+						},
+						Spec: appsv1.StatefulSetSpec{
+							Replicas: &replicas,
+						},
+					},
+					&corev1.Pod{
+						ObjectMeta: v1.ObjectMeta{
+							Name:      "broker-ss-0",
+							Namespace: "some-ns",
+						},
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name: "broker-ss-container",
+									Env: []corev1.EnvVar{
+										{
+											Name:  "AMQ_NAME",
+											Value: "my-broker",
+										},
+										{
+											Name:  "AMQ_CONSOLE_ARGS",
+											Value: "--ssl-key abc.jks --ssl-key-password def",
+										},
+									},
+								},
+							},
+						},
+						Status: corev1.PodStatus{
+							PodIP: "1.2.3.4",
+						},
+					},
+				}
+				client := fake.NewClientBuilder().WithObjects(objs...).Build()
+				brokerRef := types.NamespacedName{
+					Name:      "broker",
+					Namespace: "some-ns",
+				}
+				ssInfos := ss.GetDeployedStatefulSetNames(client, brokerRef.Namespace, []types.NamespacedName{brokerRef})
+				Expect(len(ssInfos)).To(Equal(1))
+				infos := jolokia_client.GetBrokers(brokerRef, ssInfos, client)
+				Expect(infos).Should(HaveLen(1))
+				Expect(infos[0].Artemis).NotTo(BeNil())
+				Expect(infos[0].Artemis.GetJolokia().GetProtocol()).To(Equal("https"))
+			})
+		})
+
+		Context("with http web uri", Label("jolokia-http-test"), func() {
+			It("should return a Jolokia client", func() {
+				replicas := int32(2)
+				objs := []client.Object{
+					&appsv1.StatefulSet{
+						ObjectMeta: v1.ObjectMeta{
+							Name:      "broker-ss",
+							Namespace: "some-ns",
+							Labels: map[string]string{
+								"label1": "value1",
+							},
+						},
+						Spec: appsv1.StatefulSetSpec{
+							Replicas: &replicas,
+						},
+					},
+					&corev1.Pod{
+						ObjectMeta: v1.ObjectMeta{
+							Name:      "broker-ss-0",
+							Namespace: "some-ns",
+						},
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name: "broker-ss-container",
+									Env: []corev1.EnvVar{
+										{
+											Name:  "AMQ_NAME",
+											Value: "my-broker",
+										},
+										{
+											Name:  "JAVA_ARGS_APPEND",
+											Value: "-Dwebconfig.bindings.artemis.uri=http://FQ_HOST_NAME:8161",
+										},
+									},
+								},
+							},
+						},
+						Status: corev1.PodStatus{
+							PodIP: "1.2.3.4",
+						},
+					},
+				}
+				client := fake.NewClientBuilder().WithObjects(objs...).Build()
+				brokerRef := types.NamespacedName{
+					Name:      "broker",
+					Namespace: "some-ns",
+				}
+				ssInfos := ss.GetDeployedStatefulSetNames(client, brokerRef.Namespace, []types.NamespacedName{brokerRef})
+				Expect(len(ssInfos)).To(Equal(1))
+				infos := jolokia_client.GetBrokers(brokerRef, ssInfos, client)
+				Expect(infos).Should(HaveLen(1))
+				Expect(infos[0].Artemis).NotTo(BeNil())
+				Expect(infos[0].Artemis.GetJolokia().GetProtocol()).To(Equal("http"))
+			})
+		})
+	})
 })
