@@ -6,7 +6,7 @@
 VERSION ?= 7.11.7-opr-2
 
 KUBE_CLI=kubectl
-OPERATOR_VERSION := 7.11.7-2
+OPERATOR_VERSION := 7.11.7-5
 OPERATOR_ACCOUNT_NAME := amq-broker-operator
 OPERATOR_CLUSTER_ROLE_NAME := operator-role
 OPERATOR_IMAGE_REPO := registry.redhat.io/amq7/amq-broker-rhel8-operator
