@@ -18,7 +18,12 @@ rules:
   - serviceaccounts
   - services
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
 - apiGroups:
   - ""
   resources:
@@ -33,7 +38,12 @@ rules:
   - replicasets
   - statefulsets
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
 - apiGroups:
   - apps
   resources:

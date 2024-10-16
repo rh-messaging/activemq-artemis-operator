@@ -2938,6 +2938,7 @@ spec:
                   capabilities:
                     drop:
                     - ALL
+                  readOnlyRootFilesystem: true
                   runAsNonRoot: true
                   seccompProfile:
                     type: RuntimeDefault
@@ -2993,7 +2994,12 @@ spec:
           - serviceaccounts
           - services
           verbs:
-          - '*'
+          - create
+          - delete
+          - get
+          - list
+          - update
+          - watch
         - apiGroups:
           - ""
           resources:
@@ -3008,7 +3014,12 @@ spec:
           - replicasets
           - statefulsets
           verbs:
-          - '*'
+          - create
+          - delete
+          - get
+          - list
+          - update
+          - watch
         - apiGroups:
           - apps
           resources:
