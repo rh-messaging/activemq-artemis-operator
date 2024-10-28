@@ -119,9 +119,9 @@ func CleanClusterResource(res client.Object, name string, namespace string) {
 	CleanResourceWithTimeouts(res, name, namespace, existingClusterTimeout, existingClusterInterval)
 }
 
-func checkSecretHasCorrectKeyValue(g Gomega, secName string, ns types.NamespacedName, key string, expectedValue string) {
+func checkSecretHasCorrectKeyValue(g Gomega, ns types.NamespacedName, key string, expectedValue string) {
 	g.Eventually(func(g Gomega) {
-		secret, err := secrets.RetriveSecret(ns, secName, make(map[string]string), k8sClient)
+		secret, err := secrets.RetriveSecret(ns, make(map[string]string), k8sClient)
 		g.Expect(err).Should(BeNil())
 		data := secret.Data[key]
 		g.Expect(strings.Contains(string(data), expectedValue)).Should(BeTrue())
@@ -964,10 +964,10 @@ func InstallCert(certName string, namespace string, customFunc func(candidate *c
 	return &cmCert
 }
 
-func InstallCaBundle(name string, sourceSecret string, caFileName string) *tm.Bundle {
+func InstallCaBundle(bundleName string, sourceSecret string, caFileName string) *tm.Bundle {
 	bundle := tm.Bundle{}
-	if k8sClient.Get(ctx, types.NamespacedName{Name: name, Namespace: defaultNamespace}, &bundle) == nil {
-		CleanResource(&bundle, name, defaultNamespace)
+	if k8sClient.Get(ctx, types.NamespacedName{Name: bundleName, Namespace: defaultNamespace}, &bundle) == nil {
+		CleanResource(&bundle, bundleName, defaultNamespace)
 	}
 
 	bundle = tm.Bundle{
@@ -976,7 +976,7 @@ func InstallCaBundle(name string, sourceSecret string, caFileName string) *tm.Bu
 			Kind:       "Bundle",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      bundleName,
 			Namespace: "cert-manager",
 		},
 		Spec: tm.BundleSpec{
@@ -1000,7 +1000,7 @@ func InstallCaBundle(name string, sourceSecret string, caFileName string) *tm.Bu
 
 	k8sClient.Delete(ctx, &bundle)
 	Expect(k8sClient.Create(ctx, &bundle, &client.CreateOptions{})).To(Succeed())
-	bundleKey := types.NamespacedName{Name: name, Namespace: "cert-manager"}
+	bundleKey := types.NamespacedName{Name: bundleName, Namespace: "cert-manager"}
 	newBundle := &tm.Bundle{}
 	Eventually(func(g Gomega) {
 		g.Expect(k8sClient.Get(ctx, bundleKey, newBundle)).Should(Succeed())

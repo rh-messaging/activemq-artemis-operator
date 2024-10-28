@@ -272,7 +272,7 @@ func TestGetConfigAppliedConfigMapName(t *testing.T) {
 			Name:      "test",
 		},
 	}
-	name := getConfigAppliedConfigMapName(&cr)
+	name := getPropertiesResourceNsName(&cr)
 	assert.Equal(t, "test-ns", name.Namespace)
 	assert.Equal(t, "test-props", name.Name)
 }

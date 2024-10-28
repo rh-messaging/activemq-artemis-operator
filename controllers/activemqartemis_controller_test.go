@@ -7497,7 +7497,7 @@ var _ = Describe("artemis controller", func() {
 							Name:      secretName,
 							Namespace: defaultNamespace,
 						}
-						secret, err := secrets.RetriveSecret(namespaceName, secretName, make(map[string]string), k8sClient)
+						secret, err := secrets.RetriveSecret(namespaceName, make(map[string]string), k8sClient)
 						g.Expect(err).To(BeNil())
 						data := secret.Data[envVar.ValueFrom.SecretKeyRef.Key]
 						//the value is a string of acceptors in xml format:
@@ -7552,7 +7552,7 @@ var _ = Describe("artemis controller", func() {
 							Name:      secretName,
 							Namespace: defaultNamespace,
 						}
-						secret, err := secrets.RetriveSecret(namespaceName, secretName, make(map[string]string), k8sClient)
+						secret, err := secrets.RetriveSecret(namespaceName, make(map[string]string), k8sClient)
 						g.Expect(err).To(BeNil())
 						data := secret.Data[envVar.ValueFrom.SecretKeyRef.Key]
 						//the value is a string of acceptors in xml format:
@@ -7616,7 +7616,7 @@ var _ = Describe("artemis controller", func() {
 							Name:      secretName,
 							Namespace: defaultNamespace,
 						}
-						secret, err := secrets.RetriveSecret(namespaceName, secretName, make(map[string]string), k8sClient)
+						secret, err := secrets.RetriveSecret(namespaceName, make(map[string]string), k8sClient)
 						g.Expect(err).To(BeNil())
 						data := secret.Data[envVar.ValueFrom.SecretKeyRef.Key]
 						//the value is a string of acceptors in xml format:
@@ -7679,12 +7679,12 @@ var _ = Describe("artemis controller", func() {
 							Name:      secretName,
 							Namespace: defaultNamespace,
 						}
-						secret, err := secrets.RetriveSecret(namespaceName, secretName, make(map[string]string), k8sClient)
+						secret, err := secrets.RetriveSecret(namespaceName, make(map[string]string), k8sClient)
 						g.Expect(err).To(BeNil())
 						data := secret.Data[envVar.ValueFrom.SecretKeyRef.Key]
 						By("Checking data:" + string(data))
 						g.Expect(strings.Contains(string(data), "ACCEPTOR_IP:61666")).To(BeTrue())
-						checkSecretHasCorrectKeyValue(g, secretName, namespaceName, envVar.ValueFrom.SecretKeyRef.Key, "keyStoreProvider=SunJCE")
+						checkSecretHasCorrectKeyValue(g, namespaceName, envVar.ValueFrom.SecretKeyRef.Key, "keyStoreProvider=SunJCE")
 					}
 				}
 
@@ -7742,7 +7742,7 @@ var _ = Describe("artemis controller", func() {
 						//<acceptor name="new-acceptor">...</acceptor><another one>...
 						//we need to locate our target acceptor and do the check
 						//we use the port as a clue
-						checkSecretHasCorrectKeyValue(g, secretName, namespaceName, envVar.ValueFrom.SecretKeyRef.Key, "trustStoreType=JCEKS")
+						checkSecretHasCorrectKeyValue(g, namespaceName, envVar.ValueFrom.SecretKeyRef.Key, "trustStoreType=JCEKS")
 						found = true
 					}
 				}
@@ -7789,7 +7789,7 @@ var _ = Describe("artemis controller", func() {
 							Namespace: defaultNamespace,
 						}
 
-						secret, err := secrets.RetriveSecret(namespaceName, secretName, make(map[string]string), k8sClient)
+						secret, err := secrets.RetriveSecret(namespaceName, make(map[string]string), k8sClient)
 						g.Expect(err).Should(BeNil())
 
 						data := secret.Data[envVar.ValueFrom.SecretKeyRef.Key]
@@ -7848,7 +7848,7 @@ var _ = Describe("artemis controller", func() {
 						//<acceptor name="new-acceptor">...</acceptor><another one>...
 						//we need to locate our target acceptor and do the check
 						//we use the port as a clue
-						checkSecretHasCorrectKeyValue(g, secretName, namespaceName, envVar.ValueFrom.SecretKeyRef.Key, "trustStoreProvider=SUN")
+						checkSecretHasCorrectKeyValue(g, namespaceName, envVar.ValueFrom.SecretKeyRef.Key, "trustStoreProvider=SUN")
 					}
 				}
 			}, timeout, interval).Should(Succeed())

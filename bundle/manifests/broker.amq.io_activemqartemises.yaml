@@ -4823,6 +4823,9 @@ spec:
                       type: object
                   type: object
                 type: array
+              restricted:
+                description: Restricted deployment, mtls jolokia agent with RBAC
+                type: boolean
               upgrades:
                 description: Specifies the upgrades (deprecated in favour of Version)
                 properties:

@@ -3,6 +3,9 @@ package common
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -18,11 +21,14 @@ import (
 	"github.com/RHsyseng/operator-utils/pkg/olm"
 	"github.com/RHsyseng/operator-utils/pkg/resource/read"
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/channels"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	"github.com/artemiscloud/activemq-artemis-operator/version"
 	"github.com/blang/semver/v4"
+
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -58,6 +64,11 @@ const (
 
 	//defaultRetryInterval is the interval to wait before retring a resource discovery
 	defaultRetryInterval = 3 * time.Second
+
+	// https://cert-manager.io/docs/trust/trust-manager/#preparing-for-production
+	DefaultOperatorCertSecretName = "operator-cert"
+	DefaultOperatorCASecretName   = "operator-ca"
+	DefaultOperandCertSecretName  = "broker-cert" // or can be prefixed with `cr.Name-`
 )
 
 var lastStatusMap map[types.NamespacedName]olm.DeploymentStatus = make(map[types.NamespacedName]olm.DeploymentStatus)
@@ -69,6 +80,12 @@ var jaasConfigSyntaxMatchRegEx = JaasConfigSyntaxMatchRegExDefault
 var ClusterDomain *string
 
 var isOpenshift *bool
+
+var operatorCertSecretName, operatorCASecretName *string
+
+// we may want to cache and require operator restart on rotation
+//var operatorCert *tls.Certificate
+//var operatorCertPool *x509.CertPool
 
 type Namers struct {
 	SsGlobalName                  string
@@ -161,6 +178,11 @@ func FromJson(jsonStr *string, obj interface{}) error {
 
 func NewTrue() *bool {
 	b := true
+	return &b
+}
+
+func NewFalse() *bool {
+	b := false
 	return &b
 }
 
@@ -706,6 +728,178 @@ func DetectOpenshiftWith(config *rest.Config) (bool, error) {
 	return *isOpenshift, nil
 }
 
+func GetOperandCertSecretName(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) string {
+
+	customName := cr.Name + "-" + DefaultOperandCertSecretName
+
+	if _, err := secrets.RetriveSecret(types.NamespacedName{Namespace: cr.Namespace, Name: customName}, nil, client); err == nil {
+		return customName
+	}
+	return DefaultOperandCertSecretName
+}
+
+func GetOperatorCertSecretName() string {
+	if operatorCertSecretName == nil {
+		operatorCertSecretName = fromEnv("OPERATOR_CERT_SECRET_NAME", DefaultOperatorCertSecretName)
+	}
+	return *operatorCertSecretName
+}
+
+func GetOperatorCASecretName() string {
+	if operatorCASecretName == nil {
+		operatorCASecretName = fromEnv("OPERATOR_CA_SECRET_NAME", DefaultOperatorCASecretName)
+	}
+	return *operatorCASecretName
+}
+
+func GetOperatorCASecretKey(client rtclient.Client, bundleSecret *corev1.Secret) (key string, err error) {
+	if bundleSecret == nil {
+		if bundleSecret, err = GetOperatorCASecret(client); err != nil {
+			ctrl.Log.V(1).Info("ca secret not found", "err", err)
+			return key, errors.Errorf("failed to get ca bundle secret to find ca key %v", err)
+		}
+	}
+	return FindFirstDotPemKey(bundleSecret)
+}
+
+func FindFirstDotPemKey(secret *corev1.Secret) (string, error) {
+	//extract the bundle target secret key that ends with .pem
+	//the bundle target secret could include keys for additional formats jks/pkcs12
+	for key := range secret.Data {
+		//the bundle target secret key must ends with .pem
+		if strings.HasSuffix(key, ".pem") {
+			return key, nil
+		}
+	}
+
+	return "", fmt.Errorf("no keys with the suffix .pem found in the secret %s", secret.Name)
+}
+
+func fromEnv(envVarName, defaultValue string) *string {
+	if valueFromEnv, found := os.LookupEnv(envVarName); found {
+		return &valueFromEnv
+	} else {
+		return &defaultValue
+	}
+}
+
+func GetRootCAs(client rtclient.Client) (pool *x509.CertPool, err error) {
+
+	if client == nil {
+		return nil, nil
+	}
+
+	var certSecret *corev1.Secret
+	if certSecret, err = GetOperatorCASecret(client); err != nil {
+		return nil, err
+	}
+
+	var bundleSecretKey string
+	if bundleSecretKey, err = GetOperatorCASecretKey(client, certSecret); err != nil {
+		return nil, err
+	}
+
+	pool = x509.NewCertPool()
+	if ok := pool.AppendCertsFromPEM([]byte(certSecret.Data[bundleSecretKey])); !ok {
+		return nil, errors.Errorf("Failed to extact key %s from ca secret %v", bundleSecretKey, certSecret.Name)
+	}
+	return pool, nil
+}
+
+var operatorNameSpaceFromEnv *string
+
+func GetOperatorNamespaceFromEnv() (ns string, err error) {
+	if operatorNameSpaceFromEnv == nil {
+		if ns, found := os.LookupEnv("OPERATOR_NAMESPACE"); found {
+			operatorNameSpaceFromEnv = &ns
+		} else {
+			return "", errors.New("failed to get operator namespace from env")
+		}
+	}
+	return *operatorNameSpaceFromEnv, nil
+}
+
+func GetOperatorCASecret(client rtclient.Client) (*corev1.Secret, error) {
+	return GetOperatorSecret(client, GetOperatorCASecretName())
+}
+
+func GetOperatorClientCertSecret(client rtclient.Client) (*corev1.Secret, error) {
+	return GetOperatorSecret(client, GetOperatorCertSecretName())
+}
+
+func GetOperatorSecret(client rtclient.Client, secretName string) (*corev1.Secret, error) {
+
+	var operatorNamespace string
+	var err error
+	operatorNamespace, err = GetOperatorNamespaceFromEnv()
+	if err != nil {
+		return nil, err
+	}
+
+	secretNamespacedName := types.NamespacedName{Name: secretName, Namespace: operatorNamespace}
+	secret := corev1.Secret{}
+	if err := resources.Retrieve(secretNamespacedName, client, &secret); err != nil {
+		ctrl.Log.V(1).Info("operator secret not found", "name", secretNamespacedName, "err", err)
+		return nil, errors.Errorf("failed to get secret %s, %v", secretNamespacedName, err)
+	}
+
+	return &secret, nil
+}
+
+func GetOperatorClientCertificate(client rtclient.Client, info *tls.CertificateRequestInfo) (cert *tls.Certificate, err error) {
+
+	var secret *corev1.Secret
+	if secret, err = GetOperatorClientCertSecret(client); err == nil {
+		cert, err = ExtractCertFromSecret(secret)
+	}
+	return cert, err
+}
+
+func ExtractCertFromSecret(certSecret *corev1.Secret) (*tls.Certificate, error) {
+	cert, err := tls.X509KeyPair(certSecret.Data["tls.crt"], certSecret.Data["tls.key"])
+	if err != nil {
+		return nil, errors.Errorf("invalid key pair in secret %v, %v", certSecret.Name, err)
+	}
+	return &cert, nil
+}
+
+func ExtractCertSubjectFromSecret(certSecretName string, namespace string, client rtclient.Client) (*pkix.Name, error) {
+
+	secret, err := GetOperatorSecret(client, certSecretName)
+	if err != nil {
+		return nil, err
+	}
+	cert, err := ExtractCertFromSecret(secret)
+	if err != nil {
+		return nil, err
+	}
+	return ExtractCertSubject(cert)
+}
+
+func ExtractCertSubject(cert *tls.Certificate) (*pkix.Name, error) {
+	x509Cert, err := x509.ParseCertificate(cert.Certificate[0])
+	if err != nil {
+		return nil, errors.Errorf("failed to parse tls.cert  %v", err)
+	}
+	return &x509Cert.Subject, nil
+}
+
+func OrdinalFQDNS(crName string, crNamespace string, i int32) string {
+	return OrdinalStringFQDNS(crName, crNamespace, fmt.Sprintf("%d", i))
+}
+
+func OrdinalStringFQDNS(crName string, crNamespace string, ordinal string) string {
+	// from NewHeadlessServiceForCR2 and
+	// https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#a-aaaa-records
+	return fmt.Sprintf("%s-ss-%s.%s-hdls-svc.%s.svc.%s", crName, ordinal, crName, crNamespace, GetClusterDomain())
+}
+
+func ClusterDNSWildCard(crName string, crNamespace string) string {
+	// from NewHeadlessServiceForCR2 and
+	// https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#a-aaaa-records
+	return fmt.Sprintf("*.%s-hdls-svc.%s.svc.%s", crName, crNamespace, GetClusterDomain())
+}
+
 func ApplyAnnotations(objectMeta *metav1.ObjectMeta, annotations map[string]string) {
 	if annotations != nil {
 		if objectMeta.Annotations == nil {
@@ -743,4 +937,18 @@ func HasVolumeMount(container *corev1.Container, mountName string) bool {
 		}
 	}
 	return false
+}
+
+func GenerateArtemis(name string, namespace string) *brokerv1beta1.ActiveMQArtemis {
+	return &brokerv1beta1.ActiveMQArtemis{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ActiveMQArtemis",
+			APIVersion: brokerv1beta1.GroupVersion.Identifier(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: brokerv1beta1.ActiveMQArtemisSpec{},
+	}
 }

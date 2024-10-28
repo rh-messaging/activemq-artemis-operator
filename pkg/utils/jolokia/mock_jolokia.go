@@ -5,6 +5,7 @@
 package jolokia
 
 import (
+	"net/http"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -100,4 +101,7 @@ func (m *MockIJolokia) GetProtocol() string {
 func (mr *MockIJolokiaMockRecorder) Read(path interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockIJolokia)(nil).Read), path)
+}
+
+func (m *MockIJolokia) SetClient(c *http.Client) {
 }

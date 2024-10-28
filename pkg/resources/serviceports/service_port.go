@@ -6,35 +6,48 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var appProtocolHTTP = "http"
 var appProtocolTCP = "tcp"
+var appProtocolHTTP = "http"
 
-func GetDefaultPorts() *[]corev1.ServicePort {
+func GetDefaultPorts(restricted bool) *[]corev1.ServicePort {
 
-	ports := []corev1.ServicePort{
-		{
-			Name:        "jgroups",
-			Protocol:    "TCP",
-			Port:        7800,
-			AppProtocol: &appProtocolTCP,
-			TargetPort:  intstr.FromInt(int(7800)),
-		},
-		{
-			Name:        "console-jolokia",
-			Protocol:    "TCP",
-			Port:        8161,
-			AppProtocol: &appProtocolHTTP,
-			TargetPort:  intstr.FromInt(int(8161)),
-		},
-		{
-			Name:       "all",
-			Protocol:   "TCP",
-			Port:       61616,
-			TargetPort: intstr.FromInt(int(61616)),
-		},
+	var ports *[]corev1.ServicePort
+	if restricted {
+		ports = &[]corev1.ServicePort{}
+	} else {
+
+		ports = &[]corev1.ServicePort{
+			{
+				Name:        "jgroups",
+				Protocol:    "TCP",
+				Port:        7800,
+				AppProtocol: &appProtocolTCP,
+				TargetPort:  intstr.FromInt(int(7800)),
+			},
+			{
+				Name:        "console-jolokia",
+				Protocol:    "TCP",
+				Port:        8161,
+				AppProtocol: &appProtocolHTTP,
+				TargetPort:  intstr.FromInt(int(8161)),
+			},
+			{
+				Name:        "jolokia",
+				Protocol:    "TCP",
+				Port:        8778,
+				AppProtocol: &appProtocolHTTP,
+				TargetPort:  intstr.FromInt(int(8778)),
+			},
+			{
+				Name:       "all",
+				Protocol:   "TCP",
+				Port:       61616,
+				TargetPort: intstr.FromInt(int(61616)),
+			},
+		}
 	}
 
-	return &ports
+	return ports
 }
 
 func setSSLPorts() []corev1.ServicePort {

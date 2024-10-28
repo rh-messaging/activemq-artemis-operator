@@ -89,7 +89,7 @@ func Delete(namespacedName types.NamespacedName, stringDataMap map[string]string
 	resources.Delete(client, secretDefinition)
 }
 
-func RetriveSecret(namespacedName types.NamespacedName, secretName string, labels map[string]string, client client.Client) (*corev1.Secret, error) {
+func RetriveSecret(namespacedName types.NamespacedName, labels map[string]string, client client.Client) (*corev1.Secret, error) {
 	stringData := make(map[string]string)
 	secretDefinition := MakeSecret(namespacedName, stringData, labels)
 	if err := resources.Retrieve(namespacedName, client, &secretDefinition); err != nil {

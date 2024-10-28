@@ -65,7 +65,7 @@ func MakePersistentVolumeMount(customResourceName string, mountPath string) []co
 	return volumeMounts
 }
 
-func MakeVolumeForCfg(name string) corev1.Volume {
+func MakeEmptyDirVolumeFor(name string) corev1.Volume {
 	volume := corev1.Volume{
 		Name: name,
 		VolumeSource: corev1.VolumeSource{

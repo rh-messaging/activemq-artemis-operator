@@ -78,7 +78,7 @@ func retrieveLastSuccessfulReconciledCR(scr *StoredCR, labels map[string]string)
 		Namespace: scr.Namespace,
 	}
 	log.V(2).Info("trying retriving lsrcr", "ns", secretNn, "sec name", secretName, "client", scr.UpdateClient)
-	theSecret, err := secrets.RetriveSecret(secretNn, secretName, labels, scr.UpdateClient)
+	theSecret, err := secrets.RetriveSecret(secretNn, labels, scr.UpdateClient)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			log.Error(err, "failed to retrieve secret", "secret", secretName, "ns", scr.Namespace)

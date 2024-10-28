@@ -1045,6 +1045,9 @@ There would be corresponding keys for users.properties and roles.properties, the
 
 With the possiblity of configuring arbritary jaas login modules directly, the ArtemisSecurityCR ActiveMQArtemisSecuritySpec.LoginModules and ActiveMQArtemisSecuritySpec.SecurityDomains fields are deprecated.
 
+## restricted mode (experimental)
+The CR supports a boolean restricted attribute. For single pod broker deployments this provides an empty broker that is configured through brokerProperties. The broker is secured with PKI, there are no passwords. Cert manager can be used to create the necessary PKI secrets.  The end result is a minimal broker deployment; an embedded broker with an mtls endpoint for the jolokia jvm agent and RBAC that allows just the operator to check the broker status. There is no init container, no jetty and no xml.
+
 ## Locking down a broker deployment
 
 Often when verificiation is complete it is desirable to lock down the broker images and prevent auto upgrades, which will result in a roll out of images and a restart of your broker.

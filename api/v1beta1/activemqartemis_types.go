@@ -71,6 +71,10 @@ type ActiveMQArtemisSpec struct {
 	// Specifies the template for various resources that the operator controls
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Resource Templates"
 	ResourceTemplates []ResourceTemplate `json:"resourceTemplates,omitempty"`
+
+	// Restricted deployment, mtls jolokia agent with RBAC
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Restricted"
+	Restricted *bool `json:"restricted,omitempty"`
 }
 
 type AddressSettingsType struct {

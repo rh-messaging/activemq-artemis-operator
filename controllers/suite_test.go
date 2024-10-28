@@ -792,6 +792,9 @@ var _ = BeforeSuite(func() {
 	// role binding to service account for the drainer pod
 	os.Setenv("OPERATOR_WATCH_NAMESPACE", "SomeValueToCauesEqualitytoFailInIsLocalSoDrainControllerSortsCreds")
 
+	// pulled from service account when on a pod
+	os.Setenv("OPERATOR_NAMESPACE", defaultNamespace)
+
 	var err error
 	currentDir, err = os.Getwd()
 	Expect(err).To(Succeed())

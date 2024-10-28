@@ -48,7 +48,7 @@ const (
 	rootCertNamespce     = "cert-manager"
 	rootCertSecretName   = "artemis-root-cert-secret"
 	caIssuerName         = "broker-ca-issuer"
-	caPemTrustStoreName  = "ca-truststore.pem"
+	caPemTrustStoreName  = "ca.pem"
 	caTrustStorePassword = "changeit"
 )
 
@@ -57,7 +57,7 @@ var (
 	rootIssuer   = &cmv1.ClusterIssuer{}
 	rootCert     = &cmv1.Certificate{}
 	caIssuer     = &cmv1.ClusterIssuer{}
-	caBundleName = "ca-bundle"
+	caBundleName = "operator-ca"
 )
 
 type ConnectorConfig struct {

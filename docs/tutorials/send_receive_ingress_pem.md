@@ -406,7 +406,7 @@ open a working connection:
   reached.
 
 ```bash {"stage":"test_setup", "rootdir":"$tmpdir.1", "runtime":"bash", "label":"download artemis"}
-wget --quiet https://dlcdn.apache.org/activemq/activemq-artemis/2.36.0/apache-artemis-2.36.0-bin.tar.gz
+wget --quiet https://archive.apache.org/dist/activemq/activemq-artemis/2.36.0/apache-artemis-2.36.0-bin.tar.gz
 tar -zxf apache-artemis-2.36.0-bin.tar.gz apache-artemis-2.36.0/
 ```
 

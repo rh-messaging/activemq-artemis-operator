@@ -173,7 +173,7 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 
 		err = reconciler.Process(customResource, *namer, r.Client, r.Scheme)
 
-		if ProcessBrokerStatus(customResource, r.Client, r.Scheme) {
+		if reconciler.ProcessBrokerStatus(customResource, r.Client, r.Scheme) {
 			requeueRequest = true
 		}
 	}

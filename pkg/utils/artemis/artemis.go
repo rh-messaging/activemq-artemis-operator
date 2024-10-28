@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/jolokia"
+	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -52,6 +53,17 @@ type Artemis struct {
 
 func NewArtemis(_ip string, _jolokiaPort string, _name string, _user string, _password string) *Artemis {
 	return GetArtemis(_ip, _jolokiaPort, _name, _user, _password, "http")
+}
+
+func GetArtemisAgentForRestricted(client rtclient.Client, ordinalFqdn string) *Artemis {
+	artemis := Artemis{
+		ip:          ordinalFqdn,
+		jolokiaPort: jolokia.JOLOKIA_AGENT_PORT,
+		name:        "amq-broker",
+		jolokia:     jolokia.GetRestrictedJolokia(client, ordinalFqdn, jolokia.JOLOKIA_AGENT_PORT, "/jolokia"),
+	}
+	return &artemis
+
 }
 
 func GetArtemis(_ip string, _jolokiaPort string, _name string, _user string, _password string, _protocol string) *Artemis {

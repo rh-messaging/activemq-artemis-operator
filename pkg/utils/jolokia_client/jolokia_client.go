@@ -18,10 +18,10 @@ package jolokia_client
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"strings"
 
+	"github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
@@ -61,6 +61,27 @@ func GetBrokers(resource types.NamespacedName, ssInfos []ss.StatefulSetInfo, cli
 	return artemisArray
 }
 
+func GetMinimalJolokiaAgents(cr *v1beta1.ActiveMQArtemis, client rtclient.Client) []*JkInfo {
+	var artemisArray []*JkInfo = nil
+	var i int32 = 0
+
+	for i = 0; i < common.GetDeploymentSize(cr); i++ {
+
+		ordinalFqdn := common.OrdinalFQDNS(cr.Name, cr.Namespace, i)
+
+		artemis := mgmt.GetArtemisAgentForRestricted(client, ordinalFqdn)
+
+		jkInfo := JkInfo{
+			Artemis: artemis,
+			IP:      ordinalFqdn,
+			Ordinal: strconv.FormatInt(int64(i), 10),
+		}
+		artemisArray = append(artemisArray, &jkInfo)
+	}
+
+	return artemisArray
+}
+
 // Get brokers Using DNS names in the namespace
 func GetBrokersFromDNS(crName string, namespace string, size int32, client rtclient.Client) []*JkInfo {
 	reqLogger := ctrl.Log.WithName("jolokia").WithValues("Request.Namespace", namespace, "Request.Name", crName)
@@ -68,11 +89,8 @@ func GetBrokersFromDNS(crName string, namespace string, size int32, client rtcli
 	var artemisArray []*JkInfo = nil
 	var i int32 = 0
 
-	clusterDomain := common.GetClusterDomain()
 	for i = 0; i < size; i++ {
-		// from NewHeadlessServiceForCR2 and
-		// https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#a-aaaa-records
-		ordinalFqdn := fmt.Sprintf("%s-ss-%d.%s-hdls-svc.%s.svc.%s", crName, i, crName, namespace, clusterDomain)
+		ordinalFqdn := common.OrdinalFQDNS(crName, namespace, i)
 
 		pod := &corev1.Pod{}
 		podNamespacedName := types.NamespacedName{
