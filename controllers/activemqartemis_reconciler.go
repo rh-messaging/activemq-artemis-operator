@@ -469,6 +469,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessConsole(customResource *
 
 	if customResource.Spec.Console.UseClientAuth {
 		sslFlags = sslFlags + " --use-client-auth"
+		sslArgs.NeedClientAuth = true
 	}
 
 	if len(sslArgs.PemCfgs) > 2 {

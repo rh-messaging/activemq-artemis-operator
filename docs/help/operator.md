@@ -1048,6 +1048,11 @@ With the possiblity of configuring arbritary jaas login modules directly, the Ar
 ## restricted mode (experimental)
 The CR supports a boolean restricted attribute. For single pod broker deployments this provides an empty broker that is configured through brokerProperties. The broker is secured with PKI, there are no passwords. Cert manager can be used to create the necessary PKI secrets.  The end result is a minimal broker deployment; an embedded broker with an mtls endpoint for the jolokia jvm agent and RBAC that allows just the operator to check the broker status. There is no init container, no jetty and no xml.
 
+## operator PKI
+In order for the operator to be able to use mtls to connect to the broker operand it needs a client certificate and a trust bundle listing the trusted CAs. The user needs to provide these two secrets in the operator namespace; cert manager can be used to create and populate both. If CRs use the restricted flag, these secrets are a prerequisit.
+The default operator cert secret name is `activemq-artemis-manager-cert` and the default operator trust bundle secret name is `activemq-artemis-manager-ca`. 
+If either of these secrets need to be named differently, an enviroment variable can provide the alternative name using key ACTIVEMQ_ARTEMIS_MANAGER_CERT_SECRET_NAME or ACTIVEMQ_ARTEMIS_MANAGER_CA_SECRET_NAME.
+
 ## Locking down a broker deployment
 
 Often when verificiation is complete it is desirable to lock down the broker images and prevent auto upgrades, which will result in a roll out of images and a restart of your broker.

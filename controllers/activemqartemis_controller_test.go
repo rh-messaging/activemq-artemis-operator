@@ -10331,7 +10331,7 @@ var _ = Describe("artemis controller", func() {
 				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
 
 				Eventually(func(g Gomega) {
-					jolokia := jolokia.GetJolokia(crd.Name+"-ss-0."+crd.Name+"-hdls-svc.test.svc.cluster.local", "8161", "/console/jolokia", "", "", "http")
+					jolokia := jolokia.GetJolokia(k8sClient, crd.Name+"-ss-0."+crd.Name+"-hdls-svc.test.svc.cluster.local", "8161", "/console/jolokia", "", "", "http")
 					data, err := jolokia.Read("org.apache.activemq.artemis:broker=\"amq-broker\",component=cluster-connections,name=\"my-cluster\"/Nodes")
 					g.Expect(err).To(BeNil())
 					g.Expect(data.Value).Should(ContainSubstring(crd.Name+"-ss-1"), data.Value)
@@ -10380,7 +10380,7 @@ var _ = Describe("artemis controller", func() {
 				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
 
 				Eventually(func(g Gomega) {
-					jolokia := jolokia.GetJolokia(crd.Name+"-ss-0."+crd.Name+"-hdls-svc."+defaultNamespace+".svc.cluster.local", "8161", "/console/jolokia", "", "", "http")
+					jolokia := jolokia.GetJolokia(k8sClient, crd.Name+"-ss-0."+crd.Name+"-hdls-svc."+defaultNamespace+".svc.cluster.local", "8161", "/console/jolokia", "", "", "http")
 					data, err := jolokia.Read("org.apache.activemq.artemis:broker=\"amq-broker\",component=cluster-connections,name=\"my-cluster\"/Nodes")
 					g.Expect(err).To(BeNil())
 					g.Expect(data.Value).Should(ContainSubstring(crd.Name+"-ss-1"), data.Value)
@@ -10423,7 +10423,7 @@ var _ = Describe("artemis controller", func() {
 				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
 
 				Eventually(func(g Gomega) {
-					jolokia := jolokia.GetJolokia(crd.Name+"-ss-0."+crd.Name+"-hdls-svc."+defaultNamespace+".svc.cluster.local", "8161", "/console/jolokia", "", "", "http")
+					jolokia := jolokia.GetJolokia(k8sClient, crd.Name+"-ss-0."+crd.Name+"-hdls-svc."+defaultNamespace+".svc.cluster.local", "8161", "/console/jolokia", "", "", "http")
 					data, err := jolokia.Read("org.apache.activemq.artemis:broker=\"amq-broker\",component=cluster-connections,name=\"my-cluster\"/Nodes")
 					g.Expect(err).To(BeNil())
 					g.Expect(data.Value).Should(ContainSubstring(crd.Name+"-ss-1"), data.Value)
@@ -10465,7 +10465,7 @@ var _ = Describe("artemis controller", func() {
 				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
 
 				Eventually(func(g Gomega) {
-					jolokia := jolokia.GetJolokia(crd.Name+"-ss-0."+crd.Name+"-hdls-svc."+defaultNamespace+".svc.cluster.local", "8161", "/console/jolokia", "", "", "http")
+					jolokia := jolokia.GetJolokia(k8sClient, crd.Name+"-ss-0."+crd.Name+"-hdls-svc."+defaultNamespace+".svc.cluster.local", "8161", "/console/jolokia", "", "", "http")
 					data, err := jolokia.Read("org.apache.activemq.artemis:broker=\"amq-broker\",component=cluster-connections,name=\"my-cluster\"/Nodes")
 					g.Expect(err).To(BeNil())
 					g.Expect(data.Value).Should(ContainSubstring(crd.Name+"-ss-1"), data.Value)

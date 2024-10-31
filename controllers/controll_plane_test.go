@@ -73,7 +73,7 @@ var _ = Describe("minimal", func() {
 					SecretName: rootCertSecretName,
 				}
 			})
-			InstallCaBundle(caBundleName, rootCertSecretName, caPemTrustStoreName)
+			InstallCaBundle(common.DefaultOperatorCASecretName, rootCertSecretName, caPemTrustStoreName)
 
 		}
 
@@ -82,7 +82,7 @@ var _ = Describe("minimal", func() {
 	AfterEach(func() {
 
 		if false && os.Getenv("USE_EXISTING_CLUSTER") == "true" {
-			UnInstallCaBundle(caBundleName)
+			UnInstallCaBundle(common.DefaultOperatorCASecretName)
 			UninstallClusteredIssuer(caIssuerName)
 			UninstallCert(rootCert.Name, rootCert.Namespace)
 			UninstallClusteredIssuer(rootIssuerName)
@@ -104,8 +104,8 @@ var _ = Describe("minimal", func() {
 			}
 
 			By("installing operator cert")
-			InstallCert("operator-cert", defaultNamespace, func(candidate *cmv1.Certificate) {
-				candidate.Spec.SecretName = "operator-cert"
+			InstallCert(common.DefaultOperatorCertSecretName, defaultNamespace, func(candidate *cmv1.Certificate) {
+				candidate.Spec.SecretName = common.DefaultOperatorCertSecretName
 				candidate.Spec.CommonName = "activemq-artemis-operator"
 				candidate.Spec.IssuerRef = cmmetav1.ObjectReference{
 					Name: caIssuer.Name,
@@ -161,7 +161,7 @@ var _ = Describe("minimal", func() {
 
 			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
 
-			UninstallCert("operator-cert", defaultNamespace)
+			UninstallCert(common.DefaultOperatorCertSecretName, defaultNamespace)
 			UninstallCert(sharedOperandCertName, defaultNamespace)
 		})
 	})

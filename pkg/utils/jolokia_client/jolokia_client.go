@@ -115,7 +115,7 @@ func GetBrokersFromDNS(crName string, namespace string, size int32, client rtcli
 
 			reqLogger.V(2).Info("hostname to use for jolokia ", "hostname", ordinalFqdn)
 
-			artemis := mgmt.GetArtemis(ordinalFqdn, "8161", "amq-broker", jolokiaUser, jolokiaPassword, jolokiaProtocol)
+			artemis := mgmt.GetArtemis(client, ordinalFqdn, "8161", "amq-broker", jolokiaUser, jolokiaPassword, jolokiaProtocol)
 
 			jkInfo := JkInfo{
 				Artemis: artemis,

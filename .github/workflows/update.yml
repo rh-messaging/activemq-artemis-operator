@@ -16,6 +16,16 @@ on:
         required: true
         default: true
         type: boolean
+      base_image:
+        description: 'Base image'
+        required: false
+        default: 'latest'
+        type: string
+      update_base_image:
+        description: 'Update base image'
+        required: true
+        default: true
+        type: boolean
       update_related_images:
         description: 'Update related images'
         required: true
@@ -62,6 +72,17 @@ jobs:
           sed -i "s~^LABEL version=.*~LABEL version=\"${VERSION}\"~g" Dockerfile
           make build && make generate-deploy && make bundle && git status
           git commit --all --message "Update version to ${VERSION}" || echo "nothing to commit"
+
+      - name: Update base image
+        if: ${{ inputs.update_base_image }}
+        run: |
+          if [ "${{ inputs.base_image }}" = "latest" ]; then
+            BASE_IMAGE="registry.access.redhat.com/ubi8:$(basename $(skopeo inspect docker://registry.access.redhat.com/ubi8:latest | jq -r '.Labels.url'))"
+          else
+            BASE_IMAGE="${{ inputs.base_image }}"
+          fi
+          sed -i "s~FROM.*base-env~FROM ${BASE_IMAGE} base-env~" Dockerfile
+          git commit --all --message "Update base image to ${BASE_IMAGE}" || echo "nothing to commit"
 
       - name: Update related images
         if: ${{ inputs.update_related_images }}

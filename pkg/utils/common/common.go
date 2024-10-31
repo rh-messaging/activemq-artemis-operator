@@ -66,8 +66,8 @@ const (
 	defaultRetryInterval = 3 * time.Second
 
 	// https://cert-manager.io/docs/trust/trust-manager/#preparing-for-production
-	DefaultOperatorCertSecretName = "operator-cert"
-	DefaultOperatorCASecretName   = "operator-ca"
+	DefaultOperatorCertSecretName = "activemq-artemis-manager-cert"
+	DefaultOperatorCASecretName   = "activemq-artemis-manager-ca"
 	DefaultOperandCertSecretName  = "broker-cert" // or can be prefixed with `cr.Name-`
 )
 
@@ -740,14 +740,14 @@ func GetOperandCertSecretName(cr *brokerv1beta1.ActiveMQArtemis, client rtclient
 
 func GetOperatorCertSecretName() string {
 	if operatorCertSecretName == nil {
-		operatorCertSecretName = fromEnv("OPERATOR_CERT_SECRET_NAME", DefaultOperatorCertSecretName)
+		operatorCertSecretName = fromEnv("ACTIVEMQ_ARTEMIS_MANAGER_CERT_SECRET_NAME", DefaultOperatorCertSecretName)
 	}
 	return *operatorCertSecretName
 }
 
 func GetOperatorCASecretName() string {
 	if operatorCASecretName == nil {
-		operatorCASecretName = fromEnv("OPERATOR_CA_SECRET_NAME", DefaultOperatorCASecretName)
+		operatorCASecretName = fromEnv("ACTIVEMQ_ARTEMIS_MANAGER_CA_SECRET_NAME", DefaultOperatorCASecretName)
 	}
 	return *operatorCASecretName
 }
@@ -844,6 +844,24 @@ func GetOperatorSecret(client rtclient.Client, secretName string) (*corev1.Secre
 	}
 
 	return &secret, nil
+}
+
+var operatorHasCertAndTrustBundle *bool
+
+func OperatorHasCertAndTrustBundle(client rtclient.Client) bool {
+	if operatorHasCertAndTrustBundle == nil {
+		var ok bool = false
+
+		var secret *corev1.Secret
+		var err error
+		if secret, err = GetOperatorCASecret(client); secret != nil && err == nil {
+			if secret, err = GetOperatorClientCertSecret(client); secret != nil && err == nil {
+				ok = true
+			}
+		}
+		operatorHasCertAndTrustBundle = &ok
+	}
+	return *operatorHasCertAndTrustBundle
 }
 
 func GetOperatorClientCertificate(client rtclient.Client, info *tls.CertificateRequestInfo) (cert *tls.Certificate, err error) {

@@ -58,10 +58,6 @@ type Jolokia struct {
 	client     rtclient.Client
 }
 
-func NewJolokia(_ip string, _port string, _path string, _user string, _password string) *Jolokia {
-	return GetJolokia(_ip, _port, _path, _user, _password, "http")
-}
-
 func GetRestrictedJolokia(client rtclient.Client, _ip string, _port string, _path string) *Jolokia {
 	j := Jolokia{
 		ip:         _ip,
@@ -74,7 +70,7 @@ func GetRestrictedJolokia(client rtclient.Client, _ip string, _port string, _pat
 	return &j
 }
 
-func GetJolokia(_ip string, _port string, _path string, _user string, _password string, _protocol string) *Jolokia {
+func GetJolokia(_client rtclient.Client, _ip string, _port string, _path string, _user string, _password string, _protocol string) *Jolokia {
 
 	j := Jolokia{
 		ip:         _ip,
@@ -83,6 +79,7 @@ func GetJolokia(_ip string, _port string, _path string, _user string, _password 
 		user:       _user,
 		password:   _password,
 		protocol:   _protocol,
+		client:     _client,
 	}
 	if j.user == "" {
 		j.user = "admin"
@@ -113,7 +110,7 @@ func (j *Jolokia) getClient() *http.Client {
 			InsecureSkipVerify: true,
 			ServerName:         j.ip,
 		}
-		if j.restricted {
+		if common.OperatorHasCertAndTrustBundle(j.client) {
 			httpClientTransport.TLSClientConfig.InsecureSkipVerify = false
 			httpClientTransport.TLSClientConfig.GetClientCertificate =
 				func(cri *tls.CertificateRequestInfo) (*tls.Certificate, error) {

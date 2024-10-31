@@ -46,13 +46,7 @@ type Artemis struct {
 	ip          string
 	jolokiaPort string
 	name        string
-	userName    string
-	password    string
 	jolokia     jolokia.IJolokia
-}
-
-func NewArtemis(_ip string, _jolokiaPort string, _name string, _user string, _password string) *Artemis {
-	return GetArtemis(_ip, _jolokiaPort, _name, _user, _password, "http")
 }
 
 func GetArtemisAgentForRestricted(client rtclient.Client, ordinalFqdn string) *Artemis {
@@ -66,13 +60,13 @@ func GetArtemisAgentForRestricted(client rtclient.Client, ordinalFqdn string) *A
 
 }
 
-func GetArtemis(_ip string, _jolokiaPort string, _name string, _user string, _password string, _protocol string) *Artemis {
+func GetArtemis(_client rtclient.Client, _ip string, _jolokiaPort string, _name string, _user string, _password string, _protocol string) *Artemis {
 
 	artemis := Artemis{
 		ip:          _ip,
 		jolokiaPort: _jolokiaPort,
 		name:        _name,
-		jolokia:     jolokia.GetJolokia(_ip, _jolokiaPort, "/console/jolokia", _user, _password, _protocol),
+		jolokia:     jolokia.GetJolokia(_client, _ip, _jolokiaPort, "/console/jolokia", _user, _password, _protocol),
 	}
 
 	return &artemis

@@ -47,6 +47,7 @@ type SslArguments struct {
 	TrustStorePassword *string
 	PemCfgs            []string
 	IsConsole          bool
+	NeedClientAuth     bool
 }
 
 func (s *SslArguments) ToSystemProperties() string {
@@ -79,6 +80,9 @@ func (s *SslArguments) ToSystemProperties() string {
 	}
 	if s.TrustStoreType != "" {
 		sslFlags = sslFlags + " -D" + Console_web_prefix + "trustStoreType=" + s.TrustStoreType
+	}
+	if s.NeedClientAuth {
+		sslFlags = sslFlags + " -D" + Console_web_prefix + "clientAuth=true"
 	}
 
 	sslFlags = sslFlags + " -D" + Console_web_prefix + "uri=" + getConsoleUri()
