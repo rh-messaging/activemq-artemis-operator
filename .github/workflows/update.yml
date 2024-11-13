@@ -77,11 +77,11 @@ jobs:
         if: ${{ inputs.update_base_image }}
         run: |
           if [ "${{ inputs.base_image }}" = "latest" ]; then
-            BASE_IMAGE="registry.access.redhat.com/ubi8:$(basename $(skopeo inspect docker://registry.access.redhat.com/ubi8:latest | jq -r '.Labels.url'))"
+            BASE_IMAGE="registry.access.redhat.com/ubi8-minimal:$(basename $(skopeo inspect docker://registry.access.redhat.com/ubi8-minimal:latest | jq -r '.Labels.url'))"
           else
             BASE_IMAGE="${{ inputs.base_image }}"
           fi
-          sed -i "s~FROM.*base-env~FROM ${BASE_IMAGE} base-env~" Dockerfile
+          sed -i "s~FROM.*base-env~FROM ${BASE_IMAGE} as base-env~" Dockerfile
           git commit --all --message "Update base image to ${BASE_IMAGE}" || echo "nothing to commit"
 
       - name: Update related images

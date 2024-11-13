@@ -39,7 +39,7 @@ RUN cp -r $REMOTE_SOURCE_DIR/app/* .
 # by leaving it empty we can ensure that the container and binary shipped on it will have the same platform.
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -ldflags="-X '${GO_MODULE}/version.BuildTimestamp=`date '+%Y-%m-%dT%H:%M:%S'`'" -o manager main.go
 
-FROM registry.access.redhat.com/ubi8:8.6-855 as base-env
+FROM registry.access.redhat.com/ubi8-minimal:8.10-1130 as base-env
 
 ENV BROKER_NAME=activemq-artemis
 ENV USER_UID=1000
@@ -62,7 +62,7 @@ COPY --from=builder /opt/app-root/src/entrypoint/entrypoint ${USER_HOME}/bin/ent
 RUN chown -R `id -u`:0 ${USER_HOME}/bin && chmod -R 755 ${USER_HOME}/bin
 
 # Upgrade packages
-RUN dnf update -y --setopt=install_weak_deps=0 && rm -rf /var/cache/yum
+RUN microdnf update -y --setopt=install_weak_deps=0 && rm -rf /var/cache/yum
 
 USER ${USER_UID}
 ENTRYPOINT ["${USER_HOME}/bin/entrypoint"]
