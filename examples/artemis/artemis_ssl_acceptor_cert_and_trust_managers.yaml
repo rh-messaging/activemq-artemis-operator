@@ -9,8 +9,6 @@ spec:
     protocols: all
     sslEnabled: true
     sslSecret: ssl-acceptor-ssl-secret
-    verifyHost: true
-    needClientAuth: true
   deploymentPlan:
     extraMounts:
       secrets:

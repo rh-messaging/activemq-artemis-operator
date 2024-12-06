@@ -700,7 +700,7 @@ func GenerateKeystore(password string, dnsNames []string) ([]byte, error) {
 		return nil, err
 	}
 
-	ksBytes, err := pkcs12.Encode(crand.Reader, caPrivKey, cert, []*x509.Certificate{}, password)
+	ksBytes, err := pkcs12.Modern.Encode(caPrivKey, cert, []*x509.Certificate{}, password)
 	if err != nil {
 		return nil, err
 	}
@@ -716,7 +716,7 @@ func GenerateTrustStoreFromKeyStore(ksBytes []byte, password string) ([]byte, er
 		return nil, err
 	}
 
-	pfxBytes, err := pkcs12.EncodeTrustStore(crand.Reader, []*x509.Certificate{cert}, password)
+	pfxBytes, err := pkcs12.Modern.EncodeTrustStore([]*x509.Certificate{cert}, password)
 
 	if err != nil {
 		return nil, err

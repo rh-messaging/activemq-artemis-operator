@@ -29,6 +29,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -140,6 +141,12 @@ var _ = Describe("minimal", func() {
 			})
 
 			crd.Spec.Restricted = common.NewTrue()
+
+			// how the jdk command line can be configured or modified
+			crd.Spec.Env = []corev1.EnvVar{
+				{Name: "JDK_JAVA_OPTIONS", Value: "-XshowSettings:system -Xlog:os+container=trace -DordinalPropForDoubleO=${STATEFUL_SET_ORDINAL}${STATEFUL_SET_ORDINAL}7"},
+				{Name: "JAVA_ARGS_APPEND", Value: "-DordinalProp=${STATEFUL_SET_ORDINAL}"},
+			}
 
 			By("Deploying the CRD " + crd.ObjectMeta.Name)
 			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())

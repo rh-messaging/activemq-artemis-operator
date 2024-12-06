@@ -265,9 +265,9 @@ Then send 100 messages through port 61618, but before replace **dummy_password**
 
 ```shell
 cd amq-broker/bin
-[jboss@artemis-broker-ss-0 bin]$ ./artemis producer --user admin --password admin --url tcp://artemis-broker-ss-0:61618?sslEnabled=true\&keyStorePath=/amq/extra/secrets/amq-ssl-secret/keystore.jks\&keyStorePassword=dummy_password\&trustStorePath=/amq/extra/configmaps/ca-bundle/truststore.jks\&trustStorePassword=changeit --message-count 100
+[jboss@artemis-broker-ss-0 bin]$ ./artemis producer --user admin --password admin --url tcp://artemis-broker-ss-0:61618?sslEnabled=true\&trustStorePath=/amq/extra/configmaps/ca-bundle/truststore.jks\&trustStorePassword=changeit --message-count 100
 OpenJDK 64-Bit Server VM warning: If the number of processors is expected to increase from one, then you should configure the number of parallel GC threads appropriately using -XX:ParallelGCThreads=N
-Connection brokerURL = tcp://artemis-broker-ss-0:61618?sslEnabled=true\&keyStorePath=/amq/extra/secrets/amq-ssl-secret/keystore.jks\&keyStorePassword=dummy_password\&trustStorePath=/amq/extra/configmaps/ca-bundle/truststore.jks\&trustStorePassword=changeit
+Connection brokerURL = tcp://artemis-broker-ss-0:61618?sslEnabled=true\&trustStorePath=/amq/extra/configmaps/ca-bundle/truststore.jks\&trustStorePassword=changeit
 Producer ActiveMQQueue[TEST], thread=0 Started to calculate elapsed time ...
 
 Producer ActiveMQQueue[TEST], thread=0 Produced: 100 messages
@@ -278,9 +278,9 @@ Producer ActiveMQQueue[TEST], thread=0 Elapsed time in milli second : 724 milli 
 Finally you can receive those 100 messages (again replace **dummy_password** with the password you have used in section **Create secret for keystore password**):
 
 ```shell
-[jboss@artemis-broker-ss-0 bin]$ ./artemis consumer --user admin --password admin --url tcp://artemis-broker-ss-0:61618?sslEnabled=true\&keyStorePath=/amq/extra/secrets/amq-ssl-secret/keystore.jks\&keyStorePassword=dummy_password\&trustStorePath=/amq/extra/configmaps/ca-bundle/truststore.jks\&trustStorePassword=changeit --message-count 100
+[jboss@artemis-broker-ss-0 bin]$ ./artemis consumer --user admin --password admin --url tcp://artemis-broker-ss-0:61618?sslEnabled=true\&trustStorePath=/amq/extra/configmaps/ca-bundle/truststore.jks\&trustStorePassword=changeit --message-count 100
 OpenJDK 64-Bit Server VM warning: If the number of processors is expected to increase from one, then you should configure the number of parallel GC threads appropriately using -XX:ParallelGCThreads=N
-Connection brokerURL = tcp://artemis-broker-ss-0:61618?sslEnabled=true\&keyStorePath=/amq/extra/secrets/amq-ssl-secret/keystore.jks\&keyStorePassword=dummy_password\&trustStorePath=/amq/extra/configmaps/ca-bundle/truststore.jks\&trustStorePassword=changeit
+Connection brokerURL = tcp://artemis-broker-ss-0:61618?sslEnabled=true\&trustStorePath=/amq/extra/configmaps/ca-bundle/truststore.jks\&trustStorePassword=changeit
 Consumer:: filter = null
 Consumer ActiveMQQueue[TEST], thread=0 wait until 100 messages are consumed
 Consumer ActiveMQQueue[TEST], thread=0 Consumed: 100 messages
