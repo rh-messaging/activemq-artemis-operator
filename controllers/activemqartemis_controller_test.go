@@ -10323,6 +10323,7 @@ var _ = Describe("artemis controller", func() {
 
 				crd.Spec.BrokerProperties = []string{
 					"connectorConfigurations.artemis.params.sslEnabled=true",
+					"connectorConfigurations.artemis.params.forceSSLParameters=true",
 					"connectorConfigurations.artemis.params.trustStorePath=/etc/" + tlsSecretName + "-volume/broker.ks",
 					"connectorConfigurations.artemis.params.trustStorePassword=" + defaultPassword,
 				}
@@ -10360,6 +10361,7 @@ var _ = Describe("artemis controller", func() {
 
 				crd.Spec.BrokerProperties = []string{
 					"connectorConfigurations.artemis.params.sslEnabled=true",
+					"connectorConfigurations.artemis.params.forceSSLParameters=true",
 					"connectorConfigurations.artemis.params.trustStorePath=/etc/" + tlsSecretName + "-volume/tls.crt",
 					"connectorConfigurations.artemis.params.trustStoreType=PEM",
 				}
@@ -10415,6 +10417,7 @@ var _ = Describe("artemis controller", func() {
 
 				crd.Spec.BrokerProperties = []string{
 					"connectorConfigurations.artemis.params.sslEnabled=true",
+					"connectorConfigurations.artemis.params.forceSSLParameters=true",
 					"connectorConfigurations.artemis.params.trustStorePath=/etc/" + tlsSecretName + "-volume/broker.ks",
 					"connectorConfigurations.artemis.params.trustStorePassword=" + defaultPassword,
 				}
@@ -10456,6 +10459,7 @@ var _ = Describe("artemis controller", func() {
 
 				crd.Spec.BrokerProperties = []string{
 					"connectorConfigurations.artemis.params.sslEnabled=true",
+					"connectorConfigurations.artemis.params.forceSSLParameters=true",
 					"connectorConfigurations.artemis.params.trustStorePath=/etc/" + tlsSecretName + "-volume/broker.ks",
 					"connectorConfigurations.artemis.params.trustStorePassword=" + defaultPassword,
 					"connectorConfigurations.artemis.params.verifyHost=false",

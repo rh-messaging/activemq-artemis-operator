@@ -188,6 +188,10 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 		})
 
 		It("test configured with cert secret as legacy one", func() {
+			if isFIPSEnabled {
+				Skip("Legacy PKCS12 key stores with PBEWithSHA1AndRC2_40 are not supported when FIPS mode is enabled")
+			}
+
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 				By("deploying the broker")
 				_, brokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
@@ -414,7 +418,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 			podName := activeMQArtemis.Name + "-ss-0"
 			trustStorePath := "/amq/extra/secrets/" + issuerCertSecretName + "/tls.crt"
 			checkCommandBeforeUpdating := []string{"/home/jboss/amq-broker/bin/artemis", "check", "node", "--up", "--url",
-				"tcp://" + podName + ":61617?sslEnabled=true&sniHost=" + ingressHost + "&trustStoreType=PEM&trustStorePath=" + trustStorePath}
+				"tcp://" + podName + ":61617?sslEnabled=true&forceSSLParameters=true&sniHost=" + ingressHost + "&trustStoreType=PEM&trustStorePath=" + trustStorePath}
 			Eventually(func(g Gomega) {
 				stdOutContent := ExecOnPod(podName, activeMQArtemis.Name, defaultNamespace, checkCommandBeforeUpdating, g)
 				g.Expect(stdOutContent).Should(ContainSubstring("Checks run: 1"))
@@ -544,7 +548,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 
 			By("Checking tls-acceptor before updating")
 			checkCommandBeforeUpdating := []string{"/home/jboss/amq-broker/bin/artemis", "check", "node", "--up", "--url",
-				"tcp://" + podName + ":61617?sslEnabled=true&sniHost=before.artemiscloud.io&trustStoreType=PEM&trustStorePath=" + trustStorePath}
+				"tcp://" + podName + ":61617?sslEnabled=true&forceSSLParameters=true&sniHost=before.artemiscloud.io&trustStoreType=PEM&trustStorePath=" + trustStorePath}
 			Eventually(func(g Gomega) {
 				stdOutContent := ExecOnPod(podName, activeMQArtemis.Name, defaultNamespace, checkCommandBeforeUpdating, g)
 				g.Expect(stdOutContent).Should(ContainSubstring("Checks run: 1"))
@@ -574,7 +578,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 
 			By("Checking tls-acceptor after updating")
 			checkCommandAfterUpdating := []string{"/home/jboss/amq-broker/bin/artemis", "check", "node", "--up", "--url",
-				"tcp://" + podName + ":61617?sslEnabled=true&sniHost=after.artemiscloud.io&trustStoreType=PEM&trustStorePath=" + trustStorePath}
+				"tcp://" + podName + ":61617?sslEnabled=true&forceSSLParameters=true&sniHost=after.artemiscloud.io&trustStoreType=PEM&trustStorePath=" + trustStorePath}
 			Eventually(func(g Gomega) {
 				stdOutContent := ExecOnPod(podName, activeMQArtemis.Name, defaultNamespace, checkCommandAfterUpdating, g)
 				g.Expect(stdOutContent).Should(ContainSubstring("Checks run: 1"))
@@ -751,7 +755,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 			trustStorePath := "/amq/extra/secrets/" + bundleName + "/root-certs.pem"
 			certDumpCommand := []string{"cat", "/etc/" + certSecretName + "-volume/tls.crt"}
 			checkCommand := []string{"/home/jboss/amq-broker/bin/artemis", "check", "node", "--up", "--url",
-				"tcp://" + podName + ":61617?sslEnabled=true&sniHost=broker.artemiscloud.io&trustStoreType=PEMCA&trustStorePath=" + trustStorePath}
+				"tcp://" + podName + ":61617?sslEnabled=true&forceSSLParameters=true&sniHost=broker.artemiscloud.io&trustStoreType=PEMCA&trustStorePath=" + trustStorePath}
 
 			By("Checking tls-acceptor before updating")
 			Eventually(func(g Gomega) {
@@ -1046,7 +1050,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 			Eventually(func(g Gomega) {
 				keyStorePath := "/amq/extra/secrets/" + clientKeyStoreSecretName + "/client-foo.pemcfg"
 				checkCommand := []string{"/home/jboss/amq-broker/bin/artemis", "check", "node", "--up", "--url",
-					"tcp://" + podName + ":61617?sslEnabled=true&sniHost=broker.artemiscloud.io&keyStoreType=PEMCFG&keyStorePath=" + keyStorePath + "&trustStoreType=PEM&trustStorePath=" + trustStorePath}
+					"tcp://" + podName + ":61617?sslEnabled=true&forceSSLParameters=true&sniHost=broker.artemiscloud.io&keyStoreType=PEMCFG&keyStorePath=" + keyStorePath + "&trustStoreType=PEM&trustStorePath=" + trustStorePath}
 
 				stdOutContent := ExecOnPod(podName, activeMQArtemis.Name, defaultNamespace, checkCommand, g)
 				g.Expect(stdOutContent).Should(ContainSubstring("Checks run: 1"))
@@ -1056,7 +1060,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 			Eventually(func(g Gomega) {
 				keyStorePath := "/amq/extra/secrets/" + clientKeyStoreSecretName + "/client-bar.pemcfg"
 				checkCommand := []string{"/home/jboss/amq-broker/bin/artemis", "check", "node", "--up", "--url",
-					"tcp://" + podName + ":61617?sslEnabled=true&sniHost=broker.artemiscloud.io&keyStoreType=PEMCFG&keyStorePath=" + keyStorePath + "&trustStoreType=PEM&trustStorePath=" + trustStorePath}
+					"tcp://" + podName + ":61617?sslEnabled=true&forceSSLParameters=true&sniHost=broker.artemiscloud.io&keyStoreType=PEMCFG&keyStorePath=" + keyStorePath + "&trustStoreType=PEM&trustStorePath=" + trustStorePath}
 
 				stdOutContent := ExecOnPod(podName, activeMQArtemis.Name, defaultNamespace, checkCommand, g)
 				g.Expect(stdOutContent).Should(ContainSubstring("Checks run: 1"))
@@ -1128,7 +1132,7 @@ func CheckAcceptorStarted(podName string, crName string, acceptorName string, g 
 }
 
 func checkMessagingInPodWithJavaStore(podName string, crName string, portNumber string, trustStoreLoc string, trustStorePassword string, keyStoreLoc *string, keyStorePassword *string, g Gomega) {
-	tcpUrl := "tcp://" + podName + ":" + portNumber + "?sslEnabled=true&trustStorePath=" + trustStoreLoc + "&trustStorePassword=" + trustStorePassword
+	tcpUrl := "tcp://" + podName + ":" + portNumber + "?sslEnabled=true&forceSSLParameters=true&trustStorePath=" + trustStoreLoc + "&trustStorePassword=" + trustStorePassword
 	if keyStoreLoc != nil {
 		tcpUrl += "&keyStorePath=" + *keyStoreLoc + "&keyStorePassword=" + *keyStorePassword
 	}
@@ -1141,7 +1145,7 @@ func checkMessagingInPodWithJavaStore(podName string, crName string, portNumber 
 }
 
 func checkMessagingInPod(podName string, crName string, portNumber string, trustStoreLoc string, g Gomega) {
-	tcpUrl := "tcp://" + podName + ":" + portNumber + "?sslEnabled=true&trustStorePath=" + trustStoreLoc + "&trustStoreType=PEM"
+	tcpUrl := "tcp://" + podName + ":" + portNumber + "?sslEnabled=true&forceSSLParameters=true&trustStorePath=" + trustStoreLoc + "&trustStoreType=PEM"
 	sendCommand := []string{"amq-broker/bin/artemis", "producer", "--user", "testuser", "--password", "testpassword", "--url", tcpUrl, "--message-count", "1", "--destination", "queue://DLQ", "--verbose"}
 	result := ExecOnPod(podName, crName, defaultNamespace, sendCommand, g)
 	g.Expect(result).To(ContainSubstring("Produced: 1 messages"))

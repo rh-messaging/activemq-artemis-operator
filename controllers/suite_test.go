@@ -143,6 +143,7 @@ var (
 
 	artemisGvk = schema.GroupVersionKind{Group: "broker", Version: "v1beta1", Kind: "ActiveMQArtemis"}
 
+	isFIPSEnabled                             = false
 	isOpenshift                               = false
 	isIngressSSLPassthroughEnabled            = false
 	verbose                                   = false
@@ -200,6 +201,15 @@ func setUpEnvTest() {
 
 	if isOpenshift {
 		kubeTool = "oc"
+	}
+
+	if isOpenshift {
+		clusterConfig := &corev1.ConfigMap{}
+		clusterConfigKey := types.NamespacedName{Name: "cluster-config-v1", Namespace: "kube-system"}
+		clusterConfigErr := k8sClient.Get(ctx, clusterConfigKey, clusterConfig)
+		if clusterConfigErr == nil {
+			isFIPSEnabled = strings.Contains(clusterConfig.Data["install-config"], "fips: true")
+		}
 	}
 
 	setUpIngress()
@@ -362,13 +372,22 @@ func setUpTestProxy() {
 		true, "", testProxyHost, isOpenshift)
 	createOrOverwriteResource(testProxyIngress)
 
+	if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+		Eventually(func(g Gomega) {
+			tlsConn, tlsErr := tls.Dial("tcp", clusterIngressHost+":443",
+				&tls.Config{ServerName: testProxyHost, InsecureSkipVerify: true})
+			g.Expect(tlsErr).Should(BeNil())
+			tlsConn.Close()
+		}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+	}
+
 	http.DefaultTransport = &http.Transport{
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			tlsConn, tlsErr := tls.Dial("tcp", clusterIngressHost+":443",
 				&tls.Config{ServerName: testProxyHost, InsecureSkipVerify: true})
 			if tlsErr != nil {
 				testProxyLog.V(1).Info("Error creating tls connection", "addr", addr, "error", tlsErr)
-				return nil, tlsErr
+				return nil, fmt.Errorf("Error creating tls connection to %s: %v", addr, tlsErr)
 			}
 
 			sshConn, sshChans, sshReqs, sshErr := ssh.NewClientConn(tlsConn, "127.0.0.1:2022", &ssh.ClientConfig{
@@ -378,9 +397,8 @@ func setUpTestProxy() {
 			})
 			if sshErr != nil {
 				testProxyLog.V(1).Info("Error creating SSH connection", "addr", addr, "error", sshErr)
-				fmt.Printf("\nError creating SSH tunnel to %s: %v", addr, sshErr)
 				tlsConn.Close()
-				return nil, sshErr
+				return nil, fmt.Errorf("Error creating SSH connection to %s: %v", addr, sshErr)
 			}
 
 			sshClient := ssh.NewClient(sshConn, sshChans, sshReqs)
@@ -391,7 +409,7 @@ func setUpTestProxy() {
 				sshClient.Close()
 				sshConn.Close()
 				tlsConn.Close()
-				return nil, sshClientErr
+				return nil, fmt.Errorf("Error creating SSH tunnel to %s: %v", addr, sshClientErr)
 			}
 
 			testProxyLog.V(1).Info("Opened SSH tunnel", "addr", addr)
