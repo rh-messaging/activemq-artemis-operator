@@ -99,19 +99,19 @@ func (artemis *Artemis) GetStatus() (string, error) {
 
 func (artemis *Artemis) CreateQueue(addressName string, queueName string, routingType string) (*jolokia.ResponseData, error) {
 
-	url := "org.apache.activemq.artemis:broker=\\\"" + artemis.name + "\\\""
+	url := "org.apache.activemq.artemis:broker=\"" + artemis.name + "\""
 	routingType = strings.ToUpper(routingType)
 	parameters := `"` + addressName + `","` + queueName + `",` + `"` + routingType + `"`
-	jsonStr := `{ "type":"EXEC","mbean":"` + url + `","operation":"createQueue(java.lang.String,java.lang.String,java.lang.String)","arguments":[` + parameters + `]` + ` }`
+	jsonStr := `{ "type":"EXEC","mbean":"` + strings.Replace(url, "\"", "\\\"", -1) + `","operation":"createQueue(java.lang.String,java.lang.String,java.lang.String)","arguments":[` + parameters + `]` + ` }`
 	data, err := artemis.jolokia.Exec(url, jsonStr)
 
 	return data, err
 }
 
 func (artemis *Artemis) UpdateQueue(queueConfig string) (*jolokia.ResponseData, error) {
-	url := "org.apache.activemq.artemis:broker=\\\"" + artemis.name + "\\\""
+	url := "org.apache.activemq.artemis:broker=\"" + artemis.name + "\""
 	parameters := queueConfig
-	jsonStr := `{ "type":"EXEC","mbean":"` + url + `","operation":"updateQueue(java.lang.String)","arguments":[` + parameters + `]` + ` }`
+	jsonStr := `{ "type":"EXEC","mbean":"` + strings.Replace(url, "\"", "\\\"", -1) + `","operation":"updateQueue(java.lang.String)","arguments":[` + parameters + `]` + ` }`
 
 	data, err := artemis.jolokia.Exec(url, jsonStr)
 
@@ -126,9 +126,9 @@ func (artemis *Artemis) CreateQueueFromConfig(queueConfig string, ignoreIfExists
 	} else {
 		ignoreIfExistsValue = "false"
 	}
-	url := "org.apache.activemq.artemis:broker=\\\"" + artemis.name + "\\\""
+	url := "org.apache.activemq.artemis:broker=\"" + artemis.name + "\""
 	parameters := queueConfig + `,` + ignoreIfExistsValue
-	jsonStr := `{ "type":"EXEC","mbean":"` + url + `","operation":"createQueue(java.lang.String,boolean)","arguments":[` + parameters + `]` + ` }`
+	jsonStr := `{ "type":"EXEC","mbean":"` + strings.Replace(url, "\"", "\\\"", -1) + `","operation":"createQueue(java.lang.String,boolean)","arguments":[` + parameters + `]` + ` }`
 
 	data, err := artemis.jolokia.Exec(url, jsonStr)
 
@@ -137,10 +137,10 @@ func (artemis *Artemis) CreateQueueFromConfig(queueConfig string, ignoreIfExists
 
 func (artemis *Artemis) CreateAddress(addressName string, routingType string) (*jolokia.ResponseData, error) {
 
-	url := "org.apache.activemq.artemis:broker=\\\"" + artemis.name + "\\\""
+	url := "org.apache.activemq.artemis:broker=\"" + artemis.name + "\""
 	routingType = strings.ToUpper(routingType)
 	parameters := `"` + addressName + `","` + routingType + `"`
-	jsonStr := `{ "type":"EXEC","mbean":"` + url + `","operation":"createAddress(java.lang.String,java.lang.String)","arguments":[` + parameters + `]` + ` }`
+	jsonStr := `{ "type":"EXEC","mbean":"` + strings.Replace(url, "\"", "\\\"", -1) + `","operation":"createAddress(java.lang.String,java.lang.String)","arguments":[` + parameters + `]` + ` }`
 	data, err := artemis.jolokia.Exec(url, jsonStr)
 
 	return data, err
@@ -148,9 +148,9 @@ func (artemis *Artemis) CreateAddress(addressName string, routingType string) (*
 
 func (artemis *Artemis) DeleteQueue(queueName string) (*jolokia.ResponseData, error) {
 
-	url := "org.apache.activemq.artemis:broker=\\\"" + artemis.name + "\\\""
+	url := "org.apache.activemq.artemis:broker=\"" + artemis.name + "\""
 	parameters := `"` + queueName + `"`
-	jsonStr := `{ "type":"EXEC","mbean":"` + url + `","operation":"destroyQueue(java.lang.String)","arguments":[` + parameters + `]` + ` }`
+	jsonStr := `{ "type":"EXEC","mbean":"` + strings.Replace(url, "\"", "\\\"", -1) + `","operation":"destroyQueue(java.lang.String)","arguments":[` + parameters + `]` + ` }`
 	data, err := artemis.jolokia.Exec(url, jsonStr)
 
 	return data, err
@@ -158,9 +158,9 @@ func (artemis *Artemis) DeleteQueue(queueName string) (*jolokia.ResponseData, er
 
 func (artemis *Artemis) ListBindingsForAddress(addressName string) (*jolokia.ResponseData, error) {
 
-	url := "org.apache.activemq.artemis:broker=\\\"" + artemis.name + "\\\""
+	url := "org.apache.activemq.artemis:broker=\"" + artemis.name + "\""
 	parameters := `"` + addressName + `"`
-	jsonStr := `{ "type":"EXEC","mbean":"` + url + `","operation":"listBindingsForAddress(java.lang.String)","arguments":[` + parameters + `]` + ` }`
+	jsonStr := `{ "type":"EXEC","mbean":"` + strings.Replace(url, "\"", "\\\"", -1) + `","operation":"listBindingsForAddress(java.lang.String)","arguments":[` + parameters + `]` + ` }`
 	data, err := artemis.jolokia.Exec(url, jsonStr)
 
 	return data, err
@@ -168,9 +168,9 @@ func (artemis *Artemis) ListBindingsForAddress(addressName string) (*jolokia.Res
 
 func (artemis *Artemis) DeleteAddress(addressName string) (*jolokia.ResponseData, error) {
 
-	url := "org.apache.activemq.artemis:broker=\\\"" + artemis.name + "\\\""
+	url := "org.apache.activemq.artemis:broker=\"" + artemis.name + "\""
 	parameters := `"` + addressName + `"`
-	jsonStr := `{ "type":"EXEC","mbean":"` + url + `","operation":"deleteAddress(java.lang.String)","arguments":[` + parameters + `]` + ` }`
+	jsonStr := `{ "type":"EXEC","mbean":"` + strings.Replace(url, "\"", "\\\"", -1) + `","operation":"deleteAddress(java.lang.String)","arguments":[` + parameters + `]` + ` }`
 	data, err := artemis.jolokia.Exec(url, jsonStr)
 
 	return data, err

@@ -183,7 +183,7 @@ var _ = Describe("security without controller", func() {
 			By("verify joe cannot see address message count attribute")
 			podWithOrdinal0 := namer.CrToSS(crd.Name) + "-0"
 			originHeader := "Origin: http://" + "localhost" // value not verified but presence necessary
-			curlUrl := "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:address=\"TOMS_WORK_QUEUE\",broker=\"amq-broker\",component=addresses/MessageCount"
+			curlUrl := "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:address=%22TOMS_WORK_QUEUE%22,broker=%22amq-broker%22,component=addresses/MessageCount"
 			curlCmd := []string{"curl", "-S", "-v", "-H", originHeader, "-u", "joe:joe", curlUrl}
 			Eventually(func(g Gomega) {
 				result, err := RunCommandInPod(podWithOrdinal0, crd.Name+"-container", curlCmd)
@@ -206,7 +206,7 @@ var _ = Describe("security without controller", func() {
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			By("verify admin can't call forceFailover")
-			curlUrl = "http://" + podWithOrdinal0 + ":8161/console/jolokia/exec/org.apache.activemq.artemis:broker=\"amq-broker\"/forceFailover"
+			curlUrl = "http://" + podWithOrdinal0 + ":8161/console/jolokia/exec/org.apache.activemq.artemis:broker=%22amq-broker%22/forceFailover"
 			curlCmd = []string{"curl", "-S", "-v", "-H", originHeader, "-u", "admin:admin", curlUrl}
 			Eventually(func(g Gomega) {
 				result, err := RunCommandInPod(podWithOrdinal0, crd.Name+"-container", curlCmd)

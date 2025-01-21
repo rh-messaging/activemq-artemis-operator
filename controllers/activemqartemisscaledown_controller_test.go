@@ -125,7 +125,7 @@ var _ = Describe("Scale down controller", func() {
 					// so the pod number will change from 1 to 2 and back to 1.
 					// checking message count on broker 0 to make sure scale down finally happens.
 					By("Checking messsage count on broker 0")
-					curlUrl := "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\",component=addresses,address=\"DLQ\",subcomponent=queues,routing-type=\"anycast\",queue=\"DLQ\"/MessageCount"
+					curlUrl := "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=%22amq-broker%22,component=addresses,address=%22DLQ%22,subcomponent=queues,routing-type=%22anycast%22,queue=%22DLQ%22/MessageCount"
 					curlCmd := []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
 					result, err := RunCommandInPod(podWithOrdinal0, brokerName+"-container", curlCmd)
 					g.Expect(err).To(BeNil())

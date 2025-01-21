@@ -1095,7 +1095,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 })
 
 func getConnectorConfig(podName string, crName string, connectorName string, g Gomega) map[string]string {
-	curlUrl := "http://" + podName + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/ConnectorsAsJSON"
+	curlUrl := "http://" + podName + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=%22amq-broker%22/ConnectorsAsJSON"
 	command := []string{"curl", "-k", "-s", "-u", "testuser:testpassword", curlUrl}
 
 	result := ExecOnPod(podName, crName, defaultNamespace, command, g)
@@ -1119,7 +1119,7 @@ func getConnectorConfig(podName string, crName string, connectorName string, g G
 }
 
 func CheckAcceptorStarted(podName string, crName string, acceptorName string, g Gomega) {
-	curlUrl := "http://" + podName + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\",component=acceptors,name=\"" + acceptorName + "\"/Started"
+	curlUrl := "http://" + podName + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=%22amq-broker%22,component=acceptors,name=%22" + acceptorName + "%22/Started"
 	command := []string{"curl", "-k", "-s", "-u", "testuser:testpassword", curlUrl}
 
 	result := ExecOnPod(podName, crName, defaultNamespace, command, g)

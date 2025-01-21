@@ -10050,7 +10050,7 @@ var _ = Describe("artemis controller", func() {
 				By("checking pod 0 status that has properties applied")
 				podWithOrdinal0 := namer.CrToSS(crd.Name) + "-0"
 
-				curlUrl := "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/Status"
+				curlUrl := "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=%22amq-broker%22/Status"
 				curlCmd := []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
 				Eventually(func(g Gomega) {
 					result, err := RunCommandInPod(podWithOrdinal0, crd.Name+"-container", curlCmd)
@@ -10061,7 +10061,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(*result).NotTo(ContainSubstring("broker-1.globalMem.properties"))
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
-				curlUrl = "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/GlobalMaxSize"
+				curlUrl = "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=%22amq-broker%22/GlobalMaxSize"
 				curlCmd = []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
 				Eventually(func(g Gomega) {
 					result, err := RunCommandInPod(podWithOrdinal0, crd.Name+"-container", curlCmd)
@@ -10073,7 +10073,7 @@ var _ = Describe("artemis controller", func() {
 				By("checking pod 1 status that has properties applied")
 				podWithOrdinal1 := namer.CrToSS(crd.Name) + "-1"
 
-				curlUrl = "http://" + podWithOrdinal1 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/Status"
+				curlUrl = "http://" + podWithOrdinal1 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=%22amq-broker%22/Status"
 				curlCmd = []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
 				Eventually(func(g Gomega) {
 					result, err := RunCommandInPod(podWithOrdinal1, crd.Name+"-container", curlCmd)
@@ -10084,7 +10084,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(*result).NotTo(ContainSubstring("broker-0.globalMem.properties"))
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
-				curlUrl = "http://" + podWithOrdinal1 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/GlobalMaxSize"
+				curlUrl = "http://" + podWithOrdinal1 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=%22amq-broker%22/GlobalMaxSize"
 				curlCmd = []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
 				Eventually(func(g Gomega) {
 					result, err := RunCommandInPod(podWithOrdinal1, crd.Name+"-container", curlCmd)
@@ -10155,7 +10155,7 @@ var _ = Describe("artemis controller", func() {
 				By("checking pod 0 status that has properties applied")
 				podWithOrdinal0 := namer.CrToSS(crd.Name) + "-0"
 
-				curlUrl := "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/Status"
+				curlUrl := "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=%22amq-broker%22/Status"
 				curlCmd := []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
 				Eventually(func(g Gomega) {
 					result, err := RunCommandInPod(podWithOrdinal0, crd.Name+"-container", curlCmd)
@@ -10166,7 +10166,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(*result).NotTo(ContainSubstring("broker-1.globalMem.json"))
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
-				curlUrl = "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/GlobalMaxSize"
+				curlUrl = "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=%22amq-broker%22/GlobalMaxSize"
 				curlCmd = []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
 				Eventually(func(g Gomega) {
 					result, err := RunCommandInPod(podWithOrdinal0, crd.Name+"-container", curlCmd)
@@ -10178,7 +10178,7 @@ var _ = Describe("artemis controller", func() {
 				By("checking pod 1 status that has properties applied")
 				podWithOrdinal1 := namer.CrToSS(crd.Name) + "-1"
 
-				curlUrl = "http://" + podWithOrdinal1 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/Status"
+				curlUrl = "http://" + podWithOrdinal1 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=%22amq-broker%22/Status"
 				curlCmd = []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
 				Eventually(func(g Gomega) {
 					result, err := RunCommandInPod(podWithOrdinal1, crd.Name+"-container", curlCmd)
@@ -10189,7 +10189,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(*result).NotTo(ContainSubstring("broker-0.globalMem.json"))
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
-				curlUrl = "http://" + podWithOrdinal1 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/GlobalMaxSize"
+				curlUrl = "http://" + podWithOrdinal1 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=%22amq-broker%22/GlobalMaxSize"
 				curlCmd = []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
 				Eventually(func(g Gomega) {
 					result, err := RunCommandInPod(podWithOrdinal1, crd.Name+"-container", curlCmd)
