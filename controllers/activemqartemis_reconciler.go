@@ -2036,7 +2036,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) PodTemplateSpecForCR(customReso
 		brokerPropertiesMapData["_cert-roles"] = cert_roles.String()
 
 		foundationalProps := newPropsWithHeader()
-		fmt.Fprintln(foundationalProps, "name=amq-broker")
+		fmt.Fprintf(foundationalProps, "name=%s\n", customResource.Name)
 		fmt.Fprintln(foundationalProps, "criticalAnalyzer=false")
 		fmt.Fprintln(foundationalProps, "journalDirectory=/app/data")
 		fmt.Fprintln(foundationalProps, "bindingsDirectory=/app/data/bindings")

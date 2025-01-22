@@ -69,7 +69,7 @@ func GetMinimalJolokiaAgents(cr *v1beta1.ActiveMQArtemis, client rtclient.Client
 
 		ordinalFqdn := common.OrdinalFQDNS(cr.Name, cr.Namespace, i)
 
-		artemis := mgmt.GetArtemisAgentForRestricted(client, ordinalFqdn)
+		artemis := mgmt.GetArtemisAgentForRestricted(client, cr.Name, ordinalFqdn)
 
 		jkInfo := JkInfo{
 			Artemis: artemis,
