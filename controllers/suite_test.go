@@ -374,7 +374,11 @@ func setUpTestProxy() {
 
 	if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 		Eventually(func(g Gomega) {
-			tlsConn, tlsErr := tls.Dial("tcp", clusterIngressHost+":443",
+			tlsDialer := new(net.Dialer)
+			// The tls proxy dialer timeout reduce the proxy setup time because the
+			// fisrt connection usually fails and TCP timeouts are often around 3 mins
+			tlsDialer.Timeout = 3 * time.Second
+			tlsConn, tlsErr := tls.DialWithDialer(tlsDialer, "tcp", clusterIngressHost+":443",
 				&tls.Config{ServerName: testProxyHost, InsecureSkipVerify: true})
 			g.Expect(tlsErr).Should(BeNil())
 			tlsConn.Close()
