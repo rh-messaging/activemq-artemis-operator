@@ -3261,7 +3261,7 @@ func AssertBrokersAvailable(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.C
 	DeployedCondition := meta.FindStatusCondition(cr.Status.Conditions, brokerv1beta1.DeployedConditionType)
 	if DeployedCondition == nil || DeployedCondition.Status == metav1.ConditionFalse {
 		reqLogger.V(2).Info("There are no available brokers from DeployedCondition", "condition", DeployedCondition)
-		return NewUnknownJolokiaError(errors.New("no available brokers from deployed condition"))
+		return NewArtemisStatusError(errors.New("no available brokers from deployed condition"), false)
 	}
 	return nil
 }
@@ -3271,8 +3271,8 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) AssertBrokerPropertiesStatus(cr
 
 	secretProjection, err := getSecretProjection(getPropertiesResourceNsName(cr), client)
 	if err != nil {
-		reqLogger.V(2).Info("error retrieving config resources. requeing")
-		return NewUnknownJolokiaError(err)
+		reqLogger.V(2).Info("error retrieving config resources.")
+		return NewArtemisStatusError(err, false)
 	}
 
 	errorStatus := reconciler.checkProjectionStatus(cr, client, secretProjection, func(BrokerStatus *brokerStatus, FileName string) (propertiesStatus, bool) {
@@ -3285,8 +3285,8 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) AssertBrokerPropertiesStatus(cr
 			if strings.HasSuffix(extraSecretName, brokerPropsSuffix) {
 				secretProjection, err = getSecretProjection(types.NamespacedName{Name: extraSecretName, Namespace: cr.Namespace}, client)
 				if err != nil {
-					reqLogger.V(2).Info("error retrieving -bp extra mount resource. requeing")
-					return NewUnknownJolokiaError(err)
+					reqLogger.V(2).Info("error retrieving -bp extra mount resource.")
+					return NewArtemisStatusError(err, false)
 				}
 				errorStatus = reconciler.checkProjectionStatus(cr, client, secretProjection, func(BrokerStatus *brokerStatus, FileName string) (propertiesStatus, bool) {
 					current, present := BrokerStatus.BrokerConfigStatus.PropertiesStatus[FileName]
@@ -3310,8 +3310,8 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) AssertJaasPropertiesStatus(cr *
 
 	Projection, err := getConfigMappedJaasProperties(cr, client)
 	if err != nil {
-		reqLogger.V(2).Info("error retrieving config resources. requeing")
-		return NewUnknownJolokiaError(err)
+		reqLogger.V(2).Info("error retrieving config resources.")
+		return NewArtemisStatusError(err, false)
 	}
 
 	statusError := reconciler.checkProjectionStatus(cr, client, Projection, func(BrokerStatus *brokerStatus, FileName string) (propertiesStatus, bool) {
@@ -3375,8 +3375,8 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) checkStatus(cr *brokerv1beta1.A
 		currentJson, err := jk.Artemis.GetStatus()
 
 		if err != nil {
-			reqLogger.V(1).Info("unknown status reported from Jolokia.", "IP", jk.IP, "Ordinal", jk.Ordinal, "error", err)
-			return NewUnknownJolokiaError(err)
+			reqLogger.V(1).Info("error getting broker status with Jolokia", "IP", jk.IP, "Ordinal", jk.Ordinal, "error", err)
+			return NewArtemisStatusError(err, true)
 		}
 
 		reqLogger.V(2).Info("raw json status", "IP", jk.IP, "ordinal", jk.Ordinal, "status json", currentJson)
@@ -3384,7 +3384,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) checkStatus(cr *brokerv1beta1.A
 		brokerStatus, err := unmarshallStatus(currentJson)
 		if err != nil {
 			reqLogger.Error(err, "unable to unmarshall broker status", "json", currentJson)
-			return NewUnknownJolokiaError(err)
+			return NewArtemisStatusError(err, false)
 		}
 
 		reqLogger.V(2).Info("broker status", "ordinal", jk.Ordinal, "status", brokerStatus)
@@ -3510,7 +3510,7 @@ func getSecretProjection(secretName types.NamespacedName, client rtclient.Client
 	resource := corev1.Secret{}
 	err := client.Get(context.TODO(), secretName, &resource)
 	if err != nil {
-		return nil, NewUnknownJolokiaError(errors.Wrap(err, "unable to retrieve mutable properties secret"))
+		return nil, errors.Wrap(err, "unable to retrieve secret projection")
 	}
 	return newProjectionFromByteValues(resource.ObjectMeta, resource.Data), nil
 }

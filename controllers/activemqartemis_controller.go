@@ -862,9 +862,11 @@ type ArtemisError interface {
 	Requeue() bool
 }
 
-type unknownJolokiaError struct {
-	cause error
+type artemisStatusError struct {
+	cause     error
+	transient bool
 }
+
 type jolokiaClientNotFoundError struct {
 	cause error
 }
@@ -881,18 +883,19 @@ type versionMismatchError struct {
 	cause string
 }
 
-func NewUnknownJolokiaError(err error) unknownJolokiaError {
-	return unknownJolokiaError{
+func NewArtemisStatusError(err error, transient bool) artemisStatusError {
+	return artemisStatusError{
 		err,
+		transient,
 	}
 }
 
-func (e unknownJolokiaError) Error() string {
+func (e artemisStatusError) Error() string {
 	return e.cause.Error()
 }
 
-func (e unknownJolokiaError) Requeue() bool {
-	return false
+func (e artemisStatusError) Requeue() bool {
+	return e.transient
 }
 
 func NewJolokiaClientsNotFoundError(err error) jolokiaClientNotFoundError {
