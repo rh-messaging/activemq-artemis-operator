@@ -649,8 +649,12 @@ func PodStartingStatusDigestMessage(podName string, status corev1.PodStatus) str
 	return buf.String()
 }
 
+func IsRestricted(customResource *brokerv1beta1.ActiveMQArtemis) bool {
+	return customResource.Spec.Restricted != nil && *customResource.Spec.Restricted
+}
+
 func GetDeploymentSize(cr *brokerv1beta1.ActiveMQArtemis) int32 {
-	if cr.Spec.DeploymentPlan.Size == nil {
+	if cr.Spec.DeploymentPlan.Size == nil || IsRestricted(cr) {
 		return DefaultDeploymentSize
 	}
 	return *cr.Spec.DeploymentPlan.Size

@@ -282,7 +282,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(customResour
 	}
 
 	labels := namer.LabelBuilder.Labels()
-	headlessServiceDefinition = svc.NewHeadlessServiceForCR2(client, headlesServiceName, ssNamespacedName.Namespace, serviceports.GetDefaultPorts(isRestricted(customResource)), labels, headlessServiceDefinition)
+	headlessServiceDefinition = svc.NewHeadlessServiceForCR2(client, headlesServiceName, ssNamespacedName.Namespace, serviceports.GetDefaultPorts(common.IsRestricted(customResource)), labels, headlessServiceDefinition)
 	reconciler.trackDesired(headlessServiceDefinition)
 
 	if isClustered(customResource) {
@@ -303,7 +303,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(customResour
 }
 
 func isClustered(customResource *brokerv1beta1.ActiveMQArtemis) bool {
-	if isRestricted(customResource) {
+	if common.IsRestricted(customResource) {
 		return false
 	}
 
@@ -315,7 +315,7 @@ func isClustered(customResource *brokerv1beta1.ActiveMQArtemis) bool {
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessCredentials(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) {
 
-	if isRestricted(customResource) {
+	if common.IsRestricted(customResource) {
 		return
 	}
 	reconciler.log.V(1).Info("ProcessCredentials")
@@ -416,7 +416,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) applyPodDisruptionBudget(custom
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAcceptorsAndConnectors(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) error {
 
-	if isRestricted(customResource) {
+	if common.IsRestricted(customResource) {
 		return nil
 	}
 
@@ -452,7 +452,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAcceptorsAndConnectors(c
 func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessConsole(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) error {
 
 	reconciler.configureConsoleExposure(customResource, namer, client)
-	if !customResource.Spec.Console.SSLEnabled || isRestricted(customResource) {
+	if !customResource.Spec.Console.SSLEnabled || common.IsRestricted(customResource) {
 		return nil
 	}
 
@@ -1737,7 +1737,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) MakeVolumes(customResource *bro
 	if customResource.Spec.DeploymentPlan.PersistenceEnabled {
 		basicCRVolume := volumes.MakePersistentVolume(customResource.Name)
 		volumeDefinitions = append(volumeDefinitions, basicCRVolume...)
-	} else if isRestricted(customResource) {
+	} else if common.IsRestricted(customResource) {
 		emptyDirData := volumes.MakeEmptyDirVolumeFor(customResource.Name)
 		volumeDefinitions = append(volumeDefinitions, emptyDirData)
 	}
@@ -1782,7 +1782,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) MakeVolumes(customResource *bro
 		}
 	}
 
-	if !isRestricted(customResource) && customResource.Spec.Console.SSLEnabled {
+	if !common.IsRestricted(customResource) && customResource.Spec.Console.SSLEnabled {
 		reconciler.log.V(1).Info("Make volumes for ssl console exposure on k8s")
 		secretName := namer.SecretsConsoleNameBuilder.Name()
 		addNewVolumes(secretVolumes, &volumeDefinitions, &secretName)
@@ -1805,7 +1805,7 @@ func addNewVolumeMounts(existingNames map[string]string, existing *[]corev1.Volu
 func (reconciler *ActiveMQArtemisReconcilerImpl) MakeVolumeMounts(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers) ([]corev1.VolumeMount, error) {
 
 	volumeMounts := []corev1.VolumeMount{}
-	if customResource.Spec.DeploymentPlan.PersistenceEnabled || isRestricted(customResource) {
+	if customResource.Spec.DeploymentPlan.PersistenceEnabled || common.IsRestricted(customResource) {
 		persistentCRVlMnt := volumes.MakePersistentVolumeMount(customResource.Name, getDataMountPath(customResource, namer))
 		volumeMounts = append(volumeMounts, persistentCRVlMnt...)
 	}
@@ -1892,7 +1892,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) MakeVolumeMounts(customResource
 }
 
 func getDataMountPath(cr *brokerv1beta1.ActiveMQArtemis, namer common.Namers) string {
-	if isRestricted(cr) {
+	if common.IsRestricted(cr) {
 		return "/app"
 	}
 	return namer.GLOBAL_DATA_PATH
@@ -1973,7 +1973,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) PodTemplateSpecForCR(customReso
 	}
 
 	additionalSystemPropsForRestricted := []string{}
-	if isRestricted(customResource) {
+	if common.IsRestricted(customResource) {
 
 		mountPathRoot := secretPathBase + getPropertiesResourceNsName(customResource).Name
 		security_properties := newPropsWithHeader()
@@ -2128,7 +2128,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) PodTemplateSpecForCR(customReso
 	}
 
 	container.StartupProbe = reconciler.configureStartupProbe(container, customResource.Spec.DeploymentPlan.StartupProbe)
-	if !isRestricted(customResource) {
+	if !common.IsRestricted(customResource) {
 		container.LivenessProbe = reconciler.configureLivenessProbe(container, customResource.Spec.DeploymentPlan.LivenessProbe)
 	}
 	container.ReadinessProbe = reconciler.configureReadinessProbe(container, customResource.Spec.DeploymentPlan.ReadinessProbe)
@@ -2189,7 +2189,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) PodTemplateSpecForCR(customReso
 			Value: fmt.Sprintf("-Dlog4j2.configurationFile=%v", loggingConfigPath),
 		}
 		environments.CreateOrAppend(podSpec.Containers, &loggerOpts)
-	} else if isRestricted(customResource) {
+	} else if common.IsRestricted(customResource) {
 		// modify log4j2 default of ERROR
 		loggerOpts := corev1.EnvVar{
 			Name:  getLoginConfigEnvVarName(customResource),
@@ -2201,7 +2201,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) PodTemplateSpecForCR(customReso
 	// add TopologySpreadConstraints config
 	podSpec.TopologySpreadConstraints = customResource.Spec.DeploymentPlan.TopologySpreadConstraints
 
-	if !isRestricted(customResource) {
+	if !common.IsRestricted(customResource) {
 		//add empty-dir volume and volumeMounts to main container
 		volumeForCfg := volumes.MakeEmptyDirVolumeFor(cfgVolumeName)
 		podSpec.Volumes = append(podSpec.Volumes, volumeForCfg)
@@ -2406,7 +2406,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) PodTemplateSpecForCR(customReso
 
 	pts.Spec = *podSpec
 
-	if isRestricted(customResource) {
+	if common.IsRestricted(customResource) {
 		pts.Spec.InitContainers = nil
 
 		// restricted env
@@ -2453,7 +2453,7 @@ func supportsOrdinalReplacement(envVar corev1.EnvVar) bool {
 }
 
 func getJaasConfigEnvVarName(customResource *brokerv1beta1.ActiveMQArtemis) string {
-	if !isRestricted(customResource) {
+	if !common.IsRestricted(customResource) {
 		// legacy
 		return debugArgsEnvVarName
 	}
@@ -2462,16 +2462,12 @@ func getJaasConfigEnvVarName(customResource *brokerv1beta1.ActiveMQArtemis) stri
 }
 
 func getLoginConfigEnvVarName(customResource *brokerv1beta1.ActiveMQArtemis) string {
-	if !isRestricted(customResource) {
+	if !common.IsRestricted(customResource) {
 		// legacy
 		return javaArgsAppendEnvVarName
 	}
 
 	return jdkJavaOptionsEnvVarName
-}
-
-func isRestricted(customResource *brokerv1beta1.ActiveMQArtemis) bool {
-	return customResource.Spec.Restricted != nil && *customResource.Spec.Restricted
 }
 
 func newPropsWithHeader() *bytes.Buffer {
@@ -2574,7 +2570,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureLivenessProbe(containe
 			reconciler.log.V(1).Info("Using user provided Liveness Probe Handler" + probeFromCr.ProbeHandler.String())
 			livenessProbe.ProbeHandler = probeFromCr.ProbeHandler
 		}
-	} else if !isRestricted(reconciler.customResource) {
+	} else if !common.IsRestricted(reconciler.customResource) {
 
 		reconciler.log.V(1).Info("Creating Default Liveness Probe")
 
@@ -2631,7 +2627,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureReadinessProbe(contain
 		} else {
 			readinessProbe.ProbeHandler = probeFromCr.ProbeHandler
 		}
-	} else if isRestricted(reconciler.customResource) {
+	} else if common.IsRestricted(reconciler.customResource) {
 		// liveness probe is sufficient
 		readinessProbe = nil
 	} else {
@@ -2819,7 +2815,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureContianerSecurityConte
 		container.SecurityContext = containerSecurityContext
 	} else {
 		reconciler.log.V(2).Info("Incoming Container SecurityContext is nil, creating with default values")
-		readOnlyRootFilesystem := isRestricted(reconciler.customResource)
+		readOnlyRootFilesystem := common.IsRestricted(reconciler.customResource)
 		runAsNonRoot := true
 		allowPrivilegeEscalation := false
 		capabilities := corev1.Capabilities{Drop: []corev1.Capability{"ALL"}}
@@ -2859,7 +2855,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configPodSecurity(podSpec *core
 		reconciler.log.V(2).Info("Pod serviceAccountName specified", "existing", podSpec.ServiceAccountName, "new", *podSecurity.ServiceAccountName)
 		podSpec.ServiceAccountName = *podSecurity.ServiceAccountName
 	} else {
-		autoMount := !isRestricted(reconciler.customResource)
+		autoMount := !common.IsRestricted(reconciler.customResource)
 		podSpec.AutomountServiceAccountToken = &autoMount
 	}
 	if podSecurity.RunAsUser != nil {
@@ -3351,7 +3347,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) checkStatus(cr *brokerv1beta1.A
 	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", cr.Name)
 
 	var jks []*jolokia_client.JkInfo
-	if isRestricted(cr) {
+	if common.IsRestricted(cr) {
 		jks = jolokia_client.GetMinimalJolokiaAgents(cr, client)
 	} else {
 		resource := types.NamespacedName{

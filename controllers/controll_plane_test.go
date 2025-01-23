@@ -141,6 +141,7 @@ var _ = Describe("minimal", func() {
 			})
 
 			crd.Spec.Restricted = common.NewTrue()
+			crd.Spec.DeploymentPlan.Size = common.Int32ToPtr(2) // will be ignored and default to 1
 
 			// how the jdk command line can be configured or modified
 			crd.Spec.Env = []corev1.EnvVar{
