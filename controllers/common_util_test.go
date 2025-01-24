@@ -36,10 +36,10 @@ import (
 	"strings"
 	"time"
 
-	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
+	brokerv1beta1 "github.com/arkmq-org/activemq-artemis-operator/api/v1beta1"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/resources/secrets"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/common"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/namer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -69,7 +69,7 @@ import (
 
 var chars = []rune("hgjkmnpqrtvwxyzslbcdaefiou")
 var defaultPassword string = "password"
-var defaultSanDnsNames = []string{"*.apps.artemiscloud.io", "*.tests.artemiscloud.io"}
+var defaultSanDnsNames = []string{"*.apps.arkmq-org.io", "*.tests.arkmq-org.io"}
 var okDefaultPwd = "okdefaultpassword"
 var helmCmd = GetHelmCmd()
 
@@ -674,9 +674,9 @@ func GenerateKeystore(password string, dnsNames []string) ([]byte, error) {
 	ca := &x509.Certificate{
 		SerialNumber: big.NewInt(202305071030),
 		Subject: pkix.Name{
-			CommonName:         "ArtemisCloud Broker",
+			CommonName:         "arkmq-org Broker",
 			OrganizationalUnit: []string{"Broker"},
-			Organization:       []string{"ArtemisCloud"},
+			Organization:       []string{"arkmq-org"},
 		},
 		NotBefore:          time.Now(),
 		NotAfter:           time.Now().AddDate(10, 0, 0),
@@ -700,7 +700,7 @@ func GenerateKeystore(password string, dnsNames []string) ([]byte, error) {
 		return nil, err
 	}
 
-	ksBytes, err := pkcs12.Encode(crand.Reader, caPrivKey, cert, []*x509.Certificate{}, password)
+	ksBytes, err := pkcs12.Modern.Encode(caPrivKey, cert, []*x509.Certificate{}, password)
 	if err != nil {
 		return nil, err
 	}
@@ -716,7 +716,7 @@ func GenerateTrustStoreFromKeyStore(ksBytes []byte, password string) ([]byte, er
 		return nil, err
 	}
 
-	pfxBytes, err := pkcs12.EncodeTrustStore(crand.Reader, []*x509.Certificate{cert}, password)
+	pfxBytes, err := pkcs12.Modern.EncodeTrustStore([]*x509.Certificate{cert}, password)
 
 	if err != nil {
 		return nil, err
@@ -938,7 +938,7 @@ func InstallCert(certName string, namespace string, customFunc func(candidate *c
 			SecretName: certName + "-secret",
 			DNSNames:   defaultSanDnsNames,
 			Subject: &cmv1.X509Subject{
-				Organizations: []string{"www.artemiscloud.io"},
+				Organizations: []string{"www.arkmq-org.io"},
 			},
 		},
 	}

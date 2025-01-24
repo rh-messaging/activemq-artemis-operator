@@ -33,15 +33,15 @@ import (
 	"strconv"
 	"strings"
 
-	brokerv2alpha4 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha4"
-	"github.com/artemiscloud/activemq-artemis-operator/api/v2alpha5"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v1beta1"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/configmaps"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
-	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/jolokia"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
+	brokerv2alpha4 "github.com/arkmq-org/activemq-artemis-operator/api/v2alpha4"
+	"github.com/arkmq-org/activemq-artemis-operator/api/v2alpha5"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v1beta1"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/resources/configmaps"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/resources/secrets"
+	ss "github.com/arkmq-org/activemq-artemis-operator/pkg/resources/statefulsets"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/common"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/jolokia"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/namer"
 	"github.com/blang/semver/v4"
 
 	"time"
@@ -50,7 +50,7 @@ import (
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/artemiscloud/activemq-artemis-operator/version"
+	"github.com/arkmq-org/activemq-artemis-operator/version"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
@@ -64,8 +64,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/cr2jinja2"
+	brokerv1beta1 "github.com/arkmq-org/activemq-artemis-operator/api/v1beta1"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/cr2jinja2"
 
 	"github.com/Azure/go-amqp"
 	routev1 "github.com/openshift/api/route/v1"
@@ -861,8 +861,8 @@ var _ = Describe("artemis controller", func() {
 		})
 
 		It("specify only major version", func() {
-			os.Setenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_"+version.CompactLatestVersion, "quay.io/artemiscloud/fake-broker:latest")
-			os.Setenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_"+version.CompactLatestVersion, "quay.io/artemiscloud/fake-broker-init:latest")
+			os.Setenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_"+version.CompactLatestVersion, "quay.io/arkmq-org/fake-broker:latest")
+			os.Setenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_"+version.CompactLatestVersion, "quay.io/arkmq-org/fake-broker-init:latest")
 			defer func() {
 				os.Unsetenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_" + version.CompactLatestVersion)
 				os.Unsetenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_" + version.CompactLatestVersion)
@@ -880,9 +880,9 @@ var _ = Describe("artemis controller", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, ssKey, createdSs)).Should(Succeed())
 				mainContainer := createdSs.Spec.Template.Spec.Containers[0]
-				g.Expect(mainContainer.Image).To(Equal("quay.io/artemiscloud/fake-broker:latest"))
+				g.Expect(mainContainer.Image).To(Equal("quay.io/arkmq-org/fake-broker:latest"))
 				initContainer := createdSs.Spec.Template.Spec.InitContainers[0]
-				g.Expect(initContainer.Image).To(Equal("quay.io/artemiscloud/fake-broker-init:latest"))
+				g.Expect(initContainer.Image).To(Equal("quay.io/arkmq-org/fake-broker-init:latest"))
 
 			}, timeout, interval).Should(Succeed())
 
@@ -909,8 +909,8 @@ var _ = Describe("artemis controller", func() {
 		})
 
 		It("specify only major.minor version", func() {
-			os.Setenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_"+version.CompactLatestVersion, "quay.io/artemiscloud/fake-broker:latest")
-			os.Setenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_"+version.CompactLatestVersion, "quay.io/artemiscloud/fake-broker-init:latest")
+			os.Setenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_"+version.CompactLatestVersion, "quay.io/arkmq-org/fake-broker:latest")
+			os.Setenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_"+version.CompactLatestVersion, "quay.io/arkmq-org/fake-broker-init:latest")
 			defer func() {
 				os.Unsetenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_" + version.CompactLatestVersion)
 				os.Unsetenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_" + version.CompactLatestVersion)
@@ -931,9 +931,9 @@ var _ = Describe("artemis controller", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, ssKey, createdSs)).Should(Succeed())
 				mainContainer := createdSs.Spec.Template.Spec.Containers[0]
-				g.Expect(mainContainer.Image).To(Equal("quay.io/artemiscloud/fake-broker:latest"))
+				g.Expect(mainContainer.Image).To(Equal("quay.io/arkmq-org/fake-broker:latest"))
 				initContainer := createdSs.Spec.Template.Spec.InitContainers[0]
-				g.Expect(initContainer.Image).To(Equal("quay.io/artemiscloud/fake-broker-init:latest"))
+				g.Expect(initContainer.Image).To(Equal("quay.io/arkmq-org/fake-broker-init:latest"))
 
 			}, timeout, interval).Should(Succeed())
 
@@ -958,8 +958,8 @@ var _ = Describe("artemis controller", func() {
 		})
 
 		It("default broker versions", func() {
-			os.Setenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_"+version.CompactLatestVersion, "quay.io/artemiscloud/fake-broker:latest")
-			os.Setenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_"+version.CompactLatestVersion, "quay.io/artemiscloud/fake-broker-init:latest")
+			os.Setenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_"+version.CompactLatestVersion, "quay.io/arkmq-org/fake-broker:latest")
+			os.Setenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_"+version.CompactLatestVersion, "quay.io/arkmq-org/fake-broker-init:latest")
 			defer func() {
 				os.Unsetenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_" + version.CompactLatestVersion)
 				os.Unsetenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_" + version.CompactLatestVersion)
@@ -977,9 +977,9 @@ var _ = Describe("artemis controller", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, ssKey, createdSs)).Should(Succeed())
 				mainContainer := createdSs.Spec.Template.Spec.Containers[0]
-				g.Expect(mainContainer.Image).To(Equal("quay.io/artemiscloud/fake-broker:latest"))
+				g.Expect(mainContainer.Image).To(Equal("quay.io/arkmq-org/fake-broker:latest"))
 				initContainer := createdSs.Spec.Template.Spec.InitContainers[0]
-				g.Expect(initContainer.Image).To(Equal("quay.io/artemiscloud/fake-broker-init:latest"))
+				g.Expect(initContainer.Image).To(Equal("quay.io/arkmq-org/fake-broker-init:latest"))
 
 			}, timeout, interval).Should(Succeed())
 
@@ -10050,7 +10050,7 @@ var _ = Describe("artemis controller", func() {
 				By("checking pod 0 status that has properties applied")
 				podWithOrdinal0 := namer.CrToSS(crd.Name) + "-0"
 
-				curlUrl := "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/Status"
+				curlUrl := "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=%22amq-broker%22/Status"
 				curlCmd := []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
 				Eventually(func(g Gomega) {
 					result, err := RunCommandInPod(podWithOrdinal0, crd.Name+"-container", curlCmd)
@@ -10061,7 +10061,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(*result).NotTo(ContainSubstring("broker-1.globalMem.properties"))
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
-				curlUrl = "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/GlobalMaxSize"
+				curlUrl = "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=%22amq-broker%22/GlobalMaxSize"
 				curlCmd = []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
 				Eventually(func(g Gomega) {
 					result, err := RunCommandInPod(podWithOrdinal0, crd.Name+"-container", curlCmd)
@@ -10073,7 +10073,7 @@ var _ = Describe("artemis controller", func() {
 				By("checking pod 1 status that has properties applied")
 				podWithOrdinal1 := namer.CrToSS(crd.Name) + "-1"
 
-				curlUrl = "http://" + podWithOrdinal1 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/Status"
+				curlUrl = "http://" + podWithOrdinal1 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=%22amq-broker%22/Status"
 				curlCmd = []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
 				Eventually(func(g Gomega) {
 					result, err := RunCommandInPod(podWithOrdinal1, crd.Name+"-container", curlCmd)
@@ -10084,7 +10084,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(*result).NotTo(ContainSubstring("broker-0.globalMem.properties"))
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
-				curlUrl = "http://" + podWithOrdinal1 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/GlobalMaxSize"
+				curlUrl = "http://" + podWithOrdinal1 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=%22amq-broker%22/GlobalMaxSize"
 				curlCmd = []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
 				Eventually(func(g Gomega) {
 					result, err := RunCommandInPod(podWithOrdinal1, crd.Name+"-container", curlCmd)
@@ -10155,7 +10155,7 @@ var _ = Describe("artemis controller", func() {
 				By("checking pod 0 status that has properties applied")
 				podWithOrdinal0 := namer.CrToSS(crd.Name) + "-0"
 
-				curlUrl := "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/Status"
+				curlUrl := "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=%22amq-broker%22/Status"
 				curlCmd := []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
 				Eventually(func(g Gomega) {
 					result, err := RunCommandInPod(podWithOrdinal0, crd.Name+"-container", curlCmd)
@@ -10166,7 +10166,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(*result).NotTo(ContainSubstring("broker-1.globalMem.json"))
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
-				curlUrl = "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/GlobalMaxSize"
+				curlUrl = "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=%22amq-broker%22/GlobalMaxSize"
 				curlCmd = []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
 				Eventually(func(g Gomega) {
 					result, err := RunCommandInPod(podWithOrdinal0, crd.Name+"-container", curlCmd)
@@ -10178,7 +10178,7 @@ var _ = Describe("artemis controller", func() {
 				By("checking pod 1 status that has properties applied")
 				podWithOrdinal1 := namer.CrToSS(crd.Name) + "-1"
 
-				curlUrl = "http://" + podWithOrdinal1 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/Status"
+				curlUrl = "http://" + podWithOrdinal1 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=%22amq-broker%22/Status"
 				curlCmd = []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
 				Eventually(func(g Gomega) {
 					result, err := RunCommandInPod(podWithOrdinal1, crd.Name+"-container", curlCmd)
@@ -10189,7 +10189,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(*result).NotTo(ContainSubstring("broker-0.globalMem.json"))
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
-				curlUrl = "http://" + podWithOrdinal1 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/GlobalMaxSize"
+				curlUrl = "http://" + podWithOrdinal1 + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=%22amq-broker%22/GlobalMaxSize"
 				curlCmd = []string{"curl", "-s", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
 				Eventually(func(g Gomega) {
 					result, err := RunCommandInPod(podWithOrdinal1, crd.Name+"-container", curlCmd)
@@ -10323,6 +10323,7 @@ var _ = Describe("artemis controller", func() {
 
 				crd.Spec.BrokerProperties = []string{
 					"connectorConfigurations.artemis.params.sslEnabled=true",
+					"connectorConfigurations.artemis.params.forceSSLParameters=true",
 					"connectorConfigurations.artemis.params.trustStorePath=/etc/" + tlsSecretName + "-volume/broker.ks",
 					"connectorConfigurations.artemis.params.trustStorePassword=" + defaultPassword,
 				}
@@ -10360,6 +10361,7 @@ var _ = Describe("artemis controller", func() {
 
 				crd.Spec.BrokerProperties = []string{
 					"connectorConfigurations.artemis.params.sslEnabled=true",
+					"connectorConfigurations.artemis.params.forceSSLParameters=true",
 					"connectorConfigurations.artemis.params.trustStorePath=/etc/" + tlsSecretName + "-volume/tls.crt",
 					"connectorConfigurations.artemis.params.trustStoreType=PEM",
 				}
@@ -10415,6 +10417,7 @@ var _ = Describe("artemis controller", func() {
 
 				crd.Spec.BrokerProperties = []string{
 					"connectorConfigurations.artemis.params.sslEnabled=true",
+					"connectorConfigurations.artemis.params.forceSSLParameters=true",
 					"connectorConfigurations.artemis.params.trustStorePath=/etc/" + tlsSecretName + "-volume/broker.ks",
 					"connectorConfigurations.artemis.params.trustStorePassword=" + defaultPassword,
 				}
@@ -10456,6 +10459,7 @@ var _ = Describe("artemis controller", func() {
 
 				crd.Spec.BrokerProperties = []string{
 					"connectorConfigurations.artemis.params.sslEnabled=true",
+					"connectorConfigurations.artemis.params.forceSSLParameters=true",
 					"connectorConfigurations.artemis.params.trustStorePath=/etc/" + tlsSecretName + "-volume/broker.ks",
 					"connectorConfigurations.artemis.params.trustStorePassword=" + defaultPassword,
 					"connectorConfigurations.artemis.params.verifyHost=false",

@@ -39,16 +39,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/certutil"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/resources"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/certutil"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/namer"
 	"github.com/go-logr/logr"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/pkg/errors"
 
-	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
+	brokerv1beta1 "github.com/arkmq-org/activemq-artemis-operator/api/v1beta1"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/common"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/selectors"
 )
 
 var namespaceToConfigHandler = make(map[types.NamespacedName]common.ActiveMQArtemisConfigHandler)
@@ -862,9 +862,11 @@ type ArtemisError interface {
 	Requeue() bool
 }
 
-type unknownJolokiaError struct {
-	cause error
+type artemisStatusError struct {
+	cause     error
+	transient bool
 }
+
 type jolokiaClientNotFoundError struct {
 	cause error
 }
@@ -881,18 +883,19 @@ type versionMismatchError struct {
 	cause string
 }
 
-func NewUnknownJolokiaError(err error) unknownJolokiaError {
-	return unknownJolokiaError{
+func NewArtemisStatusError(err error, transient bool) artemisStatusError {
+	return artemisStatusError{
 		err,
+		transient,
 	}
 }
 
-func (e unknownJolokiaError) Error() string {
+func (e artemisStatusError) Error() string {
 	return e.cause.Error()
 }
 
-func (e unknownJolokiaError) Requeue() bool {
-	return false
+func (e artemisStatusError) Requeue() bool {
+	return e.transient
 }
 
 func NewJolokiaClientsNotFoundError(err error) jolokiaClientNotFoundError {

@@ -59,18 +59,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	brokerv1alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v1alpha1"
-	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
-	brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha1"
-	brokerv2alpha2 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha2"
-	brokerv2alpha3 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha3"
-	brokerv2alpha4 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha4"
-	brokerv2alpha5 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha5"
+	brokerv1alpha1 "github.com/arkmq-org/activemq-artemis-operator/api/v1alpha1"
+	brokerv1beta1 "github.com/arkmq-org/activemq-artemis-operator/api/v1beta1"
+	brokerv2alpha1 "github.com/arkmq-org/activemq-artemis-operator/api/v2alpha1"
+	brokerv2alpha2 "github.com/arkmq-org/activemq-artemis-operator/api/v2alpha2"
+	brokerv2alpha3 "github.com/arkmq-org/activemq-artemis-operator/api/v2alpha3"
+	brokerv2alpha4 "github.com/arkmq-org/activemq-artemis-operator/api/v2alpha4"
+	brokerv2alpha5 "github.com/arkmq-org/activemq-artemis-operator/api/v2alpha5"
 
 	//+kubebuilder:scaffold:imports
 
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/ingresses"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/resources/ingresses"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/common"
 	tm "github.com/cert-manager/trust-manager/pkg/apis/trust/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -100,7 +100,7 @@ const (
 	specShortNameLimit      = 25
 
 	// Default ingress domain for tests
-	defaultTestIngressDomain = "tests.artemiscloud.io"
+	defaultTestIngressDomain = "tests.arkmq-org.io"
 )
 
 var (
@@ -143,6 +143,7 @@ var (
 
 	artemisGvk = schema.GroupVersionKind{Group: "broker", Version: "v1beta1", Kind: "ActiveMQArtemis"}
 
+	isFIPSEnabled                             = false
 	isOpenshift                               = false
 	isIngressSSLPassthroughEnabled            = false
 	verbose                                   = false
@@ -200,6 +201,15 @@ func setUpEnvTest() {
 
 	if isOpenshift {
 		kubeTool = "oc"
+	}
+
+	if isOpenshift {
+		clusterConfig := &corev1.ConfigMap{}
+		clusterConfigKey := types.NamespacedName{Name: "cluster-config-v1", Namespace: "kube-system"}
+		clusterConfigErr := k8sClient.Get(ctx, clusterConfigKey, clusterConfig)
+		if clusterConfigErr == nil {
+			isFIPSEnabled = strings.Contains(clusterConfig.Data["install-config"], "fips: true")
+		}
 	}
 
 	setUpIngress()
@@ -281,7 +291,7 @@ func setUpTestProxy() {
 	testProxyDeploymentReplicas := int32(1)
 	testProxyName := "test-proxy"
 	testProxyNamespace := "default"
-	testProxyHost := testProxyName + ".tests.artemiscloud.io"
+	testProxyHost := testProxyName + ".tests.arkmq-org.io"
 	testProxyLabels := map[string]string{"app": "test-proxy"}
 	testProxyScript := fmt.Sprintf("yum -y install openssh-server openssl stunnel && "+
 		"adduser --system -u 1000 tunnel && echo secret | passwd tunnel --stdin && "+
@@ -362,13 +372,26 @@ func setUpTestProxy() {
 		true, "", testProxyHost, isOpenshift)
 	createOrOverwriteResource(testProxyIngress)
 
+	if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+		Eventually(func(g Gomega) {
+			tlsDialer := new(net.Dialer)
+			// The tls proxy dialer timeout reduce the proxy setup time because the
+			// fisrt connection usually fails and TCP timeouts are often around 3 mins
+			tlsDialer.Timeout = 3 * time.Second
+			tlsConn, tlsErr := tls.DialWithDialer(tlsDialer, "tcp", clusterIngressHost+":443",
+				&tls.Config{ServerName: testProxyHost, InsecureSkipVerify: true})
+			g.Expect(tlsErr).Should(BeNil())
+			tlsConn.Close()
+		}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+	}
+
 	http.DefaultTransport = &http.Transport{
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			tlsConn, tlsErr := tls.Dial("tcp", clusterIngressHost+":443",
 				&tls.Config{ServerName: testProxyHost, InsecureSkipVerify: true})
 			if tlsErr != nil {
 				testProxyLog.V(1).Info("Error creating tls connection", "addr", addr, "error", tlsErr)
-				return nil, tlsErr
+				return nil, fmt.Errorf("Error creating tls connection to %s: %v", addr, tlsErr)
 			}
 
 			sshConn, sshChans, sshReqs, sshErr := ssh.NewClientConn(tlsConn, "127.0.0.1:2022", &ssh.ClientConfig{
@@ -378,9 +401,8 @@ func setUpTestProxy() {
 			})
 			if sshErr != nil {
 				testProxyLog.V(1).Info("Error creating SSH connection", "addr", addr, "error", sshErr)
-				fmt.Printf("\nError creating SSH tunnel to %s: %v", addr, sshErr)
 				tlsConn.Close()
-				return nil, sshErr
+				return nil, fmt.Errorf("Error creating SSH connection to %s: %v", addr, sshErr)
 			}
 
 			sshClient := ssh.NewClient(sshConn, sshChans, sshReqs)
@@ -391,7 +413,7 @@ func setUpTestProxy() {
 				sshClient.Close()
 				sshConn.Close()
 				tlsConn.Close()
-				return nil, sshClientErr
+				return nil, fmt.Errorf("Error creating SSH tunnel to %s: %v", addr, sshClientErr)
 			}
 
 			testProxyLog.V(1).Info("Opened SSH tunnel", "addr", addr)

@@ -24,7 +24,7 @@ Installation guides for cert-manager and trust-manager you can find on the [cert
 
 ## SSL
 
-There are various scenarioes how SSL can be achived for your ActiveMQ Artemis brokers, to list some:
+There are various scenarios how SSL can be achieved for your ActiveMQ Artemis brokers, to list some:
 
 - ActiveMQ Artemis brokers handling SSL termination
   - you need to provide keystore with certificate and truststore
@@ -199,7 +199,7 @@ kubectl create secret generic ssl-acceptor-ssl-secret -n myproject \
 --from-literal=trustStorePassword=changeit
 ```
 
-## Deploy ArtemisCloud operator
+## Deploy Arkmq-org operator
 
 Operator will create ActiveMQ resources based on custom resources definitions (CRD).
 
@@ -218,7 +218,7 @@ activemq-artemis-operator-58bb658f4c-zcqmw   1/1     Running   0          7m32s
 
 ## Deploy a broker
 
-Example of the broker CRD is located in the local repository cloned during activities from section **Deploy ArtemisCloud operator**.
+Example of the broker CRD is located in the local repository cloned during activities from section **Deploy Arkmq-org operator**.
 
 Replace **myproject** with actual namespace your brokers are installed in.
 
@@ -230,7 +230,7 @@ kubectl apply -f examples/artemis/artemis_ssl_acceptor_cert_and_trust_managers.y
 
 ## Deploy a queue
 
-Example of the queue CRD is located in the local repository cloned during activities from section **Deploy ArtemisCloud operator**.
+Example of the queue CRD is located in the local repository cloned during activities from section **Deploy Arkmq-org operator**.
 
 Deploy a queue with (beeing on the root folder of this repository):
 
@@ -265,9 +265,9 @@ Then send 100 messages through port 61618, but before replace **dummy_password**
 
 ```shell
 cd amq-broker/bin
-[jboss@artemis-broker-ss-0 bin]$ ./artemis producer --user admin --password admin --url tcp://artemis-broker-ss-0:61618?sslEnabled=true\&keyStorePath=/amq/extra/secrets/amq-ssl-secret/keystore.jks\&keyStorePassword=dummy_password\&trustStorePath=/amq/extra/configmaps/ca-bundle/truststore.jks\&trustStorePassword=changeit --message-count 100
+[jboss@artemis-broker-ss-0 bin]$ ./artemis producer --user admin --password admin --url tcp://artemis-broker-ss-0:61618?sslEnabled=true\&trustStorePath=/amq/extra/configmaps/ca-bundle/truststore.jks\&trustStorePassword=changeit --message-count 100
 OpenJDK 64-Bit Server VM warning: If the number of processors is expected to increase from one, then you should configure the number of parallel GC threads appropriately using -XX:ParallelGCThreads=N
-Connection brokerURL = tcp://artemis-broker-ss-0:61618?sslEnabled=true\&keyStorePath=/amq/extra/secrets/amq-ssl-secret/keystore.jks\&keyStorePassword=dummy_password\&trustStorePath=/amq/extra/configmaps/ca-bundle/truststore.jks\&trustStorePassword=changeit
+Connection brokerURL = tcp://artemis-broker-ss-0:61618?sslEnabled=true\&trustStorePath=/amq/extra/configmaps/ca-bundle/truststore.jks\&trustStorePassword=changeit
 Producer ActiveMQQueue[TEST], thread=0 Started to calculate elapsed time ...
 
 Producer ActiveMQQueue[TEST], thread=0 Produced: 100 messages
@@ -278,9 +278,9 @@ Producer ActiveMQQueue[TEST], thread=0 Elapsed time in milli second : 724 milli 
 Finally you can receive those 100 messages (again replace **dummy_password** with the password you have used in section **Create secret for keystore password**):
 
 ```shell
-[jboss@artemis-broker-ss-0 bin]$ ./artemis consumer --user admin --password admin --url tcp://artemis-broker-ss-0:61618?sslEnabled=true\&keyStorePath=/amq/extra/secrets/amq-ssl-secret/keystore.jks\&keyStorePassword=dummy_password\&trustStorePath=/amq/extra/configmaps/ca-bundle/truststore.jks\&trustStorePassword=changeit --message-count 100
+[jboss@artemis-broker-ss-0 bin]$ ./artemis consumer --user admin --password admin --url tcp://artemis-broker-ss-0:61618?sslEnabled=true\&trustStorePath=/amq/extra/configmaps/ca-bundle/truststore.jks\&trustStorePassword=changeit --message-count 100
 OpenJDK 64-Bit Server VM warning: If the number of processors is expected to increase from one, then you should configure the number of parallel GC threads appropriately using -XX:ParallelGCThreads=N
-Connection brokerURL = tcp://artemis-broker-ss-0:61618?sslEnabled=true\&keyStorePath=/amq/extra/secrets/amq-ssl-secret/keystore.jks\&keyStorePassword=dummy_password\&trustStorePath=/amq/extra/configmaps/ca-bundle/truststore.jks\&trustStorePassword=changeit
+Connection brokerURL = tcp://artemis-broker-ss-0:61618?sslEnabled=true\&trustStorePath=/amq/extra/configmaps/ca-bundle/truststore.jks\&trustStorePassword=changeit
 Consumer:: filter = null
 Consumer ActiveMQQueue[TEST], thread=0 wait until 100 messages are consumed
 Consumer ActiveMQQueue[TEST], thread=0 Consumed: 100 messages

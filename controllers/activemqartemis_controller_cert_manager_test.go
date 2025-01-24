@@ -22,11 +22,11 @@ import (
 	"os"
 
 	"github.com/Azure/go-amqp"
-	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/certutil"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
+	brokerv1beta1 "github.com/arkmq-org/activemq-artemis-operator/api/v1beta1"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/resources"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/certutil"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/common"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/namer"
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	tm "github.com/cert-manager/trust-manager/pkg/apis/trust/v1alpha1"
@@ -188,6 +188,10 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 		})
 
 		It("test configured with cert secret as legacy one", func() {
+			if isFIPSEnabled {
+				Skip("Legacy PKCS12 key stores with PBEWithSHA1AndRC2_40 are not supported when FIPS mode is enabled")
+			}
+
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 				By("deploying the broker")
 				_, brokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
@@ -344,9 +348,9 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 					IsCA:       true,
 					SecretName: issuerCertSecretName,
 					IssuerRef:  cmmetav1.ObjectReference{Name: rootIssuerName, Kind: "Issuer"},
-					CommonName: "ArtemisCloud Issuer",
-					DNSNames:   []string{"issuer.artemiscloud.io"},
-					Subject:    &cmv1.X509Subject{Organizations: []string{"ArtemisCloud"}},
+					CommonName: "arkmq-org Issuer",
+					DNSNames:   []string{"issuer.arkmq-org.io"},
+					Subject:    &cmv1.X509Subject{Organizations: []string{"arkmq-org"}},
 				},
 			}
 			Expect(k8sClient.Create(ctx, &issuerCert)).Should(Succeed())
@@ -414,7 +418,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 			podName := activeMQArtemis.Name + "-ss-0"
 			trustStorePath := "/amq/extra/secrets/" + issuerCertSecretName + "/tls.crt"
 			checkCommandBeforeUpdating := []string{"/home/jboss/amq-broker/bin/artemis", "check", "node", "--up", "--url",
-				"tcp://" + podName + ":61617?sslEnabled=true&sniHost=" + ingressHost + "&trustStoreType=PEM&trustStorePath=" + trustStorePath}
+				"tcp://" + podName + ":61617?sslEnabled=true&forceSSLParameters=true&sniHost=" + ingressHost + "&trustStoreType=PEM&trustStorePath=" + trustStorePath}
 			Eventually(func(g Gomega) {
 				stdOutContent := ExecOnPod(podName, activeMQArtemis.Name, defaultNamespace, checkCommandBeforeUpdating, g)
 				g.Expect(stdOutContent).Should(ContainSubstring("Checks run: 1"))
@@ -484,9 +488,9 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 					IsCA:       true,
 					SecretName: issuerCertSecretName,
 					IssuerRef:  cmmetav1.ObjectReference{Name: rootIssuerName, Kind: "Issuer"},
-					CommonName: "ArtemisCloud Issuer",
-					DNSNames:   []string{"issuer.artemiscloud.io"},
-					Subject:    &cmv1.X509Subject{Organizations: []string{"ArtemisCloud"}},
+					CommonName: "arkmq-org Issuer",
+					DNSNames:   []string{"issuer.arkmq-org.io"},
+					Subject:    &cmv1.X509Subject{Organizations: []string{"arkmq-org"}},
 				},
 			}
 			Expect(k8sClient.Create(ctx, &issuerCert)).Should(Succeed())
@@ -513,9 +517,9 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 				Spec: cmv1.CertificateSpec{
 					SecretName: certSecretName,
 					IssuerRef:  cmmetav1.ObjectReference{Name: issuerName, Kind: "Issuer"},
-					CommonName: "ArtemisCloud Broker",
-					DNSNames:   []string{"before.artemiscloud.io"},
-					Subject:    &cmv1.X509Subject{Organizations: []string{"ArtemisCloud"}},
+					CommonName: "arkmq-org Broker",
+					DNSNames:   []string{"before.arkmq-org.io"},
+					Subject:    &cmv1.X509Subject{Organizations: []string{"arkmq-org"}},
 				},
 			}
 			Expect(k8sClient.Create(ctx, &cert)).Should(Succeed())
@@ -544,7 +548,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 
 			By("Checking tls-acceptor before updating")
 			checkCommandBeforeUpdating := []string{"/home/jboss/amq-broker/bin/artemis", "check", "node", "--up", "--url",
-				"tcp://" + podName + ":61617?sslEnabled=true&sniHost=before.artemiscloud.io&trustStoreType=PEM&trustStorePath=" + trustStorePath}
+				"tcp://" + podName + ":61617?sslEnabled=true&forceSSLParameters=true&sniHost=before.arkmq-org.io&trustStoreType=PEM&trustStorePath=" + trustStorePath}
 			Eventually(func(g Gomega) {
 				stdOutContent := ExecOnPod(podName, activeMQArtemis.Name, defaultNamespace, checkCommandBeforeUpdating, g)
 				g.Expect(stdOutContent).Should(ContainSubstring("Checks run: 1"))
@@ -560,7 +564,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 			By("Updating certificate: " + certName)
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: certName, Namespace: defaultNamespace}, &cert)).Should(Succeed())
-				cert.Spec.DNSNames = []string{"after.artemiscloud.io"}
+				cert.Spec.DNSNames = []string{"after.arkmq-org.io"}
 				g.Expect(k8sClient.Update(ctx, &cert)).Should(Succeed())
 			}, timeout, interval).Should(Succeed())
 
@@ -574,7 +578,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 
 			By("Checking tls-acceptor after updating")
 			checkCommandAfterUpdating := []string{"/home/jboss/amq-broker/bin/artemis", "check", "node", "--up", "--url",
-				"tcp://" + podName + ":61617?sslEnabled=true&sniHost=after.artemiscloud.io&trustStoreType=PEM&trustStorePath=" + trustStorePath}
+				"tcp://" + podName + ":61617?sslEnabled=true&forceSSLParameters=true&sniHost=after.arkmq-org.io&trustStoreType=PEM&trustStorePath=" + trustStorePath}
 			Eventually(func(g Gomega) {
 				stdOutContent := ExecOnPod(podName, activeMQArtemis.Name, defaultNamespace, checkCommandAfterUpdating, g)
 				g.Expect(stdOutContent).Should(ContainSubstring("Checks run: 1"))
@@ -632,9 +636,9 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 					IsCA:       true,
 					SecretName: beforeIssuerCertSecretName,
 					IssuerRef:  cmmetav1.ObjectReference{Name: rootIssuerName, Kind: "ClusterIssuer"},
-					CommonName: "ArtemisCloud Before Issuer",
-					DNSNames:   []string{"issuer.artemiscloud.io"},
-					Subject:    &cmv1.X509Subject{Organizations: []string{"ArtemisCloud"}},
+					CommonName: "arkmq-org Before Issuer",
+					DNSNames:   []string{"issuer.arkmq-org.io"},
+					Subject:    &cmv1.X509Subject{Organizations: []string{"arkmq-org"}},
 				},
 			}
 			Expect(k8sClient.Create(ctx, &beforeIssuerCert)).Should(Succeed())
@@ -653,9 +657,9 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 					IsCA:       true,
 					SecretName: afterIssuerCertSecretName,
 					IssuerRef:  cmmetav1.ObjectReference{Name: rootIssuerName, Kind: "ClusterIssuer"},
-					CommonName: "ArtemisCloud After Issuer",
-					DNSNames:   []string{"issuer.artemiscloud.io"},
-					Subject:    &cmv1.X509Subject{Organizations: []string{"ArtemisCloud"}},
+					CommonName: "arkmq-org After Issuer",
+					DNSNames:   []string{"issuer.arkmq-org.io"},
+					Subject:    &cmv1.X509Subject{Organizations: []string{"arkmq-org"}},
 				},
 			}
 			Expect(k8sClient.Create(ctx, &afterIssuerCert)).Should(Succeed())
@@ -703,9 +707,9 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 				Spec: cmv1.CertificateSpec{
 					SecretName: certSecretName,
 					IssuerRef:  cmmetav1.ObjectReference{Name: beforeIssuerName, Kind: "ClusterIssuer"},
-					CommonName: "ArtemisCloud Broker",
-					DNSNames:   []string{"broker.artemiscloud.io"},
-					Subject:    &cmv1.X509Subject{Organizations: []string{"ArtemisCloud"}},
+					CommonName: "arkmq-org Broker",
+					DNSNames:   []string{"broker.arkmq-org.io"},
+					Subject:    &cmv1.X509Subject{Organizations: []string{"arkmq-org"}},
 				},
 			}
 			Expect(k8sClient.Create(ctx, &cert)).Should(Succeed())
@@ -751,7 +755,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 			trustStorePath := "/amq/extra/secrets/" + bundleName + "/root-certs.pem"
 			certDumpCommand := []string{"cat", "/etc/" + certSecretName + "-volume/tls.crt"}
 			checkCommand := []string{"/home/jboss/amq-broker/bin/artemis", "check", "node", "--up", "--url",
-				"tcp://" + podName + ":61617?sslEnabled=true&sniHost=broker.artemiscloud.io&trustStoreType=PEMCA&trustStorePath=" + trustStorePath}
+				"tcp://" + podName + ":61617?sslEnabled=true&forceSSLParameters=true&sniHost=broker.arkmq-org.io&trustStoreType=PEMCA&trustStorePath=" + trustStorePath}
 
 			By("Checking tls-acceptor before updating")
 			Eventually(func(g Gomega) {
@@ -844,9 +848,9 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 					IsCA:       true,
 					SecretName: brokerCertSecretName,
 					IssuerRef:  cmmetav1.ObjectReference{Name: selfsignedIssuerName, Kind: "ClusterIssuer"},
-					CommonName: "ArtemisCloud Broker",
-					DNSNames:   []string{"broker.artemiscloud.io"},
-					Subject:    &cmv1.X509Subject{Organizations: []string{"ArtemisCloud"}},
+					CommonName: "arkmq-org Broker",
+					DNSNames:   []string{"broker.arkmq-org.io"},
+					Subject:    &cmv1.X509Subject{Organizations: []string{"arkmq-org"}},
 				},
 			}
 			Expect(k8sClient.Create(ctx, &brokerCert)).Should(Succeed())
@@ -865,9 +869,9 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 					IsCA:       true,
 					SecretName: clientFooIssuerCertSecretName,
 					IssuerRef:  cmmetav1.ObjectReference{Name: rootIssuerName, Kind: "ClusterIssuer"},
-					CommonName: "ArtemisCloud Client Foo Issuer",
-					DNSNames:   []string{"client-foo.issuer.artemiscloud.io"},
-					Subject:    &cmv1.X509Subject{Organizations: []string{"ArtemisCloud"}},
+					CommonName: "arkmq-org Client Foo Issuer",
+					DNSNames:   []string{"client-foo.issuer.arkmq-org.io"},
+					Subject:    &cmv1.X509Subject{Organizations: []string{"arkmq-org"}},
 				},
 			}
 			Expect(k8sClient.Create(ctx, &clientFooIssuerCert)).Should(Succeed())
@@ -903,9 +907,9 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 					IsCA:       true,
 					SecretName: clientBarIssuerCertSecretName,
 					IssuerRef:  cmmetav1.ObjectReference{Name: rootIssuerName, Kind: "ClusterIssuer"},
-					CommonName: "ArtemisCloud Client Bar Issuer",
-					DNSNames:   []string{"client-bar.issuer.artemiscloud.io"},
-					Subject:    &cmv1.X509Subject{Organizations: []string{"ArtemisCloud"}},
+					CommonName: "arkmq-org Client Bar Issuer",
+					DNSNames:   []string{"client-bar.issuer.arkmq-org.io"},
+					Subject:    &cmv1.X509Subject{Organizations: []string{"arkmq-org"}},
 				},
 			}
 			Expect(k8sClient.Create(ctx, &clientBarIssuerCert)).Should(Succeed())
@@ -941,9 +945,9 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 					IsCA:       true,
 					SecretName: clientFooCertSecretName,
 					IssuerRef:  cmmetav1.ObjectReference{Name: clientFooIssuerName, Kind: "ClusterIssuer"},
-					CommonName: "ArtemisCloud Client Foo",
-					DNSNames:   []string{"client-foo.artemiscloud.io"},
-					Subject:    &cmv1.X509Subject{Organizations: []string{"ArtemisCloud"}},
+					CommonName: "arkmq-org Client Foo",
+					DNSNames:   []string{"client-foo.arkmq-org.io"},
+					Subject:    &cmv1.X509Subject{Organizations: []string{"arkmq-org"}},
 				},
 			}
 			Expect(k8sClient.Create(ctx, &clientFooCert)).Should(Succeed())
@@ -962,9 +966,9 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 					IsCA:       true,
 					SecretName: clientBarCertSecretName,
 					IssuerRef:  cmmetav1.ObjectReference{Name: clientBarIssuerName, Kind: "ClusterIssuer"},
-					CommonName: "ArtemisCloud Client Bar",
-					DNSNames:   []string{"client-bar.artemiscloud.io"},
-					Subject:    &cmv1.X509Subject{Organizations: []string{"ArtemisCloud"}},
+					CommonName: "arkmq-org Client Bar",
+					DNSNames:   []string{"client-bar.arkmq-org.io"},
+					Subject:    &cmv1.X509Subject{Organizations: []string{"arkmq-org"}},
 				},
 			}
 			Expect(k8sClient.Create(ctx, &clientBarCert)).Should(Succeed())
@@ -1046,7 +1050,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 			Eventually(func(g Gomega) {
 				keyStorePath := "/amq/extra/secrets/" + clientKeyStoreSecretName + "/client-foo.pemcfg"
 				checkCommand := []string{"/home/jboss/amq-broker/bin/artemis", "check", "node", "--up", "--url",
-					"tcp://" + podName + ":61617?sslEnabled=true&sniHost=broker.artemiscloud.io&keyStoreType=PEMCFG&keyStorePath=" + keyStorePath + "&trustStoreType=PEM&trustStorePath=" + trustStorePath}
+					"tcp://" + podName + ":61617?sslEnabled=true&forceSSLParameters=true&sniHost=broker.arkmq-org.io&keyStoreType=PEMCFG&keyStorePath=" + keyStorePath + "&trustStoreType=PEM&trustStorePath=" + trustStorePath}
 
 				stdOutContent := ExecOnPod(podName, activeMQArtemis.Name, defaultNamespace, checkCommand, g)
 				g.Expect(stdOutContent).Should(ContainSubstring("Checks run: 1"))
@@ -1056,7 +1060,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 			Eventually(func(g Gomega) {
 				keyStorePath := "/amq/extra/secrets/" + clientKeyStoreSecretName + "/client-bar.pemcfg"
 				checkCommand := []string{"/home/jboss/amq-broker/bin/artemis", "check", "node", "--up", "--url",
-					"tcp://" + podName + ":61617?sslEnabled=true&sniHost=broker.artemiscloud.io&keyStoreType=PEMCFG&keyStorePath=" + keyStorePath + "&trustStoreType=PEM&trustStorePath=" + trustStorePath}
+					"tcp://" + podName + ":61617?sslEnabled=true&forceSSLParameters=true&sniHost=broker.arkmq-org.io&keyStoreType=PEMCFG&keyStorePath=" + keyStorePath + "&trustStoreType=PEM&trustStorePath=" + trustStorePath}
 
 				stdOutContent := ExecOnPod(podName, activeMQArtemis.Name, defaultNamespace, checkCommand, g)
 				g.Expect(stdOutContent).Should(ContainSubstring("Checks run: 1"))
@@ -1091,7 +1095,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 })
 
 func getConnectorConfig(podName string, crName string, connectorName string, g Gomega) map[string]string {
-	curlUrl := "http://" + podName + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/ConnectorsAsJSON"
+	curlUrl := "http://" + podName + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=%22amq-broker%22/ConnectorsAsJSON"
 	command := []string{"curl", "-k", "-s", "-u", "testuser:testpassword", curlUrl}
 
 	result := ExecOnPod(podName, crName, defaultNamespace, command, g)
@@ -1115,7 +1119,7 @@ func getConnectorConfig(podName string, crName string, connectorName string, g G
 }
 
 func CheckAcceptorStarted(podName string, crName string, acceptorName string, g Gomega) {
-	curlUrl := "http://" + podName + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\",component=acceptors,name=\"" + acceptorName + "\"/Started"
+	curlUrl := "http://" + podName + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=%22amq-broker%22,component=acceptors,name=%22" + acceptorName + "%22/Started"
 	command := []string{"curl", "-k", "-s", "-u", "testuser:testpassword", curlUrl}
 
 	result := ExecOnPod(podName, crName, defaultNamespace, command, g)
@@ -1128,7 +1132,7 @@ func CheckAcceptorStarted(podName string, crName string, acceptorName string, g 
 }
 
 func checkMessagingInPodWithJavaStore(podName string, crName string, portNumber string, trustStoreLoc string, trustStorePassword string, keyStoreLoc *string, keyStorePassword *string, g Gomega) {
-	tcpUrl := "tcp://" + podName + ":" + portNumber + "?sslEnabled=true&trustStorePath=" + trustStoreLoc + "&trustStorePassword=" + trustStorePassword
+	tcpUrl := "tcp://" + podName + ":" + portNumber + "?sslEnabled=true&forceSSLParameters=true&trustStorePath=" + trustStoreLoc + "&trustStorePassword=" + trustStorePassword
 	if keyStoreLoc != nil {
 		tcpUrl += "&keyStorePath=" + *keyStoreLoc + "&keyStorePassword=" + *keyStorePassword
 	}
@@ -1141,7 +1145,7 @@ func checkMessagingInPodWithJavaStore(podName string, crName string, portNumber 
 }
 
 func checkMessagingInPod(podName string, crName string, portNumber string, trustStoreLoc string, g Gomega) {
-	tcpUrl := "tcp://" + podName + ":" + portNumber + "?sslEnabled=true&trustStorePath=" + trustStoreLoc + "&trustStoreType=PEM"
+	tcpUrl := "tcp://" + podName + ":" + portNumber + "?sslEnabled=true&forceSSLParameters=true&trustStorePath=" + trustStoreLoc + "&trustStoreType=PEM"
 	sendCommand := []string{"amq-broker/bin/artemis", "producer", "--user", "testuser", "--password", "testpassword", "--url", tcpUrl, "--message-count", "1", "--destination", "queue://DLQ", "--verbose"}
 	result := ExecOnPod(podName, crName, defaultNamespace, sendCommand, g)
 	g.Expect(result).To(ContainSubstring("Produced: 1 messages"))

@@ -21,13 +21,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
-	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
-	mgmt "github.com/artemiscloud/activemq-artemis-operator/pkg/utils/artemis"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
+	"github.com/arkmq-org/activemq-artemis-operator/api/v1beta1"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/resources"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/resources/secrets"
+	ss "github.com/arkmq-org/activemq-artemis-operator/pkg/resources/statefulsets"
+	mgmt "github.com/arkmq-org/activemq-artemis-operator/pkg/utils/artemis"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/common"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/namer"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -69,7 +69,7 @@ func GetMinimalJolokiaAgents(cr *v1beta1.ActiveMQArtemis, client rtclient.Client
 
 		ordinalFqdn := common.OrdinalFQDNS(cr.Name, cr.Namespace, i)
 
-		artemis := mgmt.GetArtemisAgentForRestricted(client, ordinalFqdn)
+		artemis := mgmt.GetArtemisAgentForRestricted(client, cr.Name, ordinalFqdn)
 
 		jkInfo := JkInfo{
 			Artemis: artemis,

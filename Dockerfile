@@ -1,10 +1,10 @@
 # Build the manager binary
-FROM registry.access.redhat.com/ubi8/go-toolset:1.21.11 as builder
+FROM registry.access.redhat.com/ubi9/go-toolset:1.21.11 as builder
 
 ARG TARGETOS
 ARG TARGETARCH
 
-ENV GO_MODULE=github.com/artemiscloud/activemq-artemis-operator
+ENV GO_MODULE=github.com/arkmq-org/activemq-artemis-operator
 
 ### BEGIN REMOTE SOURCE
 # Use the COPY instruction only inside the REMOTE SOURCE block
@@ -37,9 +37,11 @@ RUN cp -r $REMOTE_SOURCE_DIR/app/* .
 # was called. For example, if we call make docker-build in a local env which has the Apple Silicon M1 SO
 # the docker BUILDPLATFORM arg will be linux/arm64 when for Apple x86 it will be linux/amd64. Therefore,
 # by leaving it empty we can ensure that the container and binary shipped on it will have the same platform.
-RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -ldflags="-X '${GO_MODULE}/version.BuildTimestamp=`date '+%Y-%m-%dT%H:%M:%S'`'" -o manager main.go
+# CGO_ENABLED is set to 1 for dynamic linking to OpenSSL to use FIPS validated cryptographic modules
+# when is executed on nodes that are booted into FIPS mode.
+RUN CGO_ENABLED=1 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -ldflags="-X '${GO_MODULE}/version.BuildTimestamp=`date '+%Y-%m-%dT%H:%M:%S'`'" -o manager main.go
 
-FROM registry.access.redhat.com/ubi8-minimal:8.10-1130 as base-env
+FROM registry.access.redhat.com/ubi9-minimal:9.5-1736404155 as base-env
 
 ENV BROKER_NAME=activemq-artemis
 ENV USER_UID=1000
@@ -67,7 +69,7 @@ RUN microdnf update -y --setopt=install_weak_deps=0 && rm -rf /var/cache/yum
 USER ${USER_UID}
 ENTRYPOINT ["${USER_HOME}/bin/entrypoint"]
 
-LABEL name="artemiscloud/activemq-artemis-operator"
+LABEL name="arkmq-org/activemq-artemis-operator"
 LABEL description="ActiveMQ Artemis Broker Operator"
 LABEL maintainer="Roddie Kieley <rkieley@redhat.com>"
-LABEL version="1.2.6"
+LABEL version="1.2.9"

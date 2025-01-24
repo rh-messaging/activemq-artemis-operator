@@ -19,9 +19,9 @@ import (
 	"os"
 	"strconv"
 
-	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
+	brokerv1beta1 "github.com/arkmq-org/activemq-artemis-operator/api/v1beta1"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/common"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/namer"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -165,7 +165,7 @@ var _ = Describe("tests regarding controller manager", func() {
 						k8sClient.Update(ctx, createdCr)
 						g.Expect(len(createdCr.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
 						By("Checking messsage count on broker 0")
-						curlUrl := "http://" + podWithOrdinal + ":8161/console/jolokia/read/org.apache.activemq.artemis:address=\"TEST\",broker=\"amq-broker\",component=addresses,queue=\"TEST\",routing-type=\"anycast\",subcomponent=queues/MessageCount"
+						curlUrl := "http://" + podWithOrdinal + ":8161/console/jolokia/read/org.apache.activemq.artemis:address=%22TEST%22,broker=%22amq-broker%22,component=addresses,queue=%22TEST%22,routing-type=%22anycast%22,subcomponent=queues/MessageCount"
 						queryCmd := []string{"curl", "-k", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
 						reply, err := RunCommandInPodWithNamespace(podWithOrdinal, restrictedNamespace, createdCr.Name+"-container", queryCmd)
 						g.Expect(err).To(BeNil())

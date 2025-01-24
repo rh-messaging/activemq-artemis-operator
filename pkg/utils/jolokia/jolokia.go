@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/common"
 	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -101,7 +101,9 @@ func (j *Jolokia) GetProtocol() string {
 func (j *Jolokia) getClient() *http.Client {
 	httpClient := http.Client{
 		Transport: http.DefaultTransport,
-		Timeout:   time.Second * 2,
+		// A timeout less than 3 seconds may cause connection issues when
+		// the server requires to change the chiper.
+		Timeout: time.Second * 3,
 	}
 
 	if j.protocol == "https" {
