@@ -31,7 +31,7 @@ jobs:
         run: |
           git fetch --tags --force
           HEAD_COMMIT="$(git rev-parse HEAD)"
-          RELEASE_TAG="$(grep -m 1 -oP '(?<=Version = ")[^"]+' version/version.go)"
+          RELEASE_TAG="v$(grep -m 1 -oP '(?<=Version = ")[^"]+' version/version.go)"
           RELEASE_TAG_COMMIT="$(git rev-list -n 1 ${RELEASE_TAG} || true)"
           if [ "$RELEASE_TAG_COMMIT" != "$HEAD_COMMIT" ]; then
             git config user.name 'arkmq-bot'
