@@ -2095,7 +2095,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) PodTemplateSpecForCR(customReso
 							"/bin/bash",
 							"-c",
 							// use curl with mtls as the broker-cert to pull the status to find start state using dns
-							fmt.Sprintf(`export STATEFUL_SET_ORDINAL=${HOSTNAME##*-};curl --cacert %s%s/%s --cert %s%s/tls.crt --key %s%s/tls.key  https://%s:8778/jolokia/read/org.apache.activemq.artemis:broker=%%22amq-broker%%22/Status | grep -w -P "(START|STOPP)(ED|ING)"`, secretPathBase, caSecret, caSecretKey, secretPathBase, operandCertSecretName, secretPathBase, operandCertSecretName, common.OrdinalStringFQDNS(customResource.Name, customResource.Namespace, "$STATEFUL_SET_ORDINAL")),
+							fmt.Sprintf(`export STATEFUL_SET_ORDINAL=${HOSTNAME##*-};curl --cacert %s%s/%s --cert %s%s/tls.crt --key %s%s/tls.key  https://%s:8778/jolokia/read/org.apache.activemq.artemis:broker=%%22%s%%22/Status | grep -w -P "(START|STOPP)(ED|ING)"`, secretPathBase, caSecret, caSecretKey, secretPathBase, operandCertSecretName, secretPathBase, operandCertSecretName, common.OrdinalStringFQDNS(customResource.Name, customResource.Namespace, "$STATEFUL_SET_ORDINAL"), customResource.Name),
 						},
 					},
 				},
