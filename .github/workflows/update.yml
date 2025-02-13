@@ -83,7 +83,7 @@ jobs:
           else
             BASE_IMAGE="${{ inputs.base_image }}"
           fi
-          sed -i "s~FROM.*base-env~FROM ${BASE_IMAGE} as base-env~" Dockerfile
+          sed -i "s~FROM.*base-env~FROM ${BASE_IMAGE} AS base-env~" Dockerfile
           git commit --all --message "Update base image to ${BASE_IMAGE}" || echo "nothing to commit"
 
       - name: Update related images
