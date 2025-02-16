@@ -31,7 +31,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	golang.org/x/crypto v0.21.0
 	k8s.io/apiextensions-apiserver v0.28.3
-	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
+	k8s.io/utils v0.0.0-20241210054802-24370beab758
 )
 
 require (
