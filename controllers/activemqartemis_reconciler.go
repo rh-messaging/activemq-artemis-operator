@@ -3450,6 +3450,10 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) checkProjectionStatus(cr *broke
 		}
 
 		if len(missingKeys) > 0 {
+			// sort missingKeys to generate a stable error message because it is used to update
+			// the config applied conditions and unstable messages cause unnecessaray resource updates
+			sort.Strings(missingKeys)
+
 			if strings.HasSuffix(secretProjection.Name, jaasConfigSuffix) {
 				err = errors.Errorf("out of sync on pod %s-%s, property files are not visible on the broker: %v. Reloadable JAAS LoginModule property files are only visible after the first login attempt that references them. If the property files are for a third party LoginModule or not reloadable, prefix the property file names with an underscore to exclude them from this condition",
 					namer.CrToSS(cr.Name), jk.Ordinal, missingKeys)
