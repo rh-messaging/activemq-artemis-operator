@@ -6851,7 +6851,7 @@ spec:
         - --leader-elect
         command:
         - /home/amq-broker-operator/bin/entrypoint
-        image: registry.redhat.io/amq0/amq-broker-rhel9-operator@sha256:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        image: registry.redhat.io/amq7/amq-broker-rhel9-operator@sha256:ef670a5dc8287894eaa1fdec138cb1d5d4d6f1eb472dfb6aa48b9101c131dea7
         livenessProbe:
           httpGet:
             path: /healthz
