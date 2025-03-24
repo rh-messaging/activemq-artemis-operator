@@ -21,14 +21,14 @@ COPY bundle/metadata /metadata/
 COPY bundle/tests/scorecard /tests/scorecard/
 
 LABEL name="amq0/amq-broker-rhel9-operator-bundle"
-LABEL description="Red Hat AMQ Broker 0.0 Operator Bundle"
+LABEL description="Red Hat AMQ Broker 7.13 Operator Bundle"
 LABEL maintainer="Roddie Kieley <rkieley@redhat.com>"
-LABEL version="0.0.0"
-LABEL summary="Red Hat AMQ Broker 0.0 Operator Bundle"
-LABEL amq.broker.version="0.0.0.OPR.2.CR1"
+LABEL version="7.13.0"
+LABEL summary="Red Hat AMQ Broker 7.13 Operator Bundle"
+LABEL amq.broker.version="7.13.0.OPR.1.SR1"
 LABEL com.redhat.component="amq-broker-rhel9-operator-bundle-container"
 LABEL com.redhat.delivery.backport=false
 LABEL com.redhat.delivery.operator.bundle=true
 LABEL com.redhat.openshift.versions="v4.12"
-LABEL io.k8s.display-name="Red Hat AMQ Broker 0.0 Operator Bundle"
+LABEL io.k8s.display-name="Red Hat AMQ Broker 7.13 Operator Bundle"
 LABEL io.openshift.tags="messaging,amq,integration,operator,golang"
