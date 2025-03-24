@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM registry-proxy.engineering.redhat.com/rh-osbs/rhel9-go-toolset:1.21.11 AS builder
+FROM registry-proxy.engineering.redhat.com/rh-osbs/rhel9-go-toolset:1.22.7 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH

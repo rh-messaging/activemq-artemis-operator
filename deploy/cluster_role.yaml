@@ -52,83 +52,8 @@ rules:
   - broker.amq.io
   resources:
   - activemqartemisaddresses
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - broker.amq.io
-  resources:
-  - activemqartemisaddresses/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - broker.amq.io
-  resources:
-  - activemqartemisaddresses/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - broker.amq.io
-  resources:
   - activemqartemises
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - broker.amq.io
-  resources:
-  - activemqartemises/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - broker.amq.io
-  resources:
-  - activemqartemises/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - broker.amq.io
-  resources:
   - activemqartemisscaledowns
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - broker.amq.io
-  resources:
-  - activemqartemisscaledowns/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - broker.amq.io
-  resources:
-  - activemqartemisscaledowns/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - broker.amq.io
-  resources:
   - activemqartemissecurities
   verbs:
   - create
@@ -141,12 +66,18 @@ rules:
 - apiGroups:
   - broker.amq.io
   resources:
+  - activemqartemisaddresses/finalizers
+  - activemqartemises/finalizers
+  - activemqartemisscaledowns/finalizers
   - activemqartemissecurities/finalizers
   verbs:
   - update
 - apiGroups:
   - broker.amq.io
   resources:
+  - activemqartemisaddresses/status
+  - activemqartemises/status
+  - activemqartemisscaledowns/status
   - activemqartemissecurities/status
   verbs:
   - get
