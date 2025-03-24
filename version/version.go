@@ -15,11 +15,11 @@ var (
 
 const (
 	// LatestVersion product version supported
-	LatestVersion        = "0.0.0"
-	CompactLatestVersion = "7xx"
+	LatestVersion        = "7.13.0"
+	CompactLatestVersion = "7130"
 
-	LatestKubeImage = "registry.redhat.io/amq0/amq-broker-rhel9:0.0.0" + LatestVersion
-	LatestInitImage = "registry.redhat.io/amq0/amq-broker-init-rhel9:0.0.0" + LatestVersion
+	LatestKubeImage = "registry.redhat.io/amq7/amq-broker-rhel9:7.13.0"
+	LatestInitImage = "registry.redhat.io/amq7/amq-broker-init-rhel9:7.13.0"
 )
 
 func DefaultImageName(archSpecificRelatedImageEnvVarName string) string {
@@ -35,6 +35,7 @@ var FullVersionFromCompactVersion map[string]string = map[string]string{
 	"7121": "7.12.1",
 	"7122": "7.12.2",
 	"7123": "7.12.3",
+	"7130": "7.13.0",
 }
 
 // The yacfg profile to use for a given full version of broker
@@ -43,6 +44,7 @@ var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
 	"7.12.1": "7.10.0",
 	"7.12.2": "7.10.0",
 	"7.12.3": "7.10.0",
+	"7.13.0": "7.10.0",
 }
 
 var YacfgProfileName string = "amq_broker"
@@ -53,6 +55,7 @@ var SupportedActiveMQArtemisVersions = []string{
 	"7.12.1",
 	"7.12.2",
 	"7.12.3",
+	"7.13.0",
 }
 
 var ActiveMQArtemisVersionfromFullVersion map[string]string = map[string]string{
@@ -60,6 +63,7 @@ var ActiveMQArtemisVersionfromFullVersion map[string]string = map[string]string{
 	"7.12.1": "2.33.0.redhat-00013",
 	"7.12.2": "2.33.0.redhat-00015",
 	"7.12.3": "2.33.0.redhat-00016",
+	"7.13.0": "2.40.0.redhat-00002",
 }
 
 func CompactActiveMQArtemisVersion(version string) string {
