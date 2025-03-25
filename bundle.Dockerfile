@@ -20,7 +20,7 @@ COPY bundle/manifests /manifests/
 COPY bundle/metadata /metadata/
 COPY bundle/tests/scorecard /tests/scorecard/
 
-LABEL name="amq0/amq-broker-rhel9-operator-bundle"
+LABEL name="amq7/amq-broker-rhel9-operator-bundle"
 LABEL description="Red Hat AMQ Broker 7.13 Operator Bundle"
 LABEL maintainer="Roddie Kieley <rkieley@redhat.com>"
 LABEL version="7.13.0"

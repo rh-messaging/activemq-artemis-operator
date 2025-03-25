@@ -1,5 +1,5 @@
 annotations:
-  name: "amq0/amq-broker-rhel9-operator-bundle"
+  name: "amq7/amq-broker-rhel9-operator-bundle"
   description: "Red Hat AMQ Broker 7.13 Operator Bundle"
   maintainer: "Roddie Kieley <rkieley@redhat.com>"
   version: "7.13.0"
