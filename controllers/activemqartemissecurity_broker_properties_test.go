@@ -128,7 +128,7 @@ var _ = Describe("security without controller", func() {
 			crd.Spec.Env = []corev1.EnvVar{{
 				Name: "JAVA_ARGS_APPEND",
 				// no role check in hawtio as roles are checked by the broker via the guard installed with this ArtemisRbacMBeanServerBuilder
-				Value: "-Dhawtio.role= -Djavax.management.builder.initial=org.apache.activemq.artemis.core.server.management.ArtemisRbacMBeanServerBuilder",
+				Value: "-Dhawtio.roles= -Djavax.management.builder.initial=org.apache.activemq.artemis.core.server.management.ArtemisRbacMBeanServerBuilder",
 			}}
 
 			By("removing management.xml authorization section from artemis create with a resource template patch")
