@@ -283,7 +283,7 @@ metadata:
     features.operators.openshift.io/token-auth-gcp: "false"
     operators.operatorframework.io/builder: operator-sdk-v1.28.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
-  name: activemq-artemis-operator.v2.0.1
+  name: activemq-artemis-operator.v2.0.2
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -2929,7 +2929,7 @@ spec:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
                 - name: ENABLE_WEBHOOKS
                   value: "false"
-                image: quay.io/arkmq-org/activemq-artemis-operator:2.0.1
+                image: quay.io/arkmq-org/activemq-artemis-operator:2.0.2
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -3272,4 +3272,4 @@ spec:
     name: activemq-artemis-broker-init-2400
   - image: quay.io/arkmq-org/activemq-artemis-broker-kubernetes@sha256:a4a0d0453f0761b9e114d0d4cc7c14091a2a9c30790f18ffa6bf1e365d5083fe
     name: activemq-artemis-broker-kubernetes-2400
-  version: 2.0.1
+  version: 2.0.2
