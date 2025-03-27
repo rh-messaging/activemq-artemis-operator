@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM registry.access.redhat.com/ubi9/go-toolset:1.21.11 AS builder
+FROM registry.access.redhat.com/ubi9/go-toolset:1.22.7 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -41,7 +41,7 @@ RUN cp -r $REMOTE_SOURCE_DIR/app/* .
 # when is executed on nodes that are booted into FIPS mode.
 RUN CGO_ENABLED=1 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -ldflags="-X '${GO_MODULE}/version.BuildTimestamp=`date '+%Y-%m-%dT%H:%M:%S'`'" -o manager main.go
 
-FROM registry.access.redhat.com/ubi9-minimal:9.5-1741850109 AS base-env
+FROM registry.access.redhat.com/ubi9-minimal:9.5-1742914212 AS base-env
 
 ENV BROKER_NAME=activemq-artemis
 ENV USER_UID=1000
@@ -72,4 +72,4 @@ ENTRYPOINT ["${USER_HOME}/bin/entrypoint"]
 LABEL name="arkmq-org/activemq-artemis-operator"
 LABEL description="ActiveMQ Artemis Broker Operator"
 LABEL maintainer="Roddie Kieley <rkieley@redhat.com>"
-LABEL version="2.0.1"
+LABEL version="2.0.2"
