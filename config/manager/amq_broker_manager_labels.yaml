@@ -8,8 +8,8 @@ spec:
       labels:
         com.company: Red_Hat
         rht.prod_name: Red_Hat_Integration
-        rht.prod_ver: 2024.Q4
+        rht.prod_ver: 2025.Q2
         rht.comp: Broker_AMQ
-        rht.comp_ver: 7.11.7
+        rht.comp_ver: 7.11.8
         rht.subcomp: broker-amq-operator
         rht.subcomp_t: application
