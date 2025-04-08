@@ -85,7 +85,6 @@ var _ = Describe("minimal", func() {
 	})
 
 	AfterEach(func() {
-
 		if false && os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 			UnInstallCaBundle(common.DefaultOperatorCASecretName)
 			UninstallClusteredIssuer(caIssuerName)
@@ -97,6 +96,7 @@ var _ = Describe("minimal", func() {
 				installedCertManager = false
 			}
 		}
+
 		AfterEachSpec()
 	})
 
