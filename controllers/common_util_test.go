@@ -26,12 +26,14 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"log"
 	"math/big"
 	"math/rand"
 	"net/http"
 	"os"
 	"os/exec"
 	"path"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -51,6 +53,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -96,6 +99,8 @@ func randString() string {
 }
 
 func CleanResourceWithTimeouts(res client.Object, name string, namespace string, cleanTimeout time.Duration, cleanInterval time.Duration) {
+	//batch.kubernetes.io/job-name: consumer
+
 	err := k8sClient.Delete(ctx, res)
 	if errors.IsNotFound(err) {
 		return
@@ -109,6 +114,35 @@ func CleanResourceWithTimeouts(res client.Object, name string, namespace string,
 		}
 		g.Expect(errors.IsNotFound(err)).To(BeTrue())
 	}, cleanTimeout, cleanInterval).Should(Succeed())
+
+	resType := reflect.ValueOf(res).Elem().Type()
+	jobType := reflect.TypeOf(batchv1.Job{})
+
+	if resType == jobType {
+		cfg, err := config.GetConfig()
+		Expect(err).To(BeNil())
+
+		clientset, err := kubernetes.NewForConfig(cfg)
+		Expect(err).To(BeNil())
+
+		// Define the label selector (replace with your label selector)
+		labelSelector := "batch.kubernetes.io/job-name=" + res.GetName()
+
+		// Get the list of pods with the label selector
+		pods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
+			LabelSelector: labelSelector,
+		})
+		if err != nil {
+			log.Fatalf("Failed to list pods: %v", err)
+		}
+
+		// Delete the selected pods
+		for _, pod := range pods.Items {
+			fmt.Printf("Deleting pod: %s\n", pod.Name)
+			CleanResourceWithTimeouts(&pod, pod.GetName(), pod.GetNamespace(), cleanTimeout, cleanInterval)
+		}
+
+	}
 }
 
 func CleanResource(res client.Object, name string, namespace string) {

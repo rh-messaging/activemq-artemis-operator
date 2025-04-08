@@ -283,33 +283,9 @@ var _ = Describe("work queue", func() {
 
 				}
 
-				// small prefetch to ensure messages are federated when there is demand even if the
-				// majority of consumers go to a single broker
-				serviceUrl := "tcp://" + brokerCrd.Name + ":62616?jms.prefetchPolicy.all=1"
-
-				numConsumers := 10
-				numMessagesToConsume := "100"
-				numMessagesToProduce := "1000"
-
-				By("deploying single producer to send " + numMessagesToProduce + " to one broker and sleep!")
-				producer := jobTemplate(
-					"producer",
-					1,
-					[]string{"/bin/sh", "-c", "/opt/amq/bin/artemis producer --protocol=AMQP --user p --password passwd --url " + serviceUrl + " --message-count " + numMessagesToProduce + " --destination queue://JOBS; sleep 300"},
-				)
-				Expect(k8sClient.Create(ctx, &producer)).Should(Succeed())
-
-				By("deploying  " + fmt.Sprintf("%d", numConsumers) + " to consume in batches of " + numMessagesToConsume)
-				consumers := jobTemplate(
-					"consumer",
-					int32(numConsumers),
-					[]string{"/bin/sh", "-c", "/opt/amq/bin/artemis consumer --protocol=AMQP --user c --password passwd --url " + serviceUrl + " --message-count " + numMessagesToConsume + " --destination queue://JOBS"},
-				)
-				Expect(k8sClient.Create(ctx, &consumers)).Should(Succeed())
-
 				By("verifying - messages flowing.. via routed_message_count")
 
-				metricsMessageCountCheck := func(g Gomega, ordinal string, routedNonZeroCheck bool) bool {
+				metricsCheck := func(g Gomega, ordinal string, metricsPredicate func(metrics string) bool) bool {
 					pod := &corev1.Pod{}
 					podName := namer.CrToSS(createdBrokerCrd.Name) + "-" + ordinal
 					podNamespacedName := types.NamespacedName{Name: podName, Namespace: defaultNamespace}
@@ -327,7 +303,6 @@ var _ = Describe("work queue", func() {
 
 					lines := strings.Split(string(body), "\n")
 
-					var done = false
 					if verbose {
 						fmt.Printf("\nStart Metrics for JOBS on %v with Headers %v \n", ordinal, resp.Header)
 					}
@@ -337,40 +312,67 @@ var _ = Describe("work queue", func() {
 							fmt.Printf("%s\n", line)
 						}
 
-						if routedNonZeroCheck {
-							if strings.Contains(line, "artemis_routed_message_count{address=\"JOBS\",broker=\"amq-broker\",}") {
-								if !strings.Contains(line, "} 0.0") {
-									done = true
-								}
-							}
-						} else if strings.Contains(line, "artemis_message_count{address=\"JOBS\",broker=\"amq-broker\",queue=\"JOBS\",} 0.0") {
-							done = true
+						if metricsPredicate(line) {
+							return true
 						}
 					}
-					return done
+					return false
 				}
 
-				By("verifying artemis_routed_message_count metric on JOBS")
-				doRoutedNonZeroCheck := true
+				// small prefetch to ensure messages are federated when there is demand even if the
+				// majority of consumers go to a single broker
+				serviceUrl := "tcp://" + brokerCrd.Name + ":62616?jms.prefetchPolicy.all=1"
+
+				numConsumers := 10
+				numMessagesToConsume := "100"
+				numMessagesToProduce := "1000"
+
+				By("deploying  " + fmt.Sprintf("%d", numConsumers) + " to consume in batches of " + numMessagesToConsume)
+				consumers := jobTemplate(
+					"consumer",
+					int32(numConsumers),
+					[]string{"/bin/sh", "-c", "/opt/amq/bin/artemis consumer --silent --protocol=AMQP --user c --password passwd --url " + serviceUrl + " --message-count " + numMessagesToConsume + " --destination queue://JOBS || (sleep 5 && exit 1)"},
+				)
+				Expect(k8sClient.Create(ctx, &consumers)).Should(Succeed())
+
+				By("verifying artemis_consumer_count metric on JOBS")
+				checkJOBSConsumerNonZero := func(metrics string) bool {
+					return strings.Contains(metrics, "artemis_consumer_count{address=\"JOBS\",broker=\"amq-broker\",queue=\"JOBS\",} ") && !strings.Contains(metrics, "} 0.0")
+				}
 				Eventually(func(g Gomega) {
 
-					foundMetric0 := metricsMessageCountCheck(g, "0", doRoutedNonZeroCheck)
-					foundMetric1 := metricsMessageCountCheck(g, "1", doRoutedNonZeroCheck)
+					g.Expect(metricsCheck(g, "0", checkJOBSConsumerNonZero)).Should(Equal(true))
+					g.Expect(metricsCheck(g, "1", checkJOBSConsumerNonZero)).Should(Equal(true))
 
-					g.Expect(foundMetric0).Should(Equal(true))
-					g.Expect(foundMetric1).Should(Equal(true))
+				}, existingClusterTimeout, existingClusterInterval*5).Should(Succeed())
+
+				By("deploying single producer to send " + numMessagesToProduce + " to one broker and sleep!")
+				producer := jobTemplate(
+					"producer",
+					1,
+					[]string{"/bin/sh", "-c", "/opt/amq/bin/artemis producer --silent --protocol=AMQP --user p --password passwd --url " + serviceUrl + " --message-count " + numMessagesToProduce + " --destination queue://JOBS || (sleep 5 && exit 1)"},
+				)
+				Expect(k8sClient.Create(ctx, &producer)).Should(Succeed())
+
+				By("verifying artemis_routed_message_count metric on JOBS")
+				checkJOBSRoutedNonZero := func(metrics string) bool {
+					return strings.Contains(metrics, "artemis_routed_message_count{address=\"JOBS\",broker=\"amq-broker\",}") && !strings.Contains(metrics, "} 0.0")
+				}
+				Eventually(func(g Gomega) {
+
+					g.Expect(metricsCheck(g, "0", checkJOBSRoutedNonZero)).Should(Equal(true))
+					g.Expect(metricsCheck(g, "1", checkJOBSRoutedNonZero)).Should(Equal(true))
 
 				}, existingClusterTimeout, existingClusterInterval*5).Should(Succeed())
 
 				By("verifying artemis_message_count metric 0, all messaged consumed")
-				doRoutedNonZeroCheck = false
+				checkJOBSMessageCountZero := func(metrics string) bool {
+					return strings.Contains(metrics, "artemis_message_count{address=\"JOBS\",broker=\"amq-broker\",queue=\"JOBS\",} 0.0")
+				}
 				Eventually(func(g Gomega) {
 
-					foundMetric0 := metricsMessageCountCheck(g, "0", doRoutedNonZeroCheck)
-					foundMetric1 := metricsMessageCountCheck(g, "1", doRoutedNonZeroCheck)
-
-					g.Expect(foundMetric0).Should(Equal(true))
-					g.Expect(foundMetric1).Should(Equal(true))
+					g.Expect(metricsCheck(g, "0", checkJOBSMessageCountZero)).Should(Equal(true))
+					g.Expect(metricsCheck(g, "1", checkJOBSMessageCountZero)).Should(Equal(true))
 
 				}, existingClusterTimeout, existingClusterInterval*5).Should(Succeed())
 
