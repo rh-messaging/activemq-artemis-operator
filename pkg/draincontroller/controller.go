@@ -49,8 +49,6 @@ import (
 	"strings"
 
 	rbacutil "github.com/arkmq-org/activemq-artemis-operator/pkg/rbac"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/resources"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/resources/secrets"
 	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/namer"
 	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/selectors"
 	"k8s.io/apimachinery/pkg/labels"
@@ -736,30 +734,6 @@ func (c *Controller) GetStopCh() *chan struct{} {
 	return &c.stopCh
 }
 
-func (c *Controller) getClusterCredentials(namespace string, ssNames map[string]string) (string, string) {
-
-	secretName := ssNames["AMQ_CREDENTIALS_SECRET_NAME"]
-
-	namespacedName := types.NamespacedName{
-		Name:      secretName,
-		Namespace: namespace,
-	}
-	stringDataMap := make(map[string]string)
-	stringDataMap["AMQ_CLUSTER_USER"] = ""
-	stringDataMap["AMQ_CLUSTER_PASSWORD"] = ""
-
-	secretDefinition := secrets.NewSecret(namespacedName, stringDataMap, c.ssLabels)
-
-	c.log.V(2).Info("Try retrieving cluster credentials from secret", "secret", namespacedName)
-	if err := resources.Retrieve(namespacedName, c.client, secretDefinition); err != nil {
-		c.log.V(2).Info("Failed to retrieve cluster credentials from secret, using defaults", "err", err)
-		return ssNames["CLUSTERUSER"], ssNames["CLUSTERPASS"]
-	} else {
-		c.log.V(2).Info("retrieved cluster credential from existing secret")
-		return string(secretDefinition.Data["AMQ_CLUSTER_USER"]), string(secretDefinition.Data["AMQ_CLUSTER_PASSWORD"])
-	}
-}
-
 func (c *Controller) newPod(sts *appsv1.StatefulSet, ordinal int) (*corev1.Pod, error) {
 
 	ssNamesKey := types.NamespacedName{
@@ -778,10 +752,7 @@ func (c *Controller) newPod(sts *appsv1.StatefulSet, ordinal int) (*corev1.Pod, 
 	//podTemplateJson := sts.Annotations[AnnotationDrainerPodTemplate]
 	//TODO: Remove this blatant hack
 	podTemplateJson := globalPodTemplateJson
-	clusterUser, clusterPassword := c.getClusterCredentials(sts.Namespace, ssNames)
 	podTemplateJson = strings.Replace(podTemplateJson, "CRNAME", ssNames["CRNAME"], -1)
-	podTemplateJson = strings.Replace(podTemplateJson, "CLUSTERUSER", clusterUser, 1)
-	podTemplateJson = strings.Replace(podTemplateJson, "CLUSTERPASS", clusterPassword, 1)
 	podTemplateJson = strings.Replace(podTemplateJson, "HEADLESSSVCNAMEVALUE", ssNames["HEADLESSSVCNAMEVALUE"], 1)
 	podTemplateJson = strings.Replace(podTemplateJson, "PINGSVCNAMEVALUE", ssNames["PINGSVCNAMEVALUE"], 1)
 
@@ -855,6 +826,24 @@ func (c *Controller) newPod(sts *appsv1.StatefulSet, ordinal int) (*corev1.Pod, 
 		},
 	}
 	pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, drainerHost)
+
+	for i := 0; i < len(pod.Spec.Containers[0].Env); i++ {
+		if pod.Spec.Containers[0].Env[i].Name == "AMQ_CLUSTER_USER" ||
+			pod.Spec.Containers[0].Env[i].Name == "AMQ_CLUSTER_PASSWORD" {
+			envVarSource := &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: ssNames["AMQ_CREDENTIALS_SECRET_NAME"],
+					},
+					Key:      pod.Spec.Containers[0].Env[i].Name,
+					Optional: nil,
+				},
+			}
+			pod.Spec.Containers[0].Env[i].Value = ""
+			pod.Spec.Containers[0].Env[i].ValueFrom = envVarSource
+		}
+
+	}
 
 	pod.Spec.SecurityContext = sts.Spec.Template.Spec.SecurityContext
 	for i := 0; i < len(pod.Spec.Containers); i++ {
