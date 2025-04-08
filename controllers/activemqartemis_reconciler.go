@@ -29,6 +29,7 @@ import (
 	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/cr2jinja2"
 	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/jolokia_client"
 	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/namer"
+	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/random"
 	"github.com/arkmq-org/activemq-artemis-operator/version"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -338,7 +339,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessCredentials(customResour
 			adminUser.Value = amqUserEnvVar.Value
 		}
 		if adminUser.Value == "" {
-			adminUser.Value = environments.Defaults.AMQ_USER
+			adminUser.Value = random.GenerateRandomString(8)
 			adminUser.AutoGen = true
 		}
 	}
@@ -350,18 +351,18 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessCredentials(customResour
 			adminPassword.Value = amqPasswordEnvVar.Value
 		}
 		if adminPassword.Value == "" {
-			adminPassword.Value = environments.Defaults.AMQ_PASSWORD
+			adminPassword.Value = random.GenerateRandomString(8)
 			adminPassword.AutoGen = true
 		}
 	}
 	envVars["AMQ_PASSWORD"] = adminPassword
 
 	envVars["AMQ_CLUSTER_USER"] = ValueInfo{
-		Value:   environments.GLOBAL_AMQ_CLUSTER_USER,
+		Value:   random.GenerateRandomString(8),
 		AutoGen: true,
 	}
 	envVars["AMQ_CLUSTER_PASSWORD"] = ValueInfo{
-		Value:   environments.GLOBAL_AMQ_CLUSTER_PASSWORD,
+		Value:   random.GenerateRandomString(8),
 		AutoGen: true,
 	}
 
@@ -510,8 +511,6 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) syncMessageMigration(customReso
 	ssNames := make(map[string]string)
 	ssNames["CRNAMESPACE"] = customResource.Namespace
 	ssNames["CRNAME"] = customResource.Name
-	ssNames["CLUSTERUSER"] = environments.GLOBAL_AMQ_CLUSTER_USER
-	ssNames["CLUSTERPASS"] = environments.GLOBAL_AMQ_CLUSTER_PASSWORD
 	ssNames["HEADLESSSVCNAMEVALUE"] = namer.SvcHeadlessNameBuilder.Name()
 	ssNames["PINGSVCNAMEVALUE"] = namer.SvcPingNameBuilder.Name()
 	ssNames["SERVICE_ACCOUNT"] = os.Getenv("SERVICE_ACCOUNT")
