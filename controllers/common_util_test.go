@@ -188,10 +188,6 @@ func newArtemisSpecWithFastProbes() brokerv1beta1.ActiveMQArtemisSpec {
 		InitialDelaySeconds: 1,
 		PeriodSeconds:       3,
 	}
-	spec.DeploymentPlan.LivenessProbe = &corev1.Probe{
-		InitialDelaySeconds: 6,
-		PeriodSeconds:       3,
-	}
 
 	return spec
 }

@@ -7038,10 +7038,6 @@ var _ = Describe("artemis controller", func() {
 			ctx := context.Background()
 			crd := generateArtemisSpec(defaultNamespace)
 
-			crd.Spec.DeploymentPlan.LivenessProbe = &corev1.Probe{
-				InitialDelaySeconds: 1,
-				PeriodSeconds:       2,
-			}
 			crd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
 				InitialDelaySeconds: 1,
 				PeriodSeconds:       2,
