@@ -111,7 +111,7 @@ var _ = Describe("jdbc fast failover", func() {
 							}},
 					},
 				}
-				Expect(k8sClient.Create(ctx, &db)).Should(Succeed())
+				CreateOrOverwriteResource(&db)
 
 				dbService := corev1.Service{
 					TypeMeta:   metav1.TypeMeta{Kind: "Service", APIVersion: "core/v1"},
@@ -127,8 +127,7 @@ var _ = Describe("jdbc fast failover", func() {
 						},
 					},
 				}
-
-				Expect(k8sClient.Create(ctx, &dbService)).Should(Succeed())
+				CreateOrOverwriteResource(&dbService)
 
 				By("verifying dbservice has a jdbc endpoint, db is ready!")
 				Eventually(func(g Gomega) {

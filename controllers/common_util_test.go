@@ -1156,3 +1156,16 @@ func CloneStringMap(original map[string]string) map[string]string {
 	}
 	return copy
 }
+
+func CreateOrOverwriteResource(res client.Object) {
+	err := k8sClient.Create(ctx, res)
+	if errors.IsAlreadyExists(err) {
+		k8sClient.Delete(ctx, res)
+
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Create(ctx, res)).To(Succeed())
+		}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+	} else {
+		Expect(err).To(Succeed())
+	}
+}
