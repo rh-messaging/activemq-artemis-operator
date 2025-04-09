@@ -347,7 +347,7 @@ func setUpTestProxy() {
 			},
 		},
 	}
-	createOrOverwriteResource(&testProxyDeployment)
+	CreateOrOverwriteResource(&testProxyDeployment)
 
 	testProxyService := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -364,13 +364,13 @@ func setUpTestProxy() {
 			},
 		},
 	}
-	createOrOverwriteResource(&testProxyService)
+	CreateOrOverwriteResource(&testProxyService)
 
 	testProxyIngress := ingresses.NewIngressForCRWithSSL(
 		nil, types.NamespacedName{Name: testProxyName, Namespace: testProxyNamespace},
 		map[string]string{}, testProxyName+"-dep-svc", strconv.FormatInt(int64(testProxyPort), 10),
 		true, "", testProxyHost, isOpenshift)
-	createOrOverwriteResource(testProxyIngress)
+	CreateOrOverwriteResource(testProxyIngress)
 
 	if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 		Eventually(func(g Gomega) {
@@ -473,19 +473,6 @@ func cleanUpTestProxy() {
 
 	err = k8sClient.Delete(ctx, &testProxyIngress)
 	Expect(err == nil || errors.IsNotFound(err)).To(BeTrue())
-}
-
-func createOrOverwriteResource(res client.Object) {
-	err := k8sClient.Create(ctx, res)
-	if errors.IsAlreadyExists(err) {
-		k8sClient.Delete(ctx, res)
-
-		Eventually(func(g Gomega) {
-			g.Expect(k8sClient.Create(ctx, res)).To(Succeed())
-		}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
-	} else {
-		Expect(err).To(Succeed())
-	}
 }
 
 func createControllerManagerForSuite() {

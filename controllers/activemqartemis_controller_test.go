@@ -6007,6 +6007,8 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(deployCondition.Message).To(ContainSubstring(debugArgsEnvVarName))
 			}, timeout, interval).Should(Succeed())
 
+			By("deleting the CR")
+			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
 
 		It("validate user directly using internal env vars", Label("invalid-internal-var-usage"), func() {
@@ -6899,10 +6901,6 @@ var _ = Describe("artemis controller", func() {
 			ctx := context.Background()
 			crd := generateArtemisSpec(defaultNamespace)
 
-			crd.Spec.DeploymentPlan.LivenessProbe = &corev1.Probe{
-				InitialDelaySeconds: 1,
-				PeriodSeconds:       2,
-			}
 			crd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
 				InitialDelaySeconds: 1,
 				PeriodSeconds:       2,

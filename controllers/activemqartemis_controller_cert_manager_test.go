@@ -69,6 +69,8 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 	var installedCertManager bool = false
 
 	BeforeEach(func() {
+		BeforeEachSpec()
+
 		if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 			//if cert manager/trust manager is not installed, install it
 			if !CertManagerInstalled() {
@@ -110,6 +112,8 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 				installedCertManager = false
 			}
 		}
+
+		AfterEachSpec()
 	})
 
 	Context("cert-manager cert with java store", Label("cert-mgr-cert-as-java-store"), func() {
@@ -1034,7 +1038,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 				g.Expect(condition.Status).To(Equal(metav1.ConditionFalse))
 				g.Expect(condition.Reason).To(Equal(brokerv1beta1.DeployedConditionCrudKindErrorReason))
 				g.Expect(condition.Message).To(ContainSubstring(bundleName))
-			}, timeout, interval).Should(Succeed())
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			By("updating bundle: " + bundleName)
 			Eventually(func(g Gomega) {
