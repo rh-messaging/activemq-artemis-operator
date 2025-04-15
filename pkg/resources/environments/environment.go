@@ -3,7 +3,6 @@ package environments
 import (
 	"strconv"
 
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/random"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -11,38 +10,6 @@ const (
 	NameEnvVar             = "AMQ_NAME"
 	NameEnvVarDefaultValue = "amq-broker"
 )
-
-// TODO: Remove this blatant hack
-var GLOBAL_AMQ_CLUSTER_USER string = ""
-var GLOBAL_AMQ_CLUSTER_PASSWORD string = ""
-
-type defaults struct {
-	AMQ_USER             string
-	AMQ_PASSWORD         string
-	AMQ_CLUSTER_USER     string
-	AMQ_CLUSTER_PASSWORD string
-}
-
-var Defaults defaults
-
-func init() {
-	if "" == Defaults.AMQ_USER {
-		Defaults.AMQ_USER = random.GenerateRandomString(8)
-	}
-	if "" == Defaults.AMQ_PASSWORD {
-		Defaults.AMQ_PASSWORD = random.GenerateRandomString(8)
-	}
-	if "" == Defaults.AMQ_CLUSTER_USER {
-		Defaults.AMQ_CLUSTER_USER = random.GenerateRandomString(8)
-		// TODO: remove this hack
-		GLOBAL_AMQ_CLUSTER_USER = Defaults.AMQ_CLUSTER_USER
-	}
-	if "" == Defaults.AMQ_CLUSTER_PASSWORD {
-		Defaults.AMQ_CLUSTER_PASSWORD = random.GenerateRandomString(8)
-		// TODO: remove this hack
-		GLOBAL_AMQ_CLUSTER_PASSWORD = Defaults.AMQ_CLUSTER_PASSWORD
-	}
-}
 
 func ResolveBrokerNameFromEnvs(envs []corev1.EnvVar, defaultValue string) string {
 	if len(envs) > 0 {
