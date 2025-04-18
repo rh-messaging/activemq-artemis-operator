@@ -218,8 +218,13 @@ func main() {
 		}
 	}
 
+	defaultNamespaces := make([]string, 0, len(mgrOptions.Cache.DefaultNamespaces))
+	for defaultNamespace := range mgrOptions.Cache.DefaultNamespaces {
+		defaultNamespaces = append(defaultNamespaces, defaultNamespace)
+	}
+
 	setupLog.Info("Manager options",
-		"Namespaces", mgrOptions.Cache.DefaultNamespaces,
+		"Namespaces", defaultNamespaces,
 		"MetricsBindAddress", mgrOptions.Metrics.BindAddress,
 		"Port", mgrOptions.WebhookServer.(*webhook.DefaultServer).Options.Port,
 		"HealthProbeBindAddress", mgrOptions.HealthProbeBindAddress,
