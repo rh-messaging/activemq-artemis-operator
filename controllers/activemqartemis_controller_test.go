@@ -8011,6 +8011,49 @@ var _ = Describe("artemis controller", func() {
 
 			CleanResource(&crd, crd.Name, defaultNamespace)
 		})
+
+		It("Checking storage size mal configured", func() {
+
+			By("By creating a new crd")
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+
+			crd.Spec.DeploymentPlan = brokerv1beta1.DeploymentPlanType{
+				Size:               common.Int32ToPtr(1),
+				PersistenceEnabled: true,
+				Storage: brokerv1beta1.StorageType{
+					Size: "2GI", // note wrong capital I
+				},
+			}
+
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			key := types.NamespacedName{Name: crd.Name, Namespace: defaultNamespace}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, key, &crd)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			By("verifying status")
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, key, &crd)).Should(Succeed())
+
+				g.Expect(common.IsConditionPresentAndEqualIgnoringMessage(crd.Status.Conditions, metav1.Condition{
+					Type:   brokerv1beta1.DeployedConditionType,
+					Status: metav1.ConditionFalse,
+					Reason: brokerv1beta1.DeployedConditionValidationFailedReason,
+				})).Should(BeTrue())
+
+				condition := meta.FindStatusCondition(crd.Status.Conditions, brokerv1beta1.ValidConditionType)
+				g.Expect(condition).NotTo(BeNil())
+
+				By("checking message" + fmt.Sprintf("%v", condition.Message))
+				g.Expect(condition.Message).To(ContainSubstring("Size"))
+			}, timeout, interval).Should(Succeed())
+
+			CleanResource(&crd, crd.Name, defaultNamespace)
+		})
 	})
 
 	It("populateValidatedUser", func() {
@@ -10057,6 +10100,136 @@ var _ = Describe("artemis controller", func() {
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 			}
 
+			Expect(k8sClient.Delete(ctx, secret)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, &crd)).To(Succeed())
+		})
+
+		It("complex extraSecret with JSON broker properties with quote and -bp suffix", func() {
+
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+
+			loggingData := make(map[string]string)
+			loggingData[LoggingConfigKey] = `appender.stdout.name = STDOUT
+		appender.stdout.type = Console
+		rootLogger = info, STDOUT
+		logger.activemq.name=org.apache.activemq.artemis.core.config.impl.ConfigurationImpl
+        logger.activemq.level=TRACE`
+
+			loggingConfigMap := configmaps.MakeConfigMap(defaultNamespace, "config-impl-logging-config", loggingData)
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Create(ctx, loggingConfigMap, &client.CreateOptions{})).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			secret := &corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "k8s.io.api.core.v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "y-bp",
+					Namespace: crd.ObjectMeta.Namespace,
+				},
+			}
+
+			secret.Data = map[string][]byte{
+				"config.json": []byte(`{}`),
+			}
+
+			crd.Spec.DeploymentPlan.ExtraMounts.Secrets = []string{secret.Name}
+			//loggingConfigMap
+			crd.Spec.DeploymentPlan.ExtraMounts.ConfigMaps = []string{loggingConfigMap.Name}
+
+			By("Deploying the -bp secret " + secret.ObjectMeta.Name)
+			Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
+
+			By("Deploying the CRD " + crd.ObjectMeta.Name)
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+				brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
+
+				By("verify status ok")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+
+					condition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType)
+					g.Expect(condition).NotTo(BeNil())
+					g.Expect(condition.Status).To(Equal(metav1.ConditionTrue))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				jolokia := jolokia.GetJolokia(k8sClient, crd.Name+"-ss-0."+crd.Name+"-hdls-svc.test.svc.cluster.local", "8161", "/console/jolokia", "", "", "http")
+
+				var hasFileChecksum bool = false
+				By("verify file checksum")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					// check for fileAlder32
+					data, err := jolokia.Read("org.apache.activemq.artemis:broker=\"amq-broker\"/Status")
+
+					if verbose {
+						fmt.Printf("\nStatus ERROR: %v : %v\n", data, err)
+					}
+					g.Expect(err).To(BeNil())
+					hasFileChecksum = strings.Contains(data.Value, "fileAlder32")
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				if hasFileChecksum {
+
+					By("Update json config with quote value")
+					createdSecret := corev1.Secret{}
+					Eventually(func(g Gomega) {
+
+						g.Expect(k8sClient.Get(ctx, client.ObjectKey{Name: secret.Name, Namespace: secret.Namespace}, &createdSecret)).To(Succeed())
+
+						createdSecret.Data["config.json"] = []byte(`{
+						"key.surround": "$$",
+						"addressSettings": {
+						  "a": {
+							"maxDeliveryAttempts": 0
+						  },
+						  "$$e.\"\"e$$": {
+							"maxDeliveryAttempts": 1
+						  },
+						  "b.b": {
+							"maxDeliveryAttempts": 2
+						  }
+						}
+					  }`)
+						g.Expect(k8sClient.Update(ctx, &createdSecret)).To(Succeed())
+
+					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+					By("verify status ok")
+					Eventually(func(g Gomega) {
+						g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+
+						condition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType)
+						g.Expect(condition).NotTo(BeNil())
+
+						g.Expect(condition.Status).To(Equal(metav1.ConditionTrue))
+
+						By("check applied address settings via jolokia")
+						for index, addr := range []string{"a", `e.\"\"e`, "b.b"} {
+							data, err := jolokia.Exec("", `{ "type":"EXEC","mbean":"org.apache.activemq.artemis:broker=\"amq-broker\"","operation":"getAddressSettingsAsJSON(java.lang.String)","arguments":["`+addr+`"] }`)
+
+							if verbose {
+								fmt.Printf("\nSettings ERROR: %s : %v\n", addr, err)
+							}
+							g.Expect(err).To(BeNil())
+							if verbose {
+								fmt.Printf("\nSettings: %s : %v\n", addr, data.Value)
+							}
+							g.Expect(data.Value).Should(ContainSubstring(`"maxDeliveryAttempts":`+strconv.Itoa(index)), data.Value)
+						}
+
+					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				}
+			}
+
+			Expect(k8sClient.Delete(ctx, loggingConfigMap)).To(Succeed())
 			Expect(k8sClient.Delete(ctx, secret)).To(Succeed())
 			Expect(k8sClient.Delete(ctx, &crd)).To(Succeed())
 		})
