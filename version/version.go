@@ -47,7 +47,7 @@ var SupportedActiveMQArtemisVersions = []string{
 }
 
 var ActiveMQArtemisVersionfromFullVersion map[string]string = map[string]string{
-	"8.0.0": "2.41.0.temporary-redhat-00044",
+	"8.0.0": "2.41.0.temporary-redhat-00045",
 }
 
 func CompactActiveMQArtemisVersion(version string) string {
