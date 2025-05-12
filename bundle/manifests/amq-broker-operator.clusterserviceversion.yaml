@@ -2868,6 +2868,33 @@ spec:
                 - --leader-elect
                 command:
                 - /home/amq-broker-operator/bin/entrypoint
+                env:
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_800
+                  value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:4615379473eaddf9849afa05666623339ca44fdf7b2ee0631ac998ae35703015
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_800
+                  value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:2c18306aa5e7552cfaf007d78eaab19d1b2d8c9f49d3905d39c44f383bd59d4d
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_800_ppc64le
+                  value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:4615379473eaddf9849afa05666623339ca44fdf7b2ee0631ac998ae35703015
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_800_ppc64le
+                  value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:2c18306aa5e7552cfaf007d78eaab19d1b2d8c9f49d3905d39c44f383bd59d4d
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_800_s390x
+                  value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:4615379473eaddf9849afa05666623339ca44fdf7b2ee0631ac998ae35703015
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_800_s390x
+                  value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:2c18306aa5e7552cfaf007d78eaab19d1b2d8c9f49d3905d39c44f383bd59d4d
+                - name: OPERATOR_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.labels['name']
+                - name: POD_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: WATCH_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.annotations['olm.targetNamespaces']
+                - name: ENABLE_WEBHOOKS
+                  value: "false"
                 image: registry.redhat.io/amq0/amq-broker-rhel9-operator@sha256:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
                 livenessProbe:
                   httpGet:
@@ -3105,4 +3132,9 @@ spec:
   provider:
     name: Red Hat
     url: https://www.redhat.com/
+  relatedImages:
+  - image: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:4615379473eaddf9849afa05666623339ca44fdf7b2ee0631ac998ae35703015
+    name: ""
+  - image: registry.redhat.io/amq8/amq-broker-rhel9@sha256:2c18306aa5e7552cfaf007d78eaab19d1b2d8c9f49d3905d39c44f383bd59d4d
+    name: ""
   version: 0.0.0-opr-1
