@@ -28,7 +28,6 @@ spec:
       protocols: amqp
       port: 5672
       sslEnabled: false
-      enabledProtocols: TLSv1,TLSv1.1,TLSv1.2
       needClientAuth: true
       wantClientAuth: true
       verifyHost: true
@@ -42,7 +41,6 @@ spec:
       host: localhost
       port: 22222
       sslEnabled: false
-      enabledProtocols: TLSv1,TLSv1.1,TLSv1.2
       needClientAuth: true
       wantClientAuth: true
       verifyHost: true
