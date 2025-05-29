@@ -20,6 +20,10 @@ metadata:
     features.operators.openshift.io/token-auth-gcp: "false"
     repository: https://github.com/arkmq-org/activemq-artemis-operator
     support: arkmq-org
+  labels:
+    operatorframework.io/arch.amd64: supported
+    operatorframework.io/arch.arm64: supported
+    operatorframework.io/os.linux: supported
   name: activemq-artemis-operator.v0.0.0
   namespace: placeholder
 spec:
