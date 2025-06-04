@@ -3409,7 +3409,7 @@ var _ = Describe("artemis controller", func() {
 	})
 
 	Context("PVC no gc test", func() {
-		It("deploy, verify, undeploy, verify", func() {
+		It("deploy, verify, undeploy, verify, redeploy, verify", func() {
 
 			crd := generateArtemisSpec(defaultNamespace)
 			crd.Spec.DeploymentPlan.PersistenceEnabled = true
@@ -3431,6 +3431,18 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
+				podName := namer.CrToSS(crd.Name) + "-0"
+
+				By("sending a message to 1")
+				Eventually(func(g Gomega) {
+
+					sendCmd := []string{"amq-broker/bin/artemis", "producer", "--user", "Jay", "--password", "activemq", "--url", "tcp://" + podName + ":61616", "--message-count", "1", "--destination", "queue://DLQ", "--verbose"}
+					content, err := RunCommandInPod(podName, crd.Name+"-container", sendCmd)
+					g.Expect(err).To(BeNil())
+					g.Expect(*content).Should(ContainSubstring("Produced: 1 messages"))
+
+				}, timeout, interval).Should(Succeed())
+
 				By("finding PVC")
 				pvcKey := types.NamespacedName{Namespace: defaultNamespace, Name: crd.Name + "-" + namer.CrToSS(crd.Name) + "-0"}
 				pvc := &corev1.PersistentVolumeClaim{}
@@ -3443,8 +3455,65 @@ var _ = Describe("artemis controller", func() {
 
 				Eventually(func(g Gomega) {
 					By("again finding PVC b/c it has not been gc'ed - " + pvcKey.Name)
-					g.Expect(k8sClient.Get(ctx, pvcKey, &corev1.PersistentVolumeClaim{})).Should(Succeed())
+					g.Expect(k8sClient.Get(ctx, pvcKey, pvc)).Should(Succeed())
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("retaining the PV " + crd.ObjectMeta.Name)
+				Eventually(func(g Gomega) {
+					pvKey := types.NamespacedName{Namespace: defaultNamespace, Name: pvc.Spec.VolumeName}
+					pv := &corev1.PersistentVolume{}
+
+					g.Expect(k8sClient.Get(ctx, pvKey, pv)).Should(Succeed())
+
+					pv.Spec.PersistentVolumeReclaimPolicy = corev1.PersistentVolumeReclaimRetain
+					Expect(k8sClient.Update(ctx, pv)).Should(Succeed())
+				}, timeout, interval).Should(Succeed())
+
+				By("deleting the PVC " + crd.ObjectMeta.Name)
+				Expect(k8sClient.Delete(ctx, pvc)).Should(Succeed())
+
+				By("updating the PV " + crd.ObjectMeta.Name)
+				Eventually(func(g Gomega) {
+					pvKey := types.NamespacedName{Namespace: defaultNamespace, Name: pvc.Spec.VolumeName}
+					pv := &corev1.PersistentVolume{}
+
+					g.Expect(k8sClient.Get(ctx, pvKey, pv)).Should(Succeed())
+
+					pv.Spec.ClaimRef.Name = crd.Name + "c-" + namer.CrToSS(crd.Name+"c") + "-0"
+					pv.Spec.ClaimRef.UID = ""
+					pv.Spec.ClaimRef.ResourceVersion = ""
+					g.Expect(k8sClient.Update(ctx, pv)).Should(Succeed())
+				}, timeout, interval).Should(Succeed())
+
+				By("Redeploying the CRD " + crd.ObjectMeta.Name)
+				newCrd := crd
+				newCrd.ResourceVersion = ""
+				newCrd.Name = crd.Name + "c"
+				Expect(k8sClient.Create(ctx, &newCrd)).Should(Succeed())
+
+				newCreatedCrd := &brokerv1beta1.ActiveMQArtemis{}
+				newBrokerKey := types.NamespacedName{Name: newCrd.Name, Namespace: defaultNamespace}
+
+				By("verifing started")
+				Eventually(func(g Gomega) {
+
+					g.Expect(k8sClient.Get(ctx, newBrokerKey, newCreatedCrd)).Should(Succeed())
+					g.Expect(len(newCreatedCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+					g.Expect(meta.IsStatusConditionTrue(newCreatedCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(newCreatedCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				newPodName := namer.CrToSS(newCrd.Name) + "-0"
+
+				By("Receiving a message from 0")
+				Eventually(func(g Gomega) {
+
+					rcvCmd := []string{"amq-broker/bin/artemis", "consumer", "--user", "Jay", "--password", "activemq", "--url", "tcp://" + newPodName + ":61616", "--message-count", "1", "--destination", "queue://DLQ", "--receive-timeout", "10000", "--break-on-null", "--verbose"}
+					content, err := RunCommandInPod(newPodName, newCrd.Name+"-container", rcvCmd)
+					g.Expect(err).To(BeNil())
+					g.Expect(*content).Should(ContainSubstring("JMS Message ID:"))
+
+				}, timeout, interval).Should(Succeed())
 			}
 		})
 	})

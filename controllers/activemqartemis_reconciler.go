@@ -1978,7 +1978,8 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) PodTemplateSpecForCR(customReso
 		mountPathRoot := secretPathBase + getPropertiesResourceNsName(customResource).Name
 		security_properties := newPropsWithHeader()
 		fmt.Fprintf(security_properties, "login.config.url.1=file:%s/login.config\n", mountPathRoot)
-		fmt.Fprintf(security_properties, "security.provider.6=de.dentrassi.crypto.pem.PemKeyStoreProvider\n")
+		fmt.Fprintf(security_properties, "security.provider.13=de.dentrassi.crypto.pem.PemKeyStoreProvider\n")
+		fmt.Fprintf(security_properties, "fips.provider.8=de.dentrassi.crypto.pem.PemKeyStoreProvider\n")
 
 		brokerPropertiesMapData["_security.config"] = security_properties.String()
 
