@@ -181,7 +181,7 @@ var _ = Describe("artemis controller 2", func() {
 					candidate.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{
 						corev1.ReadWriteOnce,
 					}
-					candidate.Spec.Resources = corev1.ResourceRequirements{
+					candidate.Spec.Resources = corev1.VolumeResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceStorage: resource.MustParse("16Mi"),
 						},
@@ -285,7 +285,7 @@ var _ = Describe("artemis controller 2", func() {
 					candidate.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{
 						corev1.ReadWriteOnce,
 					}
-					candidate.Spec.Resources = corev1.ResourceRequirements{
+					candidate.Spec.Resources = corev1.VolumeResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceStorage: resource.MustParse("16Mi"),
 						},
@@ -310,7 +310,7 @@ var _ = Describe("artemis controller 2", func() {
 								AccessModes: []corev1.PersistentVolumeAccessMode{
 									corev1.ReadWriteOnce,
 								},
-								Resources: corev1.ResourceRequirements{
+								Resources: corev1.VolumeResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceName(corev1.ResourceStorage): resource.MustParse("16Mi"),
 									},
@@ -361,7 +361,7 @@ var _ = Describe("artemis controller 2", func() {
 								AccessModes: []corev1.PersistentVolumeAccessMode{
 									corev1.ReadWriteOnce,
 								},
-								Resources: corev1.ResourceRequirements{
+								Resources: corev1.VolumeResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceName(corev1.ResourceStorage): resource.MustParse("16Mi"),
 									},

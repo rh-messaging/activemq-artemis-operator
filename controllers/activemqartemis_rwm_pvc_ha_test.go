@@ -64,7 +64,7 @@ var _ = Describe("shared store fast failover", func() {
 				pvc.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{
 					corev1.ReadWriteMany,
 				}
-				pvc.Spec.Resources = corev1.ResourceRequirements{
+				pvc.Spec.Resources = corev1.VolumeResourceRequirements{
 					Requests: corev1.ResourceList{
 						corev1.ResourceStorage: resource.MustParse("1Mi"),
 					},
