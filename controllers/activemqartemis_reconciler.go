@@ -1955,6 +1955,8 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) PodTemplateSpecForCR(customReso
 
 	reconciler.configureContianerSecurityContext(container, customResource.Spec.DeploymentPlan.ContainerSecurityContext)
 
+	container.TerminationMessagePolicy = corev1.TerminationMessageFallbackToLogsOnError
+
 	containerPorts := MakeContainerPorts(customResource)
 	if len(containerPorts) > 0 {
 		reqLogger.V(1).Info("Adding new ports to main", "len", len(containerPorts))
@@ -2282,6 +2284,8 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) PodTemplateSpecForCR(customReso
 	initContainer.Resources = customResource.Spec.DeploymentPlan.Resources
 
 	reconciler.configureContianerSecurityContext(initContainer, customResource.Spec.DeploymentPlan.ContainerSecurityContext)
+
+	initContainer.TerminationMessagePolicy = corev1.TerminationMessageFallbackToLogsOnError
 
 	var initCmds []string
 	var initCfgRootDir = "/init_cfg_root"
