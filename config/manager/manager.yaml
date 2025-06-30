@@ -90,5 +90,6 @@ spec:
             port: 8081
           initialDelaySeconds: 5
           periodSeconds: 10
+        terminationMessagePolicy: FallbackToLogsOnError
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
