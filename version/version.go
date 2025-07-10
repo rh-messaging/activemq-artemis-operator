@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	Version = "7.12.4.OPR.1"
+	Version = "7.12.5.OPR.1"
 
 	//Vars injected at build-time
 	BuildTimestamp = ""
