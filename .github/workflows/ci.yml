@@ -76,11 +76,11 @@ jobs:
 
       - name: Execute tests
         if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' && !inputs.skipTests }}
-        run: make OPERATOR_IMAGE_REPO=localhost/$IMAGE_NAME OPERATOR_VERSION=dev.latest test-mk-v
+        run: IMG="localhost/$IMAGE_NAME:dev.latest" make test-mk-v
 
       - name: Execute do tests
         if: ${{ github.event_name != 'workflow_dispatch' || !inputs.skipDOTests }}
-        run: make OPERATOR_IMAGE_REPO=localhost/$IMAGE_NAME OPERATOR_VERSION=dev.latest test-mk-do-v
+        run: IMG="localhost/$IMAGE_NAME:dev.latest" make test-mk-do-v
 
       - name: Run scorecard tests
         run: make scorecard | tee scorecard.log && ! grep 'Suggestions' scorecard.log
