@@ -271,7 +271,7 @@ metadata:
       ]
     capabilities: Seamless Upgrades
     categories: Streaming & Messaging
-    containerImage: quay.io/arkmq-org/activemq-artemis-operator:2.0.2
+    containerImage: quay.io/arkmq-org/activemq-artemis-operator:2.0.3
     createdAt: "2025-04-04 14:35:00"
     description: An operator for managing the Apache ActiveMQ Artemis message broker
     features.operators.openshift.io/cnf: "false"
@@ -292,7 +292,7 @@ metadata:
     operatorframework.io/arch.amd64: supported
     operatorframework.io/arch.arm64: supported
     operatorframework.io/os.linux: supported
-  name: activemq-artemis-operator.v2.0.2
+  name: activemq-artemis-operator.v2.0.3
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -2942,7 +2942,7 @@ spec:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
                 - name: ENABLE_WEBHOOKS
                   value: "false"
-                image: quay.io/arkmq-org/activemq-artemis-operator:2.0.2
+                image: quay.io/arkmq-org/activemq-artemis-operator:2.0.3
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -3290,4 +3290,4 @@ spec:
     name: activemq-artemis-broker-init-2410
   - image: quay.io/arkmq-org/activemq-artemis-broker-kubernetes@sha256:decb3932ebb5b848b90a4a23b083f0cb5237eec2844095d8c58a6798da8bb999
     name: activemq-artemis-broker-kubernetes-2410
-  version: 2.0.2
+  version: 2.0.3

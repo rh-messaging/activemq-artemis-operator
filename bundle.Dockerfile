@@ -23,4 +23,4 @@ COPY bundle/tests/scorecard /tests/scorecard/
 LABEL name="arkmq-org/activemq-artemis-operator-bundle"
 LABEL description="ActiveMQ Artemis Broker Operator Bundle"
 LABEL maintainer="arkmq-org <info@arkmq.org>"
-LABEL version="2.0.2"
+LABEL version="2.0.3"
