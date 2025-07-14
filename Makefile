@@ -125,8 +125,8 @@ manifests: controller-gen
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
-	sed -i "s~Version = \"${CURRENT_VERSION}\"~Version = \"${VERSION}\"~" version/version.go
-	sed -i "s~^LABEL version=.*~LABEL version=\"${VERSION}\"~g" Dockerfile
+	sed -i 's~\tVersion = ".*"~\tVersion = "$(VERSION)"~' version/version.go
+	sed -i 's~^LABEL version=.*~LABEL version="$(VERSION)"~g' Dockerfile
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
