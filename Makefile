@@ -3,10 +3,10 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 2.0.2
+VERSION ?= 2.0.3
 
 KUBE_CLI=kubectl
-OPERATOR_VERSION := 2.0.2
+OPERATOR_VERSION := 2.0.3
 OPERATOR_ACCOUNT_NAME := activemq-artemis-operator
 OPERATOR_CLUSTER_ROLE_NAME := operator-role
 OPERATOR_IMAGE_REPO := quay.io/arkmq-org/activemq-artemis-operator
@@ -125,8 +125,8 @@ manifests: controller-gen
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
-	sed -i "s~Version = \"${CURRENT_VERSION}\"~Version = \"${VERSION}\"~" version/version.go
-	sed -i "s~^LABEL version=.*~LABEL version=\"${VERSION}\"~g" Dockerfile
+	sed -i 's~\tVersion = ".*"~\tVersion = "$(VERSION)"~' version/version.go
+	sed -i 's~^LABEL version=.*~LABEL version="$(VERSION)"~g' Dockerfile
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
