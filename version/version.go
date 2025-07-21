@@ -71,7 +71,7 @@ var ActiveMQArtemisVersionfromFullVersion map[string]string = map[string]string{
 	"7.12.3": "2.33.0.redhat-00016",
 	"7.13.0": "2.40.0.redhat-00004",
 	"7.12.4": "2.33.0.redhat-00017",
-	"7.13.1": "2.40.0.redhat-00004",
+	"7.13.1": "2.40.0.redhat-00006",
 }
 
 func CompactActiveMQArtemisVersion(version string) string {
