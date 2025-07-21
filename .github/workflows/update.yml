@@ -2,6 +2,7 @@ name: Update
 
 env:
   IMAGE_NAME: activemq-artemis-broker
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 on:
   workflow_dispatch:
