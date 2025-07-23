@@ -2,6 +2,7 @@ name: Release
 
 env:
   IMAGE_NAME: activemq-artemis-operator
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 on:
   workflow_dispatch:

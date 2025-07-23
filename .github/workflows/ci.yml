@@ -2,6 +2,7 @@ name: CI
 
 env:
   IMAGE_NAME: activemq-artemis-operator
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 on:
   push:
