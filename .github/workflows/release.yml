@@ -6,6 +6,12 @@ env:
 
 on:
   workflow_dispatch:
+    inputs:
+      force_release_tag:
+        description: 'Force release tag'
+        required: true
+        default: false
+        type: boolean
 
 jobs:
   build:
@@ -37,7 +43,7 @@ jobs:
           if [ "$RELEASE_TAG_COMMIT" != "$HEAD_COMMIT" ]; then
             git config user.name 'arkmq-bot'
             git config user.email 'bot@arkmq-org.io'
-            git tag -a ${RELEASE_TAG} -m ${RELEASE_TAG} --force
+            git tag -a ${RELEASE_TAG} -m ${RELEASE_TAG} $([ "${{ inputs.force_release_tag }}" = "true" ] && echo '--force')
             git push origin $RELEASE_TAG --force
           fi
 
