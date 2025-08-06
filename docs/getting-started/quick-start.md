@@ -28,14 +28,31 @@ resource.
 Currently the operator is tested against kubernetes v1.25 and above.
 You can install a [Minikube](https://minikube.sigs.k8s.io/docs/) or a [CodeReady Containers(CRC)](https://developers.redhat.com/products/openshift-local/overview) to deploy the operator.
 
-## Getting the code and build the image
+## Install the operator
+There are multiple methods of installing the operator: [from releases](#install-the-operator-from-releases), [from OperatorHub.io](#install-the-operator-from-operatorhubio) and [from sources](#install-the-operator).
 
-To launch the operator you will need to clone the [activemq-artemis-operator](https://github.com/arkmq-org/activemq-artemis-operator) and checkout the main branch.
+### Install the operator from releases
+In order to install the operator from the latest release is by running the following command:
+```shell
+kubectl apply -f https://github.com/arkmq-org/activemq-artemis-operator/releases/latest/download/activemq-artemis-operator.yaml
+```
+You can also install a specific version the operator. i.e. to install the version `v2.0.5`
+```shell
+kubectl apply -f https://github.com/arkmq-org/activemq-artemis-operator/releases/download/v2.0.5/activemq-artemis-operator.yaml
+```
 
-(Optional) Follow the [building](../help/building.md) instructions, tag, and push it into your project
-namespace.
+### Install the operator from OperatorHub.io
+In order to install the operator from OperatorHub.io, first be sure that you have a Kubernetes cluster with [OLM](https://olm.operatorframework.io/) then run the following command:
+```shell
+kubectl create -f https://operatorhub.io/install/activemq-artemis-operator.yaml
+```
+For further details see https://operatorhub.io/operator/activemq-artemis-operator
 
-## Deploying the operator
+### Install the operator from sources
+In order to install the operator from sources, first clone the git repository with the following command:
+```shell
+git clone https://github.com/arkmq-org/activemq-artemis-operator.git
+```
 
 Create the namespace activemq-artemis-operator and save it for all subsequent kubectl commands
 ```shell
@@ -407,9 +424,6 @@ secret/newlog4j-logging-config created
 ```
 
 and use the [example](../../examples/artemis/artemis_custom_logging_configmap.yaml)
-
-
-## 
 
 ## Undeploying the operator
 
