@@ -5,10 +5,7 @@ generatorOptions:
   disableNameSuffixHash: true
 
 patches:
-- path: amq_broker_manager_related_images.yaml
-  target:
-    kind: Deployment
-- path: amq_broker_manager_labels.yaml
+- path: activemq_artemis_manager_related_images.yaml
   target:
     kind: Deployment
 
@@ -16,5 +13,5 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 images:
 - name: controller
-  newName: registry.redhat.io/amq0/amq-broker-rhel9-operator
-  newTag: amq-broker-8.0-rhel-9-containers-candidate-43339-20250911123730
+  newName: quay.io/arkmq-org/activemq-artemis-operator
+  newTag: 2.0.5
