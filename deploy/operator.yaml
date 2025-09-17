@@ -152,7 +152,7 @@ spec:
               fieldPath: metadata.namespace
         - name: ENABLE_WEBHOOKS
           value: "false"
-        image: quay.io/arkmq-org/activemq-artemis-operator:2.0.5
+        image: quay.io/arkmq-org/activemq-artemis-operator:2.0.6
         livenessProbe:
           httpGet:
             path: /healthz
