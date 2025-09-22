@@ -53,7 +53,7 @@ jobs:
             }
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '1.23.9'
           cache: true
@@ -103,7 +103,7 @@ jobs:
       - name: Get changed files in tutorials
         id: changed-tutorial-files
         if: github.event_name == 'pull_request'
-        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@v47
         with:
           files: docs/tutorials/**
 
@@ -121,7 +121,7 @@ jobs:
           minikube start --insecure-registry=$HOSTNAME:5000
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 18.x
 
