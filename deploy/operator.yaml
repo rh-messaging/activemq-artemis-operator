@@ -22,7 +22,7 @@ spec:
         control-plane: controller-manager
         name: amq-broker-operator
         rht.comp: Broker_AMQ
-        rht.comp_ver: 7.13.1
+        rht.comp_ver: 7.13.2
         rht.prod_name: Red_Hat_Integration
         rht.prod_ver: 2025.Q3
         rht.subcomp: broker-amq-operator
