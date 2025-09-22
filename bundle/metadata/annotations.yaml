@@ -14,15 +14,15 @@ annotations:
   operators.operatorframework.io.test.mediatype.v1: scorecard+v1
   operators.operatorframework.io.test.config.v1: tests/scorecard/
 
-  name: "amq0/amq-broker-rhel9-operator-bundle"
-  description: "Red Hat AMQ Broker 0.0 Operator Bundle"
+  name: "amq8/amq-broker-rhel9-operator-bundle"
+  description: "Red Hat AMQ Broker 8.0 Operator Bundle"
   maintainer: "Roddie Kieley <rkieley@redhat.com>"
-  version: "0.0.0-opr-1"
-  summary: "Red Hat AMQ Broker 0.0 Operator Bundle"
-  amq.broker.version: "0.0.0-opr-1"
+  version: "8.0.0-opr-1"
+  summary: "Red Hat AMQ Broker 8.0 Operator Bundle"
+  amq.broker.version: "8.0.0-opr-1"
   com.redhat.component: "amq-broker-rhel9-operator-bundle-container"
   com.redhat.delivery.backport: false
   com.redhat.delivery.operator.bundle: true
   com.redhat.openshift.versions: "v4.12"
-  io.k8s.display-name: "Red Hat AMQ Broker 0.0 Operator Bundle"
+  io.k8s.display-name: "Red Hat AMQ Broker 8.0 Operator Bundle"
   io.openshift.tags: "messaging,amq,integration,operator,golang"
