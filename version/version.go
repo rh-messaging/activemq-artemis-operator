@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	Version = "2.0.6"
+	Version = "0.0.0.OPR.1"
 
 	//Vars injected at build-time
 	BuildTimestamp = ""
@@ -16,11 +16,11 @@ var (
 
 const (
 	// LatestVersion product version supported
-	LatestVersion        = "2.42.0"
-	CompactLatestVersion = "2420"
+	LatestVersion        = "0.0.0"
+	CompactLatestVersion = "7xx"
 
-	LatestKubeImage = "quay.io/arkmq-org/activemq-artemis-broker-kubernetes:artemis." + LatestVersion
-	LatestInitImage = "quay.io/arkmq-org/activemq-artemis-broker-init:artemis." + LatestVersion
+	LatestKubeImage = "registry.redhat.io/amq0/amq-broker-rhel9:0.0.0" + LatestVersion
+	LatestInitImage = "registry.redhat.io/amq0/amq-broker-init-rhel9:0.0.0" + LatestVersion
 )
 
 var (
@@ -80,85 +80,19 @@ func DefaultImageName(archSpecificRelatedImageEnvVarName string) string {
 }
 
 var FullVersionFromCompactVersion map[string]string = map[string]string{
-	"2210": "2.21.0",
-	"2220": "2.22.0",
-	"2230": "2.23.0",
-	"2250": "2.25.0",
-	"2260": "2.26.0",
-	"2270": "2.27.0",
-	"2271": "2.27.1",
-	"2280": "2.28.0",
-	"2290": "2.29.0",
-	"2300": "2.30.0",
-	"2310": "2.31.0",
-	"2312": "2.31.2",
-	"2320": "2.32.0",
-	"2330": "2.33.0",
-	"2340": "2.34.0",
-	"2350": "2.35.0",
-	"2360": "2.36.0",
-	"2370": "2.37.0",
-	"2380": "2.38.0",
-	"2390": "2.39.0",
-	"2400": "2.40.0",
-	"2410": "2.41.0",
-	"2420": "2.42.0",
 }
 
 // The yacfg profile to use for a given full version of broker
 var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
-	"2.21.0": "2.21.0",
-	"2.22.0": "2.21.0",
-	"2.23.0": "2.21.0",
-	"2.25.0": "2.21.0",
-	"2.26.0": "2.21.0",
-	"2.27.0": "2.21.0",
-	"2.27.1": "2.21.0",
-	"2.28.0": "2.21.0",
-	"2.29.0": "2.21.0",
-	"2.30.0": "2.21.0",
-	"2.31.0": "2.21.0",
-	"2.31.2": "2.21.0",
-	"2.32.0": "2.21.0",
-	"2.33.0": "2.21.0",
-	"2.34.0": "2.21.0",
-	"2.35.0": "2.21.0",
-	"2.36.0": "2.21.0",
-	"2.37.0": "2.21.0",
-	"2.38.0": "2.21.0",
-	"2.39.0": "2.21.0",
-	"2.40.0": "2.21.0",
-	"2.41.0": "2.21.0",
-	"2.42.0": "2.21.0",
 }
 
-var YacfgProfileName string = "artemis"
+var YacfgProfileName string = "amq_broker"
 
 // Sorted array of supported ActiveMQ Artemis versions
 var SupportedActiveMQArtemisVersions = []string{
-	"2.21.0",
-	"2.22.0",
-	"2.23.0",
-	"2.25.0",
-	"2.26.0",
-	"2.27.0",
-	"2.27.1",
-	"2.28.0",
-	"2.29.0",
-	"2.30.0",
-	"2.31.0",
-	"2.31.2",
-	"2.32.0",
-	"2.33.0",
-	"2.34.0",
-	"2.35.0",
-	"2.36.0",
-	"2.37.0",
-	"2.38.0",
-	"2.39.0",
-	"2.40.0",
-	"2.41.0",
-	"2.42.0",
+}
+
+var ActiveMQArtemisVersionfromFullVersion map[string]string = map[string]string{
 }
 
 func CompactActiveMQArtemisVersion(version string) string {
