@@ -9231,51 +9231,51 @@ spec:
         - /home/activemq-artemis-operator/bin/entrypoint
         env:
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2150
-          value: quay.io/arkmq-org/activemq-artemis-broker-init:0.2.2
+          value: quay.io/arkmq-org/activemq-artemis-broker-init@sha256:edbec2276270c2f890572daf9141390bc33b5cf75621eca6e10f11bb144944f3
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2150
+          value: quay.io/arkmq-org/activemq-artemis-broker-kubernetes@sha256:39f34248f112751b7835f746016990046d21374a6514cb528632e0b06c76616b
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2160
-          value: quay.io/arkmq-org/activemq-artemis-broker-init:0.2.4
+          value: quay.io/arkmq-org/activemq-artemis-broker-init@sha256:4fa0e5420f0f3fc3669b2268de12abcf441e3b70babf07a5fbdac1b946ab33d0
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2160
+          value: quay.io/arkmq-org/activemq-artemis-broker-kubernetes@sha256:005074711b2af77d56309e18e44cd9a7bd7c49b0982ae312d7ca2b120100b351
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2180
-          value: quay.io/arkmq-org/activemq-artemis-broker-init:0.2.10
+          value: quay.io/arkmq-org/activemq-artemis-broker-init@sha256:58b4effb8b83666c59adb657149dc0f037604254b4cd538de0cfaf50f9c14ddd
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2180
+          value: quay.io/arkmq-org/activemq-artemis-broker-kubernetes@sha256:474de621b3c892a7fdcb992a7c03b496f39f70c78d23f3c9159294e2db7b4bd4
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2200
-          value: quay.io/arkmq-org/activemq-artemis-broker-init:1.0.0
+          value: quay.io/arkmq-org/activemq-artemis-broker-init@sha256:b05852acb764caa16bec496eef108f5f9b66d8f300e09a0a267b7eaf4c910596
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2200
+          value: quay.io/arkmq-org/activemq-artemis-broker-kubernetes@sha256:de52f034dc04bbf1c3a7a68f3ff040d76730bfb64b760c4420526c924613c1a0
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2210
-          value: quay.io/arkmq-org/activemq-artemis-broker-init:1.0.2
+          value: quay.io/arkmq-org/activemq-artemis-broker-init@sha256:f63ba7261c3f9b81d3c29251a584a74b153109482753a20a960acf65bd851601
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2210
+          value: quay.io/arkmq-org/activemq-artemis-broker-kubernetes@sha256:661931ae563086458a15b387e9d7b2561a64b48d4790529f636ed78cf399f579
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2220
-          value: quay.io/arkmq-org/activemq-artemis-broker-init:1.0.5
+          value: quay.io/arkmq-org/activemq-artemis-broker-init@sha256:895512e378006bc519d0b28196f61eabff27c6800e3a2951b21a19ac74cd5579
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2220
+          value: quay.io/arkmq-org/activemq-artemis-broker-kubernetes@sha256:a34bcbf7585078a178e464f047e2f670eb0217ac66e409b08c4da0594f5907d3
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2230
-          value: quay.io/arkmq-org/activemq-artemis-broker-init:1.0.7
+          value: quay.io/arkmq-org/activemq-artemis-broker-init@sha256:c9e0442ed7a2f3d378e52b92b85d6bfbf650896948890ef912e7bedf478fea52
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2230
+          value: quay.io/arkmq-org/activemq-artemis-broker-kubernetes@sha256:f3e8ebad14c2385e47b260113beb7d6467f834aa04bc37eb12bc9bbc92b7b8b7
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2250
           value: quay.io/arkmq-org/activemq-artemis-broker-init@sha256:e2438670831bad39bb08147bbebe67ef9465899fb7750f1a5a185569f99d5fb5
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2260
-          value: quay.io/arkmq-org/activemq-artemis-broker-init@sha256:634f3d8fd620607b56e0360a191d23a9cb8a32ba0ba1f24fe20791ec52343586
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2270
-          value: quay.io/arkmq-org/activemq-artemis-broker-init@sha256:9bbb915855f29ea16950a3fd50d0b9bac25f82cba7d197579e04d9c33a5b02c4
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2271
-          value: quay.io/arkmq-org/activemq-artemis-broker-init@sha256:fc9b9a4c7550d84fd90335dd4f9e0d8d39c09136c6034b28490a368368cb11f1
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2280
-          value: quay.io/arkmq-org/activemq-artemis-broker-init@sha256:264b33a9aad90d32a41258904f35092a141d76dcef0c115d414475444100aace
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2150
-          value: quay.io/arkmq-org/activemq-artemis-broker-kubernetes:0.2.0
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2160
-          value: quay.io/arkmq-org/activemq-artemis-broker-kubernetes:0.2.1
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2180
-          value: quay.io/arkmq-org/activemq-artemis-broker-kubernetes:0.2.7
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2200
-          value: quay.io/arkmq-org/activemq-artemis-broker-kubernetes:1.0.0
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2210
-          value: quay.io/arkmq-org/activemq-artemis-broker-kubernetes:1.0.2
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2220
-          value: quay.io/arkmq-org/activemq-artemis-broker-kubernetes:1.0.5
-        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2230
-          value: quay.io/arkmq-org/activemq-artemis-broker-kubernetes:1.0.7
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2250
           value: quay.io/arkmq-org/activemq-artemis-broker-kubernetes@sha256:2d155bffd246f26f516a6075ec170babc1373c72bb664cba4e3c58521ffd3558
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2260
+          value: quay.io/arkmq-org/activemq-artemis-broker-init@sha256:634f3d8fd620607b56e0360a191d23a9cb8a32ba0ba1f24fe20791ec52343586
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2260
           value: quay.io/arkmq-org/activemq-artemis-broker-kubernetes@sha256:f25db980c3229e66cf48690aa175f6f93e3dce3974c0e70ab23af6462e7d1893
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2270
+          value: quay.io/arkmq-org/activemq-artemis-broker-init@sha256:9bbb915855f29ea16950a3fd50d0b9bac25f82cba7d197579e04d9c33a5b02c4
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2270
           value: quay.io/arkmq-org/activemq-artemis-broker-kubernetes@sha256:a4628c2591ec06caf21a3467f6e3faeaede7fa402b4f137d943b25b4dd4ad343
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2271
+          value: quay.io/arkmq-org/activemq-artemis-broker-init@sha256:fc9b9a4c7550d84fd90335dd4f9e0d8d39c09136c6034b28490a368368cb11f1
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2271
           value: quay.io/arkmq-org/activemq-artemis-broker-kubernetes@sha256:2895b2cf6292c951a0cdde78e755514f5d7cb43ce9f7b6e7dc381d8dfeec31ab
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2280
+          value: quay.io/arkmq-org/activemq-artemis-broker-init@sha256:264b33a9aad90d32a41258904f35092a141d76dcef0c115d414475444100aace
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2280
           value: quay.io/arkmq-org/activemq-artemis-broker-kubernetes@sha256:42230ce9d11a1949a5bb73b6ee218b1581f585bcd553485ee438e1c5b50fcf8b
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2290
