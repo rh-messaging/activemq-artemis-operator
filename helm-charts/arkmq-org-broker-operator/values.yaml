@@ -16,7 +16,7 @@ controllerManager:
         type: RuntimeDefault
     image:
       repository: quay.io/arkmq-org/activemq-artemis-operator
-      tag: 2.0.6
+      tag: 2.1.0
     relatedImages:
       activemqArtemisBrokerInitRepository: quay.io/arkmq-org/activemq-artemis-broker-init
       activemqArtemisBrokerKubernetesRepository: quay.io/arkmq-org/activemq-artemis-broker-kubernetes
