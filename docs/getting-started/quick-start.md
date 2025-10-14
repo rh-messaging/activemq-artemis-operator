@@ -29,16 +29,31 @@ Currently the operator is tested against kubernetes v1.25 and above.
 You can install a [Minikube](https://minikube.sigs.k8s.io/docs/) or a [CodeReady Containers(CRC)](https://developers.redhat.com/products/openshift-local/overview) to deploy the operator.
 
 ## Install the operator
-There are multiple methods of installing the operator: [from releases](#install-the-operator-from-releases), [from OperatorHub.io](#install-the-operator-from-operatorhubio) and [from sources](#install-the-operator).
+There are multiple methods of installing the operator: [from releases](#install-the-operator-from-releases), [from helm charts](#install-the-operator-from-helm-charts), [from OperatorHub.io](#install-the-operator-from-operatorhubio) and [from sources](#install-the-operator-from-sources).
 
 ### Install the operator from releases
 In order to install the operator from the latest release is by running the following command:
 ```shell
 kubectl apply -f https://github.com/arkmq-org/activemq-artemis-operator/releases/latest/download/activemq-artemis-operator.yaml
 ```
-You can also install a specific version the operator. i.e. to install the version `v2.0.5`
+You can also install a specific operator version, i.e. to install the version `2.0.5`
 ```shell
 kubectl apply -f https://github.com/arkmq-org/activemq-artemis-operator/releases/download/v2.0.5/activemq-artemis-operator.yaml
+```
+
+### Install the operator from helm charts
+In order to install the operator from helm charts, first be sure that you have [Helm](https://helm.sh/) v3.8.0 or a more recent version installed then run the following command:
+```shell
+helm install my-arkmq-org-broker-operator oci://quay.io/arkmq-org/helm-charts/arkmq-org-broker-operator
+```
+You can also install a specific operator version, i.e. to install the version `2.0.7`
+```shell
+helm install my-arkmq-org-broker-operator oci://quay.io/arkmq-org/helm-charts/arkmq-org-broker-operator --version 2.0.7
+```
+Use the `--set` option to customize the default [values](https://github.com/arkmq-org/activemq-artemis-operator/blob/main/helm-charts/arkmq-org-broker-operator/values.yaml),
+i.e. to install the operator without the CRDs:
+```shell
+helm install my-arkmq-org-broker-operator oci://quay.io/arkmq-org/helm-charts/arkmq-org-broker-operator --set crds.apply=false
 ```
 
 ### Install the operator from OperatorHub.io
