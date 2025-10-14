@@ -46,9 +46,9 @@ In order to install the operator from helm charts, first be sure that you have [
 ```shell
 helm install my-arkmq-org-broker-operator oci://quay.io/arkmq-org/helm-charts/arkmq-org-broker-operator
 ```
-You can also install a specific operator version, i.e. to install the version `2.0.7`
+You can also install a specific operator version, i.e. to install the version `2.1.0`
 ```shell
-helm install my-arkmq-org-broker-operator oci://quay.io/arkmq-org/helm-charts/arkmq-org-broker-operator --version 2.0.7
+helm install my-arkmq-org-broker-operator oci://quay.io/arkmq-org/helm-charts/arkmq-org-broker-operator --version 2.1.0
 ```
 Use the `--set` option to customize the default [values](https://github.com/arkmq-org/activemq-artemis-operator/blob/main/helm-charts/arkmq-org-broker-operator/values.yaml),
 i.e. to install the operator without the CRDs:
