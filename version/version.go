@@ -134,7 +134,7 @@ var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
 
 var YacfgProfileName string = "artemis"
 
-// Sorted array of supported ActiveMQ Artemis versions
+// Sorted array of supported Apache ActiveMQ Artemis versions
 var SupportedActiveMQArtemisVersions = []string{
 	"2.21.0",
 	"2.22.0",

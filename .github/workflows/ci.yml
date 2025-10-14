@@ -172,31 +172,29 @@ jobs:
 
       - name: Build and push catalog image
         run: |
-          make CATALOG_IMG=${HOSTNAME}:5000/$IMAGE_NAME-catalog:dev.latest catalog-build catalog-push
+          make CATALOG_IMG=${HOSTNAME}:5000/arkmq-org-broker-operator-catalog:dev.latest catalog-build catalog-push
       
       - name: Install olm and verify pod readiness
         run: |
           ./bin/operator-sdk olm install
-
-           echo "Waiting for OLM pods to be ready..."
-           minikube kubectl -- wait pod -l app=catalog-operator --for=condition=Ready --namespace=olm --timeout=2m
-           minikube kubectl -- wait pod -l app=olm-operator --for=condition=Ready --namespace=olm --timeout=2m
+          minikube kubectl -- wait pod -l app=catalog-operator --for=condition=Ready --namespace=olm --timeout=2m
+          minikube kubectl -- wait pod -l app=olm-operator --for=condition=Ready --namespace=olm --timeout=2m
 
       - name: Create and verify catalog source
         run: |
-          sed "s~image:.*~image: ${HOSTNAME}:5000/$IMAGE_NAME-catalog:dev.latest~" examples/catalog/catalog-source.yaml | minikube kubectl -- create -f -
-          minikube kubectl -- wait catalogsource activemq-artemis-operator-source --for=jsonpath='{.status.connectionState.lastObservedState}'=READY --namespace=operators --timeout=3m ||
-          minikube kubectl -- get catalogsource activemq-artemis-operator-source --namespace operators -o yaml
-          minikube kubectl -- wait pod -l olm.catalogSource=activemq-artemis-operator-source --for=condition=Ready --namespace=operators --timeout=3m ||
-          minikube kubectl -- describe pod -l olm.catalogSource=activemq-artemis-operator-source --namespace=operators
+          sed "s~image:.*~image: ${HOSTNAME}:5000/arkmq-org-broker-operator-catalog:dev.latest~" examples/catalog/catalog-source.yaml | minikube kubectl -- create -f -
+          minikube kubectl -- wait catalogsource arkmq-org-broker-operator-catalog-source --for=jsonpath='{.status.connectionState.lastObservedState}'=READY --namespace=operators --timeout=3m ||
+          minikube kubectl -- get catalogsource arkmq-org-broker-operator-catalog-source --namespace operators -o yaml
+          minikube kubectl -- wait pod -l olm.catalogSource=arkmq-org-broker-operator-catalog-source --for=condition=Ready --namespace=operators --timeout=3m ||
+          minikube kubectl -- describe pod -l olm.catalogSource=arkmq-org-broker-operator-catalog-source --namespace=operators
          
       - name: Create and verify subscription
         run: |
           minikube kubectl -- create -f ./examples/catalog/subscription.yaml
-          minikube kubectl -- wait subscription activemq-artemis-operator-subscription --for=jsonpath='{.status.installplan.kind}'=InstallPlan --namespace=operators --timeout=3m ||
-          minikube kubectl -- get subscription activemq-artemis-operator-subscription --namespace=operators -o yaml
-          minikube kubectl -- wait installplan -l operators.coreos.com/activemq-artemis-operator.operators='' --for=condition=Installed --namespace=operators --timeout=3m ||
-          minikube kubectl -- get installplan -l operators.coreos.com/activemq-artemis-operator.operators='' --namespace=operators -o yaml
+          minikube kubectl -- wait subscription arkmq-org-broker-operator-subscription --for=jsonpath='{.status.installplan.kind}'=InstallPlan --namespace=operators --timeout=3m ||
+          minikube kubectl -- get subscription arkmq-org-broker-operator-subscription --namespace=operators -o yaml
+          minikube kubectl -- wait installplan -l operators.coreos.com/arkmq-org-broker-operator.operators='' --for=condition=Installed --namespace=operators --timeout=3m ||
+          minikube kubectl -- get installplan -l operators.coreos.com/arkmq-org-broker-operator.operators='' --namespace=operators -o yaml
           minikube kubectl -- wait pod -l name=activemq-artemis-operator --for=condition=Ready --namespace=operators --timeout=3m ||
           minikube kubectl -- get pod -l name=activemq-artemis-operator --namespace=operators -o yaml
 

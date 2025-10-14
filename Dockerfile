@@ -70,6 +70,6 @@ USER ${USER_UID}
 ENTRYPOINT ["${USER_HOME}/bin/entrypoint"]
 
 LABEL name="arkmq-org/activemq-artemis-operator"
-LABEL description="ActiveMQ Artemis Broker Operator"
+LABEL description="ArkMQ Broker Operator"
 LABEL maintainer="Roddie Kieley <rkieley@redhat.com>"
 LABEL version="2.0.6"

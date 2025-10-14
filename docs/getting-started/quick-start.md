@@ -20,7 +20,7 @@ other kubernetes or OpenShift environments may require minor adjustment.
 
 One important note about operators in general is that to get the operator
 installed requires cluster-admin level privileges. Once installed, a regular
-user should be able to install ActiveMQ Artemis via the provided custom
+user should be able to install Apache ActiveMQ Artemis via the provided custom
 resource.
 
 ## General environment requirements

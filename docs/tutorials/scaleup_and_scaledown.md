@@ -36,7 +36,7 @@ NAME                                         READY   STATUS    RESTARTS   AGE
 activemq-artemis-operator-58bb658f4c-m9rfr   1/1     Running   0          2m46s
 ```
 
-### Step 2 - Deploy ActiveMQ Artemis broker
+### Step 2 - Deploy Apache ActiveMQ Artemis broker
 In this step we'll setup a one-node broker in kubernetes. First we need create a broker custom resource file.
 
 Use your favorite text editor to create a file called **artemis-clustered.yaml** under your repo root directory with the following content:

@@ -117,7 +117,7 @@ kubectl wait pod --all --for=condition=Ready --namespace=send-receive-project --
 pod/activemq-artemis-controller-manager-6f4f5f699f-9mtzf condition met
 ```
 
-### Deploy the ActiveMQ Artemis Broker
+### Deploy the Apache ActiveMQ Artemis Broker
 
 For this tutorial we need to:
 
