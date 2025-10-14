@@ -105,6 +105,12 @@ jobs:
           docker tag $IMAGE_NAME-bundle:latest quay.io/${{ secrets.QUAY_NAMESPACE }}/$IMAGE_NAME-bundle:latest &&
           docker push quay.io/${{ secrets.QUAY_NAMESPACE }}/$IMAGE_NAME-bundle:latest
 
+      - name: Push helm charts
+        run: |
+          helm package helm-charts/arkmq-org-broker-operator/
+          helm registry login --username=${{ secrets.QUAY_USERNAME }} --password=${{ secrets.QUAY_PASSWORD }} quay.io
+          helm push arkmq-org-broker-operator-*.tgz oci://quay.io/${{ secrets.QUAY_NAMESPACE }}/helm-charts
+
       - name: Create GitHub release
         run: |
           RELEASE_TAG="$(git describe --exact-match --tags)"
