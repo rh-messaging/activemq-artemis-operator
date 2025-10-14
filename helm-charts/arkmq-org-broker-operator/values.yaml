@@ -73,7 +73,7 @@ controllerManager:
       activemqArtemisBrokerInit2410:
         digest: sha256:f10983c68aff358e285d89d827c27b3487a3ee3b8e121cdaa295bf5fa8501145
       activemqArtemisBrokerInit2420:
-        digest: sha256:3d2bd413d85ecc3bd5fedab18402de029679e3760ed2be7982d37e6b8bcb5b59
+        digest: sha256:ac9e2d43313412f8c3b4f7687181fa8cdb111937ecb19ad6f416618da8f347a4
       activemqArtemisBrokerKubernetes2150:
         digest: sha256:39f34248f112751b7835f746016990046d21374a6514cb528632e0b06c76616b
       activemqArtemisBrokerKubernetes2160:
