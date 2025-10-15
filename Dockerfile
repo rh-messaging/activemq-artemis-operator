@@ -41,7 +41,7 @@ RUN cp -r $REMOTE_SOURCE_DIR/app/* .
 # when is executed on nodes that are booted into FIPS mode.
 RUN CGO_ENABLED=1 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -ldflags="-X '${GO_MODULE}/version.BuildTimestamp=`date '+%Y-%m-%dT%H:%M:%S'`'" -o manager main.go
 
-FROM registry.access.redhat.com/ubi9-minimal:9.6-1755695350 AS base-env
+FROM registry.access.redhat.com/ubi9-minimal:9.6-1758184547 AS base-env
 
 ENV BROKER_NAME=activemq-artemis
 ENV USER_UID=1000
@@ -70,6 +70,6 @@ USER ${USER_UID}
 ENTRYPOINT ["${USER_HOME}/bin/entrypoint"]
 
 LABEL name="arkmq-org/activemq-artemis-operator"
-LABEL description="ActiveMQ Artemis Broker Operator"
+LABEL description="ArkMQ Broker Operator"
 LABEL maintainer="Roddie Kieley <rkieley@redhat.com>"
-LABEL version="2.0.6"
+LABEL version="2.1.0"

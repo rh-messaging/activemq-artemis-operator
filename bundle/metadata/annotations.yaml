@@ -3,7 +3,7 @@ annotations:
   operators.operatorframework.io.bundle.mediatype.v1: registry+v1
   operators.operatorframework.io.bundle.manifests.v1: manifests/
   operators.operatorframework.io.bundle.metadata.v1: metadata/
-  operators.operatorframework.io.bundle.package.v1: arkmq-org-activemq-artemis-operator
+  operators.operatorframework.io.bundle.package.v1: arkmq-org-broker-operator
   operators.operatorframework.io.bundle.channels.v1: stable
   operators.operatorframework.io.bundle.channel.default.v1: stable
   operators.operatorframework.io.metrics.builder: operator-sdk-v1.28.0
@@ -15,7 +15,7 @@ annotations:
   operators.operatorframework.io.test.config.v1: tests/scorecard/
 
   name: "arkmq-org/activemq-artemis-operator-bundle"
-  description: "ActiveMQ Artemis Broker Operator Bundle"
+  description: "ArkMQ Broker Operator Bundle"
   maintainer: "arkmq-org <info@arkmq.org>"
-  version: "2.0.6"
+  version: "2.1.0"
   com.redhat.openshift.versions: "v4.12"

@@ -32,7 +32,7 @@ The following CRD's are available for the Operator and can be found in the Opera
 
 ### Additional resources
 
-To learn how to install the ActiveMQ Artemis Operator (and all included CRDs) using:
+To learn how to install the ArkMQ Broker Operator (and all included CRDs) using:
 
 The Kubernetes CLI, see [Installing the Operator](#installing-the-operator-using-the-cli)
 
@@ -48,7 +48,7 @@ Sample Custom Reference can be found in the Operator Repository under the *deplo
 
 This section describes some important considerations when planning an Operator-based deployment
 
-Deploying the Custom Resource Definitions (CRDs) that accompany the ActiveMQ Artemis Operator requires cluster administrator 
+Deploying the Custom Resource Definitions (CRDs) that accompany the ArkMQ Broker Operator requires cluster administrator 
 privileges for your Kubernetes cluster. When the Operator is deployed, non-administrator users can create broker instances 
 via corresponding Custom Resources (CRs). To enable regular users to deploy CRs, the cluster administrator must first assign 
 roles and permissions to the CRDs. For more information, see Creating cluster roles for Custom Resource Definitions in the 
@@ -255,7 +255,7 @@ Deploy the scaledown controller CRD.
 $ kubectl create -f deploy/crds/broker_activemqartemisscaledown_crd.yaml
 ```
 
-In the deploy directory of the Operator archive that you downloaded and extracted, open the operator.yaml file. Ensure that the value of the spec.containers.image property is set to the latest Operator image for ActiveMQ Artemis, as shown below.
+In the deploy directory of the Operator archive that you downloaded and extracted, open the operator.yaml file. Ensure that the value of the spec.containers.image property is set to the latest ArkMQ Broker Operator image, as shown below.
 ```yaml
 spec:
     template:
@@ -289,7 +289,7 @@ In addition, if you click the Logs tab within the Pod, the output should include
 The preceding output confirms that the newly-deployed Operator is communicating with Kubernetes, that the controllers for 
 the broker and addressing are running, and that these controllers have started some workers.
 
-It is recommended that you deploy only a single instance of the ActiveMQ Artemis Operator in a given Kubernetes project. 
+It is recommended that you deploy only a single instance of the ArkMQ Broker Operator in a given Kubernetes project. 
 Setting the replicas element of your Operator deployment to a value greater than 1, or deploying the Operator more than 
 once in the same project is not recommended.
 
@@ -307,7 +307,7 @@ Prerequisites
 
 1. You must have already installed the arkmq-org Operator.
 
-2. To use the Kubernetes command-line interface (CLI) to install the ActiveMQ Artemis Operator, see [Installing the Operator](#installing-the-operator-using-the-cli).
+2. To use the Kubernetes command-line interface (CLI) to install the ArkMQ Broker Operator, see [Installing the Operator](#installing-the-operator-using-the-cli).
 
 When you have successfully installed the Operator, the Operator is running and listening for changes related to your CRs. 
 This example procedure shows how to use a CR instance to deploy a basic broker in your project.
@@ -336,15 +336,15 @@ spec:
     ...
 ```
 
-Observe that the sample CR uses a naming convention of **ex-aao**. This naming convention denotes that the CR is an example 
-resource for the arkmq-org (based on the ActiveMQ Artemis project) Operator. When you deploy this sample CR, the resulting 
-Stateful Set uses the name **ex-aao-ss**. Furthermore, broker Pods in the deployment are directly based on the StatefulSet name, 
-for example, **ex-aao-ss-0**, **ex-aao-ss-1**, and so on. 
+When you deploy this sample CR with the name **ex-aao**, the resulting Stateful Set uses the name **ex-aao-ss**.
+Furthermore, broker Pods in the deployment are directly based on the StatefulSet name, for example, **ex-aao-ss-0**,
+**ex-aao-ss-1**, and so on. 
 
 The size value specifies the number of brokers to deploy. The default value of 2 specifies a clustered broker deployment 
 of two brokers. However, to deploy a single broker instance, change the value to 1.
 
-The image value specifies the container image to use to launch the broker. It uses the **placeholder** key to identify that the operator should choose the latest supported broker image.
+The image value specifies the container image to use to launch the broker. It uses the **placeholder** key to identify
+that the operator should choose the latest supported broker image.
 
 Save the CR file.
 
@@ -1082,7 +1082,7 @@ In cases where a rollout of the stateful set is necessitated via a new feature o
 
 ## Enable broker's metrics plugin
 
-The ActiveMQ Artemis Broker comes with a metrics plugin to expose metrics data. The metrics data can be collected by tools such as Prometheus and visualized by tools such as Grafana.
+The ArkMQ ActiveMQ Artemis Broker container image comes with a metrics plugin to expose metrics data. The metrics data can be collected by tools such as Prometheus and visualized by tools such as Grafana.
 By default, the metrics plugin is disabled.
 To instruct the Operator to enable metrics for each broker Pod in a deployment, you must set the value of the `deploymentPlan.enableMetricsPlugin` property to true in the Custom Resource (CR) instance used to create the deployment.
 In addition, you need to expose the console, for example

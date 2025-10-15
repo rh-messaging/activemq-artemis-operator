@@ -37,7 +37,7 @@ A locked-down broker (`spec.restricted=true`) enhances security by disabling
 anonymous access, enabling client certificate authentication, and relying on
 `cert-manager` for certificate lifecycle management.
 
-This tutorial results in a fully secured ActiveMQ Artemis
+This tutorial results in a fully secured Apache ActiveMQ Artemis
 broker with comprehensive monitoring, where all communication uses mutual TLS
 authentication and real-time messaging metrics are observable through a
 Grafana dashboard.
@@ -110,8 +110,8 @@ operation:
 ```mermaid
 graph TD
     subgraph app_monitoring ["Application & Monitoring (locked-down-broker ns)"]
-        Operator["ActiveMQ Artemis Operator"]
-        ArtemisBroker["ActiveMQ Artemis Broker"]
+        Operator["ArkMQ Broker Operator"]
+        ArtemisBroker["Apache ActiveMQ Artemis Broker"]
 
         subgraph messaging_clients ["Messaging Clients"]
             Producer["Producer Job"]
@@ -1861,8 +1861,8 @@ minikube delete --profile tutorialtester
 ## Conclusion
 
 This tutorial demonstrated how to deploy a production-ready, security-first
-ActiveMQ Artemis broker with comprehensive monitoring on Kubernetes. You now
-understand how to:
+Apache ActiveMQ Artemis broker with comprehensive monitoring on Kubernetes.
+You now understand how to:
 
 * **Implement Zero-Trust Messaging:** All broker communication requires mutual
   TLS authentication using certificates issued by a managed PKI.

@@ -4,7 +4,7 @@ FROM scratch
 LABEL operators.operatorframework.io.bundle.mediatype.v1=registry+v1
 LABEL operators.operatorframework.io.bundle.manifests.v1=manifests/
 LABEL operators.operatorframework.io.bundle.metadata.v1=metadata/
-LABEL operators.operatorframework.io.bundle.package.v1=arkmq-org-activemq-artemis-operator
+LABEL operators.operatorframework.io.bundle.package.v1=arkmq-org-broker-operator
 LABEL operators.operatorframework.io.bundle.channels.v1=stable
 LABEL operators.operatorframework.io.bundle.channel.default.v1=stable
 LABEL operators.operatorframework.io.metrics.builder=operator-sdk-v1.28.0
@@ -21,7 +21,7 @@ COPY bundle/metadata /metadata/
 COPY bundle/tests/scorecard /tests/scorecard/
 
 LABEL name="arkmq-org/activemq-artemis-operator-bundle"
-LABEL description="ActiveMQ Artemis Broker Operator Bundle"
+LABEL description="ArkMQ Broker Operator Bundle"
 LABEL maintainer="arkmq-org <info@arkmq.org>"
-LABEL version="2.0.6"
+LABEL version="2.1.0"
 LABEL com.redhat.openshift.versions="v4.12"

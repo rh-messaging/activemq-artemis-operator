@@ -44,10 +44,10 @@ For the `CATALOG_IMG`, refer to the [Build a catalog image](#build-a-catalog-ima
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
-  name: activemq-artemis-operator-source
+  name: arkmq-org-broker-operator-catalog-source
   namespace: operators
 spec:
-  displayName: ActiveMQ Artemis Operators
+  displayName: ArkMQ Broker Operator Catalog Source
   image: quay.io/my-org/activemq-artemis-operator-catalog:latest
   sourceType: grpc
 ```
@@ -94,9 +94,9 @@ activemq-artemis-controller-manager-54c99b9df6-6xdzh              1/1     Runnin
 activemq-artemis-operator-source-g94fd                            1/1     Running     0          58m
 ```
 
-## Create a single ActiveMQ Artemis
+## Deploy a single Apache ActiveMQ Artemis
 
-This step creates a single ActiveMQ Artemis broker instance by applying the custom resource (CR) defined in artemis_single.yaml file.
+The following command line deployes a single Apache ActiveMQ Artemis broker instance by applying the ActiveMQArtemis custom resource (CR) defined in artemis_single.yaml file:
 
 ```$xslt
 $ kubectl apply -f examples/artemis/artemis_single.yaml
