@@ -5634,7 +5634,7 @@ spec:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
                 - name: ENABLE_WEBHOOKS
                   value: "false"
-                image: registry.redhat.io/amq8/amq-broker-rhel9-operator@sha256:ada540d03404f4fb752a4842fa84d62a2d875cc91f99ff27c4d9dfbc319f6359
+                image: registry.redhat.io/amq8/amq-broker-rhel9-operator@sha256:f2388eb4ae02a0acda67555da70eddd3978d259d39b8b939a0e46295ce5e0914
                 livenessProbe:
                   httpGet:
                     path: /healthz
