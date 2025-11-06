@@ -7148,8 +7148,7 @@ var _ = Describe("artemis controller", func() {
 									"spec": map[string]interface{}{
 										"containers": []interface{}{
 											map[string]interface{}{
-												// support for variable substutition is non trivial (and not done) for an unstuctured type
-												"name": crd.Name + /* "$(CR_NAME) */ "-container", // merge on name key
+												"name": "$(CR_NAME)-container", // merge on name key
 												"securityContext": map[string]interface{}{
 													"runAsNonRoot": true,
 												},
@@ -7207,6 +7206,115 @@ var _ = Describe("artemis controller", func() {
 			}
 			// cleanup
 			CleanResource(&crd, crd.Name, defaultNamespace)
+		})
+
+		testApplyingPatchWithincompatibleStructureToStatefulSet := func(invalidValue string) {
+
+			By("By creating a crd with template")
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+
+			crd.Spec.ResourceTemplates = []brokerv1beta1.ResourceTemplate{
+				{
+					Selector: &brokerv1beta1.ResourceSelector{Kind: ptr.To("StatefulSet")},
+					Patch: &unstructured.Unstructured{
+						Object: map[string]interface{}{
+							"kind": "StatefulSet",
+							"spec": map[string]interface{}{
+								"template": map[string]interface{}{
+									"spec": map[string]interface{}{
+										// invalid value for containers, it should be a slice
+										"containers": invalidValue,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+			brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
+
+			By("verifying deployment error via Status")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+				deployedCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)
+				g.Expect(deployedCondition).NotTo(BeNil())
+				g.Expect(deployedCondition.Status).To(Equal(metav1.ConditionFalse))
+				g.Expect(deployedCondition.Reason).To(Equal(brokerv1beta1.DeployedConditionCrudKindErrorReason))
+				g.Expect(deployedCondition.Message).To(ContainSubstring("error applying strategic merge patch"))
+				g.Expect(deployedCondition.Message).To(ContainSubstring("cannot restore slice from string"))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			CleanResource(&crd, crd.Name, defaultNamespace)
+		}
+
+		It("expect error applying strategic merge patch with incompatible structure to StatefulSet", func() {
+			testApplyingPatchWithincompatibleStructureToStatefulSet("INVALID_VALUE")
+		})
+
+		It("expect error applying strategic merge patch with variable incompatible structure to StatefulSet", func() {
+			testApplyingPatchWithincompatibleStructureToStatefulSet("INVALID_VALUE_$(CR_NAME)")
+		})
+
+		testCreatingPatchedStatefulSetWithInvalidFieldValue := func(invalidValue string,
+			getExpectedInvalidValue func(*brokerv1beta1.ActiveMQArtemis) string) {
+
+			By("By creating a crd with template")
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+
+			crd.Spec.ResourceTemplates = []brokerv1beta1.ResourceTemplate{
+				{
+					Selector: &brokerv1beta1.ResourceSelector{Kind: ptr.To("StatefulSet")},
+					Patch: &unstructured.Unstructured{
+						Object: map[string]interface{}{
+							"kind": "StatefulSet",
+							"spec": map[string]interface{}{
+								// invalid value for podManagementPolicy, allowed values are "OrderedReady" or "Parallel"
+								"podManagementPolicy": invalidValue,
+							},
+						},
+					},
+				},
+			}
+
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+			brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
+
+			By("verifying deployment error via Status")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+				deployedCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)
+				g.Expect(deployedCondition).NotTo(BeNil())
+				g.Expect(deployedCondition.Status).To(Equal(metav1.ConditionFalse))
+				g.Expect(deployedCondition.Reason).To(Equal(brokerv1beta1.DeployedConditionCrudKindErrorReason))
+				g.Expect(deployedCondition.Message).To(ContainSubstring("failed to create new *v1.StatefulSet"))
+				g.Expect(deployedCondition.Message).To(ContainSubstring(getExpectedInvalidValue(&crd)))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			Expect(false).To(BeTrue())
+
+			CleanResource(&crd, crd.Name, defaultNamespace)
+		}
+
+		It("expect error creating patched StatefulSet with invalid field value", func() {
+			testCreatingPatchedStatefulSetWithInvalidFieldValue("INVALID_VALUE",
+				func(crd *brokerv1beta1.ActiveMQArtemis) string {
+					return "INVALID_VALUE"
+				})
+		})
+
+		It("expect error creating patched StatefulSet with variable invalid field value", func() {
+			testCreatingPatchedStatefulSetWithInvalidFieldValue("INVALID_VALUE_$(CR_NAME)",
+				func(crd *brokerv1beta1.ActiveMQArtemis) string {
+					return "INVALID_VALUE_" + crd.Name
+				})
 		})
 	})
 

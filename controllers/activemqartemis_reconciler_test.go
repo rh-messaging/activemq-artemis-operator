@@ -967,8 +967,19 @@ func TestProcess_TemplateCustomAttributeMisSpellingIngress(t *testing.T) {
 }
 
 func TestProcess_TemplateCustomAttributeContainerSecurityContext(t *testing.T) {
+	testTemplateCustomAttributeContainerSecurityContext(t, false)
+}
 
+func TestProcess_TemplateCustomAttributeContainerSecurityContextWithCRNameVar(t *testing.T) {
+	testTemplateCustomAttributeContainerSecurityContext(t, true)
+}
+
+func testTemplateCustomAttributeContainerSecurityContext(t *testing.T, withCRNameVar bool) {
 	var kindMatchSs string = "StatefulSet"
+	var containerName string = "cr-container"
+	if withCRNameVar {
+		containerName = "$(CR_NAME)-container"
+	}
 
 	cr := &brokerv1beta1.ActiveMQArtemis{
 		ObjectMeta: metav1.ObjectMeta{Name: "cr"},
@@ -984,7 +995,7 @@ func TestProcess_TemplateCustomAttributeContainerSecurityContext(t *testing.T) {
 								"spec": map[string]interface{}{
 									"containers": []interface{}{
 										map[string]interface{}{
-											"name": "cr-container", // merge on name key
+											"name": containerName, // merge on name key
 											"securityContext": map[string]interface{}{
 												"runAsNonRoot": true,
 											},
@@ -1421,6 +1432,75 @@ func TestGetBrokerHost(t *testing.T) {
 
 	ingressHost = formatTemplatedString(&cr, specIngressHost, "2", "my-console", "abc")
 	assert.Equal(t, "test-test-ns-my-console-2-abc.my-domain.com", ingressHost)
+}
+
+func TestFormatTemplatedStringWithInvalidVariables(t *testing.T) {
+	cr := brokerv1beta1.ActiveMQArtemis{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test-ns",
+			Name:      "test",
+		},
+		Spec: brokerv1beta1.ActiveMQArtemisSpec{
+			IngressDomain: "my-domain.com",
+		},
+	}
+
+	assert.Equal(t, "test-$(UNKNOWN_VAR)", formatTemplatedString(&cr, "test-$(UNKNOWN_VAR)", "", "", ""))
+	assert.Equal(t, "prefix-test-$(INVALID)-suffix", formatTemplatedString(&cr, "prefix-$(CR_NAME)-$(INVALID)-suffix", "0", "", ""))
+}
+
+func TestFormatTemplatedObject(t *testing.T) {
+	cr := brokerv1beta1.ActiveMQArtemis{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test-ns",
+			Name:      "test",
+		},
+		Spec: brokerv1beta1.ActiveMQArtemisSpec{
+			IngressDomain: "my-domain.com",
+		},
+	}
+
+	templatedValue := "$(CR_NAME)-$(CR_NAMESPACE)-$(ITEM_NAME)-$(BROKER_ORDINAL)-$(RES_TYPE).$(INGRESS_DOMAIN)"
+	templatedObject := map[string]interface{}{
+		"plain-string": "TEST",
+		"plain-int":    1,
+		"test-map": map[string]interface{}{
+			"test-map-key":        templatedValue,
+			"nested-plain-string": "TEST",
+			"nested-plain-int":    1,
+			"nested-test-array": []interface{}{
+				templatedValue,
+			},
+		},
+		"test-array": []interface{}{
+			templatedValue,
+			map[string]interface{}{
+				"nested-test-map-key": templatedValue,
+			},
+		},
+		"test-string": templatedValue,
+	}
+
+	var formattedObject map[string]interface{}
+
+	formattedObject = formatTemplatedObject(&cr, templatedObject, "0", "test-name-a", "test-type-A").(map[string]interface{})
+	testFormattedObject(t, formattedObject, "test-test-ns-test-name-a-0-test-type-A.my-domain.com")
+
+	formattedObject = formatTemplatedObject(&cr, templatedObject, "1", "test-name-b", "test-type-B").(map[string]interface{})
+	testFormattedObject(t, formattedObject, "test-test-ns-test-name-b-1-test-type-B.my-domain.com")
+}
+
+func testFormattedObject(t *testing.T, formattedObject map[string]interface{}, expectedString string) {
+	assert.Equal(t, "TEST", formattedObject["plain-string"])
+	assert.Equal(t, 1, formattedObject["plain-int"])
+	assert.Equal(t, expectedString, formattedObject["test-map"].(map[string]interface{})["test-map-key"])
+	assert.Equal(t, "TEST", formattedObject["test-map"].(map[string]interface{})["nested-plain-string"])
+	assert.Equal(t, 1, formattedObject["test-map"].(map[string]interface{})["nested-plain-int"])
+	assert.Equal(t, expectedString, formattedObject["test-map"].(map[string]interface{})["nested-test-array"].([]interface{})[0])
+	assert.Equal(t, expectedString, formattedObject["test-array"].([]interface{})[0])
+	assert.Equal(t, expectedString, formattedObject["test-array"].([]interface{})[1].(map[string]interface{})["nested-test-map-key"])
+	assert.Equal(t, expectedString, formattedObject["test-string"])
+
 }
 
 func TestParseBrokerPropertyWithOrdinal(t *testing.T) {
