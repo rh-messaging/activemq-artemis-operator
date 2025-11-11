@@ -22,6 +22,7 @@ YQ_VERSION := v4.46.1
 
 HELM_CHART_NAME := $(BUNDLE_PACKAGE)
 HELMIFY ?= $(LOCALBIN)/helmify
+HELMIFY_VERSION ?= v0.4.18
 
 # Check that the system's go version is compatible with the one stored in the
 # go.mod file.
@@ -420,7 +421,7 @@ scorecard: bundle ## Run scorecard
 .PHONY: helmify
 helmify: $(HELMIFY) ## Download helmify locally if necessary.
 $(HELMIFY): $(LOCALBIN)
-	test -s $(LOCALBIN)/helmify || GOBIN=$(LOCALBIN) go install github.com/arttor/helmify/cmd/helmify@latest
+	test -s $(LOCALBIN)/helmify || GOBIN=$(LOCALBIN) go install github.com/arttor/helmify/cmd/helmify@$(HELMIFY_VERSION)
 
 helm-charts: manifests kustomize helmify yq helm
 	$(KUSTOMIZE) build config/default | $(HELMIFY) -crd-dir -original-name -image-pull-secrets helm-charts/$(HELM_CHART_NAME)
