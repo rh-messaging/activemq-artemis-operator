@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# set byte-value collation for consistent sorting behavior
+LC_COLLATE=C
+
 version=$1
 dir=$2
 YQ=${3:-yq}
