@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	Version = "8.0.0.OPR.1"
+	Version = "2.1.0"
 
 	//Vars injected at build-time
 	BuildTimestamp = ""
@@ -16,11 +16,11 @@ var (
 
 const (
 	// LatestVersion product version supported
-	LatestVersion        = "8.0.0"
-	CompactLatestVersion = "800"
+	LatestVersion        = "2.43.0"
+	CompactLatestVersion = "2430"
 
-	LatestKubeImage = "registry.redhat.io/amq8/amq-broker-rhel9:8.0.0"
-	LatestInitImage = "registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0"
+	LatestKubeImage = "quay.io/arkmq-org/activemq-artemis-broker-kubernetes:artemis." + LatestVersion
+	LatestInitImage = "quay.io/arkmq-org/activemq-artemis-broker-init:artemis." + LatestVersion
 )
 
 var (
@@ -80,23 +80,88 @@ func DefaultImageName(archSpecificRelatedImageEnvVarName string) string {
 }
 
 var FullVersionFromCompactVersion map[string]string = map[string]string{
-	"800": "8.0.0",
+	"2210": "2.21.0",
+	"2220": "2.22.0",
+	"2230": "2.23.0",
+	"2250": "2.25.0",
+	"2260": "2.26.0",
+	"2270": "2.27.0",
+	"2271": "2.27.1",
+	"2280": "2.28.0",
+	"2290": "2.29.0",
+	"2300": "2.30.0",
+	"2310": "2.31.0",
+	"2312": "2.31.2",
+	"2320": "2.32.0",
+	"2330": "2.33.0",
+	"2340": "2.34.0",
+	"2350": "2.35.0",
+	"2360": "2.36.0",
+	"2370": "2.37.0",
+	"2380": "2.38.0",
+	"2390": "2.39.0",
+	"2400": "2.40.0",
+	"2410": "2.41.0",
+	"2420": "2.42.0",
+	"2430": "2.43.0",
 }
 
 // The yacfg profile to use for a given full version of broker
 var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
-	"8.0.0": "7.10.0",
+	"2.21.0": "2.21.0",
+	"2.22.0": "2.21.0",
+	"2.23.0": "2.21.0",
+	"2.25.0": "2.21.0",
+	"2.26.0": "2.21.0",
+	"2.27.0": "2.21.0",
+	"2.27.1": "2.21.0",
+	"2.28.0": "2.21.0",
+	"2.29.0": "2.21.0",
+	"2.30.0": "2.21.0",
+	"2.31.0": "2.21.0",
+	"2.31.2": "2.21.0",
+	"2.32.0": "2.21.0",
+	"2.33.0": "2.21.0",
+	"2.34.0": "2.21.0",
+	"2.35.0": "2.21.0",
+	"2.36.0": "2.21.0",
+	"2.37.0": "2.21.0",
+	"2.38.0": "2.21.0",
+	"2.39.0": "2.21.0",
+	"2.40.0": "2.21.0",
+	"2.41.0": "2.21.0",
+	"2.42.0": "2.21.0",
+	"2.43.0": "2.21.0",
 }
 
-var YacfgProfileName string = "amq_broker"
+var YacfgProfileName string = "artemis"
 
 // Sorted array of supported Apache ActiveMQ Artemis versions
 var SupportedActiveMQArtemisVersions = []string{
-	"8.0.0",
-}
-
-var ActiveMQArtemisVersionfromFullVersion map[string]string = map[string]string{
-	"8.0.0": "2.45.0.temporary-redhat-00016",
+	"2.21.0",
+	"2.22.0",
+	"2.23.0",
+	"2.25.0",
+	"2.26.0",
+	"2.27.0",
+	"2.27.1",
+	"2.28.0",
+	"2.29.0",
+	"2.30.0",
+	"2.31.0",
+	"2.31.2",
+	"2.32.0",
+	"2.33.0",
+	"2.34.0",
+	"2.35.0",
+	"2.36.0",
+	"2.37.0",
+	"2.38.0",
+	"2.39.0",
+	"2.40.0",
+	"2.41.0",
+	"2.42.0",
+	"2.43.0",
 }
 
 func CompactActiveMQArtemisVersion(version string) string {
