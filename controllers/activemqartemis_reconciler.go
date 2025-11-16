@@ -1023,10 +1023,9 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) applyTemplate(index int, templa
 
 			if targetAsUnstructured, err = converter.ToUnstructured(target); err == nil {
 				// patch, part of our CR, needs to be mutable
-				patch := make(map[string]interface{})
-				for k, v := range template.Patch.Object {
-					patch[k] = v
-				}
+				patch := formatTemplatedObject(reconciler.customResource, template.Patch.Object, ordinal, itemName, resType).(map[string]interface{})
+				reconciler.log.V(1).Info("Applying strategic merge patch", "formattedPatch", patch)
+
 				var patched strategicpatch.JSONMap
 				if patched, err = strategicpatch.StrategicMergeMapPatch(targetAsUnstructured, patch, target); err == nil {
 					err = converter.FromUnstructuredWithValidation(patched, target, true)
@@ -1038,6 +1037,25 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) applyTemplate(index int, templa
 		}
 	}
 	return nil
+}
+
+func formatTemplatedObject(customResource *brokerv1beta1.ActiveMQArtemis, object interface{}, ordinal string, itemName string, resType string) interface{} {
+	if objectMap, isObjectMap := object.(map[string]interface{}); isObjectMap {
+		targetMap := make(map[string]interface{})
+		for objectMapKey, objectMapValue := range objectMap {
+			targetMap[objectMapKey] = formatTemplatedObject(customResource, objectMapValue, ordinal, itemName, resType)
+		}
+		return targetMap
+	} else if objectArray, isObjectArray := object.([]interface{}); isObjectArray {
+		targetArray := make([]interface{}, len(objectArray))
+		for objectArrayIndex, objectArrayValue := range objectArray {
+			targetArray[objectArrayIndex] = formatTemplatedObject(customResource, objectArrayValue, ordinal, itemName, resType)
+		}
+		return targetArray
+	} else if objectString, isObjectString := object.(string); isObjectString {
+		return formatTemplatedString(customResource, objectString, ordinal, itemName, resType)
+	}
+	return object
 }
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) applyFormattedKeyValue(collection map[string]string, ordinal string, itemName string, resType string, key string, value string) {

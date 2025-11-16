@@ -776,6 +776,24 @@ spec:
 ## Custom Modifications via a Strategic Merge Patch
 
 Occasionally it is necessary to make customisations to the spec of a managed resource. The `resourceTemplate.patch` attribute can be used to apply such customisations. The `patch` is appled by the operator using a [strategic merge](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/update-api-object-kubectl-patch/#notes-on-the-strategic-merge-patch) before submitting to the api server.
+In the following example, the `spec.publishNotReadyAddresses` attribute of the services created by the operator is set to `false`:
+
+```yaml
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: broker
+spec:
+  resourceTemplates:
+  - selector:
+      kind: "Service"
+    patch:
+      kind: "Service"
+      spec:
+        publishNotReadyAddresses: false
+```
+
+The string values in the `patch` field support the following variables: $(CR_NAME), $(CR_NAMESPACE), $(BROKER_ORDINAL), $(ITEM_NAME), $(RES_NAME) and $(INGRESS_DOMAIN). They are replaced before applying the `patch`.
 In the following example, a custom security context is added to the internal broker container of the managed StatefulSet by patching just the required attribute. Note: `name` is the mergeKey, it must match that of the managed container with the CR.Name prefix:
 
 ```yaml
@@ -793,7 +811,7 @@ spec:
         template:
           spec:
             containers:
-            - name: "broker-container"
+            - name: "$(CR_NAME)-container"
               securityContext:
                 runAsNonRoot: true
 ```
