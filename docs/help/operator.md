@@ -1234,7 +1234,7 @@ spec:
 
 When deploying the above custom resource the operator will spread matching pods among the given topology
 
-### Container SecurityContext
+## Container SecurityContext
 
 The ActiveMQArtemis custom resource offers a container level SecurityContext option for the broker that holds security configuration that will be applied to the containers.
 
@@ -1249,6 +1249,68 @@ spec:
     containerSecurityContext:
       runAsNonRoot: true
 ```
+
+### Enabling Read-Only Root Filesystem
+
+You can configure the broker containers to use a read-only root filesystem for enhanced security. This prevents any writes to the container's root filesystem at runtime. To enable this feature, set `readOnlyRootFilesystem: true` in the container security context and provide the necessary writable volumes using resource templates.
+
+When the root filesystem is read-only, the broker needs writable volumes for:
+- `/home/jboss` - The broker instance directory
+- `/opt/jboss/container/jolokia/etc` - Jolokia agent configuration (when Jolokia is enabled)
+- `/tmp` - Temporary files created by readiness probe scripts
+
+Additionally, environment variables `APPLICATION_NAME` and `PING_SVC_NAME` must be explicitly set as the launch script cannot substitute them in the jgroups-ping.xml file when the root filesystem is read-only.
+
+Here's an example configuration:
+
+```yaml
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: broker
+  namespace: activemq-artemis-operator
+spec:
+  deploymentPlan:
+    jolokiaAgentEnabled: true
+    containerSecurityContext:
+      readOnlyRootFilesystem: true
+    resourceTemplates:
+      - selector:
+          kind: StatefulSet
+        patch:
+          kind: StatefulSet
+          spec:
+            template:
+              spec:
+                volumes:
+                  - name: jboss-home
+                    emptyDir: {}
+                  - name: jolokia-config
+                    emptyDir: {}
+                  - name: tmp-dir
+                    emptyDir: {}
+                initContainers:
+                  - name: $(CR_NAME)-container-init
+                    volumeMounts:
+                      - name: jboss-home
+                        mountPath: /home/jboss
+                containers:
+                  - name: $(CR_NAME)-container
+                    env:
+                      - name: APPLICATION_NAME
+                        value: $(CR_NAME)
+                      - name: PING_SVC_NAME
+                        value: ping-svc
+                    volumeMounts:
+                      - name: jboss-home
+                        mountPath: /home/jboss
+                      - name: jolokia-config
+                        mountPath: /opt/jboss/container/jolokia/etc
+                      - name: tmp-dir
+                        mountPath: /tmp
+```
+
+Note: If you are not using Jolokia (`jolokiaAgentEnabled: false`), you can omit the `jolokia-config` volume and its corresponding volume mount.
 
 ## Configuring Jolokia Access
 
