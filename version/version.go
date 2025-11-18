@@ -16,11 +16,11 @@ var (
 
 const (
 	// LatestVersion product version supported
-	LatestVersion        = "0.0.0"
-	CompactLatestVersion = "7xx"
+	LatestVersion        = "8.0.0"
+	CompactLatestVersion = "800"
 
-	LatestKubeImage = "registry.redhat.io/amq0/amq-broker-rhel9:0.0.0" + LatestVersion
-	LatestInitImage = "registry.redhat.io/amq0/amq-broker-init-rhel9:0.0.0" + LatestVersion
+	LatestKubeImage = "registry.redhat.io/amq8/amq-broker-rhel9:8.0.0"
+	LatestInitImage = "registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0"
 )
 
 var (
@@ -80,19 +80,23 @@ func DefaultImageName(archSpecificRelatedImageEnvVarName string) string {
 }
 
 var FullVersionFromCompactVersion map[string]string = map[string]string{
+	"800": "8.0.0",
 }
 
 // The yacfg profile to use for a given full version of broker
 var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
+	"8.0.0": "7.10.0",
 }
 
 var YacfgProfileName string = "amq_broker"
 
 // Sorted array of supported Apache ActiveMQ Artemis versions
 var SupportedActiveMQArtemisVersions = []string{
+	"8.0.0",
 }
 
 var ActiveMQArtemisVersionfromFullVersion map[string]string = map[string]string{
+	"8.0.0": "2.45.0.temporary-redhat-00023",
 }
 
 func CompactActiveMQArtemisVersion(version string) string {
