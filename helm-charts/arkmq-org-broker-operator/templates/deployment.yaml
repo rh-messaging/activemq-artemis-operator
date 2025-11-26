@@ -227,7 +227,6 @@ spec:
           initialDelaySeconds: 15
           periodSeconds: 20
         name: manager
-        resources: {{- toYaml .Values.controllerManager.manager.resources | nindent 10 }}
         ports:
         - containerPort: 8383
           name: http-metrics
@@ -237,7 +236,7 @@ spec:
             port: 8081
           initialDelaySeconds: 5
           periodSeconds: 10
-        resources: {}
+        resources: {{- toYaml .Values.controllerManager.manager.resources | nindent 10 }}
         securityContext: {{- toYaml .Values.controllerManager.manager.containerSecurityContext
           | nindent 10 }}
         terminationMessagePolicy: FallbackToLogsOnError

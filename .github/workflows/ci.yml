@@ -111,6 +111,11 @@ jobs:
         if: ${{ github.event_name != 'workflow_dispatch' || !inputs.skipDOTests }}
         run: IMG="${HOSTNAME}:5000/$IMAGE_NAME:dev.latest" make test-mk-do-v
 
+      - name: Run helm-charts tests
+        run: |
+          helm install --set controllerManager.manager.image.repository=${HOSTNAME}:5000/$IMAGE_NAME --set controllerManager.manager.image.tag=dev.latest my-broker-operator --set crds.keep=false helm-charts/arkmq-org-broker-operator/
+          helm uninstall my-broker-operator
+
       - name: Run scorecard tests
         run: make scorecard | tee scorecard.log && ! grep 'Suggestions' scorecard.log
 
