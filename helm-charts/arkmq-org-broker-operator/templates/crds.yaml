@@ -4,7 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
-    helm.sh/resource-policy: '{{ if .Values.crds.keep }}keep{{ else }}delete{{ end }}'
+{{- if .Values.crds.keep }}
+    helm.sh/resource-policy: keep
+{{- end }}
   name: activemqartemises.broker.amq.io
 spec:
   group: broker.amq.io
@@ -7030,7 +7032,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
-    helm.sh/resource-policy: '{{ if .Values.crds.keep }}keep{{ else }}delete{{ end }}'
+{{- if .Values.crds.keep }}
+    helm.sh/resource-policy: keep
+{{- end }}
   name: activemqartemisaddresses.broker.amq.io
 spec:
   group: broker.amq.io
@@ -7676,7 +7680,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
-    helm.sh/resource-policy: '{{ if .Values.crds.keep }}keep{{ else }}delete{{ end }}'
+{{- if .Values.crds.keep }}
+    helm.sh/resource-policy: keep
+{{- end }}
   name: activemqartemisscaledowns.broker.amq.io
 spec:
   group: broker.amq.io
@@ -7948,7 +7954,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
-    helm.sh/resource-policy: '{{ if .Values.crds.keep }}keep{{ else }}delete{{ end }}'
+{{- if .Values.crds.keep }}
+    helm.sh/resource-policy: keep
+{{- end }}
   name: activemqartemissecurities.broker.amq.io
 spec:
   group: broker.amq.io
