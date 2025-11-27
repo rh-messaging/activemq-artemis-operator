@@ -30,18 +30,19 @@ sed -i -E 's~\.Values\.controllerManager\.manager\.env\.relatedImageA(ctivemqArt
 crds="${dir}/templates/crds.yaml"
 echo "{{- if .Values.crds.apply }}" > $crds
 for file in ${dir}/crds/*.yaml; do
-  $YQ -i '.metadata.annotations."helm.sh/resource-policy"="{{ if .Values.crds.keep }}keep{{ else }}delete{{ end }}"' $file
-  cat $file >> $crds
+  $YQ '.metadata.annotations."helm.sh/resource-policy"="keep"' $file >> $crds
   echo "---" >> $crds
 done
 echo "{{- end }}" >> $crds
+sed -i '/resource-policy/ i \{{- if .Values.crds.keep }}' $crds
+sed -i '/resource-policy/ a \{{- end }}' $crds
 rm -R ${dir}/crds/
 $YQ -i ".crds.apply=true" ${dir}/values.yaml
 $YQ -i ".crds.keep=true" ${dir}/values.yaml
 
 # resources
 $YQ -i '.controllerManager.manager.resources=null' ${dir}/values.yaml
-sed -i -z 's~name: manager~name: manager\n        resources: {{- toYaml .Values.controllerManager.manager.resources | nindent 10 }}~' ${dir}/templates/deployment.yaml
+sed -i 's~resources: {}~resources: {{- toYaml .Values.controllerManager.manager.resources | nindent 10 }}~' ${dir}/templates/deployment.yaml
 
 # ENABLE_WEBHOOKS always false
 $YQ -i 'del(.controllerManager.manager.env.enableWebhooks)' ${dir}/values.yaml
