@@ -7298,8 +7298,6 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(deployedCondition.Message).To(ContainSubstring(getExpectedInvalidValue(&crd)))
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
-			Expect(false).To(BeTrue())
-
 			CleanResource(&crd, crd.Name, defaultNamespace)
 		}
 
