@@ -331,6 +331,7 @@ deployment.apps/activemq-artemis-controller-manager created
 Wait for the Operator to start (status: `running`).
 
 ```{"stage":"init", "label":"wait for the operator to be running"}
+kubectl wait deployment activemq-artemis-controller-manager --for=create --timeout=240s
 kubectl wait pod --all --for=condition=Ready --namespace=locked-down-broker --timeout=600s
 ```
 ```shell markdown_runner
@@ -500,6 +501,13 @@ with creating your first bundle, check out the documentation on the
 cert-manager website:
 
 https://cert-manager.io/docs/projects/trust-manager/
+```
+
+Wait for `trust bundles crd` to be ready.
+
+```{"stage":"certs", "label":"wait for trust-bundles-crd creation"}
+kubectl wait crd bundles.trust.cert-manager.io --for=create --timeout=240s
+kubectl wait pod --all --for=condition=Ready --namespace=cert-manager --timeout=600s
 ```
 
 ## Create Certificate Authority and Issuers
@@ -1328,6 +1336,7 @@ Restart Grafana one final time to ensure the dashboard is loaded with fresh
 datasource connections:
 
 ```{"stage":"grafana", "runtime":"bash", "label":"restart grafana for dashboard"}
+kubectl wait configMap artemis-dashboard --for=create --namespace=locked-down-broker --timeout=600s
 kubectl rollout restart deployment prometheus-grafana -n locked-down-broker
 kubectl rollout status deployment prometheus-grafana -n locked-down-broker --timeout=300s
 echo ""
@@ -1352,6 +1361,9 @@ echo ""
 
 # Get the Grafana admin password from the secret
 GRAFANA_PASSWORD=$(kubectl get secret -n locked-down-broker prometheus-grafana -o jsonpath="{.data.admin-password}" | base64 --decode)
+
+until FOUND=$(kubectl exec -n locked-down-broker deployment/prometheus-grafana -- \
+  curl -s 'http://localhost:3000/api/search?query=*artemis*' -u admin:${GRAFANA_PASSWORD}) && [[ $FOUND != '[]' ]]; do echo "dashboard not found... try again in 5" && sleep 5; done
 
 # Fetch dashboard JSON once
 DASHBOARD_JSON=$(kubectl exec -n locked-down-broker deployment/prometheus-grafana -- \
