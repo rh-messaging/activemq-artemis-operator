@@ -263,7 +263,7 @@ echo broker version: $BROKER_VERSION
 broker version: 2.42.0
 ```
 
-#### Download the broker
+#### Download the broker to access the producer/consumer client command line tool
 
 ```{"stage":"test_setup", "rootdir":"$tmpdir.1", "runtime":"bash", "label":"download artemis"}
 wget --quiet https://repo1.maven.org/maven2/org/apache/activemq/apache-artemis/${BROKER_VERSION}/apache-artemis-${BROKER_VERSION}-bin.tar.gz
@@ -274,7 +274,7 @@ mv apache-artemis-${BROKER_VERSION}/ apache-artemis/
 
 #### Figure out the broker endpoint
 
-The `artemis` will need to point to the https endpoint generated in earlier with
+The `artemis` client will need to point to the https endpoint generated in earlier with
 a couple of parameters set:
 * `sslEnabled` = `true`
 * `verifyHost` = `false`
@@ -299,7 +299,7 @@ export BROKER_URL="tcp://${INGRESS_URL}:443?forceSSLParameters=true&sslEnabled=t
 ##### Test the connection
 
 ```{"stage":"test0", "rootdir":"$tmpdir.1/apache-artemis/bin", "runtime":"bash", "label":"test connection"}
-./artemis check queue --name TEST --produce 10 --browse 10 --consume 10 --url ${BROKER_URL} --verbose
+./artemis check queue --name TEST --produce 10 --browse 10 --consume 10 --url ${BROKER_URL} --verbose --timeout 120000
 ```
 ```shell markdown_runner
 Executing org.apache.activemq.artemis.cli.commands.check.QueueCheck check queue --name TEST --produce 10 --browse 10 --consume 10 --url tcp://send-receive-sslacceptor-0-svc-ing-send-receive-project.192.168.50.5.nip.io:443?forceSSLParameters=true&sslEnabled=true&verifyHost=false&trustStorePath=/tmp/2821826002/broker.ks&trustStorePassword=000000&useTopologyForLoadBalancing=false --verbose 
