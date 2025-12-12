@@ -13,6 +13,7 @@ const DEFAULT_PROD_VER = "2021.Q4"
 
 var productVerFromImageVer map[string]string = map[string]string{
 	// Product versions i.e. "7.10.0": "2022.Q2"
+	"8.0.0": "2025.Q4",
 }
 
 // the labels returned will be added to broker pod
