@@ -174,7 +174,7 @@ jobs:
           # Package and push
           helm package helm-charts/arkmq-org-broker-operator-dev/
           helm registry login --username=${{ secrets.QUAY_USERNAME }} --password=${{ secrets.QUAY_PASSWORD }} quay.io
-          helm push arkmq-org-broker-operator-dev-*.tgz oci://quay.io/${{ secrets.QUAY_NAMESPACE }}/helm-charts
+          helm push arkmq-org-broker-operator-0.0.0-dev.latest.tgz oci://quay.io/${{ secrets.QUAY_NAMESPACE }}/helm-charts
 
       - name: Build the bundle image
         run: podman build --file bundle.Dockerfile --label quay.expires-after=90d --label git-sha=$GITHUB_SHA --tag $IMAGE_NAME-bundle:dev.latest .
