@@ -17,4 +17,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: registry.redhat.io/amq0/amq-broker-rhel9-operator
-  newTag: amq-broker-8.0-rhel-9-containers-candidate-81621-20251222131141
+  newTag: amq-broker-8.0-rhel-9-containers-candidate-26950-20251223001855
