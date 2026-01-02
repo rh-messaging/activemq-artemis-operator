@@ -9261,7 +9261,7 @@ spec:
           value: ''
         - name: ENABLE_WEBHOOKS
           value: "false"
-        image: registry.redhat.io/amq8/amq-broker-rhel9-operator@sha256:070368c06e2be0d5822cd6cb7fa2f0e2267cae9b44c0ad8ed08fed9f9596259e
+        image: registry.redhat.io/amq8/amq-broker-rhel9-operator@sha256:0d601c5610b1b980a9eee3bbb3c51df3f5583f8871c81231b78cf073b0bcf759
         livenessProbe:
           httpGet:
             path: /healthz
