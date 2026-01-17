@@ -6,7 +6,7 @@
 VERSION ?= 8.0.0-opr-1
 
 KUBE_CLI=kubectl
-OPERATOR_VERSION := 0.0.0-0
+OPERATOR_VERSION := amq-broker-8.0-rhel-9-containers-candidate-69675-20260117002509
 OPERATOR_ACCOUNT_NAME := amq-broker-operator
 OPERATOR_CLUSTER_ROLE_NAME := operator-role
 OPERATOR_IMAGE_REPO := registry.redhat.io/amq0/amq-broker-rhel9-operator
@@ -37,8 +37,8 @@ endif
 DEPLOY := ./deploy
 
 # CHANNELS define the bundle channels used in the bundle.
-# Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
-CHANNELS = "0.0.0"
+# Add a new line here if you would like to change its default config. (E.g CHANNELS = 8.0.x
+CHANNELS = 8.0.x
 # To re-generate a bundle for other specific channels without changing the standard setup, you can:
 # - use the CHANNELS as arg of the bundle target (e.g make bundle CHANNELS=candidate,fast,stable)
 # - use environment variables to overwrite this value (e.g export CHANNELS="candidate,fast,stable")
@@ -47,8 +47,8 @@ BUNDLE_CHANNELS := --channels=$(CHANNELS)
 endif
 
 # DEFAULT_CHANNEL defines the default channel used in the bundle.
-# Add a new line here if you would like to change its default config. (E.g DEFAULT_CHANNEL = "0.0.0")
-DEFAULT_CHANNEL = "0.0.0"
+# Add a new line here if you would like to change its default config. (E.g DEFAULT_CHANNEL = 8.0.x
+DEFAULT_CHANNEL = 8.0.x
 # To re-generate a bundle for any other default channel without changing the default setup, you can:
 # - use the DEFAULT_CHANNEL as arg of the bundle target (e.g make bundle DEFAULT_CHANNEL=stable)
 # - use environment variables to overwrite this value (e.g export DEFAULT_CHANNEL="stable")
