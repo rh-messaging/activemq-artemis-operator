@@ -38,17 +38,17 @@ spec:
         - /home/amq-broker-operator/bin/entrypoint
         env:
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_800
-          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:e0992359d3ac00a3376a230f6de0a2805ba5b917b37aec2dccbfc77c6bef27c1
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:9f29ba20773bdf0b7235462119da142de4e566ec927d3dcaf0f11b904abcbb39
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_800
-          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:6749ff3c65d92f00654656d29f761834367ab123ac5d9fcda107a5603a633998
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:3021a2ce093fe6a7e239a5ead10f66a6f13636998af5fb24f92f626164642e77
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_800_ppc64le
-          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:e0992359d3ac00a3376a230f6de0a2805ba5b917b37aec2dccbfc77c6bef27c1
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:9f29ba20773bdf0b7235462119da142de4e566ec927d3dcaf0f11b904abcbb39
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_800_ppc64le
-          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:6749ff3c65d92f00654656d29f761834367ab123ac5d9fcda107a5603a633998
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:3021a2ce093fe6a7e239a5ead10f66a6f13636998af5fb24f92f626164642e77
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_800_s390x
-          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:e0992359d3ac00a3376a230f6de0a2805ba5b917b37aec2dccbfc77c6bef27c1
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:9f29ba20773bdf0b7235462119da142de4e566ec927d3dcaf0f11b904abcbb39
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_800_s390x
-          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:6749ff3c65d92f00654656d29f761834367ab123ac5d9fcda107a5603a633998
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:3021a2ce093fe6a7e239a5ead10f66a6f13636998af5fb24f92f626164642e77
         - name: OPERATOR_NAME
           valueFrom:
             fieldRef:
