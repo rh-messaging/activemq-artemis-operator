@@ -160,14 +160,14 @@ func extractStages(tutorial string) [][]*ExecutableChunk {
 			params := raw[strings.Index(raw, "{"):]
 			var v interface{}
 			if err := json.Unmarshal([]byte(params), &v); err != nil {
-				pterm.Fatal.Printf(fmt.Sprintf("%s@%d %s in %s\n", filepath, lineCounter, err, params))
+				pterm.Fatal.Printf("%s@%d %s in %s\n", filepath, lineCounter, err, params)
 			}
 			if err = sch.Validate(v); err != nil {
-				pterm.Fatal.Printf(fmt.Sprintf("%s@%d %s in %s\n", filepath, lineCounter, err, params))
+				pterm.Fatal.Printf("%s@%d %s in %s\n", filepath, lineCounter, err, params)
 			}
 			currentChunk, err = initChunk(params)
 			if err != nil {
-				pterm.Fatal.Printf(fmt.Sprintf("%s@%d %s in %s\n", filepath, lineCounter, err, params))
+				pterm.Fatal.Printf("%s@%d %s in %s\n", filepath, lineCounter, err, params)
 			}
 			if currentStage != currentChunk.Stage {
 				stages = append(stages, []*ExecutableChunk{})

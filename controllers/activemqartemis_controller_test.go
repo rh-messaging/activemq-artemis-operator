@@ -7307,7 +7307,7 @@ var _ = Describe("artemis controller", func() {
 				Eventually(func(g Gomega) {
 					stdOutContent := ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
 					if verbose {
-						fmt.Printf("\na1 - cat:\n" + stdOutContent)
+						fmt.Printf("\na1 - cat:\n%s", stdOutContent)
 					}
 					g.Expect(stdOutContent).Should(ContainSubstring(acceptorName))
 					ConfigAppliedCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType)
@@ -9107,7 +9107,7 @@ var _ = Describe("artemis controller", func() {
 
 					stdOutContent = ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, statCommand, g)
 					if verbose {
-						fmt.Printf("\na1 - Stat:\n" + stdOutContent)
+						fmt.Printf("\na1 - Stat:\n%s", stdOutContent)
 					}
 
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
@@ -9132,7 +9132,7 @@ var _ = Describe("artemis controller", func() {
 
 					stdOutContent = ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, statCommand, g)
 					if verbose {
-						fmt.Printf("\na2 - Stat:\n" + stdOutContent)
+						fmt.Printf("\na2 - Stat:\n%s", stdOutContent)
 					}
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
@@ -10613,7 +10613,7 @@ var _ = Describe("artemis controller", func() {
 				Eventually(func(g Gomega) {
 					stdOutContent := LogsOfPod(podWithOrdinal, crd.Name, defaultNamespace, g)
 					if verbose {
-						fmt.Printf("\nLOG of Pod:\n" + stdOutContent)
+						fmt.Printf("\nLOG of Pod:\n%s", stdOutContent)
 					}
 					g.Expect(stdOutContent).ShouldNot(ContainSubstring("INFO"))
 					g.Expect(stdOutContent).ShouldNot(ContainSubstring("broker-0 does not exist"))
