@@ -7216,6 +7216,108 @@ var _ = Describe("artemis controller", func() {
 			CleanResource(&crd, crd.Name, defaultNamespace)
 		})
 
+		It("expect Non fatal condition for unmatched resource templates", func() {
+
+			By("By creating a crd with unmatched templates")
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+			crd.Spec.DeploymentPlan.PersistenceEnabled = true
+
+			var serviceKind = "Service"
+			var ssKind = "StatefulSet"
+			var nonExistentKind = "NonExistentKind"
+
+			crd.Spec.ResourceTemplates = []brokerv1beta1.ResourceTemplate{
+				{
+					Selector:    &brokerv1beta1.ResourceSelector{Kind: &nonExistentKind},
+					Annotations: map[string]string{"should-not-apply": "template0"},
+				},
+				{
+					Selector:    &brokerv1beta1.ResourceSelector{Kind: &serviceKind},
+					Annotations: map[string]string{"someKey": "someValue"},
+				},
+				{
+					Selector:    &brokerv1beta1.ResourceSelector{Kind: &ssKind},
+					Annotations: map[string]string{"someSsKey": "someSsValue"},
+				},
+				{
+					Selector:    &brokerv1beta1.ResourceSelector{Name: ptr.To("no-such-resource.*")},
+					Annotations: map[string]string{"should-not-apply": "template3"},
+				},
+			}
+
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+				brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
+
+				By("verifying deployment succeeds despite unmatched templates")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("verifying matched templates were applied")
+				createdService := &corev1.Service{}
+				serviceKey := types.NamespacedName{Name: crd.Name + "-hdls-svc", Namespace: crd.Namespace}
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, serviceKey, createdService)).Should(Succeed())
+					g.Expect(createdService.Annotations["someKey"]).Should(Equal("someValue"))
+					g.Expect(createdService.Annotations["should-not-apply"]).Should(BeEmpty())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				createdSs := &appsv1.StatefulSet{}
+				ssKey := types.NamespacedName{Name: namer.CrToSS(crd.Name), Namespace: defaultNamespace}
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, ssKey, createdSs)).Should(Succeed())
+					g.Expect(createdSs.Annotations["someSsKey"]).Should(Equal("someSsValue"))
+					g.Expect(createdSs.Annotations["should-not-apply"]).Should(BeEmpty())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("verifying UnmatchedResourceTemplate condition is set with correct indices")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					condition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)
+					g.Expect(condition).NotTo(BeNil())
+					g.Expect(condition.Status).To(Equal(metav1.ConditionUnknown))
+					g.Expect(condition.Reason).To(Equal(brokerv1beta1.ValidConditionUnknownReason))
+					g.Expect(condition.Message).To(ContainSubstring("0"))
+					g.Expect(condition.Message).NotTo(ContainSubstring("3"))
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("removing unmatched templates")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					createdCrd.Spec.ResourceTemplates = []brokerv1beta1.ResourceTemplate{
+						{
+							Selector:    &brokerv1beta1.ResourceSelector{Kind: &serviceKind},
+							Annotations: map[string]string{"someKey": "someValue"},
+						},
+						{
+							Selector:    &brokerv1beta1.ResourceSelector{Kind: &ssKind},
+							Annotations: map[string]string{"someSsKey": "someSsValue"},
+						},
+					}
+					g.Expect(k8sClient.Update(ctx, createdCrd)).Should(Succeed())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("verifying non fatal condition is updated to true")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					condition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)
+					g.Expect(condition).NotTo(BeNil())
+					g.Expect(condition.Status).To(Equal(metav1.ConditionTrue))
+					g.Expect(condition.Reason).To(Equal(brokerv1beta1.ValidConditionSuccessReason))
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
+
+			CleanResource(&crd, crd.Name, defaultNamespace)
+		})
+
 		testApplyingPatchWithincompatibleStructureToStatefulSet := func(invalidValue string) {
 
 			By("By creating a crd with template")
@@ -7387,7 +7489,7 @@ var _ = Describe("artemis controller", func() {
 				Eventually(func(g Gomega) {
 					stdOutContent := ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
 					if verbose {
-						fmt.Printf("\na1 - cat:\n" + stdOutContent)
+						fmt.Printf("\na1 - cat:\n%s", stdOutContent)
 					}
 					g.Expect(stdOutContent).Should(ContainSubstring(acceptorName))
 					ConfigAppliedCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType)
@@ -9187,7 +9289,7 @@ var _ = Describe("artemis controller", func() {
 
 					stdOutContent = ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, statCommand, g)
 					if verbose {
-						fmt.Printf("\na1 - Stat:\n" + stdOutContent)
+						fmt.Printf("\na1 - Stat:\n%s", stdOutContent)
 					}
 
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
@@ -9212,7 +9314,7 @@ var _ = Describe("artemis controller", func() {
 
 					stdOutContent = ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, statCommand, g)
 					if verbose {
-						fmt.Printf("\na2 - Stat:\n" + stdOutContent)
+						fmt.Printf("\na2 - Stat:\n%s", stdOutContent)
 					}
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
@@ -10693,7 +10795,7 @@ var _ = Describe("artemis controller", func() {
 				Eventually(func(g Gomega) {
 					stdOutContent := LogsOfPod(podWithOrdinal, crd.Name, defaultNamespace, g)
 					if verbose {
-						fmt.Printf("\nLOG of Pod:\n" + stdOutContent)
+						fmt.Printf("\nLOG of Pod:\n%s", stdOutContent)
 					}
 					g.Expect(stdOutContent).ShouldNot(ContainSubstring("INFO"))
 					g.Expect(stdOutContent).ShouldNot(ContainSubstring("broker-0 does not exist"))
@@ -10744,7 +10846,7 @@ var _ = Describe("artemis controller", func() {
 				By("Deploying broker" + crd.Name)
 				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
 
-				By("validating jolokia ordinal")
+				By("validating jolokia ordinal 0")
 				Eventually(func(g Gomega) {
 					jolokia := jolokia.GetJolokia(k8sClient, crd.Name+"-ss-0."+crd.Name+"-hdls-svc.test.svc.cluster.local", "8161", "/console/jolokia", "", "", "http")
 					data, err := jolokia.Read("org.apache.activemq.artemis:broker=\"amq-broker\",component=cluster-connections,name=\"my-cluster\"/Nodes")
@@ -10753,12 +10855,21 @@ var _ = Describe("artemis controller", func() {
 
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
+				By("validating jolokia ordinal 1")
+				Eventually(func(g Gomega) {
+					jolokia := jolokia.GetJolokia(k8sClient, crd.Name+"-ss-1."+crd.Name+"-hdls-svc.test.svc.cluster.local", "8161", "/console/jolokia", "", "", "http")
+					data, err := jolokia.Read("org.apache.activemq.artemis:broker=\"amq-broker\",component=cluster-connections,name=\"my-cluster\"/Nodes")
+					g.Expect(err).To(BeNil())
+					g.Expect(data.Value).Should(ContainSubstring(crd.Name+"-ss-0"), data.Value)
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
 				By("validating jolokia service")
 				Eventually(func(g Gomega) {
 					jolokia := jolokia.GetJolokia(k8sClient, crd.Name+"-hdls-svc.test.svc.cluster.local", "8161", "/console/jolokia", "", "", "http")
 					data, err := jolokia.Read("org.apache.activemq.artemis:broker=\"amq-broker\",component=cluster-connections,name=\"my-cluster\"/Nodes")
 					g.Expect(err).To(BeNil())
-					g.Expect(data.Value).Should(ContainSubstring(crd.Name+"-ss-1"), data.Value)
+					g.Expect(data.Value).Should(ContainSubstring(crd.Name+"-ss-"), data.Value)
 
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 

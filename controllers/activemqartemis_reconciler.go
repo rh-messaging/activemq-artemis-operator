@@ -126,6 +126,7 @@ type ActiveMQArtemisReconcilerImpl struct {
 	isOnOpenShift      bool
 	jolokiaEndpoints   []*jolokia_client.JkInfo
 	cachedBrokerStatus map[string]any
+	matchedTemplates   map[int]bool
 }
 
 func NewActiveMQArtemisReconcilerImpl(customResource *brokerv1beta1.ActiveMQArtemis, parent *ActiveMQArtemisReconciler) *ActiveMQArtemisReconcilerImpl {
@@ -136,6 +137,7 @@ func NewActiveMQArtemisReconcilerImpl(customResource *brokerv1beta1.ActiveMQArte
 		requestedResources: make(map[reflect.Type]map[string]rtclient.Object),
 		isOnOpenShift:      parent.isOnOpenShift,
 		cachedBrokerStatus: make(map[string]any),
+		matchedTemplates:   make(map[int]bool),
 	}
 }
 
@@ -1126,6 +1128,9 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) applyTemplates(desired rtclient
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) applyTemplate(index int, template brokerv1beta1.ResourceTemplate, target rtclient.Object) error {
 	if match(template, target) {
+
+		reconciler.matchedTemplates[index] = true
+
 		ordinal := extractOrdinal(target)
 		itemName := extractItemName(target)
 		resType := extractResType(target)
@@ -1638,6 +1643,30 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(customResource
 		for index := range delta.Removed {
 			resourceToRemove := delta.Removed[index]
 			trackError(&compositeError, reconciler.deleteResource(client, resourceToRemove, resourceType))
+		}
+	}
+
+	// Check for matched resource templates and status condition update
+	var unmatchedIndices []int
+	for i := range customResource.Spec.ResourceTemplates {
+		if !reconciler.matchedTemplates[i] {
+			unmatchedIndices = append(unmatchedIndices, i)
+		}
+	}
+
+	if len(unmatchedIndices) > 0 {
+		validationCondition := meta.FindStatusCondition(customResource.Status.Conditions, brokerv1beta1.ValidConditionType)
+
+		// Only set to Unknown if there is no fatal validation error
+		if validationCondition == nil || validationCondition.Status != metav1.ConditionFalse {
+			message := fmt.Sprintf("ResourceTemplate at index %d did not match any operator-generated resources", unmatchedIndices[0])
+			meta.SetStatusCondition(&customResource.Status.Conditions, metav1.Condition{
+				Type:               brokerv1beta1.ValidConditionType,
+				Status:             metav1.ConditionUnknown,
+				Reason:             brokerv1beta1.ValidConditionUnknownReason,
+				Message:            message,
+				ObservedGeneration: customResource.Generation,
+			})
 		}
 	}
 
