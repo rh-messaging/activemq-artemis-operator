@@ -271,7 +271,7 @@ metadata:
       ]
     capabilities: Seamless Upgrades
     categories: Streaming & Messaging
-    containerImage: quay.io/arkmq-org/activemq-artemis-operator:2.1.1
+    containerImage: quay.io/arkmq-org/activemq-artemis-operator:2.1.2
     createdAt: "2025-04-04 14:35:00"
     description: An operator for managing the Apache ActiveMQ Artemis message broker
     features.operators.openshift.io/cnf: "false"
@@ -292,7 +292,7 @@ metadata:
     operatorframework.io/arch.amd64: supported
     operatorframework.io/arch.arm64: supported
     operatorframework.io/os.linux: supported
-  name: arkmq-org-broker-operator.v2.1.1
+  name: arkmq-org-broker-operator.v2.1.2
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -5677,6 +5677,10 @@ spec:
                   value: quay.io/arkmq-org/activemq-artemis-broker-init@sha256:3fb06f246c1beda919338aae6ab4b9d5ab03f06eb1a61c7c5278af50d822cc48
                 - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2440
                   value: quay.io/arkmq-org/activemq-artemis-broker-kubernetes@sha256:fd94e89353cbfb282f3716da7862e087348e41a81033f5e90c45552938217c55
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2500
+                  value: quay.io/arkmq-org/activemq-artemis-broker-init@sha256:6b08c972d01e9c9ba49c6be2d6a29b967d58d9954842a5b6da114a06febb2543
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2500
+                  value: quay.io/arkmq-org/activemq-artemis-broker-kubernetes@sha256:6052521772a69f81c69db6bc79f6713a49f36888063dcc7a2a22db71bb32162f
                 - name: OPERATOR_NAME
                   valueFrom:
                     fieldRef:
@@ -5691,7 +5695,7 @@ spec:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
                 - name: ENABLE_WEBHOOKS
                   value: "false"
-                image: quay.io/arkmq-org/activemq-artemis-operator:2.1.1
+                image: quay.io/arkmq-org/activemq-artemis-operator:2.1.2
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -6051,4 +6055,8 @@ spec:
     name: activemq-artemis-broker-init-2440
   - image: quay.io/arkmq-org/activemq-artemis-broker-kubernetes@sha256:fd94e89353cbfb282f3716da7862e087348e41a81033f5e90c45552938217c55
     name: activemq-artemis-broker-kubernetes-2440
-  version: 2.1.1
+  - image: quay.io/arkmq-org/activemq-artemis-broker-init@sha256:6b08c972d01e9c9ba49c6be2d6a29b967d58d9954842a5b6da114a06febb2543
+    name: activemq-artemis-broker-init-2500
+  - image: quay.io/arkmq-org/activemq-artemis-broker-kubernetes@sha256:6052521772a69f81c69db6bc79f6713a49f36888063dcc7a2a22db71bb32162f
+    name: activemq-artemis-broker-kubernetes-2500
+  version: 2.1.2
