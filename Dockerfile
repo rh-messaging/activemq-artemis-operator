@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM registry.redhat.io/ubi9/go-toolset:1.25.3 AS builder
+FROM registry.access.redhat.com/ubi9/go-toolset:1.25.3 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -41,12 +41,9 @@ RUN cp -r $REMOTE_SOURCE_DIR/app/* .
 # when is executed on nodes that are booted into FIPS mode.
 RUN CGO_ENABLED=1 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -ldflags="-X '${GO_MODULE}/version.BuildTimestamp=`date '+%Y-%m-%dT%H:%M:%S'`'" -o manager main.go
 
-# This OSBS Base Image is designed and engineered to be the base layer for
-# Red Hat products. This base image is only supported for approved Red Hat
-# products. This image is maintained by Red Hat and updated regularly.
-FROM registry.redhat.io/rhel9-osbs/osbs-ubi9-minimal@sha256:79d596b0f3e24da1915902ec31dbbef91c503e2c77de7666c2f1799279952d5f as base-env
+FROM registry.access.redhat.com/ubi9-minimal:9.7-1769056855 AS base-env
 
-ENV BROKER_NAME=amq-broker
+ENV BROKER_NAME=activemq-artemis
 ENV USER_UID=1000
 ENV USER_NAME=${BROKER_NAME}-operator
 ENV USER_HOME=/home/${USER_NAME}
@@ -72,12 +69,7 @@ RUN microdnf update -y --setopt=install_weak_deps=0 && rm -rf /var/cache/yum
 USER ${USER_UID}
 ENTRYPOINT ["${USER_HOME}/bin/entrypoint"]
 
-LABEL name="amq8/amq-broker-rhel9-operator"
-LABEL description="Red Hat AMQ Broker 8.0 Operator"
+LABEL name="arkmq-org/activemq-artemis-operator"
+LABEL description="ArkMQ Broker Operator"
 LABEL maintainer="ArkMQ <info@arkmq.org>"
-LABEL version="8.0.0"
-LABEL summary="Red Hat AMQ Broker 8.0 Operator"
-LABEL amq.broker.version="8.0.0.OPR.1.SR1"
-LABEL com.redhat.component="amq-broker-rhel9-operator-container"
-LABEL io.k8s.display-name="Red Hat AMQ Broker 8.0 Operator"
-LABEL io.openshift.tags="messaging,amq,integration,operator,golang"
+LABEL version="2.1.2"
