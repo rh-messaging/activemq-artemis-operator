@@ -5321,8 +5321,6 @@ spec:
     url: https://access.redhat.com/products/red-hat-amq-broker/
   - name: Documentation
     url: https://docs.redhat.com/en/documentation/red_hat_amq_broker/
-  maintainers:
-  - name: Red Hat, Inc.
   maturity: beta
   minKubeVersion: 1.20.0
   provider:
