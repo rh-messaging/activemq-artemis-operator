@@ -53,3 +53,23 @@ spec:
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7121_s390x
           #value: registry.redhat.io/amq7/amq-broker-rhel8:7.12.1-3.1724186872
           value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:47fd4ce2533496828aba37bd1f9715e2164d5c90bd0fc6b25e7e0786d723bf01
+
+        # 7.12.2
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7122
+          #value: registry.redhat.io/amq7/amq-broker-init-rhel8:7.12.2-1
+          value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:7f9b921d89b6d4d91b365659afff127d99f1455b94b48a10a6a7f4c38dd8b700
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7122
+          #value: registry.redhat.io/amq7/amq-broker-rhel8:7.12.2-1
+          value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:dc13871dfed52402c40fd192900fc3cb5a49da4fa08e4ec4d0e23a879e83db25
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7122_ppc64le
+          #value: registry.redhat.io/amq7/amq-broker-init-rhel8:7.12.2-1
+          value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:7f9b921d89b6d4d91b365659afff127d99f1455b94b48a10a6a7f4c38dd8b700
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7122_ppc64le
+          #value: registry.redhat.io/amq7/amq-broker-rhel8:7.12.2-1
+          value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:dc13871dfed52402c40fd192900fc3cb5a49da4fa08e4ec4d0e23a879e83db25
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7122_s390x
+          #value: registry.redhat.io/amq7/amq-broker-init-rhel8:7.12.2-1
+          value: registry.redhat.io/amq7/amq-broker-init-rhel8@sha256:7f9b921d89b6d4d91b365659afff127d99f1455b94b48a10a6a7f4c38dd8b700
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7122_s390x
+          #value: registry.redhat.io/amq7/amq-broker-rhel8:7.12.2-1
+          value: registry.redhat.io/amq7/amq-broker-rhel8@sha256:dc13871dfed52402c40fd192900fc3cb5a49da4fa08e4ec4d0e23a879e83db25
