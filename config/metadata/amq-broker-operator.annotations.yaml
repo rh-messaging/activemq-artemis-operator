@@ -2,9 +2,9 @@ annotations:
   name: "amq0/amq-broker-rhel9-operator-bundle"
   description: "Red Hat AMQ Broker 0.0 Operator Bundle"
   maintainer: "Red Hat, Inc."
-  version: "0.0.0"
+  version: "0.0.0-opr-1"
   summary: "Red Hat AMQ Broker 0.0 Operator Bundle"
-  amq.broker.version: "0.0.0.OPR.2.CR1"
+  amq.broker.version: "0.0.0-opr-1"
   com.redhat.component: "amq-broker-rhel9-operator-bundle-container"
   com.redhat.delivery.backport: false
   com.redhat.delivery.operator.bundle: true
