@@ -72,12 +72,12 @@ RUN microdnf update -y --setopt=install_weak_deps=0 && rm -rf /var/cache/yum
 USER ${USER_UID}
 ENTRYPOINT ["${USER_HOME}/bin/entrypoint"]
 
-LABEL name="amq0/amq-broker-rhel9-operator"
-LABEL description="Red Hat AMQ Broker 0.0 Operator"
+LABEL name="amq7/amq-broker-rhel9-operator"
+LABEL description="Red Hat AMQ Broker 7.14 Operator"
 LABEL maintainer="Red Hat, Inc."
-LABEL version="0.0.0"
-LABEL summary="Red Hat AMQ Broker 0.0 Operator"
-LABEL amq.broker.version="0.0.0.OPR.1.CR1"
+LABEL version="7.14.0"
+LABEL summary="Red Hat AMQ Broker 7.14 Operator"
+LABEL amq.broker.version="7.14.0.OPR.1.CR1"
 LABEL com.redhat.component="amq-broker-rhel9-operator-container"
-LABEL io.k8s.display-name="Red Hat AMQ Broker 0.0 Operator"
+LABEL io.k8s.display-name="Red Hat AMQ Broker 7.14 Operator"
 LABEL io.openshift.tags="messaging,amq,integration,operator,golang"
