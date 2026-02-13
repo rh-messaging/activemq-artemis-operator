@@ -11,8 +11,10 @@ OPERATOR_ACCOUNT_NAME := amq-broker-operator
 OPERATOR_CLUSTER_ROLE_NAME := operator-role
 OPERATOR_IMAGE_REPO := registry.redhat.io/amq0/amq-broker-rhel9-operator
 OPERATOR_NAMESPACE := amq-broker-operator
+BUNDLE_VERSION := $(VERSION)
 BUNDLE_PACKAGE := $(OPERATOR_NAMESPACE)
 BUNDLE_ANNOTATION_PACKAGE := amq-broker-rhel9
+MANAGER_VERSION := $(VERSION)
 GO_MODULE := github.com/arkmq-org/activemq-artemis-operator
 OS := $(shell go env GOOS)
 ARCH := $(shell go env GOARCH)
@@ -66,10 +68,10 @@ IMAGE_TAG_BASE ?= quay.io/arkmq-org/activemq-artemis-operator
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
-BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:$(VERSION)
+BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:$(BUNDLE_VERSION)
 
 # BUNDLE_GEN_FLAGS are the flags passed to the operator-sdk generate bundle command
-BUNDLE_GEN_FLAGS ?= -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+BUNDLE_GEN_FLAGS ?= -q --overwrite --version $(BUNDLE_VERSION) $(BUNDLE_METADATA_OPTS)
 
 # USE_IMAGE_DIGESTS defines if images are resolved via tags or digests
 # You can enable this value if you would like to use SHA Based Digests
@@ -132,8 +134,8 @@ manifests: controller-gen
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
-	sed -i 's~\tVersion = ".*"~\tVersion = "$(VERSION)"~' version/version.go
 	sed -i 's~^LABEL version=.*~LABEL version="$(VERSION)"~g' Dockerfile
+	sed -i 's~\tVersion = ".*"~\tVersion = "$(MANAGER_VERSION)"~' version/version.go
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
@@ -309,7 +311,7 @@ bundle: manifests operator-sdk kustomize ## Generate bundle manifests and metada
 	sed -i.bak '/creationTimestamp:/d' ./bundle/manifests/*.yaml && rm ./bundle/manifests/*.bak
 	sed -i.bak "s/createdAt:.*/`grep -oP 'createdAt:.*' config/manifests/bases/$(BUNDLE_PACKAGE).clusterserviceversion.yaml`/" ./bundle/manifests/*.yaml && rm ./bundle/manifests/*.bak
 	sed -i.bak 's|containerImage: .*|containerImage: '${IMG}'|' ./bundle/manifests/*.yaml && rm ./bundle/manifests/*.bak
-	sed -i "s~version:.*~version: \"${VERSION}\"~" config/metadata/$(BUNDLE_PACKAGE).annotations.yaml
+	sed -i "s~ version:.*~ version: \"${VERSION}\"~" config/metadata/$(BUNDLE_PACKAGE).annotations.yaml
 	sed 's/annotations://' config/metadata/$(BUNDLE_PACKAGE).annotations.yaml >> bundle/metadata/annotations.yaml
 	sed -e 's/annotations://' -e 's/  /LABEL /g' -e 's/: /=/g'  config/metadata/$(BUNDLE_PACKAGE).annotations.yaml >> bundle.Dockerfile
 	sed -i.bak 's/operators.operatorframework.io.bundle.package.v1:.*/operators.operatorframework.io.bundle.package.v1: $(BUNDLE_ANNOTATION_PACKAGE)/' bundle/metadata/annotations.yaml && rm bundle/metadata/annotations.yaml.bak
