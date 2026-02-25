@@ -297,7 +297,7 @@ metadata:
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
     operatorframework.io/os.linux: supported
-  name: amq-broker-operator.v7.12.5-opr-1
+  name: amq-broker-operator.v7.12.6-opr-1
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -2851,9 +2851,9 @@ spec:
                 control-plane: controller-manager
                 name: amq-broker-operator
                 rht.comp: Broker_AMQ
-                rht.comp_ver: 7.12.5
+                rht.comp_ver: 7.12.6
                 rht.prod_name: Red_Hat_Integration
-                rht.prod_ver: 2025.Q3
+                rht.prod_ver: 2026.Q1
                 rht.subcomp: broker-amq-operator
                 rht.subcomp_t: application
             spec:
@@ -3432,5 +3432,5 @@ spec:
     name: ""
   - image: registry.redhat.io/amq7/amq-broker-rhel8@sha256:8c66022dc4b4cfa830124c052f799c80786a487634b020820b7a09ffe091e528
     name: ""
-  replaces: amq-broker-operator.v7.12.4-opr-1
-  version: 7.12.5-opr-1
+  replaces: amq-broker-operator.v7.12.5-opr-1
+  version: 7.12.6-opr-1
