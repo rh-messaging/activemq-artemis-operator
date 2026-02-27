@@ -1814,6 +1814,109 @@ var _ = Describe("artemis controller", func() {
 			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
 
 		})
+
+		It("updates owner references when upgrading from v2alpha5 to v1beta1", func() {
+			brokerCr := v2alpha5.ActiveMQArtemis{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ActiveMQArtemis",
+					APIVersion: v2alpha5.GroupVersion.Identifier(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      NextSpecResourceName(),
+					Namespace: defaultNamespace,
+				},
+				Spec: v2alpha5.ActiveMQArtemisSpec{
+					DeploymentPlan: v2alpha5.DeploymentPlanType{
+						Size: common.Int32ToPtr(0),
+					},
+				},
+			}
+
+			By("deploying v2alpha5 CR")
+			Expect(k8sClient.Create(context.TODO(), &brokerCr)).Should(Succeed())
+
+			ssKey := types.NamespacedName{Name: namer.CrToSS(brokerCr.Name), Namespace: defaultNamespace}
+			createdSs := &appsv1.StatefulSet{}
+
+			By("updating statefulset owner references to simulate outdated owner references")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, ssKey, createdSs)).Should(Succeed())
+
+				g.Expect(createdSs.OwnerReferences[0].APIVersion).Should(Equal(brokerv1beta1.GroupVersion.Identifier()))
+				g.Expect(createdSs.OwnerReferences[0].Kind).Should(Equal("ActiveMQArtemis"))
+				g.Expect(createdSs.OwnerReferences[0].Name).Should(Equal(brokerCr.Name))
+
+				createdSs.OwnerReferences[0].APIVersion = v2alpha5.GroupVersion.Identifier()
+
+				createdSs.OwnerReferences = append(createdSs.OwnerReferences, metav1.OwnerReference{
+					APIVersion: "v1test1", Kind: "TestKind", Name: "test-name", UID: "test-uid"})
+
+				g.Expect(k8sClient.Update(ctx, createdSs)).Should(Succeed())
+
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			propsSecretKey := types.NamespacedName{Name: brokerCr.Name + "-props", Namespace: defaultNamespace}
+			createdSecret := &corev1.Secret{}
+
+			By("updating secret owner references to simulate outdated owner references")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, propsSecretKey, createdSecret)).Should(Succeed())
+
+				g.Expect(createdSecret.OwnerReferences[0].APIVersion).Should(Equal(brokerv1beta1.GroupVersion.Identifier()))
+				g.Expect(createdSecret.OwnerReferences[0].Kind).Should(Equal("ActiveMQArtemis"))
+				g.Expect(createdSecret.OwnerReferences[0].Name).Should(Equal(brokerCr.Name))
+
+				createdSecret.OwnerReferences[0].APIVersion = v2alpha5.GroupVersion.Identifier()
+
+				createdSecret.OwnerReferences = append(createdSecret.OwnerReferences, metav1.OwnerReference{
+					APIVersion: "v1test1", Kind: "TestKind", Name: "test-name", UID: "test-uid"})
+
+				g.Expect(k8sClient.Update(ctx, createdSecret)).Should(Succeed())
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("updating CR to v1beta1 version by triggering reconciliation")
+			crKey := types.NamespacedName{Name: brokerCr.Name, Namespace: brokerCr.Namespace}
+			deployedBrokerCr := &brokerv1beta1.ActiveMQArtemis{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, crKey, deployedBrokerCr)).Should(Succeed())
+
+				deployedBrokerCr.Annotations = map[string]string{"test-reconcile": "trigger"}
+				g.Expect(k8sClient.Update(ctx, deployedBrokerCr)).Should(Succeed())
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("waiting for owner references to be updated to v1beta1 on StatefulSet")
+			Eventually(func(g Gomega) {
+				updatedSs := &appsv1.StatefulSet{}
+				g.Expect(k8sClient.Get(ctx, ssKey, updatedSs)).Should(Succeed())
+				g.Expect(len(updatedSs.OwnerReferences)).Should(BeEquivalentTo(2))
+				g.Expect(updatedSs.OwnerReferences[0].APIVersion).Should(Equal(brokerv1beta1.GroupVersion.Identifier()))
+				g.Expect(updatedSs.OwnerReferences[0].Kind).Should(Equal("ActiveMQArtemis"))
+				g.Expect(updatedSs.OwnerReferences[0].Name).Should(Equal(deployedBrokerCr.Name))
+
+				g.Expect(updatedSs.OwnerReferences[1].APIVersion).Should(Equal("v1test1"))
+				g.Expect(updatedSs.OwnerReferences[1].Kind).Should(Equal("TestKind"))
+				g.Expect(updatedSs.OwnerReferences[1].Name).Should(Equal("test-name"))
+				g.Expect(updatedSs.OwnerReferences[1].UID).Should(Equal(types.UID("test-uid")))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("waiting for owner references to be updated to v1beta1 on Secret")
+			Eventually(func(g Gomega) {
+				updatedSecret := &corev1.Secret{}
+				g.Expect(k8sClient.Get(ctx, propsSecretKey, updatedSecret)).Should(Succeed())
+				g.Expect(len(updatedSecret.OwnerReferences)).Should(BeEquivalentTo(2))
+				g.Expect(updatedSecret.OwnerReferences[0].APIVersion).Should(Equal(brokerv1beta1.GroupVersion.Identifier()))
+				g.Expect(updatedSecret.OwnerReferences[0].Kind).Should(Equal("ActiveMQArtemis"))
+				g.Expect(updatedSecret.OwnerReferences[0].Name).Should(Equal(deployedBrokerCr.Name))
+
+				g.Expect(updatedSecret.OwnerReferences[1].APIVersion).Should(Equal("v1test1"))
+				g.Expect(updatedSecret.OwnerReferences[1].Kind).Should(Equal("TestKind"))
+				g.Expect(updatedSecret.OwnerReferences[1].Name).Should(Equal("test-name"))
+				g.Expect(updatedSecret.OwnerReferences[1].UID).Should(Equal(types.UID("test-uid")))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("cleaning up")
+			Expect(k8sClient.Delete(ctx, deployedBrokerCr)).Should(Succeed())
+		})
 	})
 
 	Context("Console config test", func() {
@@ -3896,17 +3999,17 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(Succeed())
 
 			outer := NewActiveMQArtemisReconciler(k8Manager, ctrl.Log, isOpenshift)
-			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(&crd, outer)
+			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(createdCrd, outer)
 
-			namer := MakeNamers(&crd)
-			defaultConsoleSecretName := crd.Name + "-console-secret"
+			namer := MakeNamers(createdCrd)
+			defaultConsoleSecretName := createdCrd.Name + "-console-secret"
 
 			tlsSecret, err := CreateTlsSecret(defaultConsoleSecretName, defaultNamespace, "password", nil)
 			Expect(err).To(BeNil())
 			Expect(k8sClient.Create(ctx, tlsSecret)).To(Succeed())
 
 			internalSecretName := defaultConsoleSecretName + "-internal"
-			internalConsoleSecretKey := types.NamespacedName{Namespace: crd.Namespace, Name: internalSecretName}
+			internalConsoleSecretKey := types.NamespacedName{Namespace: createdCrd.Namespace, Name: internalSecretName}
 
 			currentSS := &appsv1.StatefulSet{}
 			currentSS.Name = namer.SsNameBuilder.Name()
@@ -3952,10 +4055,10 @@ var _ = Describe("artemis controller", func() {
 			reconcilerImpl.addToDeployed(reflect.TypeOf(corev1.Secret{}), createdInternalSecret)
 
 			By("forcing second reconcile subset with mod to AMQ_CONSOLE_ARGS content for internal secret")
-			crd.Spec.Console.UseClientAuth = true
+			createdCrd.Spec.Console.UseClientAuth = true
 
-			reconcilerImpl.ProcessConsole(&crd, *namer, k8sClient, k8sClient.Scheme(), currentSS)
-			reconcilerImpl.ProcessResources(&crd, k8sClient, k8sClient.Scheme())
+			reconcilerImpl.ProcessConsole(createdCrd, *namer, k8sClient, k8sClient.Scheme(), currentSS)
+			reconcilerImpl.ProcessResources(createdCrd, k8sClient, k8sClient.Scheme())
 
 			By("finding again internal secret with owner ref")
 			createdInternalSecret = &corev1.Secret{}
@@ -3970,7 +4073,7 @@ var _ = Describe("artemis controller", func() {
 			By("cleanup")
 			k8sClient.Delete(ctx, createdInternalSecret)
 			k8sClient.Delete(ctx, createdDefaultSecret)
-			k8sClient.Delete(ctx, &crd)
+			k8sClient.Delete(ctx, createdCrd)
 		})
 
 		It("reconcile verify adopt internal secret that has lost owner ref", func() {
