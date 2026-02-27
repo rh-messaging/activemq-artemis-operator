@@ -1455,6 +1455,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(customResource
 	reqLogger.V(1).Info("Processing resources", "num requested", countOfRequested(reconciler), "num current", countOfDeployed(reconciler))
 
 	requested := compare.NewMapBuilder().Add(common.ToResourceList(reconciler.requestedResources)...).ResourceMap()
+
 	comparator := compare.MapComparator{
 		Comparator: compare.SimpleComparator(),
 	}
@@ -1512,7 +1513,8 @@ func countOfDeployed(reconciler *ActiveMQArtemisReconcilerImpl) (total int) {
 func (reconciler *ActiveMQArtemisReconcilerImpl) CompareMetaAndSpec(deployed, requested rtclient.Object) bool {
 
 	isEqual := equalObjectMeta(deployed, requested) &&
-		equality.Semantic.DeepEqual(specOf(deployed), specOf(requested))
+		equality.Semantic.DeepEqual(specOf(deployed), specOf(requested)) &&
+		reconciler.ensureOwnerReferenceAPIVersion(reconciler.customResource, deployed, requested)
 	if !isEqual {
 		reconciler.log.V(2).Info("unequal", "deployed", &deployed, "requested", &requested)
 	}
@@ -1521,7 +1523,8 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) CompareMetaAndSpec(deployed, re
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) CompareSecret(deployed, requested rtclient.Object) bool {
 
-	isEqual := equalObjectMeta(deployed, requested)
+	isEqual := equalObjectMeta(deployed, requested) &&
+		reconciler.ensureOwnerReferenceAPIVersion(reconciler.customResource, deployed, requested)
 	if isEqual {
 		deployedSecret := deployed.(*corev1.Secret)
 		requestedSecret := requested.(*corev1.Secret)
@@ -1541,7 +1544,8 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) CompareSecret(deployed, request
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) CompareConfigMap(deployed, requested rtclient.Object) bool {
 	// our single configMap is immutable, the name indicates a change
-	return deployed.GetName() == requested.GetName()
+	return deployed.GetName() == requested.GetName() &&
+		reconciler.ensureOwnerReferenceAPIVersion(reconciler.customResource, deployed, requested)
 }
 
 func mergeSecretStringDataToData(secret *corev1.Secret) *corev1.Secret {
@@ -1647,6 +1651,26 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) updateOwnerReferencesAndMatchVe
 	// we need to have 'candidate' match for update
 	candidate.SetResourceVersion(existing.GetResourceVersion())
 	candidate.SetUID(existing.GetUID())
+}
+
+func (reconciler *ActiveMQArtemisReconcilerImpl) ensureOwnerReferenceAPIVersion(cr *brokerv1beta1.ActiveMQArtemis, existing rtclient.Object, candidate rtclient.Object) bool {
+	ownerRefs := existing.GetOwnerReferences()
+	if len(ownerRefs) > 0 {
+		for i := range ownerRefs {
+			if ownerRefs[i].Kind == "ActiveMQArtemis" && ownerRefs[i].Name == cr.Name {
+				if ownerRefs[i].APIVersion != cr.APIVersion {
+					reconciler.log.V(1).Info("Updating owner reference APIVersion",
+						"resource", existing.GetName(),
+						"from", ownerRefs[i].APIVersion,
+						"to", cr.APIVersion)
+					ownerRefs[i].APIVersion = cr.APIVersion
+					candidate.SetOwnerReferences(ownerRefs)
+					return false
+				}
+			}
+		}
+	}
+	return true
 }
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) checkExistingService(cr *brokerv1beta1.ActiveMQArtemis, candidate *corev1.Service, client rtclient.Client) {
