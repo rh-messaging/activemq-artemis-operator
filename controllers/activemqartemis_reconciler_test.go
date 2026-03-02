@@ -1751,3 +1751,352 @@ func TestBrokerPropertiesDataWithAndWithoutOrdinal(t *testing.T) {
 	assert.True(t, strings.Contains(string(data[broker999BrokerPropertiesName]), "maxDiskUsage=99"))
 	assert.True(t, strings.Contains(string(data[broker999BrokerPropertiesName]), "minDiskFree=7"))
 }
+
+func TestEnsureOwnerReferenceAPIVersion_NoOwnerReferences(t *testing.T) {
+	cr := &brokerv1beta1.ActiveMQArtemis{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "broker.amq.io/v1beta1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-broker",
+			Namespace: "test-ns",
+		},
+	}
+
+	existing := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "test-secret",
+			OwnerReferences: []metav1.OwnerReference{},
+		},
+	}
+
+	candidate := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-secret",
+		},
+	}
+
+	r := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
+	ri := NewActiveMQArtemisReconcilerImpl(cr, r)
+
+	result := ri.ensureOwnerReferenceAPIVersion(cr, existing, candidate)
+
+	assert.True(t, result, "should return true when no owner references exist")
+	assert.Empty(t, candidate.GetOwnerReferences(), "candidate owner references should not be modified")
+}
+
+func TestEnsureOwnerReferenceAPIVersion_MatchingAPIVersion(t *testing.T) {
+	cr := &brokerv1beta1.ActiveMQArtemis{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "broker.amq.io/v1beta1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-broker",
+			Namespace: "test-ns",
+		},
+	}
+
+	existing := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-secret",
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "broker.amq.io/v1beta1",
+					Kind:       "ActiveMQArtemis",
+					Name:       "test-broker",
+					UID:        "test-uid",
+				},
+			},
+		},
+	}
+
+	candidate := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-secret",
+		},
+	}
+
+	r := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
+	ri := NewActiveMQArtemisReconcilerImpl(cr, r)
+
+	result := ri.ensureOwnerReferenceAPIVersion(cr, existing, candidate)
+
+	assert.True(t, result, "should return true when API versions match")
+	assert.Empty(t, candidate.GetOwnerReferences(), "candidate owner references should not be modified when versions match")
+}
+
+func TestEnsureOwnerReferenceAPIVersion_DifferentAPIVersion(t *testing.T) {
+	cr := &brokerv1beta1.ActiveMQArtemis{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "broker.amq.io/v1beta1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-broker",
+			Namespace: "test-ns",
+		},
+	}
+
+	existing := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-secret",
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "broker.amq.io/v1alpha1",
+					Kind:       "ActiveMQArtemis",
+					Name:       "test-broker",
+					UID:        "test-uid",
+				},
+			},
+		},
+	}
+
+	candidate := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-secret",
+		},
+	}
+
+	r := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
+	ri := NewActiveMQArtemisReconcilerImpl(cr, r)
+
+	result := ri.ensureOwnerReferenceAPIVersion(cr, existing, candidate)
+
+	assert.False(t, result, "should return false when API versions differ")
+	assert.Len(t, candidate.GetOwnerReferences(), 1, "candidate should have owner references set")
+	assert.Equal(t, "broker.amq.io/v1beta1", candidate.GetOwnerReferences()[0].APIVersion, "candidate should have updated API version")
+}
+
+func TestEnsureOwnerReferenceAPIVersion_MultipleOwnerReferences(t *testing.T) {
+	cr := &brokerv1beta1.ActiveMQArtemis{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "broker.amq.io/v1beta1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-broker",
+			Namespace: "test-ns",
+		},
+	}
+
+	existing := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-secret",
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+					Name:       "other-owner",
+					UID:        "other-uid",
+				},
+				{
+					APIVersion: "broker.amq.io/v1alpha1",
+					Kind:       "ActiveMQArtemis",
+					Name:       "test-broker",
+					UID:        "test-uid",
+				},
+			},
+		},
+	}
+
+	candidate := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-secret",
+		},
+	}
+
+	r := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
+	ri := NewActiveMQArtemisReconcilerImpl(cr, r)
+
+	result := ri.ensureOwnerReferenceAPIVersion(cr, existing, candidate)
+
+	assert.False(t, result, "should return false when ActiveMQArtemis owner reference API version differs")
+	assert.Len(t, candidate.GetOwnerReferences(), 2, "candidate should have both owner references")
+	assert.Equal(t, "apps/v1", candidate.GetOwnerReferences()[0].APIVersion, "first owner reference should remain unchanged")
+	assert.Equal(t, "broker.amq.io/v1beta1", candidate.GetOwnerReferences()[1].APIVersion, "ActiveMQArtemis owner reference should be updated")
+}
+
+func TestEnsureOwnerReferenceAPIVersion_DifferentBrokerName(t *testing.T) {
+	cr := &brokerv1beta1.ActiveMQArtemis{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "broker.amq.io/v1beta1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-broker",
+			Namespace: "test-ns",
+		},
+	}
+
+	existing := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-secret",
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "broker.amq.io/v1alpha1",
+					Kind:       "ActiveMQArtemis",
+					Name:       "different-broker",
+					UID:        "test-uid",
+				},
+			},
+		},
+	}
+
+	candidate := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-secret",
+		},
+	}
+
+	r := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
+	ri := NewActiveMQArtemisReconcilerImpl(cr, r)
+
+	result := ri.ensureOwnerReferenceAPIVersion(cr, existing, candidate)
+
+	assert.True(t, result, "should return true when owner reference is for a different broker")
+	assert.Empty(t, candidate.GetOwnerReferences(), "candidate owner references should not be modified")
+}
+
+func TestCompareSecret_WithAPIVersionUpdate(t *testing.T) {
+	cr := &brokerv1beta1.ActiveMQArtemis{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "broker.amq.io/v1beta1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-broker",
+			Namespace: "test-ns",
+		},
+	}
+
+	deployed := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-secret",
+			Namespace: "test-ns",
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "broker.amq.io/v1alpha1",
+					Kind:       "ActiveMQArtemis",
+					Name:       "test-broker",
+					UID:        "test-uid",
+				},
+			},
+		},
+		Data: map[string][]byte{
+			"key": []byte("value"),
+		},
+	}
+
+	requested := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-secret",
+			Namespace: "test-ns",
+		},
+		Data: map[string][]byte{
+			"key": []byte("value"),
+		},
+	}
+
+	r := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
+	ri := NewActiveMQArtemisReconcilerImpl(cr, r)
+
+	result := ri.CompareSecret(deployed, requested)
+
+	assert.False(t, result, "should return false when owner reference API version needs update")
+	assert.Len(t, requested.GetOwnerReferences(), 1, "requested should have updated owner references")
+	assert.Equal(t, "broker.amq.io/v1beta1", requested.GetOwnerReferences()[0].APIVersion, "API version should be updated")
+}
+
+func TestCompareConfigMap_WithAPIVersionUpdate(t *testing.T) {
+	cr := &brokerv1beta1.ActiveMQArtemis{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "broker.amq.io/v1beta1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-broker",
+			Namespace: "test-ns",
+		},
+	}
+
+	deployed := &v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-config",
+			Namespace: "test-ns",
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "broker.amq.io/v1alpha1",
+					Kind:       "ActiveMQArtemis",
+					Name:       "test-broker",
+					UID:        "test-uid",
+				},
+			},
+		},
+	}
+
+	requested := &v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-config",
+			Namespace: "test-ns",
+		},
+	}
+
+	r := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
+	ri := NewActiveMQArtemisReconcilerImpl(cr, r)
+
+	result := ri.CompareConfigMap(deployed, requested)
+
+	assert.False(t, result, "should return false when owner reference API version needs update")
+	assert.Len(t, requested.GetOwnerReferences(), 1, "requested should have updated owner references")
+	assert.Equal(t, "broker.amq.io/v1beta1", requested.GetOwnerReferences()[0].APIVersion, "API version should be updated")
+}
+
+func TestCompareMetaAndSpec_WithAPIVersionUpdate(t *testing.T) {
+	cr := &brokerv1beta1.ActiveMQArtemis{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "broker.amq.io/v1beta1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-broker",
+			Namespace: "test-ns",
+		},
+	}
+
+	deployed := &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-ss",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				"app": "test",
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "broker.amq.io/v1alpha1",
+					Kind:       "ActiveMQArtemis",
+					Name:       "test-broker",
+					UID:        "test-uid",
+				},
+			},
+		},
+		Spec: appsv1.StatefulSetSpec{
+			Replicas: utilpointer.Int32Ptr(1),
+		},
+	}
+
+	requested := &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-ss",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				"app": "test",
+			},
+		},
+		Spec: appsv1.StatefulSetSpec{
+			Replicas: utilpointer.Int32Ptr(1),
+		},
+	}
+
+	r := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
+	ri := NewActiveMQArtemisReconcilerImpl(cr, r)
+
+	result := ri.CompareMetaAndSpec(deployed, requested)
+
+	assert.False(t, result, "should return false when owner reference API version needs update")
+	assert.Len(t, requested.GetOwnerReferences(), 1, "requested should have updated owner references")
+	assert.Equal(t, "broker.amq.io/v1beta1", requested.GetOwnerReferences()[0].APIVersion, "API version should be updated")
+}

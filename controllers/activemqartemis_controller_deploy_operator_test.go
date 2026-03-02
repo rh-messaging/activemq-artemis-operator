@@ -41,6 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -109,7 +110,7 @@ var _ = Describe("artemis controller", Label("do"), func() {
 					getPersistedVersionedCrd(brokerCr.ObjectMeta.Name, defaultNamespace, createdBrokerCr)
 					g.Expect(len(createdBrokerCr.Status.PodStatus.Ready)).Should(BeEquivalentTo(2))
 					g.Expect(meta.IsStatusConditionTrue(createdBrokerCr.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType)).Should(BeTrue(), *oprLog)
-				}, existingClusterTimeout, interval).Should(Succeed())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				CleanResource(createdBrokerCr, createdBrokerCr.Name, defaultNamespace)
 				CleanResource(commonSecret, commonSecret.Name, defaultNamespace)
@@ -323,6 +324,7 @@ var _ = Describe("artemis controller", Label("do"), func() {
 						},
 						Spec: brokerv1beta1.ActiveMQArtemisSpec{
 							DeploymentPlan: brokerv1beta1.DeploymentPlanType{
+								Size: ptr.To(int32(0)),
 								ReadinessProbe: &corev1.Probe{
 									ProbeHandler: corev1.ProbeHandler{
 										TCPSocket: &corev1.TCPSocketAction{
