@@ -16,7 +16,7 @@ spec:
   selector:
     matchLabels:
       control-plane: controller-manager
-      name: activemq-artemis-operator
+      name: amq-broker-operator
   replicas: 1
   strategy:
     rollingUpdate:
@@ -27,7 +27,7 @@ spec:
     metadata:
       labels:
         control-plane: controller-manager
-        name: activemq-artemis-operator
+        name: amq-broker-operator
     spec:
       securityContext:
         runAsNonRoot: true
@@ -35,7 +35,7 @@ spec:
           type: RuntimeDefault
       containers:
       - command:
-        - /home/activemq-artemis-operator/bin/entrypoint
+        - /home/amq-broker-operator/bin/entrypoint
         args:
         # Explicitly set the logging level.
         # Valid values are debug, info, and error
@@ -63,7 +63,7 @@ spec:
               fieldPath: metadata.namespace
         - name: ENABLE_WEBHOOKS
           value: "false"
-        image: controller:latest
+        image: registry.redhat.io/amq0/amq-broker-rhel9-operator@sha256:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         # imagePullPolicy: Always
         name: manager
         ports:
