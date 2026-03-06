@@ -4947,7 +4947,7 @@ var _ = Describe("artemis controller", func() {
 			livenessProbe.PeriodSeconds = 5
 			livenessProbe.InitialDelaySeconds = 6
 			livenessProbe.TimeoutSeconds = 7
-			livenessProbe.SuccessThreshold = 8
+			livenessProbe.SuccessThreshold = 1
 			livenessProbe.FailureThreshold = 9
 			crd.Spec.DeploymentPlan.LivenessProbe = &livenessProbe
 			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
@@ -4980,7 +4980,7 @@ var _ = Describe("artemis controller", func() {
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds == 5).Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds == 6).Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds == 7).Should(BeTrue())
-			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.SuccessThreshold == 8).Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.SuccessThreshold == 1).Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.FailureThreshold == 9).Should(BeTrue())
 
 			By("Updating the CR")
@@ -4993,7 +4993,7 @@ var _ = Describe("artemis controller", func() {
 				original.Spec.DeploymentPlan.LivenessProbe.PeriodSeconds = 15
 				original.Spec.DeploymentPlan.LivenessProbe.InitialDelaySeconds = 16
 				original.Spec.DeploymentPlan.LivenessProbe.TimeoutSeconds = 17
-				original.Spec.DeploymentPlan.LivenessProbe.SuccessThreshold = 18
+				original.Spec.DeploymentPlan.LivenessProbe.SuccessThreshold = 1
 				original.Spec.DeploymentPlan.LivenessProbe.FailureThreshold = 19
 				exec := corev1.ExecAction{
 					Command: []string{"/broker/bin/artemis check node"},
@@ -5021,7 +5021,7 @@ var _ = Describe("artemis controller", func() {
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds == 15).Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds == 16).Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds == 17).Should(BeTrue())
-			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.SuccessThreshold == 18).Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.SuccessThreshold == 1).Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.FailureThreshold == 19).Should(BeTrue())
 
 			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
@@ -5040,7 +5040,7 @@ var _ = Describe("artemis controller", func() {
 			livenessProbe.PeriodSeconds = 5
 			livenessProbe.InitialDelaySeconds = 6
 			livenessProbe.TimeoutSeconds = 7
-			livenessProbe.SuccessThreshold = 8
+			livenessProbe.SuccessThreshold = 1
 			livenessProbe.FailureThreshold = 9
 			livenessProbe.Exec = &exec
 			crd.Spec.DeploymentPlan.LivenessProbe = &livenessProbe
@@ -5073,7 +5073,7 @@ var _ = Describe("artemis controller", func() {
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds == 5).Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds == 6).Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds == 7).Should(BeTrue())
-			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.SuccessThreshold == 8).Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.SuccessThreshold == 1).Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.FailureThreshold == 9).Should(BeTrue())
 
 			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
