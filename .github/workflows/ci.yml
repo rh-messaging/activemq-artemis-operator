@@ -33,6 +33,29 @@ on:
         type: boolean
 
 jobs:
+  validate:
+    name: Validate
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Validate commit messages
+        env:
+          COMMIT_COUNT: ${{ github.event.pull_request.commits }}
+          COMMIT_PATTERN: '^\[(NO-ISSUE|#[0-9]+)\] .+$'
+        run: |
+          git log --format=%s --max-count="$COMMIT_COUNT" --skip=1 | while IFS= read -r COMMIT_MESSAGE; do
+            if [[ ! "$COMMIT_MESSAGE" =~ $COMMIT_PATTERN ]]; then
+              echo "Invalid commit message: '$COMMIT_MESSAGE'"
+              echo "Commit messages must start with '[NO-ISSUE]' or '[#NNN]', followed by a space and a description."
+              exit 1
+            fi
+          done
 
   build:
     name: Build
