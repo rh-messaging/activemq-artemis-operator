@@ -4282,6 +4282,7 @@ var _ = Describe("artemis controller", func() {
 
 			podAffinityTerm := corev1.PodAffinityTerm{}
 			podAffinityTerm.LabelSelector = &labelSelector
+			podAffinityTerm.TopologyKey = "kubernetes.io/hostname"
 
 			podAffinity := corev1.PodAffinity{
 				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
@@ -4329,6 +4330,7 @@ var _ = Describe("artemis controller", func() {
 
 				podAffinityTerm = corev1.PodAffinityTerm{}
 				podAffinityTerm.LabelSelector = &labelSelector
+				podAffinityTerm.TopologyKey = "kubernetes.io/hostname"
 				podAffinity = corev1.PodAffinity{
 					RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
 						podAffinityTerm,
@@ -4364,6 +4366,7 @@ var _ = Describe("artemis controller", func() {
 
 			podAffinityTerm := corev1.PodAffinityTerm{}
 			podAffinityTerm.LabelSelector = &labelSelector
+			podAffinityTerm.TopologyKey = "kubernetes.io/hostname"
 			podAntiAffinity := corev1.PodAntiAffinity{
 				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
 					podAffinityTerm,
@@ -4409,6 +4412,7 @@ var _ = Describe("artemis controller", func() {
 
 				podAffinityTerm = corev1.PodAffinityTerm{}
 				podAffinityTerm.LabelSelector = &labelSelector
+				podAffinityTerm.TopologyKey = "kubernetes.io/hostname"
 				podAntiAffinity = corev1.PodAntiAffinity{
 					RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
 						podAffinityTerm,
@@ -4439,8 +4443,9 @@ var _ = Describe("artemis controller", func() {
 			crd := generateArtemisSpec(defaultNamespace)
 
 			nodeSelectorRequirement := corev1.NodeSelectorRequirement{
-				Key:    "foo",
-				Values: make([]string, 1),
+				Key:      "foo",
+				Values:   make([]string, 1),
+				Operator: corev1.NodeSelectorOpIn,
 			}
 			nodeSelectorRequirements := [1]corev1.NodeSelectorRequirement{nodeSelectorRequirement}
 			nodeSelectorRequirements[0] = nodeSelectorRequirement
@@ -4486,8 +4491,9 @@ var _ = Describe("artemis controller", func() {
 				original := createdCrd
 
 				nodeSelectorRequirement = corev1.NodeSelectorRequirement{
-					Key:    "bar",
-					Values: make([]string, 2),
+					Key:      "bar",
+					Values:   make([]string, 2),
+					Operator: corev1.NodeSelectorOpIn,
 				}
 				nodeSelectorRequirements = [1]corev1.NodeSelectorRequirement{nodeSelectorRequirement}
 				nodeSelectorRequirements[0] = nodeSelectorRequirement
