@@ -4191,9 +4191,9 @@ var _ = Describe("artemis controller", func() {
 			By("Creating a non-default SELinuxOptions CR instance")
 			nonDefaultCR := generateArtemisSpec(defaultNamespace)
 
-			credentialSpecName := "CredentialSpecName0"
-			credentialSpec := "CredentialSpec0"
-			runAsUserName := "RunAsUserName0"
+			credentialSpecName := "credential-spec-name-0"
+			credentialSpec := "credential-spec-0"
+			runAsUserName := "user-0"
 			hostProcess := false
 			var runAsUser int64 = 1000
 			var runAsGroup int64 = 1001
@@ -4203,29 +4203,29 @@ var _ = Describe("artemis controller", func() {
 			supplementalGroups := []int64{supplementalGroupA, supplementalGroupB}
 			var fsGroup int64 = 3000
 			sysctlA := corev1.Sysctl{
-				Name:  "NameA",
-				Value: "ValueA",
+				Name:  "sysctl-a",
+				Value: "test",
 			}
 			sysctlB := corev1.Sysctl{
-				Name:  "NameB",
-				Value: "ValueB",
+				Name:  "sysctl-b",
+				Value: "test",
 			}
 			sysctls := []corev1.Sysctl{sysctlA, sysctlB}
 
-			fsGCPString := "GroupChangePolicy0"
+			fsGCPString := "Always"
 			fsGCP := corev1.PodFSGroupChangePolicy(fsGCPString)
-			localhostProfile := "LocalhostProfile0"
+			localhostProfile := "localhost-profile"
 			seccompProfile := corev1.SeccompProfile{
-				Type:             corev1.SeccompProfileTypeUnconfined,
+				Type:             corev1.SeccompProfileTypeLocalhost,
 				LocalhostProfile: &localhostProfile,
 			}
 
 			nonDefaultCR.Spec.DeploymentPlan.PodSecurityContext = &corev1.PodSecurityContext{
 				SELinuxOptions: &corev1.SELinuxOptions{
-					User:  "TestUser0",
-					Role:  "TestRole0",
-					Type:  "TestType0",
-					Level: "TestLevel0",
+					User:  "user-0",
+					Role:  "role-0",
+					Type:  "type-0",
+					Level: "level-0",
 				},
 				WindowsOptions: &corev1.WindowsSecurityContextOptions{
 					GMSACredentialSpecName: &credentialSpecName,
