@@ -5,8 +5,6 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 on:
-  push:
-    branches: [ main ]
   pull_request:
     branches: [ main ]
   schedule:
@@ -28,8 +26,36 @@ on:
         required: false
         default: false
         type: boolean
+      trigger_release:
+        description: 'Trigger release'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
+  validate:
+    name: Validate
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Validate commit messages
+        env:
+          COMMIT_COUNT: ${{ github.event.pull_request.commits }}
+          COMMIT_PATTERN: '^\[(NO-ISSUE|#[0-9]+)\] .+$'
+        run: |
+          git log --format=%s --max-count="$COMMIT_COUNT" --skip=1 | while IFS= read -r COMMIT_MESSAGE; do
+            if [[ ! "$COMMIT_MESSAGE" =~ $COMMIT_PATTERN ]]; then
+              echo "Invalid commit message: '$COMMIT_MESSAGE'"
+              echo "Commit messages must start with '[NO-ISSUE]' or '[#NNN]', followed by a space and a description."
+              exit 1
+            fi
+          done
 
   build:
     name: Build
@@ -50,7 +76,7 @@ jobs:
           echo "HOSTNAME=${HOSTNAME}" >> ${GITHUB_ENV}
 
       - name: Set up Docker
-        uses: docker/setup-docker-action@v4
+        uses: docker/setup-docker-action@v5
         with:
           daemon-config: |
             {
@@ -229,3 +255,16 @@ jobs:
           find docs/tutorials -type f -exec sed -i "s|^minikube start|minikube start  --cpus 2 --memory 8000 --insecure-registry=$HOSTNAME:5000|" {} +
           sed -i "s|image: quay.io/arkmq-org/activemq-artemis-operator:.*|image: ${HOSTNAME}:5000/$IMAGE_NAME:dev.latest|" deploy/operator.yaml
           markdown-runner docs/tutorials -v
+
+      - name: Trigger release
+        if: ${{ inputs.trigger_release }}
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.BOT_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.ref,
+              workflow_id: 'release.yml'
+            });
