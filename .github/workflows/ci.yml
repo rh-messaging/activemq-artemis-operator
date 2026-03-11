@@ -7,8 +7,9 @@ env:
 on:
   pull_request:
     branches: [ main ]
+    types: [opened, edited, synchronize, reopened]
   schedule:
-    - cron:  '0 0 * * 0'
+    - cron:  '0 6 * * *'
   workflow_dispatch:
     inputs:
       skipTests:
