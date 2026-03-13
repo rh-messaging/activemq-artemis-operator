@@ -216,6 +216,12 @@ spec:
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2510
           value: {{ quote (printf "%s@%s" .Values.controllerManager.manager.relatedImages.activemqArtemisBrokerKubernetesRepository .Values.controllerManager.manager.relatedImages.activemqArtemisBrokerKubernetes2510.digest)
             }}
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2520
+          value: {{ quote (printf "%s@%s" .Values.controllerManager.manager.relatedImages.activemqArtemisBrokerInitRepository .Values.controllerManager.manager.relatedImages.activemqArtemisBrokerInit2520.digest)
+            }}
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2520
+          value: {{ quote (printf "%s@%s" .Values.controllerManager.manager.relatedImages.activemqArtemisBrokerKubernetesRepository .Values.controllerManager.manager.relatedImages.activemqArtemisBrokerKubernetes2520.digest)
+            }}
         - name: OPERATOR_NAME
           valueFrom:
             fieldRef:
