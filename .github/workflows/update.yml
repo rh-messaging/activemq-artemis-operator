@@ -64,7 +64,7 @@ jobs:
         id: update_base_image
         if: ${{ github.event_name == 'schedule' || inputs.update_base_image }}
         run: |
-          if [ "${{ inputs.base_image }}" = "latest" ]; then
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.base_image }}" = "latest" ]; then
             BASE_IMAGE="registry.access.redhat.com/ubi9-minimal:$(basename $(skopeo inspect docker://registry.access.redhat.com/ubi9-minimal:latest | jq -r '.Labels.version + "-" + .Labels.release'))"
           else
             BASE_IMAGE="${{ inputs.base_image }}"
