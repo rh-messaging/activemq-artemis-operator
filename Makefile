@@ -410,17 +410,18 @@ endif
 catalog-clean: ## Clean up catalog files and Dockerfile
 	rm -rf catalog
 
+CATALOG_GEN_FLAGS ?= -q --overwrite --version $(BUNDLE_VERSION) $(BUNDLE_METADATA_OPTS)
+
 .PHONY: catalog-generate 
 catalog-generate: catalog-clean opm yq ## Generate the catalog by adding bundles to stable channel. It requires BUNDLE_IMG exists before running the target"
 	mkdir -p catalog
 	cp config/catalog/basic-catalog-template.yaml catalog/basic-catalog-template.yaml
 	chmod +x ./hack/update-catalog-template.sh
 	./hack/update-catalog-template.sh catalog/basic-catalog-template.yaml $(BUNDLE_IMGS) $(YQ)
-	$(OPM) alpha render-template basic \
-		--migrate-level=bundle-object-to-csv-metadata \
-		-o yaml \
-		catalog/basic-catalog-template.yaml > catalog/operator.yaml
-	$(OPM) validate catalog
+	$(OPM) alpha render-template basic catalog/basic-catalog-template.yaml \
+		--migrate-level=bundle-object-to-csv-metadata -o yaml \
+		$(OPM_FLAGS) > catalog/operator.yaml
+	$(OPM) validate catalog $(OPM_FLAGS)
 	rm -f catalog/basic-catalog-template.yaml
 
 # Build a catalog image by adding bundle images to an empty catalog using the operator package manager tool, 'opm'.
