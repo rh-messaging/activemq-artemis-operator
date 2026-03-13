@@ -154,6 +154,10 @@ spec:
           value: quay.io/arkmq-org/activemq-artemis-broker-init@sha256:afb06fca57cea3fad5ba7bc39af373bc688e5277dbab41c1d07b6b2ecb532476
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2510
           value: quay.io/arkmq-org/activemq-artemis-broker-kubernetes@sha256:f9de3d120d27f216eafe2b77038e742a7c1569bba0970455969620026dde7dfc
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2520
+          value: quay.io/arkmq-org/activemq-artemis-broker-init@sha256:ec2616a67b7e462ad5571c78635cfe3d22c90ff4f6821b0ebbb61d65b9bafb66
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2520
+          value: quay.io/arkmq-org/activemq-artemis-broker-kubernetes@sha256:fb725448599d6ad3d45b89c05338a7a911b3e9ed55840a4026e502ea36dadec1
         - name: OPERATOR_NAME
           valueFrom:
             fieldRef:
@@ -168,7 +172,7 @@ spec:
               fieldPath: metadata.namespace
         - name: ENABLE_WEBHOOKS
           value: "false"
-        image: quay.io/arkmq-org/activemq-artemis-operator:2.1.2
+        image: quay.io/arkmq-org/activemq-artemis-operator:2.1.3
         livenessProbe:
           httpGet:
             path: /healthz

@@ -5,6 +5,8 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 on:
+  schedule:
+    - cron:  '0 3 * * *'
   workflow_dispatch:
     inputs:
       version:
@@ -57,35 +59,22 @@ jobs:
         run: |
           git config user.name 'arkmq-bot'
           git config user.email 'bot@arkmq.org'
-          git push
-
-      - name: Update version
-        if: ${{ inputs.update_version }}
-        run: |
-          CURRENT_VERSION=$(grep -m 1 -oP '(?<=Version = ")[^"]+' version/version.go)
-          IFS=. read CURRENT_VERSION_MAJOR CURRENT_VERSION_MINOR CURRENT_VERSION_PATCH <<< ${CURRENT_VERSION}
-          IFS=. read VERSION_MAJOR VERSION_MINOR VERSION_PATCH <<< ${{ inputs.version }}
-          VERSION_MAJOR=${VERSION_MAJOR/\*/${CURRENT_VERSION_MAJOR}} && VERSION_MAJOR=${VERSION_MAJOR/+/$((CURRENT_VERSION_MAJOR+1))}
-          VERSION_MINOR=${VERSION_MINOR/\*/${CURRENT_VERSION_MINOR}} && VERSION_MINOR=${VERSION_MINOR/+/$((CURRENT_VERSION_MINOR+1))}
-          VERSION_PATCH=${VERSION_PATCH/\*/${CURRENT_VERSION_PATCH}} && VERSION_PATCH=${VERSION_PATCH/+/$((CURRENT_VERSION_PATCH+1))}
-          VERSION="${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
-          sed -i "s~^VERSION ?=.*~VERSION ?= ${VERSION}~" Makefile
-          make build && make generate-deploy && make bundle  && make helm-charts && git status
-          git commit --all --message "[NO-ISSUE] Update version to ${VERSION}" || echo "nothing to commit"
 
       - name: Update base image
-        if: ${{ inputs.update_base_image }}
+        id: update_base_image
+        if: ${{ github.event_name == 'schedule' || inputs.update_base_image }}
         run: |
-          if [ "${{ inputs.base_image }}" = "latest" ]; then
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.base_image }}" = "latest" ]; then
             BASE_IMAGE="registry.access.redhat.com/ubi9-minimal:$(basename $(skopeo inspect docker://registry.access.redhat.com/ubi9-minimal:latest | jq -r '.Labels.version + "-" + .Labels.release'))"
           else
             BASE_IMAGE="${{ inputs.base_image }}"
           fi
           sed -i "s~FROM.*base-env~FROM ${BASE_IMAGE} AS base-env~" Dockerfile
-          git commit --all --message "[NO-ISSUE] Update base image to ${BASE_IMAGE}" || echo "nothing to commit"
+          git commit --all --message "[NO-ISSUE] Update base image to ${BASE_IMAGE}" && echo "status=DONE" >> $GITHUB_OUTPUT || echo "nothing to commit"
 
       - name: Update related images
-        if: ${{ inputs.update_related_images }}
+        id: update_related_images
+        if: ${{ github.event_name == 'schedule' || inputs.update_related_images }}
         run: |
           set -e
           QUOTE_CHAR='"'
@@ -125,14 +114,33 @@ jobs:
               sed -i "/RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_${ACTIVEMQ_ARTEMIS_COMPACT_VERSION}/,/value:/ s~value:.*~value: quay.io/arkmq-org/activemq-artemis-broker-kubernetes@${ACTIVEMQ_ARTEMIS_BROKER_KUBERNETES_DIGEST}~" ${RELATED_IMAGES_FILE}
             fi
             make build && make generate-deploy && make bundle && make helm-charts && git status
-            git commit --all --message "[NO-ISSUE] Update related images for Apache Artemis ${ACTIVEMQ_ARTEMIS_VERSION}" || echo "nothing to commit"
+            git commit --all --message "[NO-ISSUE] Update related images for Apache Artemis ${ACTIVEMQ_ARTEMIS_VERSION}" && echo "status=DONE" >> $GITHUB_OUTPUT || echo "nothing to commit"
           done
 
-      - name: Push commits
+      - name: Update version
+        id: update_version
+        if: ${{ (github.event_name == 'schedule' && steps.update_related_images.outputs.status == 'DONE') || inputs.update_version }}
+        env:
+          UPDATE_VERSION: ${{ github.event_name == 'schedule' && '*.*.+' || inputs.version }}
         run: |
-          git push
+          CURRENT_VERSION=$(grep -m 1 -oP '(?<=Version = ")[^"]+' version/version.go)
+          IFS=. read CURRENT_VERSION_MAJOR CURRENT_VERSION_MINOR CURRENT_VERSION_PATCH <<< ${CURRENT_VERSION}
+          IFS=. read VERSION_MAJOR VERSION_MINOR VERSION_PATCH <<< "${UPDATE_VERSION}"
+          VERSION_MAJOR=${VERSION_MAJOR/\*/${CURRENT_VERSION_MAJOR}} && VERSION_MAJOR=${VERSION_MAJOR/+/$((CURRENT_VERSION_MAJOR+1))}
+          VERSION_MINOR=${VERSION_MINOR/\*/${CURRENT_VERSION_MINOR}} && VERSION_MINOR=${VERSION_MINOR/+/$((CURRENT_VERSION_MINOR+1))}
+          VERSION_PATCH=${VERSION_PATCH/\*/${CURRENT_VERSION_PATCH}} && VERSION_PATCH=${VERSION_PATCH/+/$((CURRENT_VERSION_PATCH+1))}
+          VERSION="${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
+          sed -i "s~^VERSION ?=.*~VERSION ?= ${VERSION}~" Makefile
+          make build && make generate-deploy && make bundle  && make helm-charts && git status
+          git commit --all --message "[NO-ISSUE] Update version to ${VERSION}" && echo "status=DONE" >> $GITHUB_OUTPUT || echo "nothing to commit"
+
+      - name: Push commits
+        if: ${{ steps.update_version.outputs.status == 'DONE' || steps.update_base_image.outputs.status == 'DONE' || steps.update_related_images.outputs.status == 'DONE' }}
+        run: git push
 
       - name: Trigger CI
+        env:
+          TRIGGER_RELEASE: ${{ (github.event_name == 'schedule' && steps.update_related_images.outputs.status == 'DONE') || inputs.trigger_release }}
         uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.BOT_TOKEN }}
@@ -143,6 +151,6 @@ jobs:
               ref: context.ref,
               workflow_id: 'ci.yml',
               inputs: {
-                trigger_release: ${{ inputs.trigger_release }}
+                trigger_release: process.env.TRIGGER_RELEASE
               }
             });
