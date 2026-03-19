@@ -7081,13 +7081,13 @@ var _ = Describe("artemis controller", func() {
 			previousCompactVersion := version.CompactActiveMQArtemisVersion(previousVersion.String())
 			Expect(previousCompactVersion).ShouldNot(Equal(version.GetDefaultCompactVersion()))
 
-			previousImageEnvVar := common.ImageNamePrefix + "Kubernetes_" + previousCompactVersion
+			previousImageEnvVar := common.ImageNamePrefix + "KUBERNETES_" + previousCompactVersion
 			previousImageEnvValue, err := getOperatorEnv(previousImageEnvVar)
 			Expect(err).To(BeNil())
 			os.Setenv(previousImageEnvVar, previousImageEnvValue)
 			defer os.Unsetenv(previousImageEnvVar)
 
-			perviousInitImageEnvVar := common.ImageNamePrefix + "Init_" + previousCompactVersion
+			perviousInitImageEnvVar := common.ImageNamePrefix + "INIT_" + previousCompactVersion
 			perviousInitImageEnvValue, err := getOperatorEnv(perviousInitImageEnvVar)
 			Expect(err).To(BeNil())
 			os.Setenv(perviousInitImageEnvVar, perviousInitImageEnvValue)
