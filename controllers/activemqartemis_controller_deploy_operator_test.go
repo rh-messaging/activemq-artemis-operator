@@ -65,13 +65,18 @@ var _ = Describe("artemis controller", Label("do"), func() {
 		})
 		It("get status from broker", func() {
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" && os.Getenv("DEPLOY_OPERATOR") == "true" {
+				brokerName := "artemis-broker"
+				hdlsName := brokerName + "-hdls-svc." + defaultNamespace + ".svc.cluster.local"
 
 				commonSecretName := "common-amq-tls-sni-secret"
-				dnsNames := []string{"*.artemis-broker-hdls-svc.default.svc.cluster.local"}
-				commonSecret, err := CreateTlsSecret(commonSecretName, defaultNamespace, defaultPassword, dnsNames)
+				commonSecret, err := CreateTlsSecret(commonSecretName, defaultNamespace, defaultPassword, []string{"*." + hdlsName})
 				Expect(err).To(BeNil())
-
 				Expect(k8sClient.Create(ctx, commonSecret)).Should(Succeed())
+
+				acceptorSecretName := "acceptor-amq-tls-sni-secret"
+				acceptorSecret, err := CreateTlsSecret(acceptorSecretName, defaultNamespace, defaultPassword, []string{"*." + hdlsName})
+				Expect(err).To(BeNil())
+				Expect(k8sClient.Create(ctx, acceptorSecret)).Should(Succeed())
 
 				createdSecret := corev1.Secret{}
 				secretKey := types.NamespacedName{
@@ -83,11 +88,18 @@ var _ = Describe("artemis controller", Label("do"), func() {
 					g.Expect(k8sClient.Get(ctx, secretKey, &createdSecret)).To(Succeed())
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
-				brokerName := "artemis-broker"
 				By("Deploying the broker cr")
 				brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
 
 					candidate.Name = brokerName
+					candidate.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+						{
+							Name:       "artemis-acceptor",
+							Port:       61617,
+							SSLEnabled: true,
+							SSLSecret:  acceptorSecretName,
+						},
+					}
 					candidate.Spec.DeploymentPlan.Size = common.Int32ToPtr(2)
 					candidate.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
 						InitialDelaySeconds: 1,
@@ -111,6 +123,17 @@ var _ = Describe("artemis controller", Label("do"), func() {
 					g.Expect(len(createdBrokerCr.Status.PodStatus.Ready)).Should(BeEquivalentTo(2))
 					g.Expect(meta.IsStatusConditionTrue(createdBrokerCr.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType)).Should(BeTrue(), *oprLog)
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("checking test queue")
+				Eventually(func(g Gomega) {
+					ssName := namer.CrToSS(createdBrokerCr.Name)
+					for i := 0; i < 2; i++ {
+						podWithOrdinal := ssName + "-" + strconv.Itoa(i)
+						checkCmd := []string{"amq-broker/bin/artemis", "check", "queue", "--name", "TEST", "--produce", "1000", "--consume", "1000", "--url", "tcp://" + podWithOrdinal + "." + hdlsName + ":61617?sslEnabled=true&trustStorePath=/etc/" + acceptorSecretName + "-volume/client.ts&trustStorePassword=password"}
+						_, err := RunCommandInPodWithNamespace(podWithOrdinal, defaultNamespace, createdBrokerCr.Name+"-container", checkCmd)
+						g.Expect(err).To(BeNil())
+					}
+				}, timeout, interval).Should(Succeed())
 
 				CleanResource(createdBrokerCr, createdBrokerCr.Name, defaultNamespace)
 				CleanResource(commonSecret, commonSecret.Name, defaultNamespace)
