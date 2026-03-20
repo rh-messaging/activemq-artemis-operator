@@ -142,7 +142,7 @@ var ActiveMQArtemisVersionfromFullVersion map[string]string = map[string]string{
 	"7.13.1": "2.40.0.redhat-00006",
 	"7.13.2": "2.40.0.redhat-00008",
 	"7.13.3": "2.40.0.redhat-00009",
-	"7.14.0": "2.51.0.redhat-00001",
+	"7.14.0": "2.53.0.redhat-00002",
 	"7.12.6": "2.33.0.redhat-00022",
 	"7.13.4": "2.40.0.redhat-00012",
 }
