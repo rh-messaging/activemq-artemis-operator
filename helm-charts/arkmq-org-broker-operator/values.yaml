@@ -92,6 +92,8 @@ controllerManager:
         digest: sha256:afb06fca57cea3fad5ba7bc39af373bc688e5277dbab41c1d07b6b2ecb532476
       brokerInit2520:
         digest: sha256:4a5cf0c4b11c7ade4b7ac312daa697f1f8ba60a8b81f0b3e9a3e37c284cf9c1d
+      brokerInit2530:
+        digest: sha256:0b6420bc79edc511b91a04fa226b47f1f790f5de16182f388367c86778c06da9
       brokerKubernetes2150:
         digest: sha256:39f34248f112751b7835f746016990046d21374a6514cb528632e0b06c76616b
       brokerKubernetes2160:
@@ -156,6 +158,8 @@ controllerManager:
         digest: sha256:f9de3d120d27f216eafe2b77038e742a7c1569bba0970455969620026dde7dfc
       brokerKubernetes2520:
         digest: sha256:cfcbdb91612ab0aaffd52d65336dfaaf10cecf98d859d517bd77b918800e049a
+      brokerKubernetes2530:
+        digest: sha256:bea5fdd7a4dc956d899fa57e747287ad0b48cc02c4b03e8121395a87c6f68313
   podSecurityContext:
     runAsNonRoot: true
     seccompProfile:
