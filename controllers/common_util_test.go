@@ -85,7 +85,6 @@ func GetHelmCmd() string {
 }
 
 func randStringWithPrefix(prefix string) string {
-	rand.Seed(time.Now().UnixNano())
 	length := 6
 	var b strings.Builder
 	b.WriteString(prefix)
@@ -102,7 +101,16 @@ func randString() string {
 func CleanResourceWithTimeouts(res client.Object, name string, namespace string, cleanTimeout time.Duration, cleanInterval time.Duration) {
 	//batch.kubernetes.io/job-name: consumer
 
-	err := k8sClient.Delete(ctx, res)
+	// Use foreground propagation for Jobs to ensure dependent Pods are deleted first
+	resType := reflect.ValueOf(res).Elem().Type()
+	jobType := reflect.TypeOf(batchv1.Job{})
+	var err error
+	if resType == jobType {
+		cascade_foreground_policy := metav1.DeletePropagationForeground
+		err = k8sClient.Delete(ctx, res, &client.DeleteOptions{PropagationPolicy: &cascade_foreground_policy})
+	} else {
+		err = k8sClient.Delete(ctx, res)
+	}
 	if errors.IsNotFound(err) {
 		return
 	}
@@ -116,9 +124,8 @@ func CleanResourceWithTimeouts(res client.Object, name string, namespace string,
 		g.Expect(errors.IsNotFound(err)).To(BeTrue())
 	}, cleanTimeout, cleanInterval).Should(Succeed())
 
-	resType := reflect.ValueOf(res).Elem().Type()
-	jobType := reflect.TypeOf(batchv1.Job{})
-
+	// With foreground propagation, dependent pods should be deleted automatically,
+	// but verify cleanup as a safety measure
 	if resType == jobType {
 		cfg, err := config.GetConfig()
 		Expect(err).To(BeNil())

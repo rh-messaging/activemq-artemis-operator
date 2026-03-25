@@ -762,7 +762,6 @@ type ExternalConfigStatus struct {
 //+kubebuilder:subresource:status
 //+kubebuilder:subresource:scale:specpath=.spec.deploymentPlan.size,statuspath=.status.deploymentPlanSize,selectorpath=.status.scaleLabelSelector
 //+kubebuilder:storageversion
-//+kubebuilder:resource:path=brokers
 //+kubebuilder:resource:path=brokers,shortName=b
 //+kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status",description="The state of the resource"
 //+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",description="The age of the resource"

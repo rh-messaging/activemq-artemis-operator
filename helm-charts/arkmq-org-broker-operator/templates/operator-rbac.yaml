@@ -53,7 +53,9 @@ rules:
 - apiGroups:
   - arkmq.org
   resources:
+  - brokerapps
   - brokers
+  - brokerservices
   verbs:
   - create
   - delete
@@ -65,13 +67,17 @@ rules:
 - apiGroups:
   - arkmq.org
   resources:
+  - brokerapps/finalizers
   - brokers/finalizers
+  - brokerservices/finalizers
   verbs:
   - update
 - apiGroups:
   - arkmq.org
   resources:
+  - brokerapps/status
   - brokers/status
+  - brokerservices/status
   verbs:
   - get
   - patch
