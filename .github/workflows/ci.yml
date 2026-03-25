@@ -5,11 +5,13 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 on:
+  push:
+    branches: [ main ]
   pull_request:
     branches: [ main ]
     types: [opened, edited, synchronize, reopened]
   schedule:
-    - cron:  '0 6 * * *'
+    - cron:  '0 3 * * *'
   workflow_dispatch:
     inputs:
       skipTests:
@@ -114,7 +116,7 @@ jobs:
 
       - name: Build the image
         run: |
-          podman build --build-arg TARGETOS=linux --build-arg TARGETARCH=amd64 --label quay.expires-after=90d --label git-sha=$GITHUB_SHA --no-cache --platform linux/amd64 --manifest $IMAGE_NAME:dev.latest .
+          podman build --build-arg TARGETOS=linux --build-arg TARGETARCH=amd64 --label git-sha=$GITHUB_SHA --no-cache --platform linux/amd64 --manifest $IMAGE_NAME:dev.latest .
 
       - name: Push the image into minikube
         run: |
@@ -178,14 +180,12 @@ jobs:
       - name: Build the image for arm64
         if: ${{ github.event_name == 'push' }}
         run: |
-          podman build --build-arg TARGETOS=linux --build-arg TARGETARCH=arm64 --label quay.expires-after=90d --label git-sha=$GITHUB_SHA --no-cache --platform linux/arm64 --manifest $IMAGE_NAME:dev.latest .
+          podman build --build-arg TARGETOS=linux --build-arg TARGETARCH=arm64 --label git-sha=$GITHUB_SHA --no-cache --platform linux/arm64 --manifest $IMAGE_NAME:dev.latest .
 
       - name: Push the dev image
         if: ${{ github.event_name == 'push' }}
         run: |
-          COMMIT_TAG=dev.$(date +%Y%m%d).$(git rev-parse --short "$GITHUB_SHA")
           podman login --username=${{ secrets.QUAY_USERNAME }} --password=${{ secrets.QUAY_PASSWORD }} quay.io
-          podman manifest push $IMAGE_NAME:dev.latest docker://quay.io/${{ secrets.QUAY_NAMESPACE }}/$IMAGE_NAME:$COMMIT_TAG
           podman manifest push $IMAGE_NAME:dev.latest docker://quay.io/${{ secrets.QUAY_NAMESPACE }}/$IMAGE_NAME:dev.latest
 
       - name: Push dev-latest helm chart
@@ -204,39 +204,44 @@ jobs:
           helm push arkmq-org-broker-operator-0.0.0-dev.latest.tgz oci://quay.io/${{ secrets.QUAY_NAMESPACE }}/helm-charts
 
       - name: Build the bundle image
-        run: podman build --file bundle.Dockerfile --label quay.expires-after=90d --label git-sha=$GITHUB_SHA --tag $IMAGE_NAME-bundle:dev.latest .
+        run: |
+          IMG="${HOSTNAME}:5000/$IMAGE_NAME:dev.latest"
+          IMG="$IMG" yq -i '.metadata.annotations.containerImage=env(IMG)' bundle/manifests/arkmq-org-broker-operator.clusterserviceversion.yaml
+          IMG="$IMG" yq -i '.spec.install.spec.deployments[].spec.template.spec.containers[].image=env(IMG)' bundle/manifests/arkmq-org-broker-operator.clusterserviceversion.yaml
+          podman build --file bundle.Dockerfile --label git-sha=$GITHUB_SHA --tag $IMAGE_NAME-bundle:dev.latest .
+
+      - name: Check the bundle image
+        run: |
+          echo 'Pushing the bundle image to local registry'
+          CSV_VERSION=$(yq -r '.spec.version' bundle/manifests/arkmq-org-broker-operator.clusterserviceversion.yaml)
+          podman tag $IMAGE_NAME-bundle:dev.latest ${HOSTNAME}:5000/$IMAGE_NAME-bundle:${CSV_VERSION}
+          podman push --tls-verify=false ${HOSTNAME}:5000/$IMAGE_NAME-bundle:${CSV_VERSION}
+          #
+          echo 'Building and pushing catalog image'
+          make BUNDLE_IMG=${HOSTNAME}:5000/$IMAGE_NAME-bundle:${CSV_VERSION} CATALOG_IMG=${HOSTNAME}:5000/arkmq-org-broker-operator-catalog:dev.latest OPM_FLAGS=--use-http catalog-build catalog-push
+          #
+          echo 'Creating and verifying catalog source'
+          sed "s~image:.*~image: ${HOSTNAME}:5000/arkmq-org-broker-operator-catalog:dev.latest~" examples/catalog/catalog-source.yaml | minikube kubectl -- create -f -
+          minikube kubectl -- wait catalogsource arkmq-org-broker-operator-catalog-source --for=jsonpath='{.status.connectionState.lastObservedState}'=READY --namespace=operators --timeout=3m ||
+          (minikube kubectl -- get catalogsource arkmq-org-broker-operator-catalog-source --namespace operators -o yaml && exit 1)
+          minikube kubectl -- wait pod -l olm.catalogSource=arkmq-org-broker-operator-catalog-source --for=condition=Ready --namespace=operators --timeout=3m ||
+          (minikube kubectl -- describe pod -l olm.catalogSource=arkmq-org-broker-operator-catalog-source --namespace=operators && exit 1)
+          #
+          echo 'Creating and verifying subscription'
+          minikube kubectl -- create -f ./examples/catalog/subscription.yaml
+          minikube kubectl -- wait subscription arkmq-org-broker-operator-subscription --for=jsonpath='{.status.installplan.kind}'=InstallPlan --namespace=operators --timeout=3m ||
+          (minikube kubectl -- get subscription arkmq-org-broker-operator-subscription --namespace=operators -o yaml && exit 1)
+          minikube kubectl -- wait installplan -l operators.coreos.com/arkmq-org-broker-operator.operators='' --for=condition=Installed --namespace=operators --timeout=3m ||
+          (minikube kubectl -- get installplan -l operators.coreos.com/arkmq-org-broker-operator.operators='' --namespace=operators -o yaml && exit 1)
+          minikube kubectl -- wait pod -l name=activemq-artemis-operator --for=condition=Ready --namespace=operators --timeout=3m ||
+          (minikube kubectl -- get pod -l name=activemq-artemis-operator --namespace=operators -o yaml && exit 1)
 
       - name: Push the bundle image
         if: ${{ github.event_name == 'push' }}
         run: |
-          COMMIT_TAG=dev.$(date +%Y%m%d).$(git rev-parse --short "$GITHUB_SHA")
           podman login --username=${{ secrets.QUAY_USERNAME }} --password=${{ secrets.QUAY_PASSWORD }} quay.io
-          podman tag $IMAGE_NAME-bundle:dev.latest quay.io/${{ secrets.QUAY_NAMESPACE }}/$IMAGE_NAME-bundle:$COMMIT_TAG
-          podman push quay.io/${{ secrets.QUAY_NAMESPACE }}/$IMAGE_NAME-bundle:$COMMIT_TAG
           podman tag $IMAGE_NAME-bundle:dev.latest quay.io/${{ secrets.QUAY_NAMESPACE }}/$IMAGE_NAME-bundle:dev.latest
           podman push quay.io/${{ secrets.QUAY_NAMESPACE }}/$IMAGE_NAME-bundle:dev.latest
-
-      - name: Build and push catalog image
-        run: |
-          make CATALOG_IMG=${HOSTNAME}:5000/arkmq-org-broker-operator-catalog:dev.latest catalog-build catalog-push
-
-      - name: Create and verify catalog source
-        run: |
-          sed "s~image:.*~image: ${HOSTNAME}:5000/arkmq-org-broker-operator-catalog:dev.latest~" examples/catalog/catalog-source.yaml | minikube kubectl -- create -f -
-          minikube kubectl -- wait catalogsource arkmq-org-broker-operator-catalog-source --for=jsonpath='{.status.connectionState.lastObservedState}'=READY --namespace=operators --timeout=3m ||
-          minikube kubectl -- get catalogsource arkmq-org-broker-operator-catalog-source --namespace operators -o yaml
-          minikube kubectl -- wait pod -l olm.catalogSource=arkmq-org-broker-operator-catalog-source --for=condition=Ready --namespace=operators --timeout=3m ||
-          minikube kubectl -- describe pod -l olm.catalogSource=arkmq-org-broker-operator-catalog-source --namespace=operators
-
-      - name: Create and verify subscription
-        run: |
-          minikube kubectl -- create -f ./examples/catalog/subscription.yaml
-          minikube kubectl -- wait subscription arkmq-org-broker-operator-subscription --for=jsonpath='{.status.installplan.kind}'=InstallPlan --namespace=operators --timeout=3m ||
-          minikube kubectl -- get subscription arkmq-org-broker-operator-subscription --namespace=operators -o yaml
-          minikube kubectl -- wait installplan -l operators.coreos.com/arkmq-org-broker-operator.operators='' --for=condition=Installed --namespace=operators --timeout=3m ||
-          minikube kubectl -- get installplan -l operators.coreos.com/arkmq-org-broker-operator.operators='' --namespace=operators -o yaml
-          minikube kubectl -- wait pod -l name=activemq-artemis-operator --for=condition=Ready --namespace=operators --timeout=3m ||
-          minikube kubectl -- get pod -l name=activemq-artemis-operator --namespace=operators -o yaml
 
       - name: Get changed files in tutorials
         id: changed-tutorial-files

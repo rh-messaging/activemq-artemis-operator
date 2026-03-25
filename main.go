@@ -57,6 +57,7 @@ import (
 
 	brokerv1alpha1 "github.com/arkmq-org/activemq-artemis-operator/api/v1alpha1"
 	brokerv1beta1 "github.com/arkmq-org/activemq-artemis-operator/api/v1beta1"
+	brokerv1beta2 "github.com/arkmq-org/activemq-artemis-operator/api/v1beta2"
 	brokerv2alpha1 "github.com/arkmq-org/activemq-artemis-operator/api/v2alpha1"
 	brokerv2alpha2 "github.com/arkmq-org/activemq-artemis-operator/api/v2alpha2"
 	brokerv2alpha3 "github.com/arkmq-org/activemq-artemis-operator/api/v2alpha3"
@@ -98,6 +99,7 @@ func init() {
 	utilruntime.Must(brokerv2alpha5.AddToScheme(scheme))
 	utilruntime.Must(brokerv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(brokerv1beta1.AddToScheme(scheme))
+	utilruntime.Must(brokerv1beta2.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -265,6 +267,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	brokerV1Reconciler := controllers.NewBrokerReconciler(
+		mgr,
+		ctrl.Log.WithName("BrokerReconciler"),
+		isOpenshift)
+
+	if err = brokerV1Reconciler.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Broker")
+		os.Exit(1)
+	}
+
 	addressReconciler := controllers.NewActiveMQArtemisAddressReconciler(
 		mgr.GetClient(),
 		mgr.GetScheme(),
@@ -318,7 +330,7 @@ func main() {
 
 func getSupportedBrokerVersions() string {
 	allSupportVersions := make([]string, 0, 10)
-	relatedImageEnvVarPrefix := "RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_"
+	relatedImageEnvVarPrefix := "RELATED_IMAGE_BROKER_KUBERNETES_"
 	// The full env var name should be relatedImageEnvVarPrefix + compactVersion
 	for _, envLine := range os.Environ() {
 		envPair := strings.Split(envLine, "=")
