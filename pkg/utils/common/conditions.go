@@ -30,7 +30,7 @@ const (
 )
 
 func SetReadyCondition(conditions *[]metav1.Condition) {
-	condition := newReadyCondition()
+	condition := NewReadyCondition()
 	ready := meta.IsStatusConditionTrue(*conditions, v1beta2.DeployedConditionType)
 	for _, c := range *conditions {
 		if c.Type != v1beta2.ReadyConditionType && c.Status == metav1.ConditionFalse {
@@ -68,7 +68,7 @@ func IsConditionPresentAndEqualIgnoringMessage(conditions []metav1.Condition, co
 	return false
 }
 
-func newReadyCondition() metav1.Condition {
+func NewReadyCondition() metav1.Condition {
 	return metav1.Condition{
 		Type:   v1beta2.ReadyConditionType,
 		Reason: v1beta2.ReadyConditionReason,

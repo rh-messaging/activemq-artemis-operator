@@ -27,6 +27,61 @@ metadata:
           }
         },
         {
+          "apiVersion": "arkmq.org/v1beta2",
+          "kind": "BrokerApp",
+          "metadata": {
+            "name": "wq-app"
+          },
+          "spec": {
+            "acceptor": {
+              "port": 61616
+            },
+            "capabilities": [
+              {
+                "producerOf": [
+                  {
+                    "address": "APP.JOBS"
+                  }
+                ]
+              }
+            ],
+            "selector": {
+              "matchLabels": {
+                "forWorkQueue": "true"
+              }
+            }
+          },
+          "status": {
+            "conditions": []
+          }
+        },
+        {
+          "apiVersion": "arkmq.org/v1beta2",
+          "kind": "BrokerService",
+          "metadata": {
+            "labels": {
+              "forWorkQueue": "true"
+            },
+            "name": "ex-as-wq"
+          },
+          "spec": {
+            "env": [
+              {
+                "name": "JAVA_ARGS_APPEND",
+                "value": "-Dlog4j2.level=INFO"
+              }
+            ],
+            "resources": {
+              "limits": {
+                "memory": "1Gi"
+              }
+            }
+          },
+          "status": {
+            "conditions": []
+          }
+        },
+        {
           "apiVersion": "broker.amq.io/v1alpha1",
           "kind": "ActiveMQArtemisSecurity",
           "metadata": {
@@ -5546,6 +5601,31 @@ spec:
         x-descriptors:
         - urn:alm:descriptor:io.kubernetes.conditions
       version: v1beta1
+    - description: Describes the messaging requirements of an application
+      displayName: Broker App
+      kind: BrokerApp
+      name: brokerapps.arkmq.org
+      resources:
+      - kind: Secret
+        name: ""
+        version: v1
+      specDescriptors:
+      - displayName: Acceptor
+        path: acceptor
+      - displayName: Messaging Capabilities
+        path: capabilities
+      - displayName: Resources
+        path: resources
+      - displayName: ServiceSelector
+        path: selector
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
+      version: v1beta2
     - description: A stateful deployment of one or more brokers
       displayName: Broker
       kind: Broker
@@ -6598,6 +6678,38 @@ spec:
         x-descriptors:
         - urn:alm:descriptor:org.w3:link
       version: v1beta2
+    - description: Provides a broker service
+      displayName: Broker Service
+      kind: BrokerService
+      name: brokerservices.arkmq.org
+      resources:
+      - kind: Broker
+        name: ""
+        version: v1beta2
+      - kind: Secret
+        name: ""
+        version: v1
+      - kind: Service
+        name: ""
+        version: v1
+      specDescriptors:
+      - displayName: Environment
+        path: env
+      - displayName: Broker image
+        path: image
+      - displayName: Resources
+        path: resources
+      statusDescriptors:
+      - description: Current state of the resource Conditions represent the latest
+          available observations of an object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
+      - description: List of BrokerApp identities that have been applied to the service
+        displayName: Provisioned Applications
+        path: provisionedApps
+      version: v1beta2
   description: ArkMQ Operator manages ActiveMQ Artemis messaging broker in the cloud
   displayName: ArkMQ Operator
   icon:
@@ -6902,7 +7014,9 @@ spec:
         - apiGroups:
           - arkmq.org
           resources:
+          - brokerapps
           - brokers
+          - brokerservices
           verbs:
           - create
           - delete
@@ -6914,13 +7028,17 @@ spec:
         - apiGroups:
           - arkmq.org
           resources:
+          - brokerapps/finalizers
           - brokers/finalizers
+          - brokerservices/finalizers
           verbs:
           - update
         - apiGroups:
           - arkmq.org
           resources:
+          - brokerapps/status
           - brokers/status
+          - brokerservices/status
           verbs:
           - get
           - patch
