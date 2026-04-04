@@ -797,12 +797,23 @@ func (r *Broker) Hub() {
 }
 
 const (
-	DeployedConditionType                   = "Deployed"
-	DeployedConditionReadyReason            = "AllPodsReady"
-	DeployedConditionNotReadyReason         = "PodsNotReady"
-	DeployedConditionZeroSizeReason         = "ZeroSizeDeployment"
-	DeployedConditionValidationFailedReason = "ValidationFailed"
-	DeployedConditionCrudKindErrorReason    = "ResourceError"
+	DeployedConditionType                         = "Deployed"
+	DeployedConditionReadyReason                  = "AllPodsReady"
+	DeployedConditionNotReadyReason               = "PodsNotReady"
+	DeployedConditionZeroSizeReason               = "ZeroSizeDeployment"
+	DeployedConditionValidationFailedReason       = "ValidationFailed"
+	DeployedConditionCrudKindErrorReason          = "ResourceError"
+	DeployedConditionNoMatchingServiceReason      = "NoMatchingService"
+	DeployedConditionNoServiceCapacityReason      = "NoServiceCapacity"
+	DeployedConditionPortConflictReason           = "PortConflict"
+	DeployedConditionMatchedServiceNotFoundReason = "MatchedServiceNotFound"
+	DeployedConditionProvisioningPendingReason    = "ProvisioningPending"
+	DeployedConditionProvisionedReason            = "Provisioned"
+
+	AppsProvisionedConditionType           = "AppsProvisioned"
+	AppsProvisionedConditionSyncedReason   = "Synced"
+	AppsProvisionedConditionWaitingReason  = "WaitingForBroker"
+	AppsProvisionedConditionNotReadyReason = "BrokerNotReady"
 
 	ValidConditionType                   = "Valid"
 	ValidConditionSuccessReason          = "ValidationSucceded"
@@ -810,6 +821,9 @@ const (
 	ValidConditionUnknownReason          = "NonFatalValidationFailure"
 	ValidConditionMissingResourcesReason = "MissingDependentResources"
 	ValidConditionInvalidVersionReason   = "SpecVersionInvalid"
+	ValidConditionInvalidResourceName    = "InvalidResourceName"
+	ValidConditionAddressTypeError       = "AddressTypeError"
+	ValidConditionSpecSelectorError      = "SpecSelectorError"
 
 	ValidConditionPDBNonNilSelectorReason            = "PodDisruptionBudgetNonNilSelector"
 	ValidConditionFailedReservedLabelReason          = "ReservedLabelReference"

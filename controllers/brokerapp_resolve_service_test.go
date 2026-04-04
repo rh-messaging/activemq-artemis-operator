@@ -92,7 +92,7 @@ func TestResolveBrokerService(t *testing.T) {
 			expectedServiceName:    "",
 			expectedAnnotation:     "",
 			expectedError:          true,
-			expectedValidCondition: metav1.ConditionFalse,
+			expectedValidCondition: metav1.ConditionTrue, // Selector syntax is valid, runtime issue handled in Deployed
 		},
 		{
 			name: "existing annotation - service still matches",
@@ -193,9 +193,9 @@ func TestResolveBrokerService(t *testing.T) {
 			for i := range tt.services {
 				objs = append(objs, &tt.services[i])
 			}
-			fakeClient := fake.NewClientBuilder().
+			fakeClient := setupBrokerAppIndexer(fake.NewClientBuilder().
 				WithScheme(scheme).
-				WithRuntimeObjects(objs...).
+				WithRuntimeObjects(objs...)).
 				Build()
 
 			// Create reconciler
