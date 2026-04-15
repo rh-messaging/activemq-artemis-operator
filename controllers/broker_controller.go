@@ -57,18 +57,6 @@ func NewBrokerReconciler(cluster cluster.Cluster, logger logr.Logger, isOpenShif
 	}
 }
 
-// toArtemisParent creates a lightweight ActiveMQArtemisReconciler adapter
-// that provides the fields NewActiveMQArtemisReconcilerImpl needs (log,
-// Scheme, isOnOpenShift) without duplicating any reconciler logic.
-func (r *BrokerReconciler) toArtemisParent() *ActiveMQArtemisReconciler {
-	return &ActiveMQArtemisReconciler{
-		Client:        r.Client,
-		Scheme:        r.Scheme,
-		log:           r.log,
-		isOnOpenShift: r.isOnOpenShift,
-	}
-}
-
 //+kubebuilder:rbac:groups=arkmq.org,namespace=arkmq-org-broker-operator,resources=brokers,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=arkmq.org,namespace=arkmq-org-broker-operator,resources=brokers/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=arkmq.org,namespace=arkmq-org-broker-operator,resources=brokers/finalizers,verbs=update
@@ -98,7 +86,7 @@ func (r *BrokerReconciler) Reconcile(ctx context.Context, request ctrl.Request) 
 	}
 
 	namer := MakeNamers(customResource)
-	reconciler := NewActiveMQArtemisReconcilerImpl(customResource, r.toArtemisParent())
+	reconciler := NewBrokerReconcilerImpl(customResource, r)
 
 	var requeueRequest bool = false
 	var valid bool = false

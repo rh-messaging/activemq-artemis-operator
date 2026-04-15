@@ -59,8 +59,8 @@ func TestValidate(t *testing.T) {
 
 	namer := MakeNamers(cr)
 
-	r := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
-	ri := NewActiveMQArtemisReconcilerImpl(cr, r)
+	r := NewBrokerReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
+	ri := NewBrokerReconcilerImpl(cr, r)
 
 	valid, retry := ri.validate(cr, k8sClient, *namer)
 
@@ -87,8 +87,8 @@ func TestValidateBrokerPropsDuplicate(t *testing.T) {
 
 	namer := MakeNamers(cr)
 
-	r := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
-	ri := NewActiveMQArtemisReconcilerImpl(cr, r)
+	r := NewBrokerReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
+	ri := NewBrokerReconcilerImpl(cr, r)
 
 	valid, retry := ri.validate(cr, k8sClient, *namer)
 
@@ -115,8 +115,8 @@ func TestValidateBrokerPropsDuplicateOnFirstEquals(t *testing.T) {
 
 	namer := MakeNamers(cr)
 
-	r := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
-	ri := NewActiveMQArtemisReconcilerImpl(cr, r)
+	r := NewBrokerReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
+	ri := NewBrokerReconcilerImpl(cr, r)
 
 	valid, retry := ri.validate(cr, k8sClient, *namer)
 
@@ -143,8 +143,8 @@ func TestValidateBrokerPropsDuplicateOnFirstEqualsCorrect(t *testing.T) {
 
 	namer := MakeNamers(cr)
 
-	r := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
-	ri := NewActiveMQArtemisReconcilerImpl(cr, r)
+	r := NewBrokerReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
+	ri := NewBrokerReconcilerImpl(cr, r)
 
 	valid, retry := ri.validate(cr, k8sClient, *namer)
 
@@ -172,8 +172,8 @@ func TestStatusPodsCheckCached(t *testing.T) {
 		},
 	}
 
-	r := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
-	ri := NewActiveMQArtemisReconcilerImpl(cr, r)
+	r := NewBrokerReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
+	ri := NewBrokerReconcilerImpl(cr, r)
 
 	checkOk := func(brokerStatus *brokerStatus, jk *jolokia_client.JkInfo) ArtemisError {
 		return nil
@@ -209,8 +209,8 @@ func TestJolokiaStatusCached(t *testing.T) {
 		Spec:       v1beta2.BrokerSpec{},
 	}
 
-	r := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
-	ri := NewActiveMQArtemisReconcilerImpl(cr, r)
+	r := NewBrokerReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
+	ri := NewBrokerReconcilerImpl(cr, r)
 
 	checkOk := func(brokerStatus *brokerStatus, jk *jolokia_client.JkInfo) ArtemisError {
 		return nil
@@ -256,8 +256,8 @@ func TestErrOnNotFoundSecret(t *testing.T) {
 
 	namer := MakeNamers(cr)
 
-	r := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
-	ri := NewActiveMQArtemisReconcilerImpl(cr, r)
+	r := NewBrokerReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
+	ri := NewBrokerReconcilerImpl(cr, r)
 
 	var times = 0
 	interceptorFuncs := interceptor.Funcs{
@@ -408,8 +408,8 @@ func TestValidateRestrictedNeedsSecret(t *testing.T) {
 
 	namer := MakeNamers(cr)
 
-	r := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
-	ri := NewActiveMQArtemisReconcilerImpl(cr, r)
+	r := NewBrokerReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
+	ri := NewBrokerReconcilerImpl(cr, r)
 
 	fakeSecrets := map[string]client.Object{}
 	interceptorFuncs := interceptor.Funcs{
