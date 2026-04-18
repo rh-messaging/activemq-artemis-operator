@@ -13,3 +13,23 @@ spec:
         # The *Kubernetes* values refer to the broker on openshift container that runs the broker itself.
         # NOTE: Below are the original image:tag values and equivalent SHA image references. The SHA values are unique to the specific
         #       container tag utilized during operator bundle build time.
+
+        # 8.0.0
+        - name: RELATED_IMAGE_BROKER_INIT_800
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-99830-20260418001419
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:05f1e0a9e64f1606575c7c4b331f8d4af68f34b801fb91321f2e21ebc080ebb2
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-70390-20260418000135
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:7b553759cfb00fbc3d2cdf6e514210109ae565ad3bad5b37b442bb180d5d12a6
+        - name: RELATED_IMAGE_BROKER_INIT_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-99830-20260418001419
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:05f1e0a9e64f1606575c7c4b331f8d4af68f34b801fb91321f2e21ebc080ebb2
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-70390-20260418000135
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:7b553759cfb00fbc3d2cdf6e514210109ae565ad3bad5b37b442bb180d5d12a6
+        - name: RELATED_IMAGE_BROKER_INIT_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-99830-20260418001419
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:05f1e0a9e64f1606575c7c4b331f8d4af68f34b801fb91321f2e21ebc080ebb2
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-70390-20260418000135
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:7b553759cfb00fbc3d2cdf6e514210109ae565ad3bad5b37b442bb180d5d12a6
