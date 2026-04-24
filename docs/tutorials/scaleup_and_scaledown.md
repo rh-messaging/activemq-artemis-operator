@@ -17,11 +17,11 @@ Either scaling up number of nodes(pods) when workload is high, or scaling down w
 Before you start you need have access to a running Kubernetes cluster environment. A [Minikube](https://minikube.sigs.k8s.io/docs/start/) running on your laptop will just do fine. The arkmq-org operator also runs in a Openshift cluster environment like [CodeReady Container](https://developers.redhat.com/products/openshift-local/overview). In this blog we assume you have Kubernetes cluster environment. (If you use CodeReady the client tool is **oc** in place of **kubectl**)
 
 ### Step 1 - Deploy arkmq-org Operator
-In this tutorial we are using the [arkmq-org operator repo](https://github.com/arkmq-org/activemq-artemis-operator). In case you haven't done so, clone it to your local disk:
+In this tutorial we are using the [arkmq-org operator repo](https://github.com/arkmq-org/arkmq-org-broker-operator). In case you haven't done so, clone it to your local disk:
 
 ```shell
-git clone https://github.com/arkmq-org/activemq-artemis-operator.git
-cd activemq-artemis-operator
+git clone https://github.com/arkmq-org/arkmq-org-broker-operator.git
+cd arkmq-org-broker-operator
 ```
 ### Start Minikube and Deploy the Operator
 
@@ -70,7 +70,7 @@ Deploy the operator to the `myproject` namespace:
 ```
 ```shell markdown_runner
 Deploying operator to watch single namespace
-customresourcedefinition.apiextensions.k8s.io/activemqartemises.broker.amq.io created
+customresourcedefinition.apiextensions.k8s.io/brokers.broker.arkmq.org created
 customresourcedefinition.apiextensions.k8s.io/activemqartemisaddresses.broker.amq.io created
 customresourcedefinition.apiextensions.k8s.io/activemqartemisscaledowns.broker.amq.io created
 customresourcedefinition.apiextensions.k8s.io/activemqartemissecurities.broker.amq.io created
@@ -110,8 +110,8 @@ Create it using kubectl:
 
 ```{"stage":"deploy","id":"create_broker","runtime":"bash"}
 kubectl apply -f - -n myproject <<EOF
-apiVersion: broker.amq.io/v1beta1
-kind: ActiveMQArtemis
+apiVersion: broker.arkmq.org/v1beta2
+kind: Broker
 metadata:
   name: ex-aao
 spec:
@@ -127,7 +127,7 @@ spec:
 EOF
 ```
 ```shell markdown_runner
-activemqartemis.broker.amq.io/ex-aao created
+broker.broker.arkmq.org/ex-aao created
 ```
 
 The custom resource tells the operator to deploy one broker pod with **persistenceEnabled: true** and **messageMigration: true**.
@@ -139,10 +139,10 @@ The custom resource tells the operator to deploy one broker pod with **persisten
 Wait for the broker to be ready:
 
 ```{"stage":"deploy","id":"wait_broker"}
-kubectl wait ActiveMQArtemis ex-aao --for=condition=Ready --namespace=myproject --timeout=300s
+kubectl wait Broker ex-aao --for=condition=Ready --namespace=myproject --timeout=300s
 ```
 ```shell markdown_runner
-activemqartemis.broker.amq.io/ex-aao condition met
+broker.broker.arkmq.org/ex-aao condition met
 ```
 
 Check the pods:
@@ -161,19 +161,19 @@ ex-aao-ss-0                                           1/1     Running   0       
 In this step we will scale the broker pods from one to two 
 
 ```{"stage":"scale_up","id":"scale_to_2"}
-kubectl patch activemqartemis ex-aao -n myproject --type='json' -p='[{"op": "replace", "path": "/spec/deploymentPlan/size", "value": 2}]'
+kubectl patch broker ex-aao -n myproject --type='json' -p='[{"op": "replace", "path": "/spec/deploymentPlan/size", "value": 2}]'
 ```
 ```shell markdown_runner
-activemqartemis.broker.amq.io/ex-aao patched
+broker.broker.arkmq.org/ex-aao patched
 ```
 
 Wait for the scale up to complete:
 
 ```{"stage":"scale_up","id":"wait_scale_up"}
-kubectl wait ActiveMQArtemis ex-aao --for=condition=Ready --namespace=myproject --timeout=300s
+kubectl wait Broker ex-aao --for=condition=Ready --namespace=myproject --timeout=300s
 ```
 ```shell markdown_runner
-activemqartemis.broker.amq.io/ex-aao condition met
+broker.broker.arkmq.org/ex-aao condition met
 ```
 
 Check the pods:
@@ -231,19 +231,19 @@ When a broker pod is scaled down, the operator waits for it to forward all messa
 Now scale down the cluster from two pods to one
 
 ```{"stage":"scale_down","id":"scale_to_1"}
-kubectl patch activemqartemis ex-aao -n myproject --type='json' -p='[{"op": "replace", "path": "/spec/deploymentPlan/size", "value": 1}]'
+kubectl patch broker ex-aao -n myproject --type='json' -p='[{"op": "replace", "path": "/spec/deploymentPlan/size", "value": 1}]'
 ```
 ```shell markdown_runner
-activemqartemis.broker.amq.io/ex-aao patched
+broker.broker.arkmq.org/ex-aao patched
 ```
 
 Wait for the scale down and message migration to complete:
 
 ```{"stage":"scale_down","id":"wait_scale_down"}
-kubectl wait ActiveMQArtemis ex-aao --for=condition=Ready --namespace=myproject --timeout=300s
+kubectl wait Broker ex-aao --for=condition=Ready --namespace=myproject --timeout=300s
 ```
 ```shell markdown_runner
-activemqartemis.broker.amq.io/ex-aao condition met
+broker.broker.arkmq.org/ex-aao condition met
 ```
 
 Check the pods:

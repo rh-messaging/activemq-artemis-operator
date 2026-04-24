@@ -32,9 +32,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 
-	brokerv1beta1 "github.com/arkmq-org/activemq-artemis-operator/api/v1beta1"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/common"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/namer"
+	brokerv1beta1 "github.com/arkmq-org/arkmq-org-broker-operator/api/v1beta1"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/common"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/namer"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -152,7 +152,7 @@ var _ = Describe("security without controller", func() {
 					Selector: &brokerv1beta1.ResourceSelector{
 						Kind: &kindMatchSs,
 					},
-					Patch: &unstructured.Unstructured{Object: map[string]interface{}{
+					Patch: FromUnstructuredToRawExtension(&unstructured.Unstructured{Object: map[string]interface{}{
 						"kind": &kindMatchSs,
 						"spec": map[string]interface{}{
 							"template": map[string]interface{}{
@@ -171,7 +171,7 @@ var _ = Describe("security without controller", func() {
 							},
 						},
 					},
-					},
+					}),
 				},
 			}
 

@@ -24,6 +24,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -38,11 +39,11 @@ import (
 	"strings"
 	"time"
 
-	brokerv1beta1 "github.com/arkmq-org/activemq-artemis-operator/api/v1beta1"
-	brokerv1beta2 "github.com/arkmq-org/activemq-artemis-operator/api/v1beta2"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/resources/secrets"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/common"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/namer"
+	brokerv1beta1 "github.com/arkmq-org/arkmq-org-broker-operator/api/v1beta1"
+	brokerv1beta2 "github.com/arkmq-org/arkmq-org-broker-operator/api/v1beta2"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/secrets"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/common"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/namer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -59,6 +60,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -1220,4 +1222,12 @@ func CreateOrOverwriteResource(res client.Object) {
 	} else {
 		Expect(err).To(Succeed())
 	}
+}
+
+func FromUnstructuredToRawExtension(u *unstructured.Unstructured) runtime.RawExtension {
+	rawBytes, err := json.Marshal(u.Object)
+	if err != nil {
+		PanicWith(err)
+	}
+	return runtime.RawExtension{Raw: rawBytes}
 }

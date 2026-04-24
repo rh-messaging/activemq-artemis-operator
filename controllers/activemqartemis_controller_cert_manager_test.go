@@ -22,11 +22,11 @@ import (
 	"os"
 
 	"github.com/Azure/go-amqp"
-	brokerv1beta1 "github.com/arkmq-org/activemq-artemis-operator/api/v1beta1"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/resources"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/certutil"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/common"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/namer"
+	brokerv1beta1 "github.com/arkmq-org/arkmq-org-broker-operator/api/v1beta1"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/certutil"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/common"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/namer"
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	tm "github.com/cert-manager/trust-manager/pkg/apis/trust/v1alpha1"
@@ -397,7 +397,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 					Annotations: map[string]string{
 						"cert-manager.io/issuer": issuerName,
 					},
-					Patch: &unstructured.Unstructured{
+					Patch: FromUnstructuredToRawExtension(&unstructured.Unstructured{
 						Object: map[string]interface{}{
 							"kind": "Ingress",
 							"spec": map[string]interface{}{
@@ -409,7 +409,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 								},
 							},
 						},
-					},
+					}),
 				},
 			}
 

@@ -38,10 +38,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	broker "github.com/arkmq-org/activemq-artemis-operator/api/v1beta2"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/resources/secrets"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/common"
-	"github.com/arkmq-org/activemq-artemis-operator/version"
+	broker "github.com/arkmq-org/arkmq-org-broker-operator/api/v1beta2"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/secrets"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/common"
+	"github.com/arkmq-org/arkmq-org-broker-operator/version"
 )
 
 var _ = Describe("broker-service-poc", func() {
@@ -328,8 +328,8 @@ var _ = Describe("broker-service-poc", func() {
 				}
 				g.Expect(meta.IsStatusConditionTrue(createdApp.Status.Conditions, broker.ReadyConditionType)).Should(BeTrue())
 
-				g.Expect(createdApp.Status.Binding).ShouldNot(BeNil())
-				bindingSecretNameFromAppStatus = createdApp.Status.Binding.Name
+				g.Expect(createdApp.Status.Service).ShouldNot(BeNil())
+				bindingSecretNameFromAppStatus = createdApp.Status.Service.Secret
 
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
@@ -751,7 +751,7 @@ var _ = Describe("broker-service-poc", func() {
 					fmt.Printf("App STATUS: %v\n\n", createdApp.Status.Conditions)
 				}
 				g.Expect(meta.IsStatusConditionTrue(createdApp.Status.Conditions, broker.ReadyConditionType)).Should(BeTrue())
-				g.Expect(createdApp.Status.Binding).ShouldNot(BeNil())
+				g.Expect(createdApp.Status.Service).ShouldNot(BeNil())
 
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 

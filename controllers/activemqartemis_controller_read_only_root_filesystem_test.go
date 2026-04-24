@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 
-	brokerv1beta1 "github.com/arkmq-org/activemq-artemis-operator/api/v1beta1"
+	brokerv1beta1 "github.com/arkmq-org/arkmq-org-broker-operator/api/v1beta1"
 )
 
 var _ = Describe("Read-only root filesystem support", Label("read-only-root-filesystem"), func() {
@@ -62,7 +62,7 @@ var _ = Describe("Read-only root filesystem support", Label("read-only-root-file
 				candidate.Spec.ResourceTemplates = []brokerv1beta1.ResourceTemplate{
 					{
 						Selector: &brokerv1beta1.ResourceSelector{Kind: ptr.To("StatefulSet")},
-						Patch: &unstructured.Unstructured{
+						Patch: FromUnstructuredToRawExtension(&unstructured.Unstructured{
 							Object: map[string]interface{}{
 								"kind": "StatefulSet",
 								"spec": map[string]interface{}{
@@ -135,7 +135,7 @@ var _ = Describe("Read-only root filesystem support", Label("read-only-root-file
 									},
 								},
 							},
-						},
+						}),
 					},
 				}
 			})
@@ -186,7 +186,7 @@ var _ = Describe("Read-only root filesystem support", Label("read-only-root-file
 				candidate.Spec.ResourceTemplates = []brokerv1beta1.ResourceTemplate{
 					{
 						Selector: &brokerv1beta1.ResourceSelector{Kind: ptr.To("StatefulSet")},
-						Patch: &unstructured.Unstructured{
+						Patch: FromUnstructuredToRawExtension(&unstructured.Unstructured{
 							Object: map[string]interface{}{
 								"kind": "StatefulSet",
 								"spec": map[string]interface{}{
@@ -265,7 +265,7 @@ var _ = Describe("Read-only root filesystem support", Label("read-only-root-file
 									},
 								},
 							},
-						},
+						}),
 					},
 				}
 			})

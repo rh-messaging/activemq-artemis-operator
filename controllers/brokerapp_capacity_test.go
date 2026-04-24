@@ -17,8 +17,8 @@ package controllers
 import (
 	"testing"
 
-	brokerv1beta1 "github.com/arkmq-org/activemq-artemis-operator/api/v1beta2"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/common"
+	brokerv1beta1 "github.com/arkmq-org/arkmq-org-broker-operator/api/v1beta2"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/common"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -144,15 +144,19 @@ func TestFindServiceWithCapacity(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "existing-app",
 						Namespace: "test",
-						Annotations: map[string]string{
-							common.AppServiceAnnotation: "test:service2",
-						},
 					},
 					Spec: brokerv1beta1.BrokerAppSpec{
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("3Gi"), // service2 now has less available
 							},
+						},
+					},
+					Status: brokerv1beta1.BrokerAppStatus{
+						Service: &brokerv1beta1.BrokerServiceBindingStatus{
+							Name:      "service2",
+							Namespace: "test",
+							Secret:    "binding-secret",
 						},
 					},
 				},
@@ -253,10 +257,10 @@ func TestFindServiceWithCapacity(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().
 				WithScheme(scheme).
 				WithRuntimeObjects(objs...).
-				WithIndex(&brokerv1beta1.BrokerApp{}, common.AppServiceAnnotation, func(obj client.Object) []string {
+				WithIndex(&brokerv1beta1.BrokerApp{}, common.AppServiceBindingField, func(obj client.Object) []string {
 					app := obj.(*brokerv1beta1.BrokerApp)
-					if val, ok := app.Annotations[common.AppServiceAnnotation]; ok {
-						return []string{val}
+					if app.Status.Service != nil {
+						return []string{app.Status.Service.Key()}
 					}
 					return nil
 				}).

@@ -9,13 +9,13 @@ import (
 
 	"github.com/RHsyseng/operator-utils/pkg/olm"
 	"github.com/RHsyseng/operator-utils/pkg/resource/compare"
-	"github.com/arkmq-org/activemq-artemis-operator/api/v1beta2"
+	"github.com/arkmq-org/arkmq-org-broker-operator/api/v1beta2"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/stretchr/testify/assert"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/common"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/common"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -871,12 +871,12 @@ func TestProcess_TemplateCustomAttributeIngress(t *testing.T) {
 						APIGroup: &matchGvForIngress,
 					},
 					Annotations: map[string]string{"myIngressKey-$(CR_NAME)": "myValue-$(BROKER_ORDINAL)"},
-					Patch: &unstructured.Unstructured{Object: map[string]interface{}{
+					Patch: FromUnstructuredToRawExtension(&unstructured.Unstructured{Object: map[string]interface{}{
 						"spec": map[string]interface{}{
 							"ingressClassName": ingressClassVal,
 						},
 					},
-					},
+					}),
 				},
 			},
 			Acceptors: []v1beta2.AcceptorType{{
@@ -932,12 +932,12 @@ func TestProcess_TemplateCustomAttributeMisSpellingIngress(t *testing.T) {
 						APIGroup: &matchGvForIngress,
 					},
 					Annotations: map[string]string{"myIngressKey-$(CR_NAME)": "myValue-$(BROKER_ORDINAL)"},
-					Patch: &unstructured.Unstructured{Object: map[string]interface{}{
+					Patch: FromUnstructuredToRawExtension(&unstructured.Unstructured{Object: map[string]interface{}{
 						"spec": map[string]interface{}{
 							"ingressClazzName": ingressClassVal, // wrong attribute
 						},
 					},
-					},
+					}),
 				},
 			},
 			Acceptors: []v1beta2.AcceptorType{{
@@ -989,7 +989,7 @@ func testTemplateCustomAttributeContainerSecurityContext(t *testing.T, withCRNam
 					Selector: &v1beta2.ResourceSelector{
 						Kind: &kindMatchSs,
 					},
-					Patch: &unstructured.Unstructured{Object: map[string]interface{}{
+					Patch: FromUnstructuredToRawExtension(&unstructured.Unstructured{Object: map[string]interface{}{
 						"spec": map[string]interface{}{
 							"template": map[string]interface{}{
 								"spec": map[string]interface{}{
@@ -1005,7 +1005,7 @@ func testTemplateCustomAttributeContainerSecurityContext(t *testing.T, withCRNam
 							},
 						},
 					},
-					},
+					}),
 				},
 			},
 		},
@@ -1049,7 +1049,7 @@ func TestProcess_TemplateCustomAttributePriorityClassName(t *testing.T) {
 					Selector: &v1beta2.ResourceSelector{
 						Kind: &kindMatchSs,
 					},
-					Patch: &unstructured.Unstructured{Object: map[string]interface{}{
+					Patch: FromUnstructuredToRawExtension(&unstructured.Unstructured{Object: map[string]interface{}{
 						"spec": map[string]interface{}{
 							"template": map[string]interface{}{
 								"spec": map[string]interface{}{
@@ -1058,7 +1058,7 @@ func TestProcess_TemplateCustomAttributePriorityClassName(t *testing.T) {
 							},
 						},
 					},
-					},
+					}),
 				},
 			},
 		},

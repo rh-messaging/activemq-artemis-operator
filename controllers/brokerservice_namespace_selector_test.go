@@ -31,9 +31,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	broker "github.com/arkmq-org/activemq-artemis-operator/api/v1beta2"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/appselector"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/common"
+	broker "github.com/arkmq-org/arkmq-org-broker-operator/api/v1beta2"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/appselector"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/common"
 )
 
 var _ = Describe("broker-service namespace-based CEL selection", func() {
@@ -280,9 +280,8 @@ var _ = Describe("broker-service namespace-based CEL selection", func() {
 				g.Expect(meta.IsStatusConditionTrue(createdProdApp.Status.Conditions, broker.ReadyConditionType)).Should(BeTrue())
 
 				// Verify it's bound to our service
-				annotation, ok := createdProdApp.Annotations[common.AppServiceAnnotation]
-				g.Expect(ok).Should(BeTrue())
-				g.Expect(annotation).Should(Equal(fmt.Sprintf("%s:%s", defaultNamespace, serviceName)))
+				g.Expect(createdProdApp.Status.Service).ShouldNot(BeNil())
+				g.Expect(fmt.Sprintf("%s:%s", createdProdApp.Status.Service.Namespace, createdProdApp.Status.Service.Name)).Should(Equal(fmt.Sprintf("%s:%s", defaultNamespace, serviceName)))
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			By("verifying service shows the production app as provisioned")

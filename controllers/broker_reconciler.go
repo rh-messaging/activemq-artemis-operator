@@ -16,23 +16,23 @@ import (
 	"unicode"
 
 	"github.com/RHsyseng/operator-utils/pkg/resource/compare"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/resources"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/resources/containers"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/resources/ingresses"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/resources/persistentvolumeclaims"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/resources/pods"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/resources/routes"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/resources/secrets"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/resources/serviceports"
-	ss "github.com/arkmq-org/activemq-artemis-operator/pkg/resources/statefulsets"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/certutil"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/common"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/cr2jinja2"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/jolokia_client"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/namer"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/random"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/selectors"
-	"github.com/arkmq-org/activemq-artemis-operator/version"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/containers"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/ingresses"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/persistentvolumeclaims"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/pods"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/routes"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/secrets"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/serviceports"
+	ss "github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/statefulsets"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/certutil"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/common"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/cr2jinja2"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/jolokia_client"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/namer"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/random"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/selectors"
+	"github.com/arkmq-org/arkmq-org-broker-operator/version"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -48,9 +48,9 @@ import (
 
 	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/resources/environments"
-	svc "github.com/arkmq-org/activemq-artemis-operator/pkg/resources/services"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/resources/volumes"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/environments"
+	svc "github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/services"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/volumes"
 
 	"reflect"
 
@@ -61,8 +61,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	brokerv1beta1 "github.com/arkmq-org/activemq-artemis-operator/api/v1beta1"
-	v1beta2 "github.com/arkmq-org/activemq-artemis-operator/api/v1beta2"
+	brokerv1beta1 "github.com/arkmq-org/arkmq-org-broker-operator/api/v1beta1"
+	v1beta2 "github.com/arkmq-org/arkmq-org-broker-operator/api/v1beta2"
 
 	"strconv"
 	"strings"
@@ -1155,7 +1155,7 @@ func (reconciler *BrokerReconcilerImpl) applyTemplate(index int, template v1beta
 			target.SetLabels(modified)
 		}
 
-		if template.Patch != nil {
+		if len(template.Patch.Raw) > 0 {
 
 			// apply any patch
 			converter := runtime.DefaultUnstructuredConverter
@@ -1163,9 +1163,14 @@ func (reconciler *BrokerReconcilerImpl) applyTemplate(index int, template v1beta
 			var err error
 			var targetAsUnstructured map[string]interface{}
 
+			patchMap := make(map[string]interface{})
+			if err := json.Unmarshal(template.Patch.Raw, &patchMap); err != nil {
+				return fmt.Errorf("error unmarshalling patch from template[%d], got %v", index, err)
+			}
+
 			if targetAsUnstructured, err = converter.ToUnstructured(target); err == nil {
 				// patch, part of our CR, needs to be mutable
-				patch := formatTemplatedObject(reconciler.customResource, template.Patch.Object, ordinal, itemName, resType).(map[string]interface{})
+				patch := formatTemplatedObject(reconciler.customResource, patchMap, ordinal, itemName, resType).(map[string]interface{})
 				reconciler.log.V(1).Info("Applying strategic merge patch", "formattedPatch", patch)
 
 				var patched strategicpatch.JSONMap

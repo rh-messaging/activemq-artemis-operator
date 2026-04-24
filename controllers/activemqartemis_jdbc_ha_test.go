@@ -33,10 +33,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	brokerv1beta1 "github.com/arkmq-org/activemq-artemis-operator/api/v1beta1"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/resources/configmaps"
-	"github.com/arkmq-org/activemq-artemis-operator/pkg/utils/common"
-	"github.com/arkmq-org/activemq-artemis-operator/version"
+	brokerv1beta1 "github.com/arkmq-org/arkmq-org-broker-operator/api/v1beta1"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/configmaps"
+	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/common"
+	"github.com/arkmq-org/arkmq-org-broker-operator/version"
 )
 
 var _ = Describe("jdbc fast failover", func() {
@@ -192,7 +192,7 @@ var _ = Describe("jdbc fast failover", func() {
 						Selector: &brokerv1beta1.ResourceSelector{
 							Kind: &kindMatchSs,
 						},
-						Patch: &unstructured.Unstructured{Object: map[string]interface{}{
+						Patch: FromUnstructuredToRawExtension(&unstructured.Unstructured{Object: map[string]interface{}{
 							"kind": "StatefulSet",
 							"spec": map[string]interface{}{
 								"template": map[string]interface{}{
@@ -223,7 +223,7 @@ var _ = Describe("jdbc fast failover", func() {
 								},
 							},
 						},
-						},
+						}),
 					},
 				}
 
