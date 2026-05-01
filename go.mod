@@ -1,6 +1,6 @@
 module github.com/arkmq-org/arkmq-org-broker-operator
 
-go 1.25.8
+go 1.25.9
 
 require (
 	github.com/Azure/go-amqp v0.17.4
