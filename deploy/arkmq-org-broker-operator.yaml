@@ -14540,17 +14540,17 @@ spec:
         - /home/amq-broker-operator/bin/entrypoint
         env:
         - name: RELATED_IMAGE_BROKER_INIT_800
-          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:5df63e611520834ace5ab2e96d52a924e35d0f828e5b318bda7dbbc967bea7ba
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:26e136c40bd8934b35f4b1abb7da5b0a00a832e273b1e4c4dc5f867cdd62977f
         - name: RELATED_IMAGE_BROKER_KUBERNETES_800
-          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:1ce30d0ccbaa07f17b9a5cf0cdbd8847d347add73fb02857abd215a2a1aaa2c9
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:5a8d3c2706bb0eb50be1ab1ffa98932e74feda9b302d34868c7c6fef814b7008
         - name: RELATED_IMAGE_BROKER_INIT_800_ppc64le
-          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:5df63e611520834ace5ab2e96d52a924e35d0f828e5b318bda7dbbc967bea7ba
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:26e136c40bd8934b35f4b1abb7da5b0a00a832e273b1e4c4dc5f867cdd62977f
         - name: RELATED_IMAGE_BROKER_KUBERNETES_800_ppc64le
-          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:1ce30d0ccbaa07f17b9a5cf0cdbd8847d347add73fb02857abd215a2a1aaa2c9
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:5a8d3c2706bb0eb50be1ab1ffa98932e74feda9b302d34868c7c6fef814b7008
         - name: RELATED_IMAGE_BROKER_INIT_800_s390x
-          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:5df63e611520834ace5ab2e96d52a924e35d0f828e5b318bda7dbbc967bea7ba
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:26e136c40bd8934b35f4b1abb7da5b0a00a832e273b1e4c4dc5f867cdd62977f
         - name: RELATED_IMAGE_BROKER_KUBERNETES_800_s390x
-          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:1ce30d0ccbaa07f17b9a5cf0cdbd8847d347add73fb02857abd215a2a1aaa2c9
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:5a8d3c2706bb0eb50be1ab1ffa98932e74feda9b302d34868c7c6fef814b7008
         - name: OPERATOR_NAME
           valueFrom:
             fieldRef:
