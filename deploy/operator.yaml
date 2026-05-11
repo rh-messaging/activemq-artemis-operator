@@ -38,17 +38,17 @@ spec:
         - /home/amq-broker-operator/bin/entrypoint
         env:
         - name: RELATED_IMAGE_BROKER_INIT_800
-          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:21057342f423a43350f25cacc1239f8df91aead718cd6e91987cb320590fd540
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:238b8e101c66af4f7f79a8a6d1a1897d6ee46c3a14d7d5713c8eb6cc0980dde6
         - name: RELATED_IMAGE_BROKER_KUBERNETES_800
-          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:5d79716df85a250d458d6ee1d1aae79b57f5320eb5b7c858a279c8011dc63125
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:ddf8a54efcf8cedf319f817ccc9c1118ca9ad940f2618fbff5b3b429edf7a3f5
         - name: RELATED_IMAGE_BROKER_INIT_800_ppc64le
-          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:21057342f423a43350f25cacc1239f8df91aead718cd6e91987cb320590fd540
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:238b8e101c66af4f7f79a8a6d1a1897d6ee46c3a14d7d5713c8eb6cc0980dde6
         - name: RELATED_IMAGE_BROKER_KUBERNETES_800_ppc64le
-          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:5d79716df85a250d458d6ee1d1aae79b57f5320eb5b7c858a279c8011dc63125
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:ddf8a54efcf8cedf319f817ccc9c1118ca9ad940f2618fbff5b3b429edf7a3f5
         - name: RELATED_IMAGE_BROKER_INIT_800_s390x
-          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:21057342f423a43350f25cacc1239f8df91aead718cd6e91987cb320590fd540
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:238b8e101c66af4f7f79a8a6d1a1897d6ee46c3a14d7d5713c8eb6cc0980dde6
         - name: RELATED_IMAGE_BROKER_KUBERNETES_800_s390x
-          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:5d79716df85a250d458d6ee1d1aae79b57f5320eb5b7c858a279c8011dc63125
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:ddf8a54efcf8cedf319f817ccc9c1118ca9ad940f2618fbff5b3b429edf7a3f5
         - name: OPERATOR_NAME
           valueFrom:
             fieldRef:
