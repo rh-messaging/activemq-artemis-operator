@@ -13,3 +13,23 @@ spec:
         # The *Kubernetes* values refer to the broker on openshift container that runs the broker itself.
         # NOTE: Below are the original image:tag values and equivalent SHA image references. The SHA values are unique to the specific
         #       container tag utilized during operator bundle build time.
+
+        # 8.0.0
+        - name: RELATED_IMAGE_BROKER_INIT_800
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-87708-20260515002538
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:cfb97dc0a1b8734a573d7dda0b254b77bd55f70e5a0caffd6d2b22a10e94d3ed
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-53124-20260515001036
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:9ef6bdb27a4dfcb566a83ebc51ecbd77688d538aea977708a0602ff52f5cf271
+        - name: RELATED_IMAGE_BROKER_INIT_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-87708-20260515002538
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:cfb97dc0a1b8734a573d7dda0b254b77bd55f70e5a0caffd6d2b22a10e94d3ed
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-53124-20260515001036
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:9ef6bdb27a4dfcb566a83ebc51ecbd77688d538aea977708a0602ff52f5cf271
+        - name: RELATED_IMAGE_BROKER_INIT_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-87708-20260515002538
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:cfb97dc0a1b8734a573d7dda0b254b77bd55f70e5a0caffd6d2b22a10e94d3ed
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-53124-20260515001036
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:9ef6bdb27a4dfcb566a83ebc51ecbd77688d538aea977708a0602ff52f5cf271
