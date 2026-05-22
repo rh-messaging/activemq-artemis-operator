@@ -16,20 +16,20 @@ spec:
 
         # 8.0.0
         - name: RELATED_IMAGE_BROKER_INIT_800
-          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-64845-20260519002017
-          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:10d0815de02091a5d68725a4bcaf71923db9aa9d40b7c99708f169edb46bb834
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-59233-20260522001910
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:9eb225bcda48e4198c04ad4c3fef278e88d178386ebc455a1e205465d34911d4
         - name: RELATED_IMAGE_BROKER_KUBERNETES_800
-          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-89649-20260519000520
-          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:26a727e147fbf36e6690cbb94090ef0559f5bb9648bc8cc73dabaeacfc34cabf
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-36033-20260522000241
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:05e4698978d416640736c88405739801301b010524f643317784ccd40151eee5
         - name: RELATED_IMAGE_BROKER_INIT_800_ppc64le
-          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-64845-20260519002017
-          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:10d0815de02091a5d68725a4bcaf71923db9aa9d40b7c99708f169edb46bb834
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-59233-20260522001910
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:9eb225bcda48e4198c04ad4c3fef278e88d178386ebc455a1e205465d34911d4
         - name: RELATED_IMAGE_BROKER_KUBERNETES_800_ppc64le
-          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-89649-20260519000520
-          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:26a727e147fbf36e6690cbb94090ef0559f5bb9648bc8cc73dabaeacfc34cabf
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-36033-20260522000241
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:05e4698978d416640736c88405739801301b010524f643317784ccd40151eee5
         - name: RELATED_IMAGE_BROKER_INIT_800_s390x
-          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-64845-20260519002017
-          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:10d0815de02091a5d68725a4bcaf71923db9aa9d40b7c99708f169edb46bb834
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-59233-20260522001910
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:9eb225bcda48e4198c04ad4c3fef278e88d178386ebc455a1e205465d34911d4
         - name: RELATED_IMAGE_BROKER_KUBERNETES_800_s390x
-          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-89649-20260519000520
-          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:26a727e147fbf36e6690cbb94090ef0559f5bb9648bc8cc73dabaeacfc34cabf
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-36033-20260522000241
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:05e4698978d416640736c88405739801301b010524f643317784ccd40151eee5
