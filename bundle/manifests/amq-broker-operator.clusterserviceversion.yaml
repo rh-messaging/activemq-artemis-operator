@@ -6839,17 +6839,17 @@ spec:
                 - /home/amq-broker-operator/bin/entrypoint
                 env:
                 - name: RELATED_IMAGE_BROKER_INIT_800
-                  value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:d95ba4d8ebf4989d673f9cf2fed1042c51d23847ed73dcc96664472cff0f16b3
+                  value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:2b49e9ac7b0885240f2a7a035779ad74a21af167f2a3069f49c8ac957e49d2ad
                 - name: RELATED_IMAGE_BROKER_KUBERNETES_800
-                  value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:6540397631288fdfd6fceb8f058816cb49a6677fd85f25b23e57ad40767e6af6
+                  value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:ffad43cb1ec5edaf3044bc51626a9a344191f56ff079d3bb5182bfd4b526d6bd
                 - name: RELATED_IMAGE_BROKER_INIT_800_ppc64le
-                  value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:d95ba4d8ebf4989d673f9cf2fed1042c51d23847ed73dcc96664472cff0f16b3
+                  value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:2b49e9ac7b0885240f2a7a035779ad74a21af167f2a3069f49c8ac957e49d2ad
                 - name: RELATED_IMAGE_BROKER_KUBERNETES_800_ppc64le
-                  value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:6540397631288fdfd6fceb8f058816cb49a6677fd85f25b23e57ad40767e6af6
+                  value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:ffad43cb1ec5edaf3044bc51626a9a344191f56ff079d3bb5182bfd4b526d6bd
                 - name: RELATED_IMAGE_BROKER_INIT_800_s390x
-                  value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:d95ba4d8ebf4989d673f9cf2fed1042c51d23847ed73dcc96664472cff0f16b3
+                  value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:2b49e9ac7b0885240f2a7a035779ad74a21af167f2a3069f49c8ac957e49d2ad
                 - name: RELATED_IMAGE_BROKER_KUBERNETES_800_s390x
-                  value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:6540397631288fdfd6fceb8f058816cb49a6677fd85f25b23e57ad40767e6af6
+                  value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:ffad43cb1ec5edaf3044bc51626a9a344191f56ff079d3bb5182bfd4b526d6bd
                 - name: OPERATOR_NAME
                   valueFrom:
                     fieldRef:
@@ -7141,8 +7141,8 @@ spec:
     name: Red Hat
     url: https://www.redhat.com/
   relatedImages:
-  - image: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:d95ba4d8ebf4989d673f9cf2fed1042c51d23847ed73dcc96664472cff0f16b3
+  - image: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:2b49e9ac7b0885240f2a7a035779ad74a21af167f2a3069f49c8ac957e49d2ad
     name: ""
-  - image: registry.redhat.io/amq8/amq-broker-rhel9@sha256:6540397631288fdfd6fceb8f058816cb49a6677fd85f25b23e57ad40767e6af6
+  - image: registry.redhat.io/amq8/amq-broker-rhel9@sha256:ffad43cb1ec5edaf3044bc51626a9a344191f56ff079d3bb5182bfd4b526d6bd
     name: ""
   version: 8.0.0-opr-1
