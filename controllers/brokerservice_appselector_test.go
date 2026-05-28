@@ -91,7 +91,7 @@ func TestAppSelectorAllowedNamespace(t *testing.T) {
 	}
 
 	// Setup fake client
-	cl := setupBrokerAppIndexer(fake.NewClientBuilder().
+	cl := SetupBrokerAppIndexer(fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(svc, app, allowedNsObj, sharedNsObj).
 		WithStatusSubresource(app, svc)).
@@ -193,7 +193,7 @@ func TestAppSelectorDeniedNamespace(t *testing.T) {
 	}
 
 	// Setup fake client
-	cl := setupBrokerAppIndexer(fake.NewClientBuilder().
+	cl := SetupBrokerAppIndexer(fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(svc, app, allowedNsObj, deniedNsObj, sharedNsObj).
 		WithStatusSubresource(app, svc)).
@@ -204,8 +204,10 @@ func TestAppSelectorDeniedNamespace(t *testing.T) {
 
 	// Reconcile the app
 	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: appName, Namespace: deniedNs}}
-	_, err := r.Reconcile(context.TODO(), req)
-	assert.Error(t, err, "Expected error due to unauthorized namespace")
+
+	res, err := r.Reconcile(context.TODO(), req)
+	assert.NoError(t, err) // err is reflected in the status
+	assert.True(t, res.Requeue)
 
 	// Verify BrokerApp status
 	updatedApp := &v1beta2.BrokerApp{}
@@ -224,8 +226,8 @@ func TestAppSelectorDeniedNamespace(t *testing.T) {
 	deployedCondition := meta.FindStatusCondition(updatedApp.Status.Conditions, v1beta2.DeployedConditionType)
 	assert.NotNil(t, deployedCondition)
 	assert.Equal(t, v1.ConditionFalse, deployedCondition.Status)
-	assert.Equal(t, v1beta2.DeployedConditionDoesNotMatchReason, deployedCondition.Reason)
-	assert.Contains(t, deployedCondition.Message, deniedNs)
+	assert.Equal(t, v1beta2.DeployedConditionNoMatchingServiceReason, deployedCondition.Reason)
+	assert.Contains(t, deployedCondition.Message, "no services")
 
 	// Ready should be False
 	readyCondition := meta.FindStatusCondition(updatedApp.Status.Conditions, v1beta2.ReadyConditionType)
@@ -286,7 +288,7 @@ func TestAppSelectorEmptyAllowlist(t *testing.T) {
 	}
 
 	// Setup fake client
-	cl := setupBrokerAppIndexer(fake.NewClientBuilder().
+	cl := SetupBrokerAppIndexer(fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(svc, app, svcNsObj).
 		WithStatusSubresource(app, svc)).
@@ -375,7 +377,7 @@ func TestAppSelectorEmptyAllowlistDifferentNamespace(t *testing.T) {
 	}
 
 	// Setup fake client
-	cl := setupBrokerAppIndexer(fake.NewClientBuilder().
+	cl := SetupBrokerAppIndexer(fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(svc, app, svcNsObj, appNsObj).
 		WithStatusSubresource(app, svc)).
@@ -386,8 +388,9 @@ func TestAppSelectorEmptyAllowlistDifferentNamespace(t *testing.T) {
 
 	// Reconcile the app
 	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: appName, Namespace: appNs}}
-	_, err := r.Reconcile(context.TODO(), req)
-	assert.Error(t, err, "Expected error due to unauthorized namespace")
+	res, err := r.Reconcile(context.TODO(), req)
+	assert.NoError(t, err) // err is reflected in the status
+	assert.True(t, res.Requeue)
 
 	// Verify BrokerApp status
 	updatedApp := &v1beta2.BrokerApp{}
@@ -401,7 +404,7 @@ func TestAppSelectorEmptyAllowlistDifferentNamespace(t *testing.T) {
 	deployedCondition := meta.FindStatusCondition(updatedApp.Status.Conditions, v1beta2.DeployedConditionType)
 	assert.NotNil(t, deployedCondition)
 	assert.Equal(t, v1.ConditionFalse, deployedCondition.Status)
-	assert.Equal(t, v1beta2.DeployedConditionDoesNotMatchReason, deployedCondition.Reason)
+	assert.Equal(t, v1beta2.DeployedConditionNoMatchingServiceReason, deployedCondition.Reason)
 }
 
 // TestAppSelectorRevokedAccess verifies that an app loses access when removed from allowlist
@@ -471,7 +474,7 @@ func TestAppSelectorRevokedAccess(t *testing.T) {
 	}
 
 	// Setup fake client
-	cl := setupBrokerAppIndexer(fake.NewClientBuilder().
+	cl := SetupBrokerAppIndexer(fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(svc, app, appNsObj, sharedNsObj).
 		WithStatusSubresource(app, svc)).
@@ -501,8 +504,9 @@ func TestAppSelectorRevokedAccess(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Reconcile again - app should be unbound and unauthorized
-	_, err = r.Reconcile(context.TODO(), req)
-	assert.Error(t, err, "Expected error after authorization revoked")
+	res, err := r.Reconcile(context.TODO(), req)
+	assert.NoError(t, err) // err is reflected in the status
+	assert.True(t, res.Requeue)
 
 	err = cl.Get(context.TODO(), req.NamespacedName, updatedApp)
 	assert.NoError(t, err)
@@ -511,7 +515,7 @@ func TestAppSelectorRevokedAccess(t *testing.T) {
 	deployedCondition := meta.FindStatusCondition(updatedApp.Status.Conditions, v1beta2.DeployedConditionType)
 	assert.NotNil(t, deployedCondition)
 	assert.Equal(t, v1.ConditionFalse, deployedCondition.Status)
-	assert.Equal(t, v1beta2.DeployedConditionDoesNotMatchReason, deployedCondition.Reason)
+	assert.Equal(t, v1beta2.DeployedConditionNoMatchingServiceReason, deployedCondition.Reason)
 }
 
 // TestAppSelectorMultipleNamespaces verifies that multiple namespaces can be in the allowlist
@@ -607,7 +611,7 @@ func TestAppSelectorMultipleNamespaces(t *testing.T) {
 	}
 
 	// Setup fake client
-	cl := setupBrokerAppIndexer(fake.NewClientBuilder().
+	cl := SetupBrokerAppIndexer(fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(svc, appA, appB, appDenied, svcNsObj, teamANsObj, teamBNsObj, teamDNsObj).
 		WithStatusSubresource(appA, appB, appDenied, svc)).
@@ -640,8 +644,9 @@ func TestAppSelectorMultipleNamespaces(t *testing.T) {
 
 	// Reconcile app-denied (should fail)
 	reqDenied := ctrl.Request{NamespacedName: types.NamespacedName{Name: "app-denied", Namespace: "team-d"}}
-	_, err = r.Reconcile(context.TODO(), reqDenied)
-	assert.Error(t, err, "Expected error for unauthorized app")
+	res, err := r.Reconcile(context.TODO(), reqDenied)
+	assert.NoError(t, err) // err is reflected in the status
+	assert.True(t, res.Requeue)
 
 	updatedAppDenied := &v1beta2.BrokerApp{}
 	err = cl.Get(context.TODO(), reqDenied.NamespacedName, updatedAppDenied)
@@ -652,7 +657,7 @@ func TestAppSelectorMultipleNamespaces(t *testing.T) {
 	deployedCondition := meta.FindStatusCondition(updatedAppDenied.Status.Conditions, v1beta2.DeployedConditionType)
 	assert.NotNil(t, deployedCondition)
 	assert.Equal(t, v1.ConditionFalse, deployedCondition.Status)
-	assert.Equal(t, v1beta2.DeployedConditionDoesNotMatchReason, deployedCondition.Reason)
+	assert.Equal(t, v1beta2.DeployedConditionNoMatchingServiceReason, deployedCondition.Reason)
 }
 
 // TestAppSelectorAllowAll verifies that "true" allows all namespaces
@@ -714,7 +719,7 @@ func TestAppSelectorAllowAll(t *testing.T) {
 	}
 
 	// Setup fake client
-	cl := setupBrokerAppIndexer(fake.NewClientBuilder().
+	cl := SetupBrokerAppIndexer(fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(svc, app, svcNsObj, appNsObj).
 		WithStatusSubresource(app, svc)).
@@ -812,7 +817,7 @@ func TestAppSelectorPrefix(t *testing.T) {
 	}
 
 	// Setup fake client
-	cl := setupBrokerAppIndexer(fake.NewClientBuilder().
+	cl := SetupBrokerAppIndexer(fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(svc, appMatch, appNoMatch, svcNsObj, teamAProdNsObj, appNoMatchNsObj).
 		WithStatusSubresource(appMatch, appNoMatch, svc)).
@@ -834,8 +839,10 @@ func TestAppSelectorPrefix(t *testing.T) {
 
 	// Reconcile non-matching app - should fail
 	reqNoMatch := ctrl.Request{NamespacedName: types.NamespacedName{Name: "app-nomatch", Namespace: "other-namespace"}}
-	_, err = r.Reconcile(context.TODO(), reqNoMatch)
-	assert.Error(t, err, "Expected error for non-matching namespace")
+
+	res, err := r.Reconcile(context.TODO(), reqNoMatch)
+	assert.NoError(t, err) // err is reflected in the status
+	assert.True(t, res.Requeue)
 
 	updatedNoMatch := &v1beta2.BrokerApp{}
 	err = cl.Get(context.TODO(), reqNoMatch.NamespacedName, updatedNoMatch)
@@ -918,7 +925,7 @@ func TestAppSelectorSuffix(t *testing.T) {
 	}
 
 	// Setup fake client
-	cl := setupBrokerAppIndexer(fake.NewClientBuilder().
+	cl := SetupBrokerAppIndexer(fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(svc, appMatch, appNoMatch, svcNsObj, teamAProdNsObj, teamADevNsObj).
 		WithStatusSubresource(appMatch, appNoMatch, svc)).
@@ -940,8 +947,9 @@ func TestAppSelectorSuffix(t *testing.T) {
 
 	// Reconcile non-matching app
 	reqNoMatch := ctrl.Request{NamespacedName: types.NamespacedName{Name: "app-nomatch", Namespace: "team-a-dev"}}
-	_, err = r.Reconcile(context.TODO(), reqNoMatch)
-	assert.Error(t, err)
+	res, err := r.Reconcile(context.TODO(), reqNoMatch)
+	assert.NoError(t, err)
+	assert.True(t, res.Requeue)
 
 	updatedNoMatch := &v1beta2.BrokerApp{}
 	err = cl.Get(context.TODO(), reqNoMatch.NamespacedName, updatedNoMatch)
@@ -1041,7 +1049,7 @@ func TestAppSelectorPrefixAndSuffix(t *testing.T) {
 	}
 
 	// Setup fake client
-	cl := setupBrokerAppIndexer(fake.NewClientBuilder().
+	cl := SetupBrokerAppIndexer(fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(svc, appMatch1, appMatch2, appNoMatch, svcNsObj, teamAProdNsObj, teamBackendProdNsObj, teamADevNsObj).
 		WithStatusSubresource(appMatch1, appMatch2, appNoMatch, svc)).
@@ -1062,6 +1070,9 @@ func TestAppSelectorPrefixAndSuffix(t *testing.T) {
 
 	// Test no match
 	reqNoMatch := ctrl.Request{NamespacedName: types.NamespacedName{Name: "app-nomatch", Namespace: "team-a-dev"}}
-	_, err = r.Reconcile(context.TODO(), reqNoMatch)
-	assert.Error(t, err)
+
+	res, err := r.Reconcile(context.TODO(), reqNoMatch)
+	assert.NoError(t, err)
+	assert.True(t, res.Requeue)
+
 }
