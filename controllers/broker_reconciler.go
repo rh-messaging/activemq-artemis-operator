@@ -16,23 +16,22 @@ import (
 	"unicode"
 
 	"github.com/RHsyseng/operator-utils/pkg/resource/compare"
-	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources"
-	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/containers"
-	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/ingresses"
-	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/persistentvolumeclaims"
-	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/pods"
-	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/routes"
-	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/secrets"
-	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/serviceports"
-	ss "github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/statefulsets"
-	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/certutil"
-	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/common"
-	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/cr2jinja2"
-	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/jolokia_client"
-	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/namer"
-	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/random"
-	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/selectors"
-	"github.com/arkmq-org/arkmq-org-broker-operator/version"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/resources"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/resources/containers"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/resources/ingresses"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/resources/persistentvolumeclaims"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/resources/pods"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/resources/routes"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/resources/secrets"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/resources/serviceports"
+	ss "github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/resources/statefulsets"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/certutil"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/common"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/cr2jinja2"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/jolokia_client"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/namer"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/random"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/selectors"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -48,9 +47,9 @@ import (
 
 	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/environments"
-	svc "github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/services"
-	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/volumes"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/resources/environments"
+	svc "github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/resources/services"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/resources/volumes"
 
 	"reflect"
 
@@ -61,8 +60,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	brokerv1beta1 "github.com/arkmq-org/arkmq-org-broker-operator/api/v1beta1"
-	v1beta2 "github.com/arkmq-org/arkmq-org-broker-operator/api/v1beta2"
+	brokerv1beta1 "github.com/arkmq-org/arkmq-org-broker-operator/v2/api/v1beta1"
+	v1beta2 "github.com/arkmq-org/arkmq-org-broker-operator/v2/api/v1beta2"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/version"
 
 	"strconv"
 	"strings"
@@ -97,6 +97,8 @@ const (
 	debugArgsEnvVarName      = "DEBUG_ARGS"
 	javaOptsEnvVarName       = "JAVA_OPTS"
 	jdkJavaOptionsEnvVarName = "JDK_JAVA_OPTIONS"
+
+	PrometheusConfigFileName = "_prometheus_exporter_config"
 
 	ScaleDownConfigTrigger        = "HAPolicyConfiguration.scaleDownConfiguration.enabled=false"
 	ScaleDownConfigTriggerOn      = "HAPolicyConfiguration.scaleDownConfiguration.enabled=true"
@@ -2386,7 +2388,7 @@ func (reconciler *BrokerReconcilerImpl) PodTemplateSpecForCR(customResource *v1b
 		fmt.Fprintf(prometheus_config, "    name: artemis_total_produced_message_count\n")
 		fmt.Fprintf(prometheus_config, "    type: COUNTER\n")
 
-		brokerPropertiesMapData["_prometheus_exporter.yaml"] = prometheus_config.Bytes()
+		brokerPropertiesMapData[PrometheusConfigFileName] = prometheus_config.Bytes()
 
 		// Apply control plane overrides if they exist
 		if err := applyControlPlaneOverrides(customResource, client, brokerPropertiesMapData); err != nil {
@@ -2403,7 +2405,7 @@ func (reconciler *BrokerReconcilerImpl) PodTemplateSpecForCR(customResource *v1b
 		additionalSystemPropsForRestricted = append(additionalSystemPropsForRestricted, fmt.Sprintf("-javaagent:/opt/agents/jolokia.jar=host=$HOSTNAME,config=%s/_jolokia.config", mountPathRoot))
 
 		// install prometheus agent
-		additionalSystemPropsForRestricted = append(additionalSystemPropsForRestricted, fmt.Sprintf("-javaagent:/opt/agents/prometheus.jar=$HOSTNAME:8888:%s/_prometheus_exporter.yaml", mountPathRoot))
+		additionalSystemPropsForRestricted = append(additionalSystemPropsForRestricted, fmt.Sprintf("-javaagent:/opt/agents/prometheus.jar=$HOSTNAME:8888:%s/%s", mountPathRoot, PrometheusConfigFileName))
 
 		// non boot jar isolation classpath
 		additionalSystemPropsForRestricted = append(additionalSystemPropsForRestricted, "-classpath /opt/amq/lib/*:/opt/amq/lib/extra/*")

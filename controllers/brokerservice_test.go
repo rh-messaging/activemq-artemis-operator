@@ -38,10 +38,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	broker "github.com/arkmq-org/arkmq-org-broker-operator/api/v1beta2"
-	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/resources/secrets"
-	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/common"
-	"github.com/arkmq-org/arkmq-org-broker-operator/version"
+	broker "github.com/arkmq-org/arkmq-org-broker-operator/v2/api/v1beta2"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/resources/secrets"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/common"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/version"
 )
 
 var _ = Describe("broker-service-poc", func() {
@@ -768,8 +768,8 @@ var _ = Describe("broker-service-poc", func() {
 				g.Expect(k8sClient.Get(ctx, overrideSecretKey, overrideSecret)).Should(Succeed())
 
 				// Verify the secret contains the prometheus exporter config
-				prometheusYaml, ok := overrideSecret.Data["_prometheus_exporter.yaml"]
-				g.Expect(ok).Should(BeTrue(), "should have _prometheus_exporter.yaml key")
+				prometheusYaml, ok := overrideSecret.Data[PrometheusConfigFileName]
+				g.Expect(ok).Should(BeTrue(), "should have prometheus key")
 
 				prometheusConfig := string(prometheusYaml)
 				if verbose {

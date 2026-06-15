@@ -18,8 +18,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/arkmq-org/arkmq-org-broker-operator/api/v1beta2"
-	"github.com/arkmq-org/arkmq-org-broker-operator/pkg/utils/common"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/api/v1beta2"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/common"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -698,8 +698,8 @@ func TestBrokerServiceRejectsAppsFromPrometheusConfig(t *testing.T) {
 	assert.NoError(t, err, "control-plane-override secret should be created")
 
 	// Verify Prometheus config exists
-	prometheusYaml, ok := overrideSecret.Data["_prometheus_exporter.yaml"]
-	assert.True(t, ok, "should have _prometheus_exporter.yaml key")
+	prometheusYaml, ok := overrideSecret.Data[PrometheusConfigFileName]
+	assert.True(t, ok, "should have prometheus key")
 	assert.NotEmpty(t, prometheusYaml)
 
 	prometheusConfig := string(prometheusYaml)

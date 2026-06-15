@@ -4,7 +4,7 @@ FROM registry.access.redhat.com/ubi9/go-toolset:1.25.9 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 
-ENV GO_MODULE=github.com/arkmq-org/arkmq-org-broker-operator
+ENV GO_MODULE=github.com/arkmq-org/arkmq-org-broker-operator/v2
 
 ### BEGIN REMOTE SOURCE
 # Use the COPY instruction only inside the REMOTE SOURCE block
@@ -41,7 +41,7 @@ RUN cp -r $REMOTE_SOURCE_DIR/app/* .
 # when is executed on nodes that are booted into FIPS mode.
 RUN CGO_ENABLED=1 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -ldflags="-X '${GO_MODULE}/version.BuildTimestamp=`date '+%Y-%m-%dT%H:%M:%S'`'" -o manager main.go
 
-FROM registry.access.redhat.com/ubi9-minimal:9.7-1773939694 AS base-env
+FROM registry.access.redhat.com/ubi9-minimal:9.8-1780378819 AS base-env
 
 ENV BROKER_NAME=arkmq-org-broker
 ENV USER_UID=1000
