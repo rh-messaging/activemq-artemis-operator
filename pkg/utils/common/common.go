@@ -543,7 +543,7 @@ func updatePodStatus(cr *v1beta2.Broker, client rtclient.Client, namespacedName 
 	sfsFound := &appsv1.StatefulSet{}
 	err := client.Get(context.TODO(), ssNamespacedName, sfsFound)
 	if err == nil {
-		reqLogger.V(1).Info("statefulSet", "status", sfsFound.Status)
+		reqLogger.V(1).Info("statefulSet", "spec replicas", sfsFound.Spec.Replicas, "status", sfsFound.Status)
 		status = GetSingleStatefulSetStatus(sfsFound, cr)
 	}
 
