@@ -13,3 +13,23 @@ spec:
         # The *Kubernetes* values refer to the broker on openshift container that runs the broker itself.
         # NOTE: Below are the original image:tag values and equivalent SHA image references. The SHA values are unique to the specific
         #       container tag utilized during operator bundle build time.
+
+        # 8.0.0
+        - name: RELATED_IMAGE_BROKER_INIT_800
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-43276-20260615002020
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:3cd0225bf1671ddb45f9cc7079cc69db19b419560fdd0ca96c7a22d10c01927e
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-33834-20260615000422
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:16fae1d88ab53640c0c36f6f6d00862325d4e2bc7f318deda5f7970179c283f7
+        - name: RELATED_IMAGE_BROKER_INIT_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-43276-20260615002020
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:3cd0225bf1671ddb45f9cc7079cc69db19b419560fdd0ca96c7a22d10c01927e
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-33834-20260615000422
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:16fae1d88ab53640c0c36f6f6d00862325d4e2bc7f318deda5f7970179c283f7
+        - name: RELATED_IMAGE_BROKER_INIT_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-43276-20260615002020
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:3cd0225bf1671ddb45f9cc7079cc69db19b419560fdd0ca96c7a22d10c01927e
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-33834-20260615000422
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:16fae1d88ab53640c0c36f6f6d00862325d4e2bc7f318deda5f7970179c283f7
