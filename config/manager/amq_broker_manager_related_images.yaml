@@ -13,3 +13,23 @@ spec:
         # The *Kubernetes* values refer to the broker on openshift container that runs the broker itself.
         # NOTE: Below are the original image:tag values and equivalent SHA image references. The SHA values are unique to the specific
         #       container tag utilized during operator bundle build time.
+
+        # 8.0.0
+        - name: RELATED_IMAGE_BROKER_INIT_800
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-85553-20260616003635
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:0f3cda6bfc4312fc02e695535e2e071db93a34bcd6bea34298751f4323d6896d
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-34176-20260616000749
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:8c304ef67c6d83e702c5df6d6a5d094c2bf9f27ca90ea0e52f3e35b090742364
+        - name: RELATED_IMAGE_BROKER_INIT_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-85553-20260616003635
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:0f3cda6bfc4312fc02e695535e2e071db93a34bcd6bea34298751f4323d6896d
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-34176-20260616000749
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:8c304ef67c6d83e702c5df6d6a5d094c2bf9f27ca90ea0e52f3e35b090742364
+        - name: RELATED_IMAGE_BROKER_INIT_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-85553-20260616003635
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:0f3cda6bfc4312fc02e695535e2e071db93a34bcd6bea34298751f4323d6896d
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-34176-20260616000749
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:8c304ef67c6d83e702c5df6d6a5d094c2bf9f27ca90ea0e52f3e35b090742364
