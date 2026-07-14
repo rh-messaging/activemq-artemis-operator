@@ -890,7 +890,7 @@ var _ = Describe("broker-service-poc", func() {
 					g.Expect(resp.StatusCode).Should(Equal(401))
 
 					// need to update the control plane cert users/roles -
-					// will avoid this by using ou's in generated control plane certs.
+					// will avoid this by using ou's in generated control plane common.
 					// needs: https://issues.apache.org/jira/browse/ARTEMIS-5959
 					// then we can work the 200 ok
 					/*

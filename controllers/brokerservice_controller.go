@@ -178,11 +178,9 @@ func (reconciler *BrokerServiceInstanceReconciler) processBroker() (err error) {
 	if obj != nil {
 		desired = obj.(*broker.Broker)
 	} else {
-		desired = common.GenerateArtemis(reconciler.instance.Name, reconciler.instance.Namespace)
+		desired = common.GenerateBroker(reconciler.instance.Name, reconciler.instance.Namespace)
 	}
-	desired.Spec.Restricted = common.NewTrue()
 	desired.Spec.DeploymentPlan.PersistenceEnabled = false
-	desired.Spec.DeploymentPlan.Clustered = common.NewFalse()
 	desired.Spec.DeploymentPlan.Labels = map[string]string{
 		// Standard Kubernetes labels
 		common.LabelAppKubernetesInstance:  reconciler.instance.Name,

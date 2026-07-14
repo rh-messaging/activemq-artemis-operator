@@ -14,21 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
+package v1beta2
 
 import (
 	"github.com/RHsyseng/operator-utils/pkg/olm"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// ActiveMQArtemisSpec defines the desired state of ActiveMQArtemis
-type ActiveMQArtemisSpec struct {
+// BrokerClusterSpec defines the desired state of BrokerCluster
+type BrokerClusterSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
@@ -55,7 +55,7 @@ type ActiveMQArtemisSpec struct {
 	Version string `json:"version,omitempty"`
 	// Specifies the upgrades (deprecated in favour of Version)
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Upgrades"
-	Upgrades ActiveMQArtemisUpgrades `json:"upgrades,omitempty"`
+	Upgrades BrokerUpgrades `json:"upgrades,omitempty"`
 	// Specifies the address configurations (deprecated in favour of BrokerProperties)
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Address Configurations"
 	AddressSettings AddressSettingsType `json:"addressSettings,omitempty"`
@@ -359,7 +359,7 @@ type DeploymentPlanType struct {
 	// Specifies the tolerations
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Tolerations"
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
-	// Assign labels to broker pods, the keys `ActiveMQArtemis` and `application` are not allowed
+	// Assign labels to broker pods, the keys `Broker` and `application` are not allowed
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Labels"
 	Labels map[string]string `json:"labels,omitempty"`
 	// Specifies the node selector
@@ -443,6 +443,8 @@ type ResourceTemplate struct {
 	Labels map[string]string `json:"labels,omitempty"`
 
 	// Custom attributes applied as strategic merge patch by the operator.
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Patch"
 	Patch runtime.RawExtension `json:"patch,omitempty"`
 }
@@ -682,8 +684,8 @@ type ConsoleType struct {
 	TrustSecret *string `json:"trustSecret,omitempty"`
 }
 
-// ActiveMQArtemis App product upgrade flags, this is deprecated in v1beta1, specifying the Version is sufficient
-type ActiveMQArtemisUpgrades struct {
+// Broker App product upgrade flags, this is deprecated in v1beta1, specifying the Version is sufficient
+type BrokerUpgrades struct {
 	// Set true to enable automatic micro version product upgrades, it is disabled by default.
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Enable Upgrades",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:ui:booleanSwitch"}
 	Enabled bool `json:"enabled"`
@@ -692,8 +694,8 @@ type ActiveMQArtemisUpgrades struct {
 	Minor bool `json:"minor"`
 }
 
-// ActiveMQArtemisStatus defines the observed state of ActiveMQArtemis
-type ActiveMQArtemisStatus struct {
+// BrokerClusterStatus defines the observed state of BrokerCluster
+type BrokerClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
@@ -763,8 +765,7 @@ type ExternalConfigStatus struct {
 //+kubebuilder:subresource:status
 //+kubebuilder:subresource:scale:specpath=.spec.deploymentPlan.size,statuspath=.status.deploymentPlanSize,selectorpath=.status.scaleLabelSelector
 //+kubebuilder:storageversion
-//+kubebuilder:resource:path=activemqartemises
-//+kubebuilder:resource:path=activemqartemises,shortName=aa
+//+kubebuilder:resource:path=brokerclusters,shortName=bc
 //+kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status",description="The state of the resource"
 //+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",description="The age of the resource"
 //+operator-sdk:csv:customresourcedefinitions:resources={{"Service", "v1"}}
@@ -772,40 +773,51 @@ type ExternalConfigStatus struct {
 //+operator-sdk:csv:customresourcedefinitions:resources={{"ConfigMap", "v1"}}
 //+operator-sdk:csv:customresourcedefinitions:resources={{"StatefulSet", "apps/v1"}}
 
-// +kubebuilder:deprecatedversion:warning="The ActiveMQArtemis CRD (activemqartemises.broker.amq.io) is deprecated. Use the Broker CRD (brokers.broker.arkmq.org) instead by updating apiVersion to broker.arkmq.org/v1beta2 and kind to Broker. The spec is compatible."
 // A stateful deployment of one or more brokers
-// +operator-sdk:csv:customresourcedefinitions:displayName="ActiveMQ Artemis"
-type ActiveMQArtemis struct {
+// +operator-sdk:csv:customresourcedefinitions:displayName="Broker Cluster"
+type BrokerCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ActiveMQArtemisSpec   `json:"spec,omitempty"`
-	Status ActiveMQArtemisStatus `json:"status,omitempty"`
+	Spec   BrokerClusterSpec   `json:"spec,omitempty"`
+	Status BrokerClusterStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// ActiveMQArtemisList contains a list of ActiveMQArtemis
-type ActiveMQArtemisList struct {
+// BrokerClusterList contains a list of BrokerCluster
+type BrokerClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ActiveMQArtemis `json:"items"`
+	Items           []BrokerCluster `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&ActiveMQArtemis{}, &ActiveMQArtemisList{})
+	SchemeBuilder.Register(&BrokerCluster{}, &BrokerClusterList{})
 }
 
-func (r *ActiveMQArtemis) Hub() {
+func (r *BrokerCluster) Hub() {
 }
 
 const (
-	DeployedConditionType                   = "Deployed"
-	DeployedConditionReadyReason            = "AllPodsReady"
-	DeployedConditionNotReadyReason         = "PodsNotReady"
-	DeployedConditionZeroSizeReason         = "ZeroSizeDeployment"
-	DeployedConditionValidationFailedReason = "ValidationFailed"
-	DeployedConditionCrudKindErrorReason    = "ResourceError"
+	DeployedConditionType                         = "Deployed"
+	DeployedConditionReadyReason                  = "AllPodsReady"
+	DeployedConditionNotReadyReason               = "PodsNotReady"
+	DeployedConditionZeroSizeReason               = "ZeroSizeDeployment"
+	DeployedConditionValidationFailedReason       = "ValidationFailed"
+	DeployedConditionCrudKindErrorReason          = "ResourceError"
+	DeployedConditionNoMatchingServiceReason      = "NoMatchingService"
+	DeployedConditionNoServiceCapacityReason      = "NoServiceCapacity"
+	DeployedConditionMatchedServiceNotFoundReason = "MatchedServiceNotFound"
+	DeployedConditionProvisioningPendingReason    = "ProvisioningPending"
+	DeployedConditionProvisionedReason            = "Provisioned"
+	DeployedConditionSelectorEvaluationError      = "AppSelectorEvaluationError"
+	DeployedConditionPortPoolExhaustedReason      = "PortPoolExhausted"
+
+	AppsProvisionedConditionType           = "AppsProvisioned"
+	AppsProvisionedConditionSyncedReason   = "Synced"
+	AppsProvisionedConditionWaitingReason  = "WaitingForBroker"
+	AppsProvisionedConditionNotReadyReason = "BrokerNotReady"
 
 	ValidConditionType                   = "Valid"
 	ValidConditionSuccessReason          = "ValidationSucceded"
@@ -813,6 +825,9 @@ const (
 	ValidConditionUnknownReason          = "NonFatalValidationFailure"
 	ValidConditionMissingResourcesReason = "MissingDependentResources"
 	ValidConditionInvalidVersionReason   = "SpecVersionInvalid"
+	ValidConditionInvalidResourceName    = "InvalidResourceName"
+	ValidConditionAddressTypeError       = "AddressTypeError"
+	ValidConditionSpecSelectorError      = "SpecSelectorError"
 
 	ValidConditionPDBNonNilSelectorReason            = "PodDisruptionBudgetNonNilSelector"
 	ValidConditionFailedReservedLabelReason          = "ReservedLabelReference"
