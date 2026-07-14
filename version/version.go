@@ -15,11 +15,11 @@ var (
 
 const (
 	// LatestVersion product version supported
-	LatestVersion        = "7.12.7"
-	CompactLatestVersion = "7127"
+	LatestVersion        = "7.12.0"
+	CompactLatestVersion = "7120"
 
-	LatestKubeImage = "registry.redhat.io/amq7/amq-broker-rhel8:7.12.7"
-	LatestInitImage = "registry.redhat.io/amq7/amq-broker-init-rhel8:7.12.7"
+	LatestKubeImage = "registry.redhat.io/amq7/amq-broker-rhel8:7.12.0"
+	LatestInitImage = "registry.redhat.io/amq7/amq-broker-init-rhel8:7.12.0"
 )
 
 func DefaultImageName(archSpecificRelatedImageEnvVarName string) string {
@@ -102,7 +102,7 @@ var ActiveMQArtemisVersionfromFullVersion map[string]string = map[string]string{
 	"7.11.4": "2.28.0.redhat-00012",
 	"7.11.5": "2.28.0.redhat-00016",
 	"7.11.6": "2.28.0.redhat-00019",
-	"7.12.0": "2.33.0.redhat-00010",
+	"7.12.0": "2.33.0.redhat-00001",
 	"7.11.7": "2.28.0.redhat-00022",
 	"7.12.1": "2.33.0.redhat-00013",
 	"7.12.2": "2.33.0.redhat-00015",
