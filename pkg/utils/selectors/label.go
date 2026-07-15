@@ -1,8 +1,9 @@
 package selectors
 
 const (
-	LabelAppKey      = "application"
-	LabelResourceKey = "ActiveMQArtemis"
+	LabelAppKey             = "application"
+	LabelActiveMQArtemisKey = "ActiveMQArtemis"
+	LabelBrokerKey          = "broker"
 )
 
 type LabelerInterface interface {
@@ -13,9 +14,18 @@ type LabelerInterface interface {
 }
 
 type LabelerData struct {
-	baseName string
-	suffix   string
-	labels   map[string]string
+	baseName    string
+	suffix      string
+	resourceKey string
+	labels      map[string]string
+}
+
+func NewBrokerLabeler() *LabelerData {
+	return &LabelerData{resourceKey: LabelBrokerKey}
+}
+
+func NewActiveMQArtemisLabeler() *LabelerData {
+	return &LabelerData{resourceKey: LabelActiveMQArtemisKey}
 }
 
 func (l *LabelerData) Labels() map[string]string {
@@ -35,11 +45,11 @@ func (l *LabelerData) Suffix(labelSuffix string) *LabelerData {
 func (l *LabelerData) Generate() {
 	l.labels = make(map[string]string)
 	l.labels[LabelAppKey] = l.baseName + "-" + l.suffix //"-app"
-	l.labels[LabelResourceKey] = l.baseName
+	l.labels[l.resourceKey] = l.baseName
 }
 
 func GetLabels(crName string) map[string]string {
-	labelBuilder := LabelerData{}
+	labelBuilder := NewActiveMQArtemisLabeler()
 	labelBuilder.Base(crName).Suffix("app").Generate()
-	return labelBuilder.labels
+	return labelBuilder.Labels()
 }

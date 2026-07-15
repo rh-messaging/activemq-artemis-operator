@@ -380,7 +380,7 @@ func (reconciler *BrokerReconcilerImpl) applyPodDisruptionBudget(customResource 
 		}
 	}
 	desired.Spec = *customResource.Spec.PodDisruptionBudget.DeepCopy()
-	matchLabels := map[string]string{customResource.Kind: customResource.Name}
+	matchLabels := map[string]string{selectors.LabelBrokerKey: customResource.Name}
 
 	desired.Spec.Selector = &metav1.LabelSelector{
 		MatchLabels: matchLabels,
@@ -2074,7 +2074,7 @@ func validateNoDupKeysInBrokerPropertiesForBroker(customResource *v1beta2.Broker
 func validateReservedLabelsForBroker(customResource *v1beta2.Broker) *metav1.Condition {
 	if customResource.Spec.Labels != nil {
 		for key := range customResource.Spec.Labels {
-			if key == selectors.LabelAppKey || key == selectors.LabelResourceKey {
+			if key == selectors.LabelAppKey || key == selectors.LabelBrokerKey {
 				return &metav1.Condition{
 					Type:    v1beta2.ValidConditionType,
 					Status:  metav1.ConditionFalse,
@@ -2086,7 +2086,7 @@ func validateReservedLabelsForBroker(customResource *v1beta2.Broker) *metav1.Con
 	}
 	for index, template := range customResource.Spec.ResourceTemplates {
 		for key := range template.Labels {
-			if key == selectors.LabelAppKey || key == selectors.LabelResourceKey {
+			if key == selectors.LabelAppKey || key == selectors.LabelBrokerKey {
 				return &metav1.Condition{
 					Type:    v1beta2.ValidConditionType,
 					Status:  metav1.ConditionFalse,
@@ -2276,7 +2276,7 @@ func MakeNamersForBroker(customResource *v1beta2.Broker) *common.Namers {
 		SecretsCredentialsNameBuilder: namer.NamerData{},
 		SecretsConsoleNameBuilder:     namer.NamerData{},
 		SecretsNettyNameBuilder:       namer.NamerData{},
-		LabelBuilder:                  selectors.LabelerData{},
+		LabelBuilder:                  *selectors.NewBrokerLabeler(),
 		GLOBAL_DATA_PATH:              "/opt/" + customResource.Name + "/data",
 	}
 	newNamers.SsNameBuilder.Base(customResource.Name).Suffix("ss").Generate()
@@ -2294,7 +2294,7 @@ func MakeNamersForBroker(customResource *v1beta2.Broker) *common.Namers {
 }
 
 func GetDefaultLabelsForBroker(cr *v1beta2.Broker) map[string]string {
-	defaultLabelData := selectors.LabelerData{}
+	defaultLabelData := selectors.NewBrokerLabeler()
 	defaultLabelData.Base(cr.Name).Suffix("app").Generate()
 	return defaultLabelData.Labels()
 }

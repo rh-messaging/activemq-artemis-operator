@@ -21,6 +21,7 @@ import (
 	brokerv1beta1 "github.com/arkmq-org/arkmq-org-broker-operator/v2/api/v1beta1"
 	v1beta2 "github.com/arkmq-org/arkmq-org-broker-operator/v2/api/v1beta2"
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/common"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/selectors"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -138,4 +139,78 @@ func TestValidateRestrictedNeedsSecret(t *testing.T) {
 	assert.True(t, valid)
 	assert.False(t, retry)
 	assert.True(t, meta.IsStatusConditionTrue(cr.Status.Conditions, brokerv1beta1.ValidConditionType))
+}
+
+func TestMakeNamersForBrokerUsesBrokerTrackingLabel(t *testing.T) {
+	cr := &v1beta2.Broker{
+		ObjectMeta: v1.ObjectMeta{Name: "my-broker"},
+	}
+
+	namer := MakeNamersForBroker(cr)
+	labels := namer.LabelBuilder.Labels()
+
+	assert.Equal(t, "my-broker", labels[selectors.LabelBrokerKey])
+	assert.Equal(t, "my-broker-app", labels[selectors.LabelAppKey])
+	_, hasActiveMQArtemis := labels[selectors.LabelActiveMQArtemisKey]
+	assert.False(t, hasActiveMQArtemis)
+
+	defaultLabels := GetDefaultLabelsForBroker(cr)
+	assert.Equal(t, labels, defaultLabels)
+}
+
+func TestValidateReservedLabelsForBroker(t *testing.T) {
+	t.Run("rejects Broker reserved key in Spec.Labels", func(t *testing.T) {
+		cr := &v1beta2.Broker{
+			Spec: v1beta2.BrokerSpec{
+				Labels: map[string]string{selectors.LabelBrokerKey: "x"},
+			},
+		}
+		condition := validateReservedLabelsForBroker(cr)
+		assert.NotNil(t, condition)
+		assert.Equal(t, v1beta2.ValidConditionFailedReservedLabelReason, condition.Reason)
+		assert.Contains(t, condition.Message, "Spec.Labels")
+	})
+
+	t.Run("rejects application reserved key in Spec.Labels", func(t *testing.T) {
+		cr := &v1beta2.Broker{
+			Spec: v1beta2.BrokerSpec{
+				Labels: map[string]string{selectors.LabelAppKey: "x"},
+			},
+		}
+		condition := validateReservedLabelsForBroker(cr)
+		assert.NotNil(t, condition)
+		assert.Equal(t, v1beta2.ValidConditionFailedReservedLabelReason, condition.Reason)
+	})
+
+	t.Run("allows custom labels", func(t *testing.T) {
+		cr := &v1beta2.Broker{
+			Spec: v1beta2.BrokerSpec{
+				Labels: map[string]string{"team": "messaging"},
+			},
+		}
+		assert.Nil(t, validateReservedLabelsForBroker(cr))
+	})
+
+	t.Run("allows ActiveMQArtemis key on Broker CR", func(t *testing.T) {
+		cr := &v1beta2.Broker{
+			Spec: v1beta2.BrokerSpec{
+				Labels: map[string]string{selectors.LabelActiveMQArtemisKey: "x"},
+			},
+		}
+		assert.Nil(t, validateReservedLabelsForBroker(cr))
+	})
+
+	t.Run("rejects Broker reserved key in ResourceTemplates", func(t *testing.T) {
+		cr := &v1beta2.Broker{
+			Spec: v1beta2.BrokerSpec{
+				ResourceTemplates: []v1beta2.ResourceTemplate{
+					{Labels: map[string]string{selectors.LabelBrokerKey: "x"}},
+				},
+			},
+		}
+		condition := validateReservedLabelsForBroker(cr)
+		assert.NotNil(t, condition)
+		assert.Equal(t, v1beta2.ValidConditionFailedReservedLabelReason, condition.Reason)
+		assert.Contains(t, condition.Message, "Spec.ResourceTemplates[0].Labels")
+	})
 }

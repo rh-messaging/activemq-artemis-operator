@@ -22,6 +22,7 @@ import (
 
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/api/v1beta2"
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/common"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/selectors"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -84,10 +85,10 @@ func TestLabelConflicts_NoReservedKeys(t *testing.T) {
 	labels := broker.Spec.Labels
 
 	// Verify we don't use the reserved keys
-	_, hasBroker := labels["Broker"]
+	_, hasBroker := labels[selectors.LabelBrokerKey]
 	_, hasApplication := labels["application"]
 
-	assert.False(t, hasBroker, "Must not use reserved label key 'Broker'")
+	assert.False(t, hasBroker, "Must not use reserved label key 'broker'")
 	assert.False(t, hasApplication, "Must not use reserved label key 'application'")
 
 	// Verify we're using standard Kubernetes labels with proper prefixes

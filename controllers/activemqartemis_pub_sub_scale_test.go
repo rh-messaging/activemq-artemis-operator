@@ -126,7 +126,7 @@ var _ = Describe("pub sub scale", func() {
 						Name: "CR_NAME",
 						ValueFrom: &corev1.EnvVarSource{
 							FieldRef: &corev1.ObjectFieldSelector{
-								FieldPath: "metadata.labels['" + selectors.LabelResourceKey + "']"},
+								FieldPath: "metadata.labels['" + selectors.LabelActiveMQArtemisKey + "']"},
 						},
 					},
 				}
@@ -235,7 +235,7 @@ var _ = Describe("pub sub scale", func() {
 					},
 					Spec: corev1.ServiceSpec{
 						Selector: map[string]string{
-							selectors.LabelResourceKey: createdBrokerCrd.Name,
+							selectors.LabelActiveMQArtemisKey: createdBrokerCrd.Name,
 						},
 						Ports: []corev1.ServicePort{
 							{

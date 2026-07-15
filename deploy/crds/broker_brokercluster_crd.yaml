@@ -3380,7 +3380,7 @@ spec:
                   labels:
                     additionalProperties:
                       type: string
-                    description: Assign labels to broker pods, the keys `Broker` and `application` are not allowed
+                    description: Assign labels to broker pods, the keys `broker` and `application` are not allowed
                     type: object
                   livenessProbe:
                     description: Specifies the liveness probe configuration

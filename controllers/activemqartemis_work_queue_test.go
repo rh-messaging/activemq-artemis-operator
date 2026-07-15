@@ -133,7 +133,7 @@ var _ = Describe("work queue", func() {
 						Name: "CR_NAME",
 						ValueFrom: &corev1.EnvVarSource{
 							FieldRef: &corev1.ObjectFieldSelector{
-								FieldPath: "metadata.labels['" + selectors.LabelResourceKey + "']"},
+								FieldPath: "metadata.labels['" + selectors.LabelActiveMQArtemisKey + "']"},
 						},
 					},
 					{
@@ -215,7 +215,7 @@ var _ = Describe("work queue", func() {
 					},
 					Spec: corev1.ServiceSpec{
 						Selector: map[string]string{
-							selectors.LabelResourceKey: brokerCrd.Name,
+							selectors.LabelActiveMQArtemisKey: brokerCrd.Name,
 						},
 						Ports: []corev1.ServicePort{
 							{
