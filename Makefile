@@ -3,7 +3,7 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 7.14.0
+VERSION ?= 7.14.1
 
 KUBE_CLI=kubectl
 OPERATOR_VERSION := 7.14.0-5
@@ -11,10 +11,10 @@ OPERATOR_ACCOUNT_NAME := amq-broker-operator
 OPERATOR_CLUSTER_ROLE_NAME := operator-role
 OPERATOR_IMAGE_REPO := registry.redhat.io/amq0/amq-broker-rhel9-operator
 OPERATOR_NAMESPACE := amq-broker-operator
-BUNDLE_VERSION := 7.14.0-opr-1
+BUNDLE_VERSION := 7.14.1-opr-1
 BUNDLE_PACKAGE := $(OPERATOR_NAMESPACE)
 BUNDLE_ANNOTATION_PACKAGE := amq-broker-rhel9
-MANAGER_VERSION := 7.14.0.OPR.1.CR3
+MANAGER_VERSION := 7.14.1.OPR.1.CR1
 GO_MODULE := github.com/arkmq-org/activemq-artemis-operator
 OS := $(shell go env GOOS)
 ARCH := $(shell go env GOARCH)
