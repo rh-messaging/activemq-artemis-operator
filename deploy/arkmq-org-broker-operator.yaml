@@ -18862,6 +18862,31 @@ spec:
         - --leader-elect
         command:
         - /home/amq-broker-operator/bin/entrypoint
+        env:
+        - name: RELATED_IMAGE_BROKER_INIT_800
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:a63019ed7e8b227be0f9ecbd4a4d1ca258de0aa6f4a01dfd11b66d3e3d9d4713
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:005407ef43fb92c8d9725411f2ed522f0002fa6ba6045184d9a14f9ac0ee94a8
+        - name: RELATED_IMAGE_BROKER_INIT_800_ppc64le
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:a63019ed7e8b227be0f9ecbd4a4d1ca258de0aa6f4a01dfd11b66d3e3d9d4713
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_ppc64le
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:005407ef43fb92c8d9725411f2ed522f0002fa6ba6045184d9a14f9ac0ee94a8
+        - name: RELATED_IMAGE_BROKER_INIT_800_s390x
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:a63019ed7e8b227be0f9ecbd4a4d1ca258de0aa6f4a01dfd11b66d3e3d9d4713
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_s390x
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:005407ef43fb92c8d9725411f2ed522f0002fa6ba6045184d9a14f9ac0ee94a8
+        - name: OPERATOR_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['name']
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: WATCH_NAMESPACE
+          value: ''
+        - name: ENABLE_WEBHOOKS
+          value: "false"
         image: registry.redhat.io/amq0/amq-broker-rhel9-operator@sha256:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         livenessProbe:
           httpGet:

@@ -13,3 +13,23 @@ spec:
         # The *Kubernetes* values refer to the broker on openshift container that runs the broker itself.
         # NOTE: Below are the original image:tag values and equivalent SHA image references. The SHA values are unique to the specific
         #       container tag utilized during operator bundle build time.
+
+        # 8.0.0
+        - name: RELATED_IMAGE_BROKER_INIT_800
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-62283-20260729010540
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:a63019ed7e8b227be0f9ecbd4a4d1ca258de0aa6f4a01dfd11b66d3e3d9d4713
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-27282-20260729003043
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:005407ef43fb92c8d9725411f2ed522f0002fa6ba6045184d9a14f9ac0ee94a8
+        - name: RELATED_IMAGE_BROKER_INIT_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-62283-20260729010540
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:a63019ed7e8b227be0f9ecbd4a4d1ca258de0aa6f4a01dfd11b66d3e3d9d4713
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-27282-20260729003043
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:005407ef43fb92c8d9725411f2ed522f0002fa6ba6045184d9a14f9ac0ee94a8
+        - name: RELATED_IMAGE_BROKER_INIT_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-62283-20260729010540
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:a63019ed7e8b227be0f9ecbd4a4d1ca258de0aa6f4a01dfd11b66d3e3d9d4713
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-27282-20260729003043
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:005407ef43fb92c8d9725411f2ed522f0002fa6ba6045184d9a14f9ac0ee94a8
