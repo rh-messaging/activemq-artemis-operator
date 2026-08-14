@@ -13,3 +13,23 @@ spec:
         # The *Kubernetes* values refer to the broker on openshift container that runs the broker itself.
         # NOTE: Below are the original image:tag values and equivalent SHA image references. The SHA values are unique to the specific
         #       container tag utilized during operator bundle build time.
+
+        # 8.0.0
+        - name: RELATED_IMAGE_BROKER_INIT_800
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-35108-20260814002028
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:6ff4be25a9d8c22781dad04d35e3a4235e4a771d3ab2c19046646c73050f410d
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-19145-20260814000513
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:a6e709af0140b748c25025d1ab429e5f024ee5cdb605707e8939308f5beac65d
+        - name: RELATED_IMAGE_BROKER_INIT_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-35108-20260814002028
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:6ff4be25a9d8c22781dad04d35e3a4235e4a771d3ab2c19046646c73050f410d
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-19145-20260814000513
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:a6e709af0140b748c25025d1ab429e5f024ee5cdb605707e8939308f5beac65d
+        - name: RELATED_IMAGE_BROKER_INIT_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-35108-20260814002028
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:6ff4be25a9d8c22781dad04d35e3a4235e4a771d3ab2c19046646c73050f410d
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-19145-20260814000513
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:a6e709af0140b748c25025d1ab429e5f024ee5cdb605707e8939308f5beac65d
