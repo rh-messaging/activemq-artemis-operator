@@ -13,3 +13,23 @@ spec:
         # The *Kubernetes* values refer to the broker on openshift container that runs the broker itself.
         # NOTE: Below are the original image:tag values and equivalent SHA image references. The SHA values are unique to the specific
         #       container tag utilized during operator bundle build time.
+
+        # 8.0.0
+        - name: RELATED_IMAGE_BROKER_INIT_800
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-21626-20260820092651
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:95f64556784817714639dd11fd0bfd9379fab6ca17271a82058ea8c0329f3969
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-30797-20260820091004
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:c9741d65786f05a5d7003852d7dd1aa5e8c3a14742a719fa7c63d623a0e0e3ae
+        - name: RELATED_IMAGE_BROKER_INIT_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-21626-20260820092651
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:95f64556784817714639dd11fd0bfd9379fab6ca17271a82058ea8c0329f3969
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-30797-20260820091004
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:c9741d65786f05a5d7003852d7dd1aa5e8c3a14742a719fa7c63d623a0e0e3ae
+        - name: RELATED_IMAGE_BROKER_INIT_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-21626-20260820092651
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:95f64556784817714639dd11fd0bfd9379fab6ca17271a82058ea8c0329f3969
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-30797-20260820091004
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:c9741d65786f05a5d7003852d7dd1aa5e8c3a14742a719fa7c63d623a0e0e3ae
