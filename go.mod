@@ -26,7 +26,7 @@ require (
 require (
 	github.com/blang/semver/v4 v4.0.0
 	github.com/eclipse/paho.mqtt.golang v1.5.1
-	github.com/google/cel-go v0.27.0
+	github.com/google/cel-go v0.31.0
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/prometheus/client_golang v1.16.0
 	golang.org/x/crypto v0.55.0
