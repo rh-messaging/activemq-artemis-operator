@@ -13,3 +13,23 @@ spec:
         # The *Kubernetes* values refer to the broker on openshift container that runs the broker itself.
         # NOTE: Below are the original image:tag values and equivalent SHA image references. The SHA values are unique to the specific
         #       container tag utilized during operator bundle build time.
+
+        # 8.0.0
+        - name: RELATED_IMAGE_BROKER_INIT_800
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-90840-20260827003408
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:7afe703e1a3a85f9c7c7020ea86f0fc401a495f659dedebd36b3229553a37784
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-50209-20260827001806
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:529c1808fe5cd918045512074d797d69e5dd989f3f1ca54245bf37c7c88d5fc5
+        - name: RELATED_IMAGE_BROKER_INIT_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-90840-20260827003408
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:7afe703e1a3a85f9c7c7020ea86f0fc401a495f659dedebd36b3229553a37784
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-50209-20260827001806
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:529c1808fe5cd918045512074d797d69e5dd989f3f1ca54245bf37c7c88d5fc5
+        - name: RELATED_IMAGE_BROKER_INIT_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-90840-20260827003408
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:7afe703e1a3a85f9c7c7020ea86f0fc401a495f659dedebd36b3229553a37784
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-50209-20260827001806
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:529c1808fe5cd918045512074d797d69e5dd989f3f1ca54245bf37c7c88d5fc5
