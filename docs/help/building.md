@@ -31,7 +31,7 @@ Install Docker following the [installation instructions](https://docs.docker.com
 
 ## Get the code
 
-```$xslt
+```bash
 git clone https://github.com/arkmq-org/arkmq-org-broker-operator
 cd arkmq-org-broker-operator
 git checkout main
@@ -39,11 +39,11 @@ git checkout main
 
 ## Building the code locally
 
-```$xslt
+```bash
 make
 ```
 or if you have modified the CRD types in ./api
-```$xslt
+```bash
 make generate build && make generate-deploy && make bundle && make helm-charts
 ```
 
@@ -51,33 +51,33 @@ make generate build && make generate-deploy && make bundle && make helm-charts
 
 There are 2 variables you may need to override in order to push the images to your preferred registry.
 
-```$xslt
+```bash
 OPERATOR_IMAGE_REPO (your preferred image registry name, for example quay.io/hgao/operator
 ```
 and
-```$xslt
+```bash
 OPERATOR_VERSION (the image's tag, for example v1.1)
 ```
 
 Now build the image passing the variables
 
-```$xslt
+```bash
 make OPERATOR_IMAGE_REPO=<your repo> OPERATOR_VERSION=<tag> docker-build
 ```
 
 If finished sucessfully it will print the image url in the end. The image url is like
 
-```$xslt
+```bash
 ${OPERATOR_IMAGE_REPO}:${TAG}
 ```
 
 ## Push the image to registry
 
-```$xslt
+```bash
 docker push ${OPERATOR_IMAGE_REPO}:${TAG}
 ```
 or use the make target **docker-push**
-```$xslt
+```bash
 make OPERATOR_IMAGE_REPO=<your repo> OPERATOR_VERSION=<tag> docker-push
 ```
 
@@ -87,7 +87,7 @@ Now follow the [quickstart](../getting-started/quick-start.md) to deploy the ope
 
 Once your custom image has been pushed to a registry, you must update the value of **spec.template.spec.containers.image** in **./deploy/operator.yaml**
 
-```$xslt
+```bash
         image: ${OPERATOR_IMAGE_REPO}:${TAG}
 ```
 
@@ -95,7 +95,7 @@ It is important to remember to build and push a new image whenever you pull new 
 
 ## Add .vscode/settings.json
 
-```$xslt
+```bash
 {
   "go.lintTool": "golangci-lint",
   "go.lintFlags": ["--fast"]
