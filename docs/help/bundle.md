@@ -56,12 +56,12 @@ spec:
 
 and deploy it:
 
-```$xslt
+```console
 $ kubectl create -f catalog-source.yaml
 ```
 In a moment you will see the catalog image is up and running in namespace **operators**:
 
-```$xslt
+```console
 $ kubectl get pod -n operators
 NAME                                      READY   STATUS    RESTARTS   AGE
 arkmq-org-broker-operator-source-g94fd    1/1     Running   0          42s
@@ -83,12 +83,12 @@ spec:
 ```
 
 and deploy it:
-```$xslt
+```console
   $ kubectl create -f subscription.yaml
 ```
 An operator will be installed into **operators** namespace.
 
-```$xslt
+```console
 $ kubectl get pod -n operators
 NAME                                                              READY   STATUS      RESTARTS   AGE
 069c5d363d51fc04d639086da1c5180883a6cea8ec9d9f9eedde1a55f6v7jsq   0/1     Completed   0          9m55s
@@ -100,13 +100,13 @@ arkmq-org-broker-operator-source-g94fd                            1/1     Runnin
 
 The following command line deploys a single Apache Artemis Broker instance by applying the Broker custom resource (CR) defined in broker_single.yaml file:
 
-```$xslt
+```console
 $ kubectl apply -f examples/broker/broker_single.yaml
 ```
 
 To check the status of the broker, run:
 
-```$xslt
+```console
 $ kubectl get Broker
 NAME        READY   AGE
 my-broker   True    39s
