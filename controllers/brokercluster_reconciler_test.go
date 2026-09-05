@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/common"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/selectors"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -1849,4 +1850,18 @@ func TestCompareMetaAndSpec_WithAPIVersionUpdate(t *testing.T) {
 	assert.False(t, result, "should return false when owner reference API version needs update")
 	assert.Len(t, requested.GetOwnerReferences(), 1, "requested should have updated owner references")
 	assert.Equal(t, "broker.amq.io/v1beta1", requested.GetOwnerReferences()[0].APIVersion, "API version should be updated")
+}
+
+func TestMakeNamersUsesActiveMQArtemisTrackingLabel(t *testing.T) {
+	cr := &v1beta2.BrokerCluster{
+		ObjectMeta: metav1.ObjectMeta{Name: "ex-aao"},
+	}
+
+	namer := MakeNamers(cr)
+	labels := namer.LabelBuilder.Labels()
+
+	assert.Equal(t, "ex-aao", labels[selectors.LabelActiveMQArtemisKey])
+	assert.Equal(t, "ex-aao-app", labels[selectors.LabelAppKey])
+	_, hasBroker := labels[selectors.LabelBrokerKey]
+	assert.False(t, hasBroker)
 }

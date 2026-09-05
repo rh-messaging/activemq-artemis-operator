@@ -359,7 +359,7 @@ type DeploymentPlanType struct {
 	// Specifies the tolerations
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Tolerations"
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
-	// Assign labels to broker pods, the keys `Broker` and `application` are not allowed
+	// Assign labels to broker pods, the keys `broker` and `application` are not allowed
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Labels"
 	Labels map[string]string `json:"labels,omitempty"`
 	// Specifies the node selector

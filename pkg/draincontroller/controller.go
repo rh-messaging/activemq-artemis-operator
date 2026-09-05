@@ -648,7 +648,8 @@ func (c *Controller) enqueueStatefulSet(obj interface{}) {
 		return
 	}
 
-	if enquequingSTS.ObjectMeta.Labels[selectors.LabelResourceKey] == "" {
+	if enquequingSTS.Labels[selectors.LabelActiveMQArtemisKey] == "" &&
+		enquequingSTS.Labels[selectors.LabelBrokerKey] == "" {
 		c.log.V(2).Info("Skipping statefulset without expected label", "key", key, "controller ns", c.name)
 		return
 	}

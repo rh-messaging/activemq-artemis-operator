@@ -3720,7 +3720,7 @@ func validateNoDupKeysInBrokerProperties(customResource *v1beta2.BrokerCluster) 
 func validateReservedLabels(customResource *v1beta2.BrokerCluster) *metav1.Condition {
 	if customResource.Spec.DeploymentPlan.Labels != nil {
 		for key := range customResource.Spec.DeploymentPlan.Labels {
-			if key == selectors.LabelAppKey || key == selectors.LabelResourceKey {
+			if key == selectors.LabelAppKey || key == selectors.LabelActiveMQArtemisKey || key == selectors.LabelBrokerKey {
 				return &metav1.Condition{
 					Type:    v1beta2.ValidConditionType,
 					Status:  metav1.ConditionFalse,
@@ -3732,7 +3732,7 @@ func validateReservedLabels(customResource *v1beta2.BrokerCluster) *metav1.Condi
 	}
 	for index, template := range customResource.Spec.ResourceTemplates {
 		for key := range template.Labels {
-			if key == selectors.LabelAppKey || key == selectors.LabelResourceKey {
+			if key == selectors.LabelAppKey || key == selectors.LabelActiveMQArtemisKey || key == selectors.LabelBrokerKey {
 				return &metav1.Condition{
 					Type:    v1beta2.ValidConditionType,
 					Status:  metav1.ConditionFalse,
@@ -4046,7 +4046,7 @@ func MakeNamers(customResource *v1beta2.BrokerCluster) *common.Namers {
 		SecretsCredentialsNameBuilder: namer.NamerData{},
 		SecretsConsoleNameBuilder:     namer.NamerData{},
 		SecretsNettyNameBuilder:       namer.NamerData{},
-		LabelBuilder:                  selectors.LabelerData{},
+		LabelBuilder:                  *selectors.NewActiveMQArtemisLabeler(),
 		GLOBAL_DATA_PATH:              "/opt/" + customResource.Name + "/data",
 	}
 	newNamers.SsNameBuilder.Base(customResource.Name).Suffix("ss").Generate()
@@ -4068,7 +4068,7 @@ func MakeNamers(customResource *v1beta2.BrokerCluster) *common.Namers {
 }
 
 func GetDefaultLabels(cr *v1beta2.BrokerCluster) map[string]string {
-	defaultLabelData := selectors.LabelerData{}
+	defaultLabelData := selectors.NewActiveMQArtemisLabeler()
 	defaultLabelData.Base(cr.Name).Suffix("app").Generate()
 	return defaultLabelData.Labels()
 }

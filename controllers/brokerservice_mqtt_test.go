@@ -43,6 +43,7 @@ import (
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/resources/secrets"
 	svc "github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/resources/services"
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/common"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/selectors"
 )
 
 var _ = Describe("broker-service", func() {
@@ -226,7 +227,7 @@ var _ = Describe("broker-service", func() {
 
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
-			acceptorService := svc.NewServiceDefinitionForCR(types.NamespacedName{Namespace: defaultNamespace, Name: serviceName + "-acc"}, k8sClient, "acc-port", 61616, map[string]string{"ActiveMQArtemis": crd.Name}, nil, nil)
+			acceptorService := svc.NewServiceDefinitionForCR(types.NamespacedName{Namespace: defaultNamespace, Name: serviceName + "-acc"}, k8sClient, "acc-port", 61616, map[string]string{selectors.LabelBrokerKey: crd.Name}, nil, nil)
 			Expect(k8sClient.Create(ctx, acceptorService)).Should(Succeed())
 			acceptorIngressHost := serviceName + "-" + defaultNamespace + "." + defaultTestIngressDomain
 			acceptorIngress := ingresses.NewIngressForCRWithSSL(nil, types.NamespacedName{Namespace: defaultNamespace, Name: serviceName + "-acc"}, nil, serviceName+"-acc", "61616", true, defaultTestIngressDomain, acceptorIngressHost, isOpenshift)

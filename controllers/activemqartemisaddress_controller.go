@@ -150,7 +150,7 @@ func (r *ActiveMQArtemisAddressReconciler) Reconcile(ctx context.Context, reques
 }
 
 func getAddressLabels(cr *brokerv1beta1.ActiveMQArtemisAddress) map[string]string {
-	labelBuilder := selectors.LabelerData{}
+	labelBuilder := selectors.NewActiveMQArtemisLabeler()
 	labelBuilder.Base(cr.Name).Suffix("addr").Generate()
 	return labelBuilder.Labels()
 }
@@ -163,7 +163,7 @@ type SSInfoData struct {
 func createStatefulSetNameBuilder(crName string) SSInfoData {
 	ssNameBuilder := namer.NamerData{}
 	ssNameBuilder.Base(crName).Suffix("ss").Generate()
-	ssLabelData := selectors.LabelerData{}
+	ssLabelData := selectors.NewActiveMQArtemisLabeler()
 	ssLabelData.Base(crName).Suffix("app").Generate()
 
 	return SSInfoData{

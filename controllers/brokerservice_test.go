@@ -41,6 +41,7 @@ import (
 	broker "github.com/arkmq-org/arkmq-org-broker-operator/v2/api/v1beta2"
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/resources/secrets"
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/common"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/selectors"
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/version"
 )
 
@@ -204,7 +205,7 @@ var _ = Describe("broker-service-poc", func() {
 					Spec: corev1.ServiceSpec{
 						Type: corev1.ServiceTypeNodePort,
 						Selector: map[string]string{
-							"Broker": crd.Name,
+							selectors.LabelBrokerKey: crd.Name,
 						},
 						Ports: []corev1.ServicePort{
 							{

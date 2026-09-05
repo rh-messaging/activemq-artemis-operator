@@ -149,7 +149,7 @@ type ActiveMQArtemisSecurityConfigHandler struct {
 }
 
 func getLabels(cr *brokerv1beta1.ActiveMQArtemisSecurity) map[string]string {
-	labelBuilder := selectors.LabelerData{}
+	labelBuilder := selectors.NewActiveMQArtemisLabeler()
 	labelBuilder.Base(cr.Name).Suffix("sec").Generate()
 	return labelBuilder.Labels()
 }
@@ -229,10 +229,9 @@ func (r *ActiveMQArtemisSecurityConfigHandler) processCrPasswords() *brokerv1bet
 }
 
 func (r *ActiveMQArtemisSecurityConfigHandler) GetDefaultLabels() map[string]string {
-	defaultLabelData := selectors.LabelerData{}
+	defaultLabelData := selectors.NewActiveMQArtemisLabeler()
 	defaultLabelData.Base(r.SecurityCR.Name).Suffix("app").Generate()
 	return defaultLabelData.Labels()
-
 }
 
 // retrive value from secret, generate value if not exist.

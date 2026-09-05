@@ -7284,7 +7284,7 @@ spec:
         path: deploymentPlan.journalType
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Assign labels to broker pods, the keys `Broker` and `application`
+      - description: Assign labels to broker pods, the keys `broker` and `application`
           are not allowed
         displayName: Labels
         path: deploymentPlan.labels
