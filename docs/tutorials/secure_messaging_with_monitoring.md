@@ -1210,7 +1210,7 @@ echo ""
 
 # Test 1: Artemis-Prometheus connectivity
 echo "✓ Test 1: Artemis-Prometheus is reachable"
-ARTEMIS_PROM_STATUS=$(kubectl run test-artemis-prom --rm -i --restart=Never --image=curlimages/curl:latest -n broker-tutorial -- \
+ARTEMIS_PROM_STATUS=$(kubectl run test-artemis-prom --rm -i --restart=Never --image=curlimages/curl:latest --image-pull-policy=Always -n broker-tutorial -- \
   curl -s http://artemis-prometheus-svc:9090/api/v1/query?query=up --max-time 5 2>/dev/null | grep -o '"status":"success"' || echo "")
 if [ -z "$ARTEMIS_PROM_STATUS" ]; then
   echo "  ✗ FAILED: Cannot connect to artemis-prometheus-svc:9090"
@@ -1220,7 +1220,7 @@ echo "  artemis-prometheus-svc:9090 is responding"
 
 # Test 2: Cluster-Prometheus connectivity
 echo "✓ Test 2: Cluster-Prometheus is reachable"
-CLUSTER_PROM_STATUS=$(kubectl run test-cluster-prom --rm -i --restart=Never --image=curlimages/curl:latest -n broker-tutorial -- \
+CLUSTER_PROM_STATUS=$(kubectl run test-cluster-prom --rm -i --restart=Never --image=curlimages/curl:latest --image-pull-policy=Always -n broker-tutorial -- \
   curl -s http://prometheus-kube-prometheus-prometheus:9090/api/v1/query?query=up --max-time 5 2>/dev/null | grep -o '"status":"success"' || echo "")
 if [ -z "$CLUSTER_PROM_STATUS" ]; then
   echo "  ✗ FAILED: Cannot connect to prometheus-kube-prometheus-prometheus:9090"
@@ -1232,7 +1232,7 @@ echo "  prometheus-kube-prometheus-prometheus:9090 is responding"
 echo "✓ Test 3: Broker metrics are available in Artemis-Prometheus"
 BROKER_METRICS=""
 for i in $(seq 1 24); do
-  BROKER_METRICS=$(kubectl run test-broker-metrics-${i} --rm -i --restart=Never --image=curlimages/curl:latest -n broker-tutorial -- \
+  BROKER_METRICS=$(kubectl run test-broker-metrics-${i} --rm -i --restart=Never --image=curlimages/curl:latest --image-pull-policy=Always -n broker-tutorial -- \
     curl -s 'http://artemis-prometheus-svc:9090/api/v1/query?query=broker_queue_message_count' --max-time 5 2>/dev/null | grep -o '"status":"success"' || echo "")
   [ -n "$BROKER_METRICS" ] && break
   echo "  Waiting for Artemis-Prometheus to scrape broker metrics (attempt $i/24)..."
@@ -1246,7 +1246,7 @@ echo "  broker_queue_message_count is present"
 
 # Test 4: CPU/Memory metrics availability
 echo "✓ Test 4: Infrastructure metrics are available in Cluster-Prometheus"
-CPU_METRICS=$(kubectl run test-cpu-metrics --rm -i --restart=Never --image=curlimages/curl:latest -n broker-tutorial -- \
+CPU_METRICS=$(kubectl run test-cpu-metrics --rm -i --restart=Never --image=curlimages/curl:latest --image-pull-policy=Always -n broker-tutorial -- \
   curl -s 'http://prometheus-kube-prometheus-prometheus:9090/api/v1/query?query=container_cpu_usage_seconds_total' --max-time 5 2>/dev/null | grep -o '"status":"success"' || echo "")
 if [ -z "$CPU_METRICS" ]; then
   echo "  ✗ FAILED: CPU metrics not found in Cluster-Prometheus"
@@ -1262,9 +1262,13 @@ export GRAFANA_PASSWORD=$(kubectl get secret -n broker-tutorial prometheus-grafa
 
 # Wait for Grafana API to be ready with proper authentication
 echo "  Waiting for Grafana to be fully initialized..."
-DATASOURCES=$(kubectl exec -n broker-tutorial deployment/prometheus-grafana -- \
+kubectl delete pod test-grafana-ds -n broker-tutorial --ignore-not-found 2>/dev/null
+kubectl run test-grafana-ds --restart=Never --image=curlimages/curl:latest --image-pull-policy=Always -n broker-tutorial -- \
   curl -s --retry 36 --retry-delay 5 --retry-all-errors \
-    http://localhost:3000/api/datasources -u admin:${GRAFANA_PASSWORD})
+    -u "admin:${GRAFANA_PASSWORD}" http://prometheus-grafana:80/api/datasources
+kubectl wait pod/test-grafana-ds -n broker-tutorial --for=jsonpath='{.status.phase}'=Succeeded --timeout=300s
+DATASOURCES=$(kubectl logs test-grafana-ds -n broker-tutorial)
+kubectl delete pod test-grafana-ds -n broker-tutorial --ignore-not-found 2>/dev/null
 
 # Validate the response is a valid JSON array
 if ! echo "$DATASOURCES" | jq -e 'type == "array"' >/dev/null 2>&1; then
@@ -1445,12 +1449,23 @@ echo ""
 # Get the Grafana admin password from the secret
 GRAFANA_PASSWORD=$(kubectl get secret -n broker-tutorial prometheus-grafana -o jsonpath="{.data.admin-password}" | base64 --decode)
 
-until FOUND=$(kubectl exec -n broker-tutorial deployment/prometheus-grafana -- \
-  curl -s 'http://localhost:3000/api/search?query=*artemis*' -u admin:${GRAFANA_PASSWORD}) && [[ $FOUND != '[]' ]]; do echo "dashboard not found... try again in 5" && sleep 5; done
+FOUND="[]"
+while [[ "$FOUND" == "[]" || -z "$FOUND" ]]; do
+  kubectl delete pod test-grafana-search -n broker-tutorial --ignore-not-found 2>/dev/null
+  kubectl run test-grafana-search --restart=Never --image=curlimages/curl:latest --image-pull-policy=Always -n broker-tutorial -- \
+    curl -s -u "admin:${GRAFANA_PASSWORD}" 'http://prometheus-grafana:80/api/search?query=*artemis*'
+  kubectl wait pod/test-grafana-search -n broker-tutorial --for=jsonpath='{.status.phase}'=Succeeded --timeout=60s
+  FOUND=$(kubectl logs test-grafana-search -n broker-tutorial)
+  kubectl delete pod test-grafana-search -n broker-tutorial --ignore-not-found 2>/dev/null
+  if [[ "$FOUND" == "[]" || -z "$FOUND" ]]; then echo "dashboard not found... try again in 5" && sleep 5; fi
+done
 
 # Fetch dashboard JSON once
-DASHBOARD_JSON=$(kubectl exec -n broker-tutorial deployment/prometheus-grafana -- \
-  curl -s 'http://localhost:3000/api/dashboards/uid/artemis-broker-dashboard' -u admin:${GRAFANA_PASSWORD})
+kubectl run test-grafana-dashboard --restart=Never --image=curlimages/curl:latest --image-pull-policy=Always -n broker-tutorial -- \
+  curl -s -u "admin:${GRAFANA_PASSWORD}" 'http://prometheus-grafana:80/api/dashboards/uid/artemis-broker-dashboard'
+kubectl wait pod/test-grafana-dashboard -n broker-tutorial --for=jsonpath='{.status.phase}'=Succeeded --timeout=60s
+DASHBOARD_JSON=$(kubectl logs test-grafana-dashboard -n broker-tutorial)
+kubectl delete pod test-grafana-dashboard -n broker-tutorial --ignore-not-found 2>/dev/null
 
 # Test 1: Check dashboard exists and has correct title
 echo "✓ Test 1: Dashboard exists with correct title"
@@ -1734,7 +1749,8 @@ kubectl get endpoints messaging-service-metrics -n broker-tutorial
 
 **Solution:** Verify the service selector matches broker pod labels and the metrics port (8888) is accessible:
 ```bash
-kubectl exec -n broker-tutorial messaging-service-ss-0 -- curl -k https://localhost:8161/metrics
+kubectl run test-metrics --rm -i --restart=Never --image=curlimages/curl:latest -n broker-tutorial -- \
+  curl -sk https://messaging-service-ss-0.messaging-service-hdls-svc.broker-tutorial.svc.cluster.local:8161/metrics
 kubectl run test-prom --rm -i --restart=Never --image=curlimages/curl:latest -n broker-tutorial -- \
   curl -s http://artemis-prometheus-svc:9090/api/v1/targets | grep artemis
 ```
