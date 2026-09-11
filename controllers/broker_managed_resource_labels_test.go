@@ -19,6 +19,8 @@ package controllers
 import (
 	"os"
 
+	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	cmmetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -26,6 +28,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	v1beta2 "github.com/arkmq-org/arkmq-org-broker-operator/v2/api/v1beta2"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/common"
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/namer"
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/selectors"
 )
@@ -37,24 +41,91 @@ func assertManagedResourceTrackingLabels(g Gomega, labels map[string]string, crN
 	g.Expect(hasForbidden).To(BeFalse(), "must not use tracking label key %q", forbiddenKey)
 }
 
+func installRestrictedBrokerCerts(brokerName string) {
+	By("installing operator cert")
+	InstallCert(common.DefaultOperatorCertSecretName, defaultNamespace, func(candidate *cmv1.Certificate) {
+		candidate.Spec.SecretName = common.DefaultOperatorCertSecretName
+		candidate.Spec.CommonName = "arkmq-org-broker-operator"
+		candidate.Spec.IssuerRef = cmmetav1.ObjectReference{
+			Name: caIssuer.Name,
+			Kind: "ClusterIssuer",
+		}
+	})
+
+	By("installing restricted mtls broker cert")
+	InstallCert(common.DefaultOperandCertSecretName, defaultNamespace, func(candidate *cmv1.Certificate) {
+		candidate.Spec.SecretName = common.DefaultOperandCertSecretName
+		candidate.Spec.CommonName = "arkmq-org-broker-operand"
+		candidate.Spec.DNSNames = []string{common.OrdinalFQDNS(brokerName, defaultNamespace, 0)}
+		candidate.Spec.IssuerRef = cmmetav1.ObjectReference{
+			Name: caIssuer.Name,
+			Kind: "ClusterIssuer",
+		}
+	})
+
+	By("installing prometheus cert")
+	InstallCert(common.DefaultPrometheusCertSecretName, defaultNamespace, func(candidate *cmv1.Certificate) {
+		candidate.Spec.SecretName = common.DefaultPrometheusCertSecretName
+		candidate.Spec.CommonName = "prometheus"
+		candidate.Spec.IssuerRef = cmmetav1.ObjectReference{
+			Name: caIssuer.Name,
+			Kind: "ClusterIssuer",
+		}
+	})
+}
+
 var _ = Describe("broker managed resource labels", Label("broker-label-test"), func() {
 
-	BeforeEach(func() {
-		BeforeEachSpec()
-	})
-
-	AfterEach(func() {
-		AfterEachSpec()
-	})
-
 	Context("Broker CR", func() {
+		BeforeEach(func() {
+			BeforeEachSpec()
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+				if !CertManagerInstalled() {
+					Expect(InstallCertManager()).To(Succeed())
+				}
+
+				rootIssuer = InstallClusteredIssuer(rootIssuerName, nil)
+
+				rootCert = InstallCert(rootCertName, rootCertNamespce, func(candidate *cmv1.Certificate) {
+					candidate.Spec.IsCA = true
+					candidate.Spec.CommonName = "artemis.root.ca"
+					candidate.Spec.SecretName = rootCertSecretName
+					candidate.Spec.IssuerRef = cmmetav1.ObjectReference{
+						Name: rootIssuer.Name,
+						Kind: "ClusterIssuer",
+					}
+				})
+
+				caIssuer = InstallClusteredIssuer(caIssuerName, func(candidate *cmv1.ClusterIssuer) {
+					candidate.Spec.SelfSigned = nil
+					candidate.Spec.CA = &cmv1.CAIssuer{
+						SecretName: rootCertSecretName,
+					}
+				})
+				InstallCaBundle(common.DefaultOperatorCASecretName, rootCertSecretName, caPemTrustStoreName)
+			}
+		})
+
+		AfterEach(func() {
+			AfterEachSpec()
+		})
+
 		It("tags managed resources with the Broker tracking label", func() {
 			if os.Getenv("USE_EXISTING_CLUSTER") != "true" {
 				return
 			}
 
+			brokerCr := generateBrokerCRSpec(defaultNamespace)
+			installRestrictedBrokerCerts(brokerCr.Name)
+
 			By("deploying a Broker CR")
-			brokerCr, createdBrokerCr := DeployCustomBrokerCR(defaultNamespace, nil)
+			Expect(k8sClient.Create(ctx, &brokerCr)).Should(Succeed())
+
+			createdBrokerCr := v1beta2.Broker{}
+			Eventually(func() bool {
+				return getPersistedVersionedCrd(brokerCr.Name, defaultNamespace, &createdBrokerCr)
+			}, timeout, interval).Should(BeTrue())
 
 			By("waiting for the broker pod to be running")
 			WaitForPod(brokerCr.Name)
@@ -97,17 +168,25 @@ var _ = Describe("broker managed resource labels", Label("broker-label-test"), f
 
 			By("verifying scale label selector uses Broker tracking label")
 			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: brokerCr.Name, Namespace: defaultNamespace}, createdBrokerCr)).Should(Succeed())
+				g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: brokerCr.Name, Namespace: defaultNamespace}, &createdBrokerCr)).Should(Succeed())
 				g.Expect(createdBrokerCr.Status.ScaleLabelSelector).To(ContainSubstring(selectors.LabelBrokerKey + "=" + brokerCr.Name))
 				g.Expect(createdBrokerCr.Status.ScaleLabelSelector).NotTo(ContainSubstring(selectors.LabelActiveMQArtemisKey + "="))
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			By("cleaning up")
-			CleanResource(createdBrokerCr, createdBrokerCr.Name, defaultNamespace)
+			CleanResource(&createdBrokerCr, createdBrokerCr.Name, defaultNamespace)
 		})
 	})
 
 	Context("ActiveMQArtemis CR", func() {
+		BeforeEach(func() {
+			BeforeEachSpec()
+		})
+
+		AfterEach(func() {
+			AfterEachSpec()
+		})
+
 		It("continues to tag managed resources with the ActiveMQArtemis tracking label", func() {
 			if os.Getenv("USE_EXISTING_CLUSTER") != "true" {
 				return
