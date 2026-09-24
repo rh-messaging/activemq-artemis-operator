@@ -3847,7 +3847,7 @@ func validateNoDupKeysInBrokerProperties(customResource *v1beta2.BrokerCluster) 
 func validateReservedLabels(customResource *v1beta2.BrokerCluster) *metav1.Condition {
 	if customResource.Spec.DeploymentPlan.Labels != nil {
 		for key := range customResource.Spec.DeploymentPlan.Labels {
-			if key == selectors.LabelAppKey || key == selectors.LabelActiveMQArtemisKey || key == selectors.LabelBrokerKey {
+			if key == selectors.LabelAppKey || key == selectors.LabelActiveMQArtemisKey || key == selectors.LabelBrokerKey || key == selectors.LabelPartOfKey {
 				return &metav1.Condition{
 					Type:    v1beta2.ValidConditionType,
 					Status:  metav1.ConditionFalse,
@@ -3859,7 +3859,7 @@ func validateReservedLabels(customResource *v1beta2.BrokerCluster) *metav1.Condi
 	}
 	for index, template := range customResource.Spec.ResourceTemplates {
 		for key := range template.Labels {
-			if key == selectors.LabelAppKey || key == selectors.LabelActiveMQArtemisKey || key == selectors.LabelBrokerKey {
+			if key == selectors.LabelAppKey || key == selectors.LabelActiveMQArtemisKey || key == selectors.LabelBrokerKey || key == selectors.LabelPartOfKey {
 				return &metav1.Condition{
 					Type:    v1beta2.ValidConditionType,
 					Status:  metav1.ConditionFalse,

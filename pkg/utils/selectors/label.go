@@ -1,9 +1,18 @@
 package selectors
 
+import (
+	"k8s.io/apimachinery/pkg/labels"
+)
+
 const (
 	LabelAppKey             = "application"
 	LabelActiveMQArtemisKey = "ActiveMQArtemis"
 	LabelBrokerKey          = "broker"
+	// LabelPartOfKey is the Kubernetes recommended ownership label used so the
+	// operator can limit its Pod watch/informer cache to broker-managed pods.
+	LabelPartOfKey = "app.kubernetes.io/part-of"
+	// LabelPartOfValue is the shared value for all pods managed by this operator.
+	LabelPartOfValue = "broker.arkmq.org"
 )
 
 type LabelerInterface interface {
@@ -46,6 +55,16 @@ func (l *LabelerData) Generate() {
 	l.labels = make(map[string]string)
 	l.labels[LabelAppKey] = l.baseName + "-" + l.suffix //"-app"
 	l.labels[l.resourceKey] = l.baseName
+	// Common ownership label on all operator-managed resources from pod-creating CRs.
+	l.labels[LabelPartOfKey] = LabelPartOfValue
+}
+
+// OperatorPodLabelSelector returns the label selector used to limit the
+// controller-runtime Pod watch cache to operator-managed broker pods.
+func OperatorPodLabelSelector() labels.Selector {
+	return labels.SelectorFromSet(labels.Set{
+		LabelPartOfKey: LabelPartOfValue,
+	})
 }
 
 func GetLabels(crName string) map[string]string {

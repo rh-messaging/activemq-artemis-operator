@@ -1691,8 +1691,8 @@ spec:
         path: deploymentPlan.journalType
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Assign labels to broker pods, the keys `ActiveMQArtemis` and
-          `application` are not allowed
+      - description: Assign labels to broker pods, the keys `ActiveMQArtemis`, `application`
+          and `app.kubernetes.io/part-of` are not allowed
         displayName: Labels
         path: deploymentPlan.labels
       - description: Specifies the liveness probe configuration
@@ -6548,8 +6548,8 @@ spec:
         path: deploymentPlan.journalType
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:text
-      - description: Assign labels to broker pods, the keys `broker` and `application`
-          are not allowed
+      - description: Assign labels to broker pods, the keys `broker`, `application`
+          and `app.kubernetes.io/part-of` are not allowed
         displayName: Labels
         path: deploymentPlan.labels
       - description: Specifies the liveness probe configuration

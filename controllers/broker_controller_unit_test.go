@@ -166,6 +166,7 @@ func TestMakeNamersForBrokerUsesBrokerTrackingLabel(t *testing.T) {
 
 	assert.Equal(t, "my-broker", labels[selectors.LabelBrokerKey])
 	assert.Equal(t, "my-broker-app", labels[selectors.LabelAppKey])
+	assert.Equal(t, selectors.LabelPartOfValue, labels[selectors.LabelPartOfKey])
 	_, hasActiveMQArtemis := labels[selectors.LabelActiveMQArtemisKey]
 	assert.False(t, hasActiveMQArtemis)
 
@@ -190,6 +191,17 @@ func TestValidateReservedLabelsForBroker(t *testing.T) {
 		cr := &v1beta2.Broker{
 			Spec: v1beta2.BrokerSpec{
 				Labels: map[string]string{selectors.LabelAppKey: "x"},
+			},
+		}
+		condition := validateReservedLabelsForBroker(cr)
+		assert.NotNil(t, condition)
+		assert.Equal(t, v1beta2.ValidConditionFailedReservedLabelReason, condition.Reason)
+	})
+
+	t.Run("rejects part-of reserved key in Spec.Labels", func(t *testing.T) {
+		cr := &v1beta2.Broker{
+			Spec: v1beta2.BrokerSpec{
+				Labels: map[string]string{selectors.LabelPartOfKey: "x"},
 			},
 		}
 		condition := validateReservedLabelsForBroker(cr)

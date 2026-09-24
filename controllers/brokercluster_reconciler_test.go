@@ -2132,6 +2132,7 @@ func TestMakeNamersUsesActiveMQArtemisTrackingLabel(t *testing.T) {
 
 	assert.Equal(t, "ex-aao", labels[selectors.LabelActiveMQArtemisKey])
 	assert.Equal(t, "ex-aao-app", labels[selectors.LabelAppKey])
+	assert.Equal(t, selectors.LabelPartOfValue, labels[selectors.LabelPartOfKey])
 	_, hasBroker := labels[selectors.LabelBrokerKey]
 	assert.False(t, hasBroker)
 }
