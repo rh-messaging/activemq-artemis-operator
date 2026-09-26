@@ -16,6 +16,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -23,6 +24,7 @@ import (
 	"time"
 
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/api/v1beta2"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/brokerproperties"
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/common"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
@@ -107,7 +109,7 @@ func TestBrokerServiceReconcileWithAppMove(t *testing.T) {
 	}
 
 	// Setup fake client with indexer
-	builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(namespace, oc, s1, s2, app).WithStatusSubresource(s1, s2, app)
+	builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(WithCerts(namespace, oc, s1, s2, app)...).WithStatusSubresource(s1, s2, app)
 	builder.WithIndex(&v1beta2.BrokerApp{}, common.AppServiceBindingField, func(rawObj client.Object) []string {
 		app := rawObj.(*v1beta2.BrokerApp)
 		if app.Status.Service != nil {
@@ -200,7 +202,7 @@ func TestBrokerServiceReconcileErrorPropagation(t *testing.T) {
 	}
 
 	// Setup fake client with indexer
-	builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(s1).WithStatusSubresource(s1).WithInterceptorFuncs(interceptorFuncs)
+	builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(WithCerts(s1)...).WithStatusSubresource(s1).WithInterceptorFuncs(interceptorFuncs)
 	builder.WithIndex(&v1beta2.BrokerApp{}, common.AppServiceBindingField, func(rawObj client.Object) []string {
 		app := rawObj.(*v1beta2.BrokerApp)
 		if app.Status.Service != nil {
@@ -260,7 +262,7 @@ func TestBrokerServiceReconcileStatusUpdateFailure(t *testing.T) {
 	}
 
 	// Setup fake client with indexer
-	builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(s1).WithStatusSubresource(s1).WithInterceptorFuncs(interceptorFuncs)
+	builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(WithCerts(s1)...).WithStatusSubresource(s1).WithInterceptorFuncs(interceptorFuncs)
 	builder.WithIndex(&v1beta2.BrokerApp{}, common.AppServiceBindingField, func(rawObj client.Object) []string {
 		return nil
 	})
@@ -306,7 +308,7 @@ func TestBrokerServiceReconcileRequiresIndex(t *testing.T) {
 
 	// Setup fake client WITHOUT indexer
 	// This simulates what happens if SetupWithManager doesn't register the indexer
-	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(s1, app).WithStatusSubresource(s1, app).Build()
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(WithCerts(s1, app)...).WithStatusSubresource(s1, app).Build()
 
 	// Create Reconciler
 	r := NewBrokerServiceReconciler(cl, scheme, nil, logr.New(log.NullLogSink{}))
@@ -343,7 +345,7 @@ func TestReconcileDeployedConditionTransition(t *testing.T) {
 	}
 
 	// Setup fake client with indexer required by controller
-	builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(svc).WithStatusSubresource(svc, &v1beta2.Broker{})
+	builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(WithCerts(svc)...).WithStatusSubresource(svc, &v1beta2.Broker{})
 	builder.WithIndex(&v1beta2.BrokerApp{}, common.AppServiceBindingField, func(rawObj client.Object) []string {
 		app := rawObj.(*v1beta2.BrokerApp)
 		if app.Status.Service != nil {
@@ -491,7 +493,7 @@ func TestBrokerServiceReconcileStatusAppliedApps(t *testing.T) {
 	// Setup fake client
 	cl := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(namespace, oc, svc, app).
+		WithObjects(WithCerts(namespace, oc, svc, app)...).
 		WithStatusSubresource(svc, &v1beta2.Broker{}).
 		WithIndex(&v1beta2.BrokerApp{}, common.AppServiceBindingField, func(rawObj client.Object) []string {
 			app := rawObj.(*v1beta2.BrokerApp)
@@ -620,7 +622,7 @@ func TestBrokerServiceReconcileStatusAppliedAppsIncremental(t *testing.T) {
 	// Setup fake client
 	cl := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(namespace, oc, svc, app1).
+		WithObjects(WithCerts(namespace, oc, svc, app1)...).
 		WithStatusSubresource(svc, &v1beta2.Broker{}).
 		WithIndex(&v1beta2.BrokerApp{}, common.AppServiceBindingField, func(rawObj client.Object) []string {
 			app := rawObj.(*v1beta2.BrokerApp)
@@ -693,6 +695,8 @@ func TestBrokerServiceReconcileStatusAppliedAppsIncremental(t *testing.T) {
 	}
 	err = cl.Create(context.TODO(), app2)
 	assert.NoError(t, err)
+	// app2 arrives after the fixture was built, so it needs its cert creating too
+	assert.NoError(t, cl.Create(context.TODO(), NewAppCertSecret(app2Name, ns)))
 
 	// Reconcile to pick up App2. This updates the Secret to v2.
 	_, err = r.Reconcile(context.TODO(), req)
@@ -760,7 +764,7 @@ func TestBrokerServiceReconcileAppsProvisionedCondition(t *testing.T) {
 	// Setup fake client
 	cl := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(svc).
+		WithObjects(WithCerts(svc)...).
 		WithStatusSubresource(svc, &v1beta2.Broker{}).
 		WithIndex(&v1beta2.BrokerApp{}, common.AppServiceBindingField, func(rawObj client.Object) []string {
 			app := rawObj.(*v1beta2.BrokerApp)
@@ -914,7 +918,7 @@ func TestBrokerServiceReconcilePrometheusOverrideSecret(t *testing.T) {
 	// Setup fake client
 	cl := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(namespace, oc, svc, app).
+		WithObjects(WithCerts(namespace, oc, svc, app)...).
 		WithStatusSubresource(svc, &v1beta2.Broker{}).
 		WithIndex(&v1beta2.BrokerApp{}, common.AppServiceBindingField, func(rawObj client.Object) []string {
 			app := rawObj.(*v1beta2.BrokerApp)
@@ -1004,7 +1008,7 @@ func TestBrokerServiceReconcilePrometheusOverrideNoApps(t *testing.T) {
 	// Setup fake client
 	cl := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(namespace, oc, svc).
+		WithObjects(WithCerts(namespace, oc, svc)...).
 		WithStatusSubresource(svc, &v1beta2.Broker{}).
 		WithIndex(&v1beta2.BrokerApp{}, common.AppServiceBindingField, func(rawObj client.Object) []string {
 			app := rawObj.(*v1beta2.BrokerApp)
@@ -1062,7 +1066,7 @@ func TestBrokerServiceValidCondition(t *testing.T) {
 		// Setup fake client with field indexer using helper
 		cl := SetupBrokerAppIndexer(fake.NewClientBuilder().
 			WithScheme(scheme).
-			WithObjects(svc).
+			WithObjects(WithCerts(svc)...).
 			WithStatusSubresource(svc)).
 			Build()
 
@@ -1100,7 +1104,7 @@ func TestBrokerServiceValidCondition(t *testing.T) {
 		// Setup fake client with field indexer using helper
 		cl := SetupBrokerAppIndexer(fake.NewClientBuilder().
 			WithScheme(scheme).
-			WithObjects(svc).
+			WithObjects(WithCerts(svc)...).
 			WithStatusSubresource(svc)).
 			Build()
 
@@ -1146,7 +1150,7 @@ func TestBrokerServiceValidCondition(t *testing.T) {
 		// Setup fake client with field indexer using helper
 		cl := SetupBrokerAppIndexer(fake.NewClientBuilder().
 			WithScheme(scheme).
-			WithObjects(svc).
+			WithObjects(WithCerts(svc)...).
 			WithStatusSubresource(svc)).
 			Build()
 
@@ -1204,7 +1208,7 @@ func TestBrokerServiceIdempotentStatus(t *testing.T) {
 	// Setup fake client with indexer
 	cl := SetupBrokerAppIndexer(fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(svc).
+		WithObjects(WithCerts(svc)...).
 		WithStatusSubresource(svc)).
 		Build()
 
@@ -1263,7 +1267,7 @@ func TestBrokerServiceConditionIndependence(t *testing.T) {
 	// Setup fake client with indexer
 	cl := SetupBrokerAppIndexer(fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(svc).
+		WithObjects(WithCerts(svc)...).
 		WithStatusSubresource(svc)).
 		Build()
 
@@ -1336,7 +1340,7 @@ func TestBrokerServiceValidPersistsThroughRuntimeErrors(t *testing.T) {
 
 	cl := SetupBrokerAppIndexer(fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(svc).
+		WithObjects(WithCerts(svc)...).
 		WithStatusSubresource(svc).
 		WithInterceptorFuncs(interceptorFuncs)).
 		Build()
@@ -1390,7 +1394,7 @@ func TestBrokerServiceConditionTransitionsOnRecovery(t *testing.T) {
 	// Setup fake client
 	cl := SetupBrokerAppIndexer(fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(svc).
+		WithObjects(WithCerts(svc)...).
 		WithStatusSubresource(svc, &v1beta2.Broker{})).
 		Build()
 
@@ -1471,4 +1475,184 @@ func TestBrokerServiceConditionTransitionsOnRecovery(t *testing.T) {
 	assert.NotNil(t, deployedCond)
 	assert.Equal(t, metav1.ConditionTrue, deployedCond.Status)
 	assert.Equal(t, v1beta2.ReadyConditionReason, deployedCond.Reason)
+}
+
+// The per-app metrics role carries per-queue view grants, but the jmx_exporter
+// cannot read any of them until queryMBeans is open for that role.
+func TestProcessCapabilitiesGrantsQueryMBeansToAppMetricsRole(t *testing.T) {
+	reconciler := &BrokerServiceInstanceReconciler{}
+
+	app := &v1beta2.BrokerApp{
+		ObjectMeta: metav1.ObjectMeta{Name: "my-app", Namespace: "ns1"},
+		Spec: v1beta2.BrokerAppSpec{
+			Capabilities: []v1beta2.AppCapabilityType{{
+				ProducerOf: []v1beta2.AddressRef{{Address: "my-address"}},
+				ConsumerOf: []v1beta2.AddressRef{{Address: "my-address"}},
+			}},
+		},
+	}
+
+	secret := &corev1.Secret{}
+	assert.NoError(t, reconciler.processCapabilities(secret, app))
+
+	var cfg brokerproperties.CapabilitiesJSON
+	assert.NoError(t, json.Unmarshal(secret.Data[AppIdentityPrefixed(app, "capabilities.json")], &cfg))
+
+	assert.True(t, cfg.SecurityRoles["mops.mbeanserver.queryMBeans"]["ns1-my-app-metrics"].View,
+		"app metrics role needs the queryMBeans gate to enumerate its own mbeans")
+
+	assert.True(t, cfg.SecurityRoles["mops.queue.my-address"]["ns1-my-app-metrics"].View)
+}
+
+// An app with no queues gets no metrics identity worth gating.
+func TestProcessCapabilitiesOmitsQueryMBeansWithoutQueues(t *testing.T) {
+	reconciler := &BrokerServiceInstanceReconciler{}
+
+	app := &v1beta2.BrokerApp{
+		ObjectMeta: metav1.ObjectMeta{Name: "quiet-app", Namespace: "ns1"},
+		Spec:       v1beta2.BrokerAppSpec{},
+	}
+
+	secret := &corev1.Secret{}
+	assert.NoError(t, reconciler.processCapabilities(secret, app))
+
+	var cfg brokerproperties.CapabilitiesJSON
+	assert.NoError(t, json.Unmarshal(secret.Data[AppIdentityPrefixed(app, "capabilities.json")], &cfg))
+
+	_, hasQueryMBeans := cfg.SecurityRoles["mops.mbeanserver.queryMBeans"]
+	assert.False(t, hasQueryMBeans)
+}
+
+// The cached List returns apps in an arbitrary order, so unsorted entries would
+// make the comparator see a changed override on every cycle and thrash the
+// broker config.
+func TestAppIdentityEntriesAreOrderIndependent(t *testing.T) {
+	apps := []v1beta2.BrokerApp{
+		newBrokerApp("ns2", "app-alpha"), newBrokerApp("ns1", "app-beta"), newBrokerApp("ns1", "app-alpha"),
+	}
+	reconciler := newServiceReconcilerForApps(t, apps)
+
+	forward, err := reconciler.appIdentityEntries(apps)
+	assert.NoError(t, err)
+
+	reversed, err := reconciler.appIdentityEntries([]v1beta2.BrokerApp{apps[2], apps[0], apps[1]})
+	assert.NoError(t, err)
+
+	assert.Equal(t, forward, reversed, "entries must not depend on list order")
+
+	identities := make([]string, 0, len(forward))
+	for _, e := range forward {
+		identities = append(identities, e.Identity)
+	}
+	assert.Equal(t, []string{"ns1-app-alpha", "ns1-app-beta", "ns2-app-alpha"}, identities)
+}
+
+// The identity we authorise is the CN of the app's own certificate, resolved by
+// the <app>-app-cert convention, not the app name.
+func TestAppIdentityEntriesUseTheCertCommonName(t *testing.T) {
+	reconciler := newServiceReconcilerWithCerts(t,
+		appCert{namespace: "ns1", appName: "app-alpha", commonName: "app-alpha.ns1.svc"})
+
+	entries, err := reconciler.appIdentityEntries([]v1beta2.BrokerApp{newBrokerApp("ns1", "app-alpha")})
+	assert.NoError(t, err)
+
+	assert.Len(t, entries, 1)
+	assert.Equal(t, "ns1-app-alpha", entries[0].Identity)
+	assert.Equal(t, common.EscapeForRegex("app-alpha.ns1.svc"), entries[0].CNPattern,
+		"pattern must come from the cert CN, not the app name")
+}
+
+// The CN lands in a regex, so its metacharacters have to be escaped.
+func TestAppIdentityEntriesEscapeTheCommonName(t *testing.T) {
+	reconciler := newServiceReconcilerWithCerts(t,
+		appCert{namespace: "ns1", appName: "my-app", commonName: "my.app-1.ns1.svc"})
+
+	entries, err := reconciler.appIdentityEntries([]v1beta2.BrokerApp{newBrokerApp("ns1", "my-app")})
+	assert.NoError(t, err)
+
+	assert.Len(t, entries, 1)
+	// dots and dashes escaped, so the CN cannot act as a wildcard in cert_users
+	assert.Equal(t, `my\.app\-1\.ns1\.svc`, entries[0].CNPattern)
+}
+
+// No cert means no identity to authorise, so the reconcile fails rather than
+// guessing one.
+func TestAppIdentityEntriesFailWithoutAppCert(t *testing.T) {
+	reconciler := newServiceReconcilerWithCerts(t)
+
+	_, err := reconciler.appIdentityEntries([]v1beta2.BrokerApp{newBrokerApp("ns1", "app-alpha")})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "app-alpha"+common.AppCertSecretSuffix)
+}
+
+// A cert we cannot read is not a reason to fall back either.
+func TestAppIdentityEntriesFailOnUnreadableAppCert(t *testing.T) {
+	scheme := runtime.NewScheme()
+	_ = v1beta2.AddToScheme(scheme)
+	_ = corev1.AddToScheme(scheme)
+
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(&corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "app-alpha" + common.AppCertSecretSuffix,
+			Namespace: "ns1",
+		},
+		Data: map[string][]byte{"tls.crt": []byte("not a certificate")},
+	}).Build()
+
+	reconciler := newServiceReconcilerWithClient(cl)
+
+	_, err := reconciler.appIdentityEntries([]v1beta2.BrokerApp{newBrokerApp("ns1", "app-alpha")})
+	assert.Error(t, err)
+}
+
+func newBrokerApp(namespace, name string) v1beta2.BrokerApp {
+	return v1beta2.BrokerApp{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}
+}
+
+type appCert struct {
+	namespace  string
+	appName    string
+	commonName string
+}
+
+// newServiceReconcilerWithAppCerts gives every app a cert whose CN is its name.
+func newServiceReconcilerForApps(t *testing.T, apps []v1beta2.BrokerApp) *BrokerServiceInstanceReconciler {
+	t.Helper()
+	certs := make([]appCert, 0, len(apps))
+	for _, app := range apps {
+		certs = append(certs, appCert{namespace: app.Namespace, appName: app.Name, commonName: app.Name})
+	}
+	return newServiceReconcilerWithCerts(t, certs...)
+}
+
+func newServiceReconcilerWithCerts(t *testing.T, certs ...appCert) *BrokerServiceInstanceReconciler {
+	t.Helper()
+
+	scheme := runtime.NewScheme()
+	_ = v1beta2.AddToScheme(scheme)
+	_ = corev1.AddToScheme(scheme)
+
+	builder := fake.NewClientBuilder().WithScheme(scheme)
+	for _, c := range certs {
+		certPEM, keyPEM := mustTestKeyPairCN(t, c.commonName)
+		builder = builder.WithObjects(WithCerts(&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      c.appName + common.AppCertSecretSuffix,
+				Namespace: c.namespace,
+			},
+			Data: map[string][]byte{"tls.crt": certPEM, "tls.key": keyPEM},
+		})...)
+	}
+
+	return newServiceReconcilerWithClient(builder.Build())
+}
+
+func newServiceReconcilerWithClient(cl client.Client) *BrokerServiceInstanceReconciler {
+	return &BrokerServiceInstanceReconciler{
+		BrokerServiceReconciler: &BrokerServiceReconciler{
+			ReconcilerLoop: &ReconcilerLoop{
+				KubeBits: &KubeBits{Client: cl, log: logr.Discard()},
+			},
+		},
+	}
 }

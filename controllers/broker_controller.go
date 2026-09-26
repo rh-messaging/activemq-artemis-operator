@@ -3,8 +3,6 @@ package controllers
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509/pkix"
 	_ "embed"
 	"encoding/hex"
 	"encoding/json"
@@ -913,16 +911,8 @@ func (reconciler *BrokerReconcilerImpl) PodTemplateSpecForCR(customResource *v1b
 			return nil, err
 		}
 
+		// still needed below for the mount and the cert paths
 		operandCertSecretName := common.GetOperandCertSecretName(customResource, client)
-		operandCertSecret, err := common.GetNamespacedSecret(client, operandCertSecretName, customResource.Namespace)
-		if err != nil {
-			return nil, err
-		}
-
-		operandCertSubject, err := common.ExtractCertSubjectFromSecret(operandCertSecret)
-		if err != nil {
-			return nil, fmt.Errorf("failed to extract operand subject from certificate, %w", err)
-		}
 
 		var caCertSecret *corev1.Secret
 		if caCertSecret, err = common.GetOperatorCASecret(client); err != nil {
@@ -934,73 +924,28 @@ func (reconciler *BrokerReconcilerImpl) PodTemplateSpecForCR(customResource *v1b
 			return nil, fmt.Errorf("failed to get operator ca secret key, %w", err)
 		}
 
-		var operatorCert *tls.Certificate
-		if operatorCert, err = common.GetOperatorClientCertificate(client, nil); err != nil {
-			return nil, fmt.Errorf("failed to get operator client cert, %w", err)
-		}
-
-		var operatorCertSubject *pkix.Name
-		if operatorCertSubject, err = common.ExtractCertSubject(operatorCert); err != nil {
-			return nil, fmt.Errorf("failed to extract operator subject from client cert, %w", err)
-		}
-
-		prometheusCertSecretName := common.GetPrometheusCertSecretName(customResource, client)
-		prometheusCertSecret, err := common.GetNamespacedSecret(client, prometheusCertSecretName, customResource.Namespace)
-		var prometheusCertSubject *pkix.Name
-		if err == nil {
-			prometheusCertSubject, err = common.ExtractCertSubjectFromSecret(prometheusCertSecret)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			ctrl.Log.V(1).Info("prometheus secret not found", "err", err)
-		}
-
 		// TODO - make configuable
 		// support <crNname->control-plane-auth-secret, maybe a suffix for the http_server_authenticator realm login.config
 
-		prometheusCN := ""
-		if prometheusCertSubject != nil {
-			prometheusCN = prometheusCertSubject.CommonName
+		// shared with the BrokerService controller, which renders this same file
+		// complete into its control-plane override
+		cns, err := common.ResolveControlPlaneCNs(client, customResource)
+		if err != nil {
+			return nil, err
 		}
-		if brokerPropertiesMapData[common.GetCertUsersKey(common.HttpAuthenticatorRealm)], err = templates.Render(templates.CertUsers, templates.CertUsersConfig{
-			OperatorCN:   operatorCertSubject.CommonName,
-			OperandCN:    operandCertSubject.CommonName,
-			PrometheusCN: prometheusCN,
-		}); err != nil {
+
+		if brokerPropertiesMapData[common.GetCertUsersKey(common.HttpAuthenticatorRealm)], err = templates.Render(templates.CertUsers, templates.CertUsersConfig(cns)); err != nil {
 			return nil, err
 		}
 		brokerPropertiesMapData[common.GetCertRolesKey(common.HttpAuthenticatorRealm)] = templates.RenderCertRoles()
 
-		foundationalProps := brokerproperties.NewPropsWithHeader()
-		fmt.Fprintf(foundationalProps, "name=%s\n", environments.ResolveBrokerNameFromEnvs(customResource.Spec.Env, customResource.Name))
-		fmt.Fprintln(foundationalProps, "criticalAnalyzer=false")
-		fmt.Fprintln(foundationalProps, "literalMatchMarkers=()")
-
-		// with cert or token, jaas is cheap and a token will be cached while valid
-		// TODO - avoid AMQP SASL login and server login duplication, verify
-		fmt.Fprintln(foundationalProps, "authenticationCacheSize=0")
-
-		fmt.Fprintln(foundationalProps, "messageCounterEnabled=false")
-		fmt.Fprintln(foundationalProps, "journalDirectory=/app/data")
-		fmt.Fprintln(foundationalProps, "bindingsDirectory=/app/data/bindings")
-		fmt.Fprintln(foundationalProps, "largeMessagesDirectory=/app/data/largemessages")
-		fmt.Fprintln(foundationalProps, "pagingDirectory=/app/data/paging")
-
-		brokerPropertiesMapData["aa_restricted.properties"] = foundationalProps.Bytes()
-
-		rbac := brokerproperties.NewPropsWithHeader()
-		// operator status check
-		fmt.Fprintln(rbac, "securityRoles.\"mops.broker.getStatus\".status.view=true")
-
-		// jmx_exporter metrics perms
-		fmt.Fprintln(rbac, "securityRoles.\"mops.mbeanserver.queryMBeans\".metrics.view=true")
-		fmt.Fprintln(rbac, "securityRoles.\"mops.broker\".metrics.view=true") // we need view permission on the broker in order to locate through a query and retrieve it.
-		fmt.Fprintln(rbac, "securityRoles.\"mops.broker.getTotalMessageCount\".metrics.view=true")
-		fmt.Fprintln(rbac, "securityRoles.\"mops.broker.getTotalMessagesAcknowledged\".metrics.view=true")
-		fmt.Fprintln(rbac, "securityRoles.\"mops.broker.getTotalMessagesAdded\".metrics.view=true")
-
-		brokerPropertiesMapData["aa_rbac.properties"] = rbac.Bytes()
+		brokerName := environments.ResolveBrokerNameFromEnvs(customResource.Spec.Env, customResource.Name)
+		if brokerPropertiesMapData["aa_restricted.json"], err = brokerproperties.RestrictedConfigData(brokerName); err != nil {
+			return nil, err
+		}
+		if brokerPropertiesMapData["aa_rbac.json"], err = brokerproperties.RBACConfigData(); err != nil {
+			return nil, err
+		}
 
 		secretsToMount = append(secretsToMount, operandCertSecretName)
 		caSecret := common.GetOperatorCASecretName()

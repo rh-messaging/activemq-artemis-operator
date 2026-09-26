@@ -212,6 +212,7 @@ var _ = Describe("broker-service namespace-based CEL selection", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      serviceName,
 					Namespace: defaultNamespace,
+					Labels:    map[string]string{"app.kubernetes.io/instance": serviceName},
 				},
 				Spec: broker.BrokerServiceSpec{
 					// Only allow apps from namespaces labeled environment=production
@@ -248,7 +249,7 @@ var _ = Describe("broker-service namespace-based CEL selection", func() {
 				},
 				Spec: broker.BrokerAppSpec{
 					ServiceSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{}, // Match any service
+						MatchLabels: map[string]string{"app.kubernetes.io/instance": serviceName},
 					},
 					Capabilities: []broker.AppCapabilityType{
 						{
@@ -263,6 +264,7 @@ var _ = Describe("broker-service namespace-based CEL selection", func() {
 					},
 				},
 			}
+			InstallAppCert(&prodApp)
 			Expect(k8sClient.Create(ctx, &prodApp)).Should(Succeed())
 
 			prodAppKey := types.NamespacedName{Name: prodApp.Name, Namespace: prodApp.Namespace}
@@ -302,7 +304,7 @@ var _ = Describe("broker-service namespace-based CEL selection", func() {
 				},
 				Spec: broker.BrokerAppSpec{
 					ServiceSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{}, // Match any service
+						MatchLabels: map[string]string{"app.kubernetes.io/instance": serviceName},
 					},
 					Capabilities: []broker.AppCapabilityType{
 						{
@@ -317,6 +319,7 @@ var _ = Describe("broker-service namespace-based CEL selection", func() {
 					},
 				},
 			}
+			InstallAppCert(&devApp)
 			Expect(k8sClient.Create(ctx, &devApp)).Should(Succeed())
 
 			devAppKey := types.NamespacedName{Name: devApp.Name, Namespace: devApp.Namespace}
@@ -357,7 +360,7 @@ var _ = Describe("broker-service namespace-based CEL selection", func() {
 				},
 				Spec: broker.BrokerAppSpec{
 					ServiceSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{}, // Match any service
+						MatchLabels: map[string]string{"app.kubernetes.io/instance": serviceName},
 					},
 					Capabilities: []broker.AppCapabilityType{
 						{
@@ -372,6 +375,7 @@ var _ = Describe("broker-service namespace-based CEL selection", func() {
 					},
 				},
 			}
+			InstallAppCert(&qaApp)
 			Expect(k8sClient.Create(ctx, &qaApp)).Should(Succeed())
 
 			qaAppKey := types.NamespacedName{Name: qaApp.Name, Namespace: qaApp.Namespace}
@@ -488,6 +492,7 @@ var _ = Describe("broker-service namespace-based CEL selection", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      serviceName,
 					Namespace: defaultNamespace,
+					Labels:    map[string]string{"app.kubernetes.io/instance": serviceName},
 				},
 				Spec: broker.BrokerServiceSpec{
 					// Only allow apps from premium tier namespaces
@@ -524,7 +529,7 @@ var _ = Describe("broker-service namespace-based CEL selection", func() {
 				},
 				Spec: broker.BrokerAppSpec{
 					ServiceSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{},
+						MatchLabels: map[string]string{"app.kubernetes.io/instance": serviceName},
 					},
 					Capabilities: []broker.AppCapabilityType{
 						{
@@ -539,6 +544,7 @@ var _ = Describe("broker-service namespace-based CEL selection", func() {
 					},
 				},
 			}
+			InstallAppCert(&paymentsApp)
 			Expect(k8sClient.Create(ctx, &paymentsApp)).Should(Succeed())
 
 			paymentsAppKey := types.NamespacedName{Name: paymentsApp.Name, Namespace: paymentsApp.Namespace}
@@ -563,7 +569,7 @@ var _ = Describe("broker-service namespace-based CEL selection", func() {
 				},
 				Spec: broker.BrokerAppSpec{
 					ServiceSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{},
+						MatchLabels: map[string]string{"app.kubernetes.io/instance": serviceName},
 					},
 					Capabilities: []broker.AppCapabilityType{
 						{
@@ -578,6 +584,7 @@ var _ = Describe("broker-service namespace-based CEL selection", func() {
 					},
 				},
 			}
+			InstallAppCert(&ordersApp)
 			Expect(k8sClient.Create(ctx, &ordersApp)).Should(Succeed())
 
 			ordersAppKey := types.NamespacedName{Name: ordersApp.Name, Namespace: ordersApp.Namespace}

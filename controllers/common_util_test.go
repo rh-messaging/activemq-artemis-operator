@@ -52,6 +52,7 @@ import (
 	"software.sslmate.com/src/go-pkcs12"
 
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	cmmetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	tm "github.com/cert-manager/trust-manager/pkg/apis/trust/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -70,6 +71,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/tools/remotecommand"
 )
@@ -517,7 +519,7 @@ func RunCommandInPodWithNamespace(podName string, podNamespace string, container
 	}
 	httpClient, err := rest.HTTPClientFor(restConfig)
 	Expect(err).To(BeNil())
-	restClient, err := apiutil.RESTClientForGVK(gvk, false, restConfig, serializer.NewCodecFactory(scheme.Scheme), httpClient)
+	restClient, err := apiutil.RESTClientForGVK(gvk, false, false, restConfig, serializer.NewCodecFactory(scheme.Scheme), httpClient)
 	Expect(err).To(BeNil())
 	execReq := restClient.
 		Post().
@@ -600,7 +602,7 @@ func LogsOfPod(podWithOrdinal string, brokerName string, namespace string, g Gom
 	}
 	httpClient, err := rest.HTTPClientFor(restConfig)
 	Expect(err).To(BeNil())
-	restClient, err := apiutil.RESTClientForGVK(gvk, false, restConfig, serializer.NewCodecFactory(scheme.Scheme), httpClient)
+	restClient, err := apiutil.RESTClientForGVK(gvk, false, false, restConfig, serializer.NewCodecFactory(scheme.Scheme), httpClient)
 	g.Expect(err).To(BeNil())
 
 	readCloser, err := restClient.
@@ -631,7 +633,7 @@ func ExecOnPod(podWithOrdinal string, brokerName string, namespace string, comma
 	}
 	httpClient, err := rest.HTTPClientFor(restConfig)
 	g.Expect(err).To(BeNil())
-	restClient, err := apiutil.RESTClientForGVK(gvk, false, restConfig, serializer.NewCodecFactory(scheme.Scheme), httpClient)
+	restClient, err := apiutil.RESTClientForGVK(gvk, false, false, restConfig, serializer.NewCodecFactory(scheme.Scheme), httpClient)
 	g.Expect(err).To(BeNil())
 
 	execReq := restClient.
@@ -1054,6 +1056,23 @@ func InstallClusteredIssuer(issuerName string, customFunc func(*cmv1.ClusterIssu
 	return currentIssuer
 }
 
+// InstallAppCert installs the client certificate an app is provisioned with,
+// following the <app>-app-cert convention, with the app name as its common
+// name. Issued by caIssuer, so the broker already trusts it.
+func InstallAppCert(app *brokerv1beta2.BrokerApp) *cmv1.Certificate {
+	certName := app.Name + common.AppCertSecretSuffix
+	return InstallCert(certName, app.Namespace, func(candidate *cmv1.Certificate) {
+		candidate.Spec.SecretName = certName
+		candidate.Spec.CommonName = app.Name
+		candidate.Spec.Subject.Organizations = nil
+		candidate.Spec.Subject.OrganizationalUnits = []string{app.Namespace}
+		candidate.Spec.IssuerRef = cmmetav1.ObjectReference{
+			Name: caIssuer.Name,
+			Kind: "ClusterIssuer",
+		}
+	})
+}
+
 func InstallCert(certName string, namespace string, customFunc func(candidate *cmv1.Certificate)) *cmv1.Certificate {
 	cmCert := cmv1.Certificate{}
 	if k8sClient.Get(ctx, types.NamespacedName{Name: certName, Namespace: defaultNamespace}, &cmCert) == nil {
@@ -1275,6 +1294,9 @@ func (m *NillCluster) GetFieldIndexer() client.FieldIndexer {
 	return nil
 }
 func (m *NillCluster) GetEventRecorderFor(name string) record.EventRecorder {
+	return nil
+}
+func (m *NillCluster) GetEventRecorder(name string) events.EventRecorder {
 	return nil
 }
 func (m *NillCluster) GetRESTMapper() meta.RESTMapper {

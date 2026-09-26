@@ -206,6 +206,7 @@ var _ = Describe("broker-service address sharing scenarios", func() {
 					},
 				},
 			}
+			InstallAppCert(&ownerApp)
 			Expect(k8sClient.Create(ctx, &ownerApp)).Should(Succeed())
 
 			consumerAppName := NextSpecResourceName()
@@ -254,6 +255,7 @@ var _ = Describe("broker-service address sharing scenarios", func() {
 					},
 				},
 			}
+			InstallAppCert(&consumerApp)
 			Expect(k8sClient.Create(ctx, &consumerApp)).Should(Succeed())
 
 			By("verifying both apps are provisioned")
@@ -378,6 +380,7 @@ var _ = Describe("broker-service address sharing scenarios", func() {
 					},
 				},
 			}
+			InstallAppCert(&app)
 			Expect(k8sClient.Create(ctx, &app)).Should(Succeed())
 
 			createdApp := &broker.BrokerApp{}
@@ -500,6 +503,7 @@ var _ = Describe("broker-service address sharing scenarios", func() {
 					},
 				},
 			}
+			InstallAppCert(&registryApp)
 			Expect(k8sClient.Create(ctx, &registryApp)).Should(Succeed())
 
 			consumerAppName := NextSpecResourceName()
@@ -548,6 +552,7 @@ var _ = Describe("broker-service address sharing scenarios", func() {
 					},
 				},
 			}
+			InstallAppCert(&consumerApp)
 			Expect(k8sClient.Create(ctx, &consumerApp)).Should(Succeed())
 
 			createdService := &broker.BrokerService{}
@@ -663,6 +668,7 @@ var _ = Describe("broker-service address sharing scenarios", func() {
 					},
 				},
 			}
+			InstallAppCert(&ownerApp)
 			Expect(k8sClient.Create(ctx, &ownerApp)).Should(Succeed())
 
 			consumerAppName := NextSpecResourceName()
@@ -711,6 +717,7 @@ var _ = Describe("broker-service address sharing scenarios", func() {
 					},
 				},
 			}
+			InstallAppCert(&consumerApp)
 			Expect(k8sClient.Create(ctx, &consumerApp)).Should(Succeed())
 
 			createdConsumer := &broker.BrokerApp{}
@@ -843,6 +850,7 @@ var _ = Describe("broker-service address sharing scenarios", func() {
 					},
 				},
 			}
+			InstallAppCert(&app1)
 			Expect(k8sClient.Create(ctx, &app1)).Should(Succeed())
 
 			createdService := &broker.BrokerService{}
@@ -898,6 +906,7 @@ var _ = Describe("broker-service address sharing scenarios", func() {
 					},
 				},
 			}
+			InstallAppCert(&app2)
 			Expect(k8sClient.Create(ctx, &app2)).Should(Succeed())
 
 			createdApp2 := &broker.BrokerApp{}
@@ -1057,6 +1066,7 @@ var _ = Describe("broker-service address sharing scenarios", func() {
 					},
 				},
 			}
+			InstallAppCert(&ownerApp)
 			Expect(k8sClient.Create(ctx, &ownerApp)).Should(Succeed())
 
 			consumerAppName := NextSpecResourceName()
@@ -1105,6 +1115,7 @@ var _ = Describe("broker-service address sharing scenarios", func() {
 					},
 				},
 			}
+			InstallAppCert(&consumerApp)
 			Expect(k8sClient.Create(ctx, &consumerApp)).Should(Succeed())
 
 			createdService := &broker.BrokerService{}
@@ -1132,7 +1143,7 @@ var _ = Describe("broker-service address sharing scenarios", func() {
 
 	Context("Phase 6: SharedAddresses Validation", func() {
 
-		It("Scenario 10: should reject reference to private address (in Addresses, not SharedAddresses)", func() {
+		It("Scenario 10: should reject reference to private address in Addresses, not SharedAddresses", func() {
 
 			if os.Getenv("USE_EXISTING_CLUSTER") != "true" {
 				return
@@ -1231,6 +1242,7 @@ var _ = Describe("broker-service address sharing scenarios", func() {
 					},
 				},
 			}
+			InstallAppCert(&ownerApp)
 			Expect(k8sClient.Create(ctx, &ownerApp)).Should(Succeed())
 
 			consumerAppName := NextSpecResourceName()
@@ -1279,6 +1291,7 @@ var _ = Describe("broker-service address sharing scenarios", func() {
 					},
 				},
 			}
+			InstallAppCert(&consumerApp)
 			Expect(k8sClient.Create(ctx, &consumerApp)).Should(Succeed())
 
 			createdConsumer := &broker.BrokerApp{}
@@ -1309,7 +1322,7 @@ var _ = Describe("broker-service address sharing scenarios", func() {
 			UninstallCert(sharedOperandCertName, defaultNamespace)
 		})
 
-		It("Scenario 11: should allow app with SharedAddresses only (no Addresses)", func() {
+		It("Scenario 11: should allow app with SharedAddresses only no Addresses", func() {
 
 			if os.Getenv("USE_EXISTING_CLUSTER") != "true" {
 				return
@@ -1408,6 +1421,7 @@ var _ = Describe("broker-service address sharing scenarios", func() {
 					},
 				},
 			}
+			InstallAppCert(&ownerApp)
 			Expect(k8sClient.Create(ctx, &ownerApp)).Should(Succeed())
 
 			consumerAppName := NextSpecResourceName()
@@ -1456,6 +1470,7 @@ var _ = Describe("broker-service address sharing scenarios", func() {
 					},
 				},
 			}
+			InstallAppCert(&consumerApp)
 			Expect(k8sClient.Create(ctx, &consumerApp)).Should(Succeed())
 
 			createdService := &broker.BrokerService{}
@@ -1578,6 +1593,7 @@ var _ = Describe("broker-service address sharing scenarios", func() {
 					},
 				},
 			}
+			InstallAppCert(&app1)
 			Expect(k8sClient.Create(ctx, &app1)).Should(Succeed())
 
 			createdService := &broker.BrokerService{}
@@ -1631,6 +1647,7 @@ var _ = Describe("broker-service address sharing scenarios", func() {
 					},
 				},
 			}
+			InstallAppCert(&app2)
 			Expect(k8sClient.Create(ctx, &app2)).Should(Succeed())
 
 			createdApp2 := &broker.BrokerApp{}
@@ -1761,6 +1778,7 @@ var _ = Describe("broker-service address sharing scenarios", func() {
 					},
 				},
 			}
+			InstallAppCert(&app1)
 			Expect(k8sClient.Create(ctx, &app1)).Should(Succeed())
 
 			createdService := &broker.BrokerService{}
@@ -1814,6 +1832,7 @@ var _ = Describe("broker-service address sharing scenarios", func() {
 					},
 				},
 			}
+			InstallAppCert(&app2)
 			Expect(k8sClient.Create(ctx, &app2)).Should(Succeed())
 
 			createdApp2 := &broker.BrokerApp{}

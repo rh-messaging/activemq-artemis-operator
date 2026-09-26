@@ -287,8 +287,8 @@ var _ = Describe("broker-service multi-app scenarios", func() {
 
 			By("verifying app properties secret contains both apps")
 
-			app1ConfigKey := AppIdentityPrefixed(&app1, "capabilities.properties")
-			app2ConfigKey := AppIdentityPrefixed(&app2, "capabilities.properties")
+			app1ConfigKey := AppIdentityPrefixed(&app1, "capabilities.json")
+			app2ConfigKey := AppIdentityPrefixed(&app2, "capabilities.json")
 			secretName := AppPropertiesSecretName(serviceName)
 			secret := &corev1.Secret{}
 			secretKey := types.NamespacedName{Name: secretName, Namespace: defaultNamespace}
@@ -660,6 +660,7 @@ var _ = Describe("broker-service multi-app scenarios", func() {
 					},
 				},
 			}
+			InstallAppCert(&app1)
 			Expect(k8sClient.Create(ctx, &app1)).Should(Succeed())
 
 			app1Key := types.NamespacedName{Name: app1Name, Namespace: defaultNamespace}
@@ -733,6 +734,7 @@ var _ = Describe("broker-service multi-app scenarios", func() {
 					},
 				},
 			}
+			InstallAppCert(&app2)
 			Expect(k8sClient.Create(ctx, &app2)).Should(Succeed())
 
 			app2Key := types.NamespacedName{Name: app2Name, Namespace: otherNamespace}
@@ -822,6 +824,7 @@ var _ = Describe("broker-service multi-app scenarios", func() {
 					},
 				},
 			}
+			InstallAppCert(&app3)
 			Expect(k8sClient.Create(ctx, &app3)).Should(Succeed())
 
 			app3Key := types.NamespacedName{Name: app3Name, Namespace: defaultNamespace}
