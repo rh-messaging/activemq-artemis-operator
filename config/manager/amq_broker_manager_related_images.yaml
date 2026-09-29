@@ -13,3 +13,23 @@ spec:
         # The *Kubernetes* values refer to the broker on openshift container that runs the broker itself.
         # NOTE: Below are the original image:tag values and equivalent SHA image references. The SHA values are unique to the specific
         #       container tag utilized during operator bundle build time.
+
+        # 8.0.0
+        - name: RELATED_IMAGE_BROKER_INIT_800
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-17486-20260929002723
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:6dd61ae32a6ccd3341e2de33e4388dcdffdc220e300100b74cfe8db36163b313
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-84821-20260929000827
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:9519d265a7de8d760f95096c0a080d811b9179b85d3fbb5beafcfd5ff8230163
+        - name: RELATED_IMAGE_BROKER_INIT_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-17486-20260929002723
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:6dd61ae32a6ccd3341e2de33e4388dcdffdc220e300100b74cfe8db36163b313
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-84821-20260929000827
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:9519d265a7de8d760f95096c0a080d811b9179b85d3fbb5beafcfd5ff8230163
+        - name: RELATED_IMAGE_BROKER_INIT_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-17486-20260929002723
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:6dd61ae32a6ccd3341e2de33e4388dcdffdc220e300100b74cfe8db36163b313
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-84821-20260929000827
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:9519d265a7de8d760f95096c0a080d811b9179b85d3fbb5beafcfd5ff8230163
