@@ -2096,7 +2096,7 @@ func validateNoDupKeysInBrokerPropertiesForBroker(customResource *v1beta2.Broker
 func validateReservedLabelsForBroker(customResource *v1beta2.Broker) *metav1.Condition {
 	if customResource.Spec.Labels != nil {
 		for key := range customResource.Spec.Labels {
-			if key == selectors.LabelAppKey || key == selectors.LabelBrokerKey {
+			if key == selectors.LabelAppKey || key == selectors.LabelBrokerKey || key == selectors.LabelPartOfKey {
 				return &metav1.Condition{
 					Type:    v1beta2.ValidConditionType,
 					Status:  metav1.ConditionFalse,
@@ -2108,7 +2108,7 @@ func validateReservedLabelsForBroker(customResource *v1beta2.Broker) *metav1.Con
 	}
 	for index, template := range customResource.Spec.ResourceTemplates {
 		for key := range template.Labels {
-			if key == selectors.LabelAppKey || key == selectors.LabelBrokerKey {
+			if key == selectors.LabelAppKey || key == selectors.LabelBrokerKey || key == selectors.LabelPartOfKey {
 				return &metav1.Condition{
 					Type:    v1beta2.ValidConditionType,
 					Status:  metav1.ConditionFalse,

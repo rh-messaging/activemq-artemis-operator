@@ -71,7 +71,7 @@ type BrokerSpec struct {
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Image Pull Secrets"
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
-	// Assign labels to broker pods. The keys "broker" and "application" are reserved.
+	// Assign labels to broker pods. The keys "broker", "application", and "app.kubernetes.io/part-of" are reserved.
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Labels"
 	Labels map[string]string `json:"labels,omitempty"`
 

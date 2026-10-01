@@ -42,6 +42,7 @@ import (
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/common"
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/jolokia"
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/namer"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/selectors"
 	"github.com/blang/semver/v4"
 
 	"time"
@@ -4870,10 +4871,15 @@ var _ = Describe("artemis controller", func() {
 
 				g.Expect(k8sClient.Get(ctx, key, createdSs)).Should(Succeed())
 
-				g.Expect(len(createdSs.ObjectMeta.Labels)).Should(BeNumerically("==", 2))
-				g.Expect(len(createdSs.Spec.Selector.MatchLabels)).Should(BeNumerically("==", 2))
+				// Operator tracking labels on SS metadata/selector: application, ActiveMQArtemis, part-of
+				g.Expect(len(createdSs.ObjectMeta.Labels)).Should(BeNumerically("==", 3))
+				g.Expect(len(createdSs.Spec.Selector.MatchLabels)).Should(BeNumerically("==", 3))
+				g.Expect(createdSs.ObjectMeta.Labels).To(HaveKeyWithValue(selectors.LabelPartOfKey, selectors.LabelPartOfValue))
+				g.Expect(createdSs.Spec.Selector.MatchLabels).To(HaveKeyWithValue(selectors.LabelPartOfKey, selectors.LabelPartOfValue))
 
-				g.Expect(len(createdSs.Spec.Template.Labels)).Should(BeNumerically(">=", 4))
+				// Pod template includes operator labels plus the 2 user DeploymentPlan labels
+				g.Expect(len(createdSs.Spec.Template.Labels)).Should(BeNumerically(">=", 5))
+				g.Expect(createdSs.Spec.Template.Labels).To(HaveKeyWithValue(selectors.LabelPartOfKey, selectors.LabelPartOfValue))
 
 			}, timeout, interval).Should(Succeed())
 
