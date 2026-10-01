@@ -13,3 +13,23 @@ spec:
         # The *Kubernetes* values refer to the broker on openshift container that runs the broker itself.
         # NOTE: Below are the original image:tag values and equivalent SHA image references. The SHA values are unique to the specific
         #       container tag utilized during operator bundle build time.
+
+        # 8.0.0
+        - name: RELATED_IMAGE_BROKER_INIT_800
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-75239-20261001003518
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:cce0d99ae0bd804596a5deda4b76c18cefcefeabe7582d649526051a630aa64d
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-56753-20261001001624
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:8ce7bc9e83cfa5e03b4578db661a22a32f696873397544acf49094a9f9408d87
+        - name: RELATED_IMAGE_BROKER_INIT_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-75239-20261001003518
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:cce0d99ae0bd804596a5deda4b76c18cefcefeabe7582d649526051a630aa64d
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-56753-20261001001624
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:8ce7bc9e83cfa5e03b4578db661a22a32f696873397544acf49094a9f9408d87
+        - name: RELATED_IMAGE_BROKER_INIT_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-75239-20261001003518
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:cce0d99ae0bd804596a5deda4b76c18cefcefeabe7582d649526051a630aa64d
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-56753-20261001001624
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:8ce7bc9e83cfa5e03b4578db661a22a32f696873397544acf49094a9f9408d87
