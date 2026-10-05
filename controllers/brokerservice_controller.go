@@ -276,7 +276,7 @@ func (reconciler *BrokerServiceInstanceReconciler) processAppSecrets() (appPorts
 			reconciler.log.Error(err, "failed to process acceptor for app", "app", app.Name)
 			break
 		}
-		appIdentities = append(appIdentities, AppIdentity(&app))
+		appIdentities = append(appIdentities, AppIdentityWithGeneration(&app))
 		validApps = append(validApps, app)
 		if app.Status.Service != nil && app.Status.Service.AssignedPort != UnassignedPort {
 			appPorts = append(appPorts, app.Status.Service.AssignedPort)
@@ -975,6 +975,7 @@ func (reconciler *BrokerServiceInstanceReconciler) processAcceptor(serverConfigP
 							TextFileDNRole: certRolesCfgKey,
 							TextFileDNUser: certUsersCfgKey,
 							BaseDir:        secretsBase,
+							Reload:         true,
 						},
 					},
 				},
@@ -1034,6 +1035,10 @@ func metricsRole(prefix string) string {
 
 func AppIdentity(app *broker.BrokerApp) string {
 	return NameSpacedValue(app, app.Name)
+}
+
+func AppIdentityWithGeneration(app *broker.BrokerApp) string {
+	return fmt.Sprintf("%s/%s@%d", app.Namespace, app.Name, app.Generation)
 }
 
 func AppIdentityPrefixed(app *broker.BrokerApp, v string) string {
