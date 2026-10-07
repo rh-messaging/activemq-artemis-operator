@@ -15,9 +15,13 @@ const (
 	LabelPartOfValue = "broker.arkmq.org"
 
 	// Standard Kubernetes label keys
+	LabelAppKubernetesName      = "app.kubernetes.io/name"
 	LabelAppKubernetesInstance  = "app.kubernetes.io/instance"
 	LabelAppKubernetesComponent = "app.kubernetes.io/component"
 	LabelAppKubernetesManagedBy = "app.kubernetes.io/managed-by"
+
+	// LabelAppKubernetesNameValue is the recommended application name for Broker CR resources.
+	LabelAppKubernetesNameValue = "broker"
 
 	// Domain-specific label keys
 	LabelBrokerService   = "broker.arkmq.org/service"
@@ -36,6 +40,7 @@ type LabelerInterface interface {
 	Generate()
 }
 
+// LabelerData builds the legacy ActiveMQArtemis / BrokerCluster tracking labels.
 type LabelerData struct {
 	baseName    string
 	suffix      string
@@ -43,12 +48,22 @@ type LabelerData struct {
 	labels      map[string]string
 }
 
-func NewBrokerLabeler() *LabelerData {
-	return &LabelerData{resourceKey: LabelBrokerKey}
-}
-
 func NewActiveMQArtemisLabeler() *LabelerData {
 	return &LabelerData{resourceKey: LabelActiveMQArtemisKey}
+}
+
+// NewStaticLabeler wraps a precomputed label map for storage in Namers.LabelBuilder.
+func NewStaticLabeler(labels map[string]string) LabelerData {
+	return LabelerData{labels: labels}
+}
+
+// BrokerLabels returns Kubernetes recommended labels for Broker CR managed resources.
+func BrokerLabels(crName string) map[string]string {
+	return map[string]string{
+		LabelAppKubernetesName:     LabelAppKubernetesNameValue,
+		LabelAppKubernetesInstance: crName,
+		LabelPartOfKey:             LabelPartOfValue,
+	}
 }
 
 func (l *LabelerData) Labels() map[string]string {
@@ -67,7 +82,7 @@ func (l *LabelerData) Suffix(labelSuffix string) *LabelerData {
 
 func (l *LabelerData) Generate() {
 	l.labels = make(map[string]string)
-	l.labels[LabelAppKey] = l.baseName + "-" + l.suffix //"-app"
+	l.labels[LabelAppKey] = l.baseName + "-" + l.suffix // "-app"
 	l.labels[l.resourceKey] = l.baseName
 	// Common ownership label on all operator-managed resources from pod-creating CRs.
 	l.labels[LabelPartOfKey] = LabelPartOfValue
@@ -85,4 +100,15 @@ func GetLabels(crName string) map[string]string {
 	labelBuilder := NewActiveMQArtemisLabeler()
 	labelBuilder.Base(crName).Suffix("app").Generate()
 	return labelBuilder.Labels()
+}
+
+// IsBrokerReservedLabelKey reports whether key is reserved for Broker CR Spec.Labels.
+func IsBrokerReservedLabelKey(key string) bool {
+	switch key {
+	case LabelAppKubernetesName, LabelAppKubernetesInstance, LabelPartOfKey,
+		LabelAppKey, LabelBrokerKey:
+		return true
+	default:
+		return false
+	}
 }

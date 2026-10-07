@@ -32,17 +32,23 @@ var _ = Describe("Labeler", func() {
 		Expect(generated).To(HaveKeyWithValue(LabelAppKey, "my-broker-app"))
 		Expect(generated).To(HaveKeyWithValue(LabelPartOfKey, LabelPartOfValue))
 		Expect(generated).NotTo(HaveKey(LabelBrokerKey))
+		Expect(generated).NotTo(HaveKey(LabelAppKubernetesInstance))
 	})
 
-	It("uses Broker tracking label and keeps application=<name>-app", func() {
-		labeler := NewBrokerLabeler()
-		labeler.Base("my-broker").Suffix("app").Generate()
-		generated := labeler.Labels()
+	It("builds recommended labels for Broker directly", func() {
+		generated := BrokerLabels("my-broker")
 
-		Expect(generated).To(HaveKeyWithValue(LabelBrokerKey, "my-broker"))
-		Expect(generated).To(HaveKeyWithValue(LabelAppKey, "my-broker-app"))
+		Expect(generated).To(HaveKeyWithValue(LabelAppKubernetesName, LabelAppKubernetesNameValue))
+		Expect(generated).To(HaveKeyWithValue(LabelAppKubernetesInstance, "my-broker"))
 		Expect(generated).To(HaveKeyWithValue(LabelPartOfKey, LabelPartOfValue))
+		Expect(generated).NotTo(HaveKey(LabelBrokerKey))
+		Expect(generated).NotTo(HaveKey(LabelAppKey))
 		Expect(generated).NotTo(HaveKey(LabelActiveMQArtemisKey))
+	})
+
+	It("wraps precomputed labels for Namers storage", func() {
+		labeler := NewStaticLabeler(BrokerLabels("my-broker"))
+		Expect(labeler.Labels()).To(Equal(BrokerLabels("my-broker")))
 	})
 
 	It("keeps ActiveMQArtemis as default in GetLabels", func() {
@@ -63,12 +69,22 @@ var _ = Describe("Labeler", func() {
 			LabelActiveMQArtemisKey: "my-broker",
 		})).To(BeTrue())
 		Expect(selector.Matches(k8slabels.Set{
-			LabelPartOfKey: LabelPartOfValue,
-			LabelAppKey:    "my-broker-app",
-			LabelBrokerKey: "my-broker",
+			LabelPartOfKey:             LabelPartOfValue,
+			LabelAppKubernetesName:     LabelAppKubernetesNameValue,
+			LabelAppKubernetesInstance: "my-broker",
 		})).To(BeTrue())
 		Expect(selector.Matches(k8slabels.Set{
 			LabelAppKey: "my-broker-app",
 		})).To(BeFalse())
+	})
+
+	It("identifies Broker reserved label keys", func() {
+		Expect(IsBrokerReservedLabelKey(LabelAppKubernetesInstance)).To(BeTrue())
+		Expect(IsBrokerReservedLabelKey(LabelAppKubernetesName)).To(BeTrue())
+		Expect(IsBrokerReservedLabelKey(LabelPartOfKey)).To(BeTrue())
+		Expect(IsBrokerReservedLabelKey(LabelAppKey)).To(BeTrue())
+		Expect(IsBrokerReservedLabelKey(LabelBrokerKey)).To(BeTrue())
+		Expect(IsBrokerReservedLabelKey("team")).To(BeFalse())
+		Expect(IsBrokerReservedLabelKey(LabelAppKubernetesComponent)).To(BeFalse())
 	})
 })

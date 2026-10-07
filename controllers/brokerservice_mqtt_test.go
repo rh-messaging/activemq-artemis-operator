@@ -215,7 +215,7 @@ var _ = Describe("broker-service mqtt", func() {
 
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
-			acceptorService := svc.NewServiceDefinitionForCR(types.NamespacedName{Namespace: defaultNamespace, Name: serviceName + "-acc"}, k8sClient, "acc-port", 61616, map[string]string{selectors.LabelBrokerKey: crd.Name}, nil, nil)
+			acceptorService := svc.NewServiceDefinitionForCR(types.NamespacedName{Namespace: defaultNamespace, Name: serviceName + "-acc"}, k8sClient, "acc-port", 61616, map[string]string{selectors.LabelAppKubernetesInstance: crd.Name}, nil, nil)
 			Expect(k8sClient.Create(ctx, acceptorService)).Should(Succeed())
 			acceptorIngressHost := serviceName + "-" + defaultNamespace + "." + defaultTestIngressDomain
 			acceptorIngress := ingresses.NewIngressForCRWithSSL(nil, types.NamespacedName{Namespace: defaultNamespace, Name: serviceName + "-acc"}, nil, serviceName+"-acc", "61616", true, defaultTestIngressDomain, acceptorIngressHost, isOpenshift)
@@ -504,7 +504,7 @@ var _ = Describe("broker-service mqtt", func() {
 			alphaAccSvc := svc.NewServiceDefinitionForCR(
 				types.NamespacedName{Namespace: defaultNamespace, Name: serviceName + "-acc-alpha"},
 				k8sClient, "acc-port", alphaPort,
-				map[string]string{selectors.LabelBrokerKey: crd.Name}, nil, nil)
+				map[string]string{selectors.LabelAppKubernetesInstance: crd.Name}, nil, nil)
 			Expect(k8sClient.Create(ctx, alphaAccSvc)).Should(Succeed())
 
 			alphaAccIng := ingresses.NewIngressForCRWithSSL(nil,
@@ -516,7 +516,7 @@ var _ = Describe("broker-service mqtt", func() {
 			betaAccSvc := svc.NewServiceDefinitionForCR(
 				types.NamespacedName{Namespace: defaultNamespace, Name: serviceName + "-acc-beta"},
 				k8sClient, "acc-port", betaPort,
-				map[string]string{selectors.LabelBrokerKey: crd.Name}, nil, nil)
+				map[string]string{selectors.LabelAppKubernetesInstance: crd.Name}, nil, nil)
 			Expect(k8sClient.Create(ctx, betaAccSvc)).Should(Succeed())
 
 			betaAccIng := ingresses.NewIngressForCRWithSSL(nil,

@@ -281,7 +281,7 @@ var _ = Describe("broker controller unit", func() {
 		Expect(meta.IsStatusConditionTrue(cr.Status.Conditions, brokerv1beta1.ValidConditionType)).To(BeTrue())
 	})
 
-	It("makes namers for broker using broker tracking label", Label(unitLabel), func() {
+	It("makes namers for broker using recommended Kubernetes labels", Label(unitLabel), func() {
 		cr := &v1beta2.Broker{
 			ObjectMeta: v1.ObjectMeta{Name: "my-broker"},
 		}
@@ -289,9 +289,13 @@ var _ = Describe("broker controller unit", func() {
 		namer := MakeNamersForBroker(cr)
 		labels := namer.LabelBuilder.Labels()
 
-		Expect(labels[selectors.LabelBrokerKey]).To(Equal("my-broker"))
-		Expect(labels[selectors.LabelAppKey]).To(Equal("my-broker-app"))
+		Expect(labels[selectors.LabelAppKubernetesName]).To(Equal(selectors.LabelAppKubernetesNameValue))
+		Expect(labels[selectors.LabelAppKubernetesInstance]).To(Equal("my-broker"))
 		Expect(labels[selectors.LabelPartOfKey]).To(Equal(selectors.LabelPartOfValue))
+		_, hasBroker := labels[selectors.LabelBrokerKey]
+		Expect(hasBroker).To(BeFalse())
+		_, hasApplication := labels[selectors.LabelAppKey]
+		Expect(hasApplication).To(BeFalse())
 		_, hasActiveMQArtemis := labels[selectors.LabelActiveMQArtemisKey]
 		Expect(hasActiveMQArtemis).To(BeFalse())
 
@@ -316,6 +320,28 @@ var _ = Describe("broker controller unit", func() {
 			cr := &v1beta2.Broker{
 				Spec: v1beta2.BrokerSpec{
 					Labels: map[string]string{selectors.LabelAppKey: "x"},
+				},
+			}
+			condition := validateReservedLabelsForBroker(cr)
+			Expect(condition).NotTo(BeNil())
+			Expect(condition.Reason).To(Equal(v1beta2.ValidConditionFailedReservedLabelReason))
+		})
+
+		It("rejects recommended instance reserved key in Spec.Labels", Label(unitLabel), func() {
+			cr := &v1beta2.Broker{
+				Spec: v1beta2.BrokerSpec{
+					Labels: map[string]string{selectors.LabelAppKubernetesInstance: "x"},
+				},
+			}
+			condition := validateReservedLabelsForBroker(cr)
+			Expect(condition).NotTo(BeNil())
+			Expect(condition.Reason).To(Equal(v1beta2.ValidConditionFailedReservedLabelReason))
+		})
+
+		It("rejects recommended name reserved key in Spec.Labels", Label(unitLabel), func() {
+			cr := &v1beta2.Broker{
+				Spec: v1beta2.BrokerSpec{
+					Labels: map[string]string{selectors.LabelAppKubernetesName: "x"},
 				},
 			}
 			condition := validateReservedLabelsForBroker(cr)
@@ -352,11 +378,11 @@ var _ = Describe("broker controller unit", func() {
 			Expect(validateReservedLabelsForBroker(cr)).To(BeNil())
 		})
 
-		It("rejects Broker reserved key in ResourceTemplates", Label(unitLabel), func() {
+		It("rejects recommended instance reserved key in ResourceTemplates", Label(unitLabel), func() {
 			cr := &v1beta2.Broker{
 				Spec: v1beta2.BrokerSpec{
 					ResourceTemplates: []v1beta2.ResourceTemplate{
-						{Labels: map[string]string{selectors.LabelBrokerKey: "x"}},
+						{Labels: map[string]string{selectors.LabelAppKubernetesInstance: "x"}},
 					},
 				},
 			}

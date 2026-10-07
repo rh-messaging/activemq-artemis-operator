@@ -97,7 +97,8 @@ var _ = Describe("brokerservice pod labels", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		labels := broker.Spec.Labels
-		Expect(labels[selectors.LabelAppKubernetesInstance]).To(Equal(svcName))
+		Expect(labels).NotTo(HaveKey(selectors.LabelAppKubernetesInstance))
+		Expect(labels).NotTo(HaveKey(selectors.LabelAppKubernetesName))
 		Expect(labels[selectors.LabelAppKubernetesComponent]).To(Equal("broker-service"))
 		Expect(labels[selectors.LabelAppKubernetesManagedBy]).To(Equal(common.OperatorName))
 		Expect(labels[selectors.LabelBrokerService]).To(Equal(svcName))

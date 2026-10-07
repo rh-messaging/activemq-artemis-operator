@@ -87,11 +87,16 @@ var _ = Describe("brokerservice label conflicts", func() {
 
 		_, hasBroker := labels[selectors.LabelBrokerKey]
 		_, hasApplication := labels["application"]
+		_, hasInstance := labels[selectors.LabelAppKubernetesInstance]
+		_, hasName := labels[selectors.LabelAppKubernetesName]
+		_, hasPartOf := labels[selectors.LabelPartOfKey]
 
 		Expect(hasBroker).To(BeFalse(), "Must not use reserved label key 'broker'")
 		Expect(hasApplication).To(BeFalse(), "Must not use reserved label key 'application'")
+		Expect(hasInstance).To(BeFalse(), "Must not use reserved label key 'app.kubernetes.io/instance' (set by Broker labeler)")
+		Expect(hasName).To(BeFalse(), "Must not use reserved label key 'app.kubernetes.io/name' (set by Broker labeler)")
+		Expect(hasPartOf).To(BeFalse(), "Must not use reserved label key 'app.kubernetes.io/part-of'")
 
-		Expect(labels).To(HaveKey(selectors.LabelAppKubernetesInstance))
 		Expect(labels).To(HaveKey(selectors.LabelAppKubernetesComponent))
 		Expect(labels).To(HaveKey(selectors.LabelAppKubernetesManagedBy))
 		Expect(labels).To(HaveKey(selectors.LabelBrokerService))

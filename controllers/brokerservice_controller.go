@@ -188,8 +188,7 @@ func (reconciler *BrokerServiceInstanceReconciler) processBroker() (err error) {
 	}
 	desired.Spec.PersistenceEnabled = false
 	desired.Spec.Labels = map[string]string{
-		// Standard Kubernetes labels
-		selectors.LabelAppKubernetesInstance:  reconciler.instance.Name,
+		// App-specific recommended labels (name/instance/part-of are set by the Broker labeler).
 		selectors.LabelAppKubernetesComponent: "broker-service",
 		selectors.LabelAppKubernetesManagedBy: common.OperatorName,
 		// Domain-specific labels

@@ -468,7 +468,7 @@ func (reconciler *BrokerReconcilerImpl) applyPodDisruptionBudget(customResource 
 		}
 	}
 	desired.Spec = *customResource.Spec.PodDisruptionBudget.DeepCopy()
-	matchLabels := map[string]string{selectors.LabelBrokerKey: customResource.Name}
+	matchLabels := map[string]string{selectors.LabelAppKubernetesInstance: customResource.Name}
 
 	desired.Spec.Selector = &metav1.LabelSelector{
 		MatchLabels: matchLabels,
@@ -2074,7 +2074,7 @@ func validateNoDupKeysInBrokerPropertiesForBroker(customResource *v1beta2.Broker
 func validateReservedLabelsForBroker(customResource *v1beta2.Broker) *metav1.Condition {
 	if customResource.Spec.Labels != nil {
 		for key := range customResource.Spec.Labels {
-			if key == selectors.LabelAppKey || key == selectors.LabelBrokerKey || key == selectors.LabelPartOfKey {
+			if selectors.IsBrokerReservedLabelKey(key) {
 				return &metav1.Condition{
 					Type:    v1beta2.ValidConditionType,
 					Status:  metav1.ConditionFalse,
@@ -2086,7 +2086,7 @@ func validateReservedLabelsForBroker(customResource *v1beta2.Broker) *metav1.Con
 	}
 	for index, template := range customResource.Spec.ResourceTemplates {
 		for key := range template.Labels {
-			if key == selectors.LabelAppKey || key == selectors.LabelBrokerKey || key == selectors.LabelPartOfKey {
+			if selectors.IsBrokerReservedLabelKey(key) {
 				return &metav1.Condition{
 					Type:    v1beta2.ValidConditionType,
 					Status:  metav1.ConditionFalse,
@@ -2269,7 +2269,7 @@ func MakeNamersForBroker(customResource *v1beta2.Broker) *common.Namers {
 		SecretsCredentialsNameBuilder: namer.NamerData{},
 		SecretsConsoleNameBuilder:     namer.NamerData{},
 		SecretsNettyNameBuilder:       namer.NamerData{},
-		LabelBuilder:                  *selectors.NewBrokerLabeler(),
+		LabelBuilder:                  selectors.NewStaticLabeler(selectors.BrokerLabels(customResource.Name)),
 		GLOBAL_DATA_PATH:              "/opt/" + customResource.Name + "/data",
 	}
 	newNamers.SsNameBuilder.Base(customResource.Name).Suffix("ss").Generate()
@@ -2281,15 +2281,11 @@ func MakeNamersForBroker(customResource *v1beta2.Broker) *common.Namers {
 	newNamers.SecretsConsoleNameBuilder.Prefix(customResource.Name).Base("console").Suffix("secret").Generate()
 	newNamers.SecretsNettyNameBuilder.Prefix(customResource.Name).Base("netty").Suffix("secret").Generate()
 
-	newNamers.LabelBuilder.Base(customResource.Name).Suffix("app").Generate()
-
 	return &newNamers
 }
 
 func GetDefaultLabelsForBroker(cr *v1beta2.Broker) map[string]string {
-	defaultLabelData := selectors.NewBrokerLabeler()
-	defaultLabelData.Base(cr.Name).Suffix("app").Generate()
-	return defaultLabelData.Labels()
+	return selectors.BrokerLabels(cr.Name)
 }
 
 func (reconciler *BrokerReconcilerImpl) ensureSidecarConfig(client rtclient.Client) error {
@@ -2402,5 +2398,3 @@ func existingInitContainer(initContainers []corev1.Container, name string) *core
 	}
 	return &corev1.Container{Name: name}
 }
-
-// Controller Errors

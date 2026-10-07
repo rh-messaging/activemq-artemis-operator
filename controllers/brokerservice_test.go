@@ -189,7 +189,7 @@ var _ = Describe("broker-service-poc", func() {
 					Spec: corev1.ServiceSpec{
 						Type: corev1.ServiceTypeNodePort,
 						Selector: map[string]string{
-							selectors.LabelBrokerKey: crd.Name,
+							selectors.LabelAppKubernetesInstance: crd.Name,
 						},
 						Ports: []corev1.ServicePort{
 							{
