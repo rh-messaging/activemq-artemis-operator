@@ -38,19 +38,31 @@ import (
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/selectors"
 )
 
-func assertManagedResourceTrackingLabels(g Gomega, labels map[string]string, crName string, expectedKey string, forbiddenKey string) {
-	g.Expect(labels).To(HaveKeyWithValue(expectedKey, crName))
+func assertActiveMQArtemisManagedResourceTrackingLabels(g Gomega, labels map[string]string, crName string) {
+	g.Expect(labels).To(HaveKeyWithValue(selectors.LabelActiveMQArtemisKey, crName))
 	g.Expect(labels).To(HaveKeyWithValue(selectors.LabelAppKey, crName+"-app"))
 	g.Expect(labels).To(HaveKeyWithValue(selectors.LabelPartOfKey, selectors.LabelPartOfValue))
-	_, hasForbidden := labels[forbiddenKey]
-	g.Expect(hasForbidden).To(BeFalse(), "must not use tracking label key %q", forbiddenKey)
+	_, hasBroker := labels[selectors.LabelBrokerKey]
+	g.Expect(hasBroker).To(BeFalse(), "must not use tracking label key %q", selectors.LabelBrokerKey)
+}
+
+func assertBrokerRecommendedManagedResourceLabels(g Gomega, labels map[string]string, crName string) {
+	g.Expect(labels).To(HaveKeyWithValue(selectors.LabelAppKubernetesName, selectors.LabelAppKubernetesNameValue))
+	g.Expect(labels).To(HaveKeyWithValue(selectors.LabelAppKubernetesInstance, crName))
+	g.Expect(labels).To(HaveKeyWithValue(selectors.LabelPartOfKey, selectors.LabelPartOfValue))
+	_, hasBroker := labels[selectors.LabelBrokerKey]
+	g.Expect(hasBroker).To(BeFalse(), "must not use private tracking label key %q", selectors.LabelBrokerKey)
+	_, hasApplication := labels[selectors.LabelAppKey]
+	g.Expect(hasApplication).To(BeFalse(), "must not use private tracking label key %q", selectors.LabelAppKey)
+	_, hasActiveMQArtemis := labels[selectors.LabelActiveMQArtemisKey]
+	g.Expect(hasActiveMQArtemis).To(BeFalse(), "must not use ActiveMQArtemis tracking label on Broker CR resources")
 }
 
 func installRestrictedBrokerCerts(brokerName string) {
 	By("installing operator cert")
 	InstallCert(common.DefaultOperatorCertSecretName, defaultNamespace, func(candidate *cmv1.Certificate) {
 		candidate.Spec.SecretName = common.DefaultOperatorCertSecretName
-		candidate.Spec.CommonName = "arkmq-org-broker-operator"
+		candidate.Spec.CommonName = common.OperatorName
 		candidate.Spec.IssuerRef = cmmetav1.ObjectReference{
 			Name: caIssuer.Name,
 			Kind: "ClusterIssuer",
@@ -116,7 +128,7 @@ var _ = Describe("broker managed resource labels", Label("broker-label-test"), f
 			AfterEachSpec()
 		})
 
-		It("tags managed resources with the Broker tracking label", func() {
+		It("tags managed resources with recommended Kubernetes labels", func() {
 			if os.Getenv("USE_EXISTING_CLUSTER") != "true" {
 				return
 			}
@@ -152,23 +164,23 @@ var _ = Describe("broker managed resource labels", Label("broker-label-test"), f
 			Eventually(func(g Gomega) {
 				currentSS := &appsv1.StatefulSet{}
 				g.Expect(k8sClient.Get(ctx, ssKey, currentSS)).Should(Succeed())
-				assertManagedResourceTrackingLabels(g, currentSS.Labels, brokerCr.Name, selectors.LabelBrokerKey, selectors.LabelActiveMQArtemisKey)
-				assertManagedResourceTrackingLabels(g, currentSS.Spec.Template.Labels, brokerCr.Name, selectors.LabelBrokerKey, selectors.LabelActiveMQArtemisKey)
+				assertBrokerRecommendedManagedResourceLabels(g, currentSS.Labels, brokerCr.Name)
+				assertBrokerRecommendedManagedResourceLabels(g, currentSS.Spec.Template.Labels, brokerCr.Name)
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			By("verifying headless Service labels and selector")
 			Eventually(func(g Gomega) {
 				headlessSvc := &corev1.Service{}
 				g.Expect(k8sClient.Get(ctx, headlessSvcKey, headlessSvc)).Should(Succeed())
-				assertManagedResourceTrackingLabels(g, headlessSvc.Labels, brokerCr.Name, selectors.LabelBrokerKey, selectors.LabelActiveMQArtemisKey)
-				assertManagedResourceTrackingLabels(g, headlessSvc.Spec.Selector, brokerCr.Name, selectors.LabelBrokerKey, selectors.LabelActiveMQArtemisKey)
+				assertBrokerRecommendedManagedResourceLabels(g, headlessSvc.Labels, brokerCr.Name)
+				assertBrokerRecommendedManagedResourceLabels(g, headlessSvc.Spec.Selector, brokerCr.Name)
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			By("verifying broker properties Secret labels")
 			Eventually(func(g Gomega) {
 				propsSecret := &corev1.Secret{}
 				g.Expect(k8sClient.Get(ctx, propsSecretKey, propsSecret)).Should(Succeed())
-				assertManagedResourceTrackingLabels(g, propsSecret.Labels, brokerCr.Name, selectors.LabelBrokerKey, selectors.LabelActiveMQArtemisKey)
+				assertBrokerRecommendedManagedResourceLabels(g, propsSecret.Labels, brokerCr.Name)
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			By("cleaning up")
@@ -266,23 +278,23 @@ var _ = Describe("broker managed resource labels", Label("broker-label-test"), f
 			Eventually(func(g Gomega) {
 				currentSS := &appsv1.StatefulSet{}
 				g.Expect(k8sClient.Get(ctx, ssKey, currentSS)).Should(Succeed())
-				assertManagedResourceTrackingLabels(g, currentSS.Labels, brokerCr.Name, selectors.LabelActiveMQArtemisKey, selectors.LabelBrokerKey)
-				assertManagedResourceTrackingLabels(g, currentSS.Spec.Template.Labels, brokerCr.Name, selectors.LabelActiveMQArtemisKey, selectors.LabelBrokerKey)
+				assertActiveMQArtemisManagedResourceTrackingLabels(g, currentSS.Labels, brokerCr.Name)
+				assertActiveMQArtemisManagedResourceTrackingLabels(g, currentSS.Spec.Template.Labels, brokerCr.Name)
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			By("verifying headless Service labels and selector")
 			Eventually(func(g Gomega) {
 				headlessSvc := &corev1.Service{}
 				g.Expect(k8sClient.Get(ctx, headlessSvcKey, headlessSvc)).Should(Succeed())
-				assertManagedResourceTrackingLabels(g, headlessSvc.Labels, brokerCr.Name, selectors.LabelActiveMQArtemisKey, selectors.LabelBrokerKey)
-				assertManagedResourceTrackingLabels(g, headlessSvc.Spec.Selector, brokerCr.Name, selectors.LabelActiveMQArtemisKey, selectors.LabelBrokerKey)
+				assertActiveMQArtemisManagedResourceTrackingLabels(g, headlessSvc.Labels, brokerCr.Name)
+				assertActiveMQArtemisManagedResourceTrackingLabels(g, headlessSvc.Spec.Selector, brokerCr.Name)
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			By("verifying broker properties Secret labels")
 			Eventually(func(g Gomega) {
 				propsSecret := &corev1.Secret{}
 				g.Expect(k8sClient.Get(ctx, propsSecretKey, propsSecret)).Should(Succeed())
-				assertManagedResourceTrackingLabels(g, propsSecret.Labels, brokerCr.Name, selectors.LabelActiveMQArtemisKey, selectors.LabelBrokerKey)
+				assertActiveMQArtemisManagedResourceTrackingLabels(g, propsSecret.Labels, brokerCr.Name)
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			By("verifying scale label selector uses ActiveMQArtemis tracking label")

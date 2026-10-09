@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"maps"
 	"path"
+	"slices"
 	"sort"
 
 	"github.com/RHsyseng/operator-utils/pkg/resource/compare"
@@ -18,6 +19,7 @@ import (
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/brokervolumes"
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/resources"
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/resources/containers"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/resources/networkpolicies"
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/resources/persistentvolumeclaims"
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/resources/pods"
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/resources/secrets"
@@ -144,7 +146,9 @@ func (r *BrokerReconciler) Reconcile(ctx context.Context, request ctrl.Request) 
 		if !reconcileBlocked {
 			err = reconciler.Process(customResource, *namer, r.Client, r.Scheme)
 		}
-		reconciler.ProcessBrokerStatus(customResource, r.Client, r.Scheme)
+		if reconciler.ProcessBrokerStatus(customResource, r.Client, r.Scheme) {
+			requeueRequest = true
+		}
 	}
 
 	brokerstatus.UpdateBlockedStatus(customResource, reconcileBlocked)
@@ -175,6 +179,7 @@ func (r *BrokerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Service{}).
 		Owns(&netv1.Ingress{}).
 		Owns(&policyv1.PodDisruptionBudget{}).
+		Owns(&netv1.NetworkPolicy{}).
 		Watches(&corev1.Pod{},
 			handler.EnqueueRequestsFromMapFunc(r.mapPodToBrokerCR),
 			builder.WithPredicates(reconcileMeAnnotationPredicate()),
@@ -364,6 +369,10 @@ func (reconciler *BrokerReconcilerImpl) Process(customResource *v1beta2.Broker, 
 		reconciler.applyPodDisruptionBudget(customResource)
 	}
 
+	if common.BrokerNetworkPolicyEnabled() {
+		reconciler.applyNetworkPolicy(customResource)
+	}
+
 	// mods to env var values sourced from secrets are not detected by process resources
 	// track updates in trigger env var that has a total checksum
 	trackSecretCheckSumInEnvVar(common.ToResourceList(reconciler.requestedResources), desiredStatefulSet.Spec.Template.Spec.Containers)
@@ -459,11 +468,25 @@ func (reconciler *BrokerReconcilerImpl) applyPodDisruptionBudget(customResource 
 		}
 	}
 	desired.Spec = *customResource.Spec.PodDisruptionBudget.DeepCopy()
-	matchLabels := map[string]string{selectors.LabelBrokerKey: customResource.Name}
+	matchLabels := map[string]string{selectors.LabelAppKubernetesInstance: customResource.Name}
 
 	desired.Spec.Selector = &metav1.LabelSelector{
 		MatchLabels: matchLabels,
 	}
+
+	reconciler.trackDesired(desired)
+}
+
+func (reconciler *BrokerReconcilerImpl) applyNetworkPolicy(customResource *v1beta2.Broker) {
+	netpolType := reflect.TypeOf(netv1.NetworkPolicy{})
+	existing := reconciler.cloneOfDeployed(netpolType, customResource.Name+"-netpol")
+
+	var existingNP *netv1.NetworkPolicy
+	if existing != nil {
+		existingNP = existing.(*netv1.NetworkPolicy)
+	}
+
+	desired := networkpolicies.NewNetworkPolicy(existingNP, customResource.Name, customResource.Namespace, true, nil)
 
 	reconciler.trackDesired(desired)
 }
@@ -975,7 +998,7 @@ func (reconciler *BrokerReconcilerImpl) PodTemplateSpecForCR(customResource *v1b
 		}
 
 		// Apply control plane overrides if they exist
-		if err := applyControlPlaneOverridesForBroker(customResource, client, brokerPropertiesMapData); err != nil {
+		if err := reconciler.applyControlPlaneOverridesForBroker(customResource, client, brokerPropertiesMapData); err != nil {
 			return nil, err
 		}
 
@@ -1194,6 +1217,9 @@ func (reconciler *BrokerReconcilerImpl) brokerPropertiesConfigSystemPropValue(mo
 	return result
 }
 
+// when the CR has a full Spec, the intent is that the Spec is fully formed, such that there are not server side defaults in the mix.
+// For probes, we historically allow a partial spec, so we need to be careful to not overide server side applied defaults with empty values
+
 func (reconciler *BrokerReconcilerImpl) configureStartupProbe(container *corev1.Container, probeFromCr *corev1.Probe) *corev1.Probe {
 
 	var startupProbe = container.StartupProbe
@@ -1276,14 +1302,11 @@ func (reconciler *BrokerReconcilerImpl) configureReadinessProbe(container *corev
 	return readinessProbe
 }
 
-// when the CR has a full Spec, the intent is that the Spec is fully formed, such that there are not server side defaults in the mix.
-// For probes, we historically allow a partial spec, so we need to be careful to not overide server side applied defaults with empty values
-
 // applyControlPlaneOverrides applies control plane configuration overrides from secrets.
 // It first checks for CR-specific override secret ([cr-name]-control-plane-override),
 // then falls back to shared override secret (control-plane-override).
 // Each key in the override secret completely replaces the corresponding key in brokerPropertiesMapData.
-func applyControlPlaneOverridesForBroker(customResource *v1beta2.Broker, client rtclient.Client, brokerPropertiesMapData map[string][]byte) error {
+func (reconciler *BrokerReconcilerImpl) applyControlPlaneOverridesForBroker(customResource *v1beta2.Broker, client rtclient.Client, brokerPropertiesMapData map[string][]byte) error {
 	ctx := context.Background()
 
 	// Try CR-specific override secret first
@@ -1311,6 +1334,8 @@ func applyControlPlaneOverridesForBroker(customResource *v1beta2.Broker, client 
 			return err
 		}
 	}
+
+	reconciler.log.V(1).Info("applying overrides from secret", "name", overrideSecret.Name, "keys", slices.Collect(maps.Keys(overrideSecret.Data)))
 
 	// Apply overrides - complete replacement per key
 	maps.Copy(brokerPropertiesMapData, overrideSecret.Data)
@@ -2049,7 +2074,7 @@ func validateNoDupKeysInBrokerPropertiesForBroker(customResource *v1beta2.Broker
 func validateReservedLabelsForBroker(customResource *v1beta2.Broker) *metav1.Condition {
 	if customResource.Spec.Labels != nil {
 		for key := range customResource.Spec.Labels {
-			if key == selectors.LabelAppKey || key == selectors.LabelBrokerKey || key == selectors.LabelPartOfKey {
+			if selectors.IsBrokerReservedLabelKey(key) {
 				return &metav1.Condition{
 					Type:    v1beta2.ValidConditionType,
 					Status:  metav1.ConditionFalse,
@@ -2061,7 +2086,7 @@ func validateReservedLabelsForBroker(customResource *v1beta2.Broker) *metav1.Con
 	}
 	for index, template := range customResource.Spec.ResourceTemplates {
 		for key := range template.Labels {
-			if key == selectors.LabelAppKey || key == selectors.LabelBrokerKey || key == selectors.LabelPartOfKey {
+			if selectors.IsBrokerReservedLabelKey(key) {
 				return &metav1.Condition{
 					Type:    v1beta2.ValidConditionType,
 					Status:  metav1.ConditionFalse,
@@ -2244,7 +2269,7 @@ func MakeNamersForBroker(customResource *v1beta2.Broker) *common.Namers {
 		SecretsCredentialsNameBuilder: namer.NamerData{},
 		SecretsConsoleNameBuilder:     namer.NamerData{},
 		SecretsNettyNameBuilder:       namer.NamerData{},
-		LabelBuilder:                  *selectors.NewBrokerLabeler(),
+		LabelBuilder:                  selectors.NewStaticLabeler(selectors.BrokerLabels(customResource.Name)),
 		GLOBAL_DATA_PATH:              "/opt/" + customResource.Name + "/data",
 	}
 	newNamers.SsNameBuilder.Base(customResource.Name).Suffix("ss").Generate()
@@ -2256,15 +2281,11 @@ func MakeNamersForBroker(customResource *v1beta2.Broker) *common.Namers {
 	newNamers.SecretsConsoleNameBuilder.Prefix(customResource.Name).Base("console").Suffix("secret").Generate()
 	newNamers.SecretsNettyNameBuilder.Prefix(customResource.Name).Base("netty").Suffix("secret").Generate()
 
-	newNamers.LabelBuilder.Base(customResource.Name).Suffix("app").Generate()
-
 	return &newNamers
 }
 
 func GetDefaultLabelsForBroker(cr *v1beta2.Broker) map[string]string {
-	defaultLabelData := selectors.NewBrokerLabeler()
-	defaultLabelData.Base(cr.Name).Suffix("app").Generate()
-	return defaultLabelData.Labels()
+	return selectors.BrokerLabels(cr.Name)
 }
 
 func (reconciler *BrokerReconcilerImpl) ensureSidecarConfig(client rtclient.Client) error {
@@ -2377,5 +2398,3 @@ func existingInitContainer(initContainers []corev1.Container, name string) *core
 	}
 	return &corev1.Container{Name: name}
 }
-
-// Controller Errors

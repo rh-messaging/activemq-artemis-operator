@@ -30,6 +30,7 @@ import (
 	brokerproperties "github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/brokerproperties"
 	servicemetrics "github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/metrics"
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/resources"
+	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/resources/networkpolicies"
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/resources/secrets"
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/templates"
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/common"
@@ -187,10 +188,9 @@ func (reconciler *BrokerServiceInstanceReconciler) processBroker() (err error) {
 	}
 	desired.Spec.PersistenceEnabled = false
 	desired.Spec.Labels = map[string]string{
-		// Standard Kubernetes labels
-		selectors.LabelAppKubernetesInstance:  reconciler.instance.Name,
+		// App-specific recommended labels (name/instance/part-of are set by the Broker labeler).
 		selectors.LabelAppKubernetesComponent: "broker-service",
-		selectors.LabelAppKubernetesManagedBy: "arkmq-org-broker-operator",
+		selectors.LabelAppKubernetesManagedBy: common.OperatorName,
 		// Domain-specific labels
 		selectors.LabelBrokerService:   reconciler.instance.Name,
 		selectors.LabelBrokerPeerIndex: "0",
@@ -206,14 +206,21 @@ func (reconciler *BrokerServiceInstanceReconciler) processBroker() (err error) {
 		reconciler.appPropertiesSecretName(),
 	}
 
-	err = reconciler.processAppSecrets()
+	appPorts, err := reconciler.processAppSecrets()
+	if err != nil {
+		return err
+	}
+
+	if common.BrokerNetworkPolicyEnabled() && len(appPorts) > 0 {
+		desired.Spec.ResourceTemplates = appendNetworkPolicyTemplate(desired.Spec.ResourceTemplates, appPorts)
+	}
 
 	reconciler.TrackDesired(desired)
 
-	return err
+	return nil
 }
 
-func (reconciler *BrokerServiceInstanceReconciler) processAppSecrets() (err error) {
+func (reconciler *BrokerServiceInstanceReconciler) processAppSecrets() (appPorts []int32, err error) {
 	// avoid restart for app onboarding with existing mount points
 	// TODO potentially N app-secrets to overcome 1Mb size limit
 	resourceName := types.NamespacedName{
@@ -234,7 +241,7 @@ func (reconciler *BrokerServiceInstanceReconciler) processAppSecrets() (err erro
 	apps := &broker.BrokerAppList{}
 	key := reconciler.instance.Namespace + ":" + reconciler.instance.Name
 	if err = reconciler.Client.List(context.TODO(), apps, client.MatchingFields{common.AppServiceBindingField: key}); err != nil {
-		return err
+		return nil, err
 	}
 
 	// reset data
@@ -268,8 +275,11 @@ func (reconciler *BrokerServiceInstanceReconciler) processAppSecrets() (err erro
 			reconciler.log.Error(err, "failed to process acceptor for app", "app", app.Name)
 			break
 		}
-		appIdentities = append(appIdentities, AppIdentity(&app))
+		appIdentities = append(appIdentities, AppIdentityWithGeneration(&app))
 		validApps = append(validApps, app)
+		if app.Status.Service != nil && app.Status.Service.AssignedPort != UnassignedPort {
+			appPorts = append(appPorts, app.Status.Service.AssignedPort)
+		}
 	}
 
 	sort.Strings(appIdentities)
@@ -288,11 +298,46 @@ func (reconciler *BrokerServiceInstanceReconciler) processAppSecrets() (err erro
 		err = reconciler.processControlPlaneOverrideSecret(validApps)
 	}
 
-	return err
+	return appPorts, err
 }
 
 func (reconciler *BrokerServiceInstanceReconciler) appPropertiesSecretName() string {
 	return AppPropertiesSecretName(reconciler.instance.Name)
+}
+
+func appendNetworkPolicyTemplate(existing []broker.ResourceTemplate, appPorts []int32) []broker.ResourceTemplate {
+	netpolKind := "NetworkPolicy"
+
+	ports := []interface{}{
+		map[string]interface{}{"port": int64(networkpolicies.RestrictedJolokiaPort), "protocol": "TCP"},
+		map[string]interface{}{"port": int64(networkpolicies.RestrictedPrometheusPort), "protocol": "TCP"},
+	}
+	for _, p := range appPorts {
+		ports = append(ports, map[string]interface{}{"port": int64(p), "protocol": "TCP"})
+	}
+
+	patch := map[string]interface{}{
+		"spec": map[string]interface{}{
+			"ingress": []interface{}{
+				map[string]interface{}{"ports": ports},
+			},
+		},
+	}
+	patchBytes, _ := json.Marshal(patch)
+
+	// replace any existing NP template rather than appending duplicates
+	filtered := make([]broker.ResourceTemplate, 0, len(existing))
+	for _, rt := range existing {
+		if rt.Selector != nil && rt.Selector.Kind != nil && *rt.Selector.Kind == netpolKind {
+			continue
+		}
+		filtered = append(filtered, rt)
+	}
+
+	return append(filtered, broker.ResourceTemplate{
+		Selector: &broker.ResourceSelector{Kind: &netpolKind},
+		Patch:    runtime.RawExtension{Raw: patchBytes},
+	})
 }
 
 func AppPropertiesSecretName(name string) string {
@@ -368,7 +413,7 @@ func (reconciler *BrokerServiceInstanceReconciler) processStatus(reconcilerError
 					deployedCondition.Status = metav1.ConditionTrue
 					deployedCondition.Reason = broker.ReadyConditionReason
 				} else {
-					deployedCondition.Message = fmt.Sprintf("not ready broker status %v", deployed.Status)
+					deployedCondition.Message = fmt.Sprintf("awaiting deployed condition, broker status %v", deployed.Status)
 				}
 			}
 
@@ -395,10 +440,18 @@ func (reconciler *BrokerServiceInstanceReconciler) processStatus(reconcilerError
 							} else {
 								reconciler.status.ProvisionedApps = nil
 							}
+						} else {
+							appsProvisionedCondition.Message = fmt.Sprintf("externalConfig version mismatch, expected: %s, current: %s, broker status: %v", secret.ResourceVersion, appliedSecretVersion, deployed.Status)
 						}
 					}
+				} else {
+					appsProvisionedCondition.Message = fmt.Sprintf("pending externalConfig, broker status: %v", deployed.Status)
 				}
+			} else {
+				appsProvisionedCondition.Message = fmt.Sprintf("not ready, broker status: %v", deployed.Status)
 			}
+		} else {
+			appsProvisionedCondition.Message = "broker not found"
 		}
 	}
 	meta.SetStatusCondition(&reconciler.status.Conditions, deployedCondition)
@@ -929,6 +982,7 @@ func (reconciler *BrokerServiceInstanceReconciler) processAcceptor(serverConfigP
 							TextFileDNRole: certRolesCfgKey,
 							TextFileDNUser: certUsersCfgKey,
 							BaseDir:        secretsBase,
+							Reload:         true,
 						},
 					},
 				},
@@ -988,6 +1042,10 @@ func metricsRole(prefix string) string {
 
 func AppIdentity(app *broker.BrokerApp) string {
 	return NameSpacedValue(app, app.Name)
+}
+
+func AppIdentityWithGeneration(app *broker.BrokerApp) string {
+	return fmt.Sprintf("%s/%s@%d", app.Namespace, app.Name, app.Generation)
 }
 
 func AppIdentityPrefixed(app *broker.BrokerApp, v string) string {
@@ -1099,6 +1157,9 @@ func (reconciler *BrokerServiceInstanceReconciler) processControlPlaneOverrideSe
 	}
 	desired.Data[common.GetCertRolesKey(common.HttpAuthenticatorRealm)] = certRoles
 
+	for k, v := range desired.Data {
+		reconciler.log.V(1).Info("Override", "Key", k, "Value", string(v))
+	}
 	reconciler.TrackDesired(desired)
 	return nil
 }

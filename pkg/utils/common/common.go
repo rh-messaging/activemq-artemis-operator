@@ -68,6 +68,7 @@ const (
 
 	// https://cert-manager.io/docs/trust/trust-manager/#preparing-for-production
 	// New naming convention (preferred)
+	OperatorName                    = "arkmq-org-broker-operator"
 	DefaultOperatorCertSecretName   = "arkmq-org-broker-manager-cert"
 	DefaultOperatorCASecretName     = "arkmq-org-broker-manager-ca"
 	DefaultOperandCertSecretName    = "broker-cert"     // or can be prefixed with `cr.Name-`
@@ -689,6 +690,11 @@ func IsRestricted(customResource *v1beta2.BrokerCluster) bool {
 	return customResource.Spec.Restricted != nil && *customResource.Spec.Restricted
 }
 
+func BrokerNetworkPolicyEnabled() bool {
+	val, found := os.LookupEnv("BROKER_NETWORK_POLICY")
+	return found && strings.EqualFold(val, "true")
+}
+
 func GetDeploymentSize(cr *v1beta2.BrokerCluster) int32 {
 	if cr.Spec.DeploymentPlan.Size == nil {
 		return DefaultDeploymentSize
@@ -707,6 +713,7 @@ func GetDeployedResources(instance *v1beta2.BrokerCluster, client rtclient.Clien
 		&corev1.SecretList{},
 		&corev1.ConfigMapList{},
 		&policyv1.PodDisruptionBudgetList{},
+		&netv1.NetworkPolicyList{},
 	}
 	if onOpenShift {
 		lists = append(lists, &routev1.RouteList{})

@@ -18439,7 +18439,9 @@ spec:
               labels:
                 additionalProperties:
                   type: string
-                description: Assign labels to broker pods. The keys "broker", "application", and "app.kubernetes.io/part-of" are reserved.
+                description: |-
+                  Assign labels to broker pods. The keys "app.kubernetes.io/name", "app.kubernetes.io/instance",
+                  "app.kubernetes.io/part-of", "broker", and "application" are reserved.
                 type: object
               livenessProbe:
                 description: Specifies the liveness probe configuration.
@@ -20248,6 +20250,7 @@ rules:
   - networking.k8s.io
   resources:
   - ingresses
+  - networkpolicies
   verbs:
   - create
   - delete
