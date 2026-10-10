@@ -3,7 +3,7 @@ kind: NetworkPolicy
 metadata:
   labels:
     control-plane: controller-manager
-  name: amq-broker-controller-manager-netpol
+  name: arkmq-org-broker-controller-manager-netpol
 spec:
   ingress:
   - ports:
