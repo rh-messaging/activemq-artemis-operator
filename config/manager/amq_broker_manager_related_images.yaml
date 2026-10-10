@@ -13,3 +13,23 @@ spec:
         # The *Kubernetes* values refer to the broker on openshift container that runs the broker itself.
         # NOTE: Below are the original image:tag values and equivalent SHA image references. The SHA values are unique to the specific
         #       container tag utilized during operator bundle build time.
+
+        # 8.0.0
+        - name: RELATED_IMAGE_BROKER_INIT_800
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-87294-20261010005052
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:ac77b7c3cad4011b43467f0a0a390f1964af924f3d07bf29b46f3edbd4379b12
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-18849-20261010003329
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:43021abd23bbef070d959e0c6340e6b2970c01912f6f1496af0c06bd960786b0
+        - name: RELATED_IMAGE_BROKER_INIT_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-87294-20261010005052
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:ac77b7c3cad4011b43467f0a0a390f1964af924f3d07bf29b46f3edbd4379b12
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-18849-20261010003329
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:43021abd23bbef070d959e0c6340e6b2970c01912f6f1496af0c06bd960786b0
+        - name: RELATED_IMAGE_BROKER_INIT_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-87294-20261010005052
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:ac77b7c3cad4011b43467f0a0a390f1964af924f3d07bf29b46f3edbd4379b12
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-18849-20261010003329
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:43021abd23bbef070d959e0c6340e6b2970c01912f6f1496af0c06bd960786b0
