@@ -76,6 +76,7 @@ import (
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/common"
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/selectors"
 	tm "github.com/cert-manager/trust-manager/pkg/apis/trust/v1alpha1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -91,6 +92,7 @@ import (
 // Define utility constants for object names and testing timeouts/durations and intervals.
 const (
 	defaultNamespace                   = "test"
+	prometheusNamespace                = "prometheus"
 	otherNamespace                     = "other"
 	restrictedNamespace                = "restricted"
 	timeout                            = time.Second * 60
@@ -545,72 +547,95 @@ func createControllerManager(watchNamespace string) {
 	k8Manager, err = ctrl.NewManager(restConfig, mgrOptions)
 	Expect(err).ToNot(HaveOccurred())
 
-	brokerReconciler = NewActiveMQArtemisReconciler(k8Manager, ctrl.Log, isOpenshift, isGatewayAPIAvailable)
+	enabledControllers := common.ResolveEnabledControllers()
 
-	if err = brokerReconciler.SetupWithManager(k8Manager); err != nil {
-		ctrl.Log.Error(err, "unable to create controller", "controller", "ActiveMQArtemisReconciler")
+	if enabledControllers["ActiveMQArtemis"] {
+		brokerReconciler = NewActiveMQArtemisReconciler(k8Manager, ctrl.Log, isOpenshift, isGatewayAPIAvailable)
+
+		if err = brokerReconciler.SetupWithManager(k8Manager); err != nil {
+			ctrl.Log.Error(err, "unable to create controller", "controller", "ActiveMQArtemisReconciler")
+		}
 	}
 
-	brokerV1beta2Reconciler := NewBrokerClusterReconciler(k8Manager, ctrl.Log, isOpenshift, isGatewayAPIAvailable)
+	if enabledControllers["BrokerCluster"] {
+		brokerV1beta2Reconciler := NewBrokerClusterReconciler(k8Manager, ctrl.Log, isOpenshift, isGatewayAPIAvailable)
 
-	if err = brokerV1beta2Reconciler.SetupWithManager(k8Manager); err != nil {
-		ctrl.Log.Error(err, "unable to create controller", "controller", "BrokerClusterReconciler")
+		if err = brokerV1beta2Reconciler.SetupWithManager(k8Manager); err != nil {
+			ctrl.Log.Error(err, "unable to create controller", "controller", "BrokerClusterReconciler")
+		}
 	}
 
-	brokerCRReconciler := NewBrokerReconciler(k8Manager, ctrl.Log, isOpenshift)
+	if enabledControllers["Broker"] {
+		brokerCRReconciler := NewBrokerReconciler(k8Manager, ctrl.Log, isOpenshift)
 
-	if err = brokerCRReconciler.SetupWithManager(k8Manager); err != nil {
-		ctrl.Log.Error(err, "unable to create controller", "controller", "BrokerReconciler")
+		if err = brokerCRReconciler.SetupWithManager(k8Manager); err != nil {
+			ctrl.Log.Error(err, "unable to create controller", "controller", "BrokerReconciler")
+		}
 	}
 
-	securityReconciler = &ActiveMQArtemisSecurityReconciler{
-		Client:           k8Manager.GetClient(),
-		Scheme:           k8Manager.GetScheme(),
-		BrokerReconciler: brokerReconciler,
-		log:              ctrl.Log,
+	if enabledControllers["ActiveMQArtemisSecurity"] {
+		if brokerReconciler == nil {
+			ctrl.Log.Info("ActiveMQArtemisSecurity controller requires ActiveMQArtemis controller - skipping",
+				"reason", "ActiveMQArtemis controller is disabled")
+		} else {
+			securityReconciler = &ActiveMQArtemisSecurityReconciler{
+				Client:           k8Manager.GetClient(),
+				Scheme:           k8Manager.GetScheme(),
+				BrokerReconciler: brokerReconciler,
+				log:              ctrl.Log,
+			}
+
+			err = securityReconciler.SetupWithManager(k8Manager)
+			Expect(err).ToNot(HaveOccurred(), "failed to create security controller")
+		}
 	}
 
-	err = securityReconciler.SetupWithManager(k8Manager)
-	Expect(err).ToNot(HaveOccurred(), "failed to create security controller")
+	if enabledControllers["ActiveMQArtemisAddress"] {
+		addressReconciler := &ActiveMQArtemisAddressReconciler{
+			Client: k8Manager.GetClient(),
+			Scheme: k8Manager.GetScheme(),
+			log:    ctrl.Log,
+		}
 
-	addressReconciler := &ActiveMQArtemisAddressReconciler{
-		Client: k8Manager.GetClient(),
-		Scheme: k8Manager.GetScheme(),
-		log:    ctrl.Log,
+		err = addressReconciler.SetupWithManager(k8Manager, managerCtx)
+		Expect(err).ToNot(HaveOccurred(), "failed to create address reconciler")
 	}
 
-	err = addressReconciler.SetupWithManager(k8Manager, managerCtx)
-	Expect(err).ToNot(HaveOccurred(), "failed to create address reconciler")
+	if enabledControllers["ActiveMQArtemisScaledown"] {
+		scaleDownRconciler := &ActiveMQArtemisScaledownReconciler{
+			Client: k8Manager.GetClient(),
+			Scheme: k8Manager.GetScheme(),
+			Config: k8Manager.GetConfig(),
+			log:    ctrl.Log,
+		}
 
-	scaleDownRconciler := &ActiveMQArtemisScaledownReconciler{
-		Client: k8Manager.GetClient(),
-		Scheme: k8Manager.GetScheme(),
-		Config: k8Manager.GetConfig(),
-		log:    ctrl.Log,
+		err = scaleDownRconciler.SetupWithManager(k8Manager)
+		Expect(err).ShouldNot(HaveOccurred(), "failed to create scale down reconciler")
 	}
 
-	err = scaleDownRconciler.SetupWithManager(k8Manager)
-	Expect(err).ShouldNot(HaveOccurred(), "failed to create scale down reconciler")
+	if enabledControllers["BrokerService"] {
+		serviceReconciler := NewBrokerServiceReconciler(
+			k8Manager.GetClient(),
+			k8Manager.GetScheme(),
+			k8Manager.GetConfig(),
+			ctrl.Log,
+		)
 
-	serviceReconciler := NewBrokerServiceReconciler(
-		k8Manager.GetClient(),
-		k8Manager.GetScheme(),
-		k8Manager.GetConfig(),
-		ctrl.Log,
-	)
+		err = serviceReconciler.SetupWithManager(k8Manager)
+		Expect(err).ShouldNot(HaveOccurred(), "failed to create service reconciler")
+	}
 
-	err = serviceReconciler.SetupWithManager(k8Manager)
-	Expect(err).ShouldNot(HaveOccurred(), "failed to create service reconciler")
+	if enabledControllers["BrokerApp"] {
+		appReconciler := NewBrokerAppReconciler(
+			k8Manager.GetClient(),
+			k8Manager.GetScheme(),
+			k8Manager.GetConfig(),
+			ctrl.Log,
+		)
 
-	appReconciler := NewBrokerAppReconciler(
-		k8Manager.GetClient(),
-		k8Manager.GetScheme(),
-		k8Manager.GetConfig(),
-		ctrl.Log,
-	)
-
-	err = appReconciler.SetupWithManager(k8Manager)
-	Expect(err).ShouldNot(HaveOccurred(), "failed to create app reconciler")
+		err = appReconciler.SetupWithManager(k8Manager)
+		Expect(err).ShouldNot(HaveOccurred(), "failed to create app reconciler")
+	}
 
 	managerChannel = make(chan struct{}, 1)
 	go func() {
@@ -861,6 +886,9 @@ func setUpK8sClient() {
 	Expect(err).NotTo(HaveOccurred())
 
 	err = tm.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = monitoringv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = brokerv2alpha5.AddToScheme(scheme.Scheme)

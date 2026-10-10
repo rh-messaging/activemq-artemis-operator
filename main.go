@@ -50,6 +50,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	routev1 "github.com/openshift/api/route/v1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/log"
@@ -96,6 +97,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(routev1.AddToScheme(scheme))
 	utilruntime.Must(gatewayv1.Install(scheme))
+	utilruntime.Must(monitoringv1.AddToScheme(scheme))
 
 	utilruntime.Must(brokerv2alpha1.AddToScheme(scheme))
 	utilruntime.Must(brokerv2alpha2.AddToScheme(scheme))
@@ -299,90 +301,115 @@ func main() {
 	}
 	setupLog.Info("gateway-api availability", "available", gatewayAPIAvailable)
 
-	brokerReconciler := controllers.NewActiveMQArtemisReconciler(
-		mgr,
-		ctrl.Log.WithName("ActiveMQArtemisReconciler"),
-		isOpenshift,
-		gatewayAPIAvailable)
+	enabledControllers := common.ResolveEnabledControllers()
 
-	if err = brokerReconciler.SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ActiveMQArtemis")
-		os.Exit(1)
+	var brokerReconciler *controllers.ActiveMQArtemisReconciler
+
+	if enabledControllers["ActiveMQArtemis"] {
+		brokerReconciler = controllers.NewActiveMQArtemisReconciler(
+			mgr,
+			ctrl.Log.WithName("ActiveMQArtemisReconciler"),
+			isOpenshift,
+			gatewayAPIAvailable)
+
+		if err = brokerReconciler.SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ActiveMQArtemis")
+			os.Exit(1)
+		}
 	}
 
-	brokerClusterReconciler := controllers.NewBrokerClusterReconciler(
-		mgr,
-		ctrl.Log.WithName("BrokerClusterReconciler"),
-		isOpenshift,
-		gatewayAPIAvailable)
+	if enabledControllers["BrokerCluster"] {
+		brokerClusterReconciler := controllers.NewBrokerClusterReconciler(
+			mgr,
+			ctrl.Log.WithName("BrokerClusterReconciler"),
+			isOpenshift,
+			gatewayAPIAvailable)
 
-	if err = brokerClusterReconciler.SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "BrokerCluster")
-		os.Exit(1)
+		if err = brokerClusterReconciler.SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "BrokerCluster")
+			os.Exit(1)
+		}
 	}
 
-	brokerCRReconciler := controllers.NewBrokerReconciler(
-		mgr,
-		ctrl.Log.WithName("BrokerReconciler"),
-		isOpenshift)
+	if enabledControllers["Broker"] {
+		brokerCRReconciler := controllers.NewBrokerReconciler(
+			mgr,
+			ctrl.Log.WithName("BrokerReconciler"),
+			isOpenshift)
 
-	if err = brokerCRReconciler.SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Broker")
-		os.Exit(1)
+		if err = brokerCRReconciler.SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Broker")
+			os.Exit(1)
+		}
 	}
 
-	addressReconciler := controllers.NewActiveMQArtemisAddressReconciler(
-		mgr.GetClient(),
-		mgr.GetScheme(),
-		ctrl.Log.WithName("ActiveMQArtemisAddressReconciler"))
+	if enabledControllers["ActiveMQArtemisAddress"] {
+		addressReconciler := controllers.NewActiveMQArtemisAddressReconciler(
+			mgr.GetClient(),
+			mgr.GetScheme(),
+			ctrl.Log.WithName("ActiveMQArtemisAddressReconciler"))
 
-	if err = addressReconciler.SetupWithManager(mgr, context.TODO()); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ActiveMQArtemisAddress")
-		os.Exit(1)
+		if err = addressReconciler.SetupWithManager(mgr, context.TODO()); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ActiveMQArtemisAddress")
+			os.Exit(1)
+		}
 	}
 
-	scaledownReconciler := controllers.NewActiveMQArtemisScaledownReconciler(
-		mgr.GetClient(),
-		mgr.GetScheme(),
-		mgr.GetConfig(),
-		ctrl.Log.WithName("ActiveMQArtemisScaledownReconciler"))
+	if enabledControllers["ActiveMQArtemisScaledown"] {
+		scaledownReconciler := controllers.NewActiveMQArtemisScaledownReconciler(
+			mgr.GetClient(),
+			mgr.GetScheme(),
+			mgr.GetConfig(),
+			ctrl.Log.WithName("ActiveMQArtemisScaledownReconciler"))
 
-	if err = scaledownReconciler.SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ActiveMQArtemisScaledown")
-		os.Exit(1)
+		if err = scaledownReconciler.SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ActiveMQArtemisScaledown")
+			os.Exit(1)
+		}
 	}
 
-	securityReconciler := controllers.NewActiveMQArtemisSecurityReconciler(
-		mgr.GetClient(),
-		mgr.GetScheme(),
-		brokerReconciler,
-		ctrl.Log.WithName("ActiveMQArtemisSecurityReconciler"))
+	if enabledControllers["ActiveMQArtemisSecurity"] {
+		if brokerReconciler == nil {
+			setupLog.Info("ActiveMQArtemisSecurity controller requires ActiveMQArtemis controller - skipping",
+				"reason", "ActiveMQArtemis controller is disabled")
+		} else {
+			securityReconciler := controllers.NewActiveMQArtemisSecurityReconciler(
+				mgr.GetClient(),
+				mgr.GetScheme(),
+				brokerReconciler,
+				ctrl.Log.WithName("ActiveMQArtemisSecurityReconciler"))
 
-	if err = securityReconciler.SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ActiveMQArtemisSecurity")
-		os.Exit(1)
+			if err = securityReconciler.SetupWithManager(mgr); err != nil {
+				setupLog.Error(err, "unable to create controller", "controller", "ActiveMQArtemisSecurity")
+				os.Exit(1)
+			}
+		}
 	}
 
-	serviceReconciler := controllers.NewBrokerServiceReconciler(
-		mgr.GetClient(),
-		mgr.GetScheme(),
-		mgr.GetConfig(),
-		ctrl.Log.WithName("BrokerServiceReconciler"))
+	if enabledControllers["BrokerService"] {
+		serviceReconciler := controllers.NewBrokerServiceReconciler(
+			mgr.GetClient(),
+			mgr.GetScheme(),
+			mgr.GetConfig(),
+			ctrl.Log.WithName("BrokerServiceReconciler"))
 
-	if err = serviceReconciler.SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "BrokerService")
-		os.Exit(1)
+		if err = serviceReconciler.SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "BrokerService")
+			os.Exit(1)
+		}
 	}
 
-	appReconciler := controllers.NewBrokerAppReconciler(
-		mgr.GetClient(),
-		mgr.GetScheme(),
-		mgr.GetConfig(),
-		ctrl.Log.WithName("NewBrokerAppReconciler"))
+	if enabledControllers["BrokerApp"] {
+		appReconciler := controllers.NewBrokerAppReconciler(
+			mgr.GetClient(),
+			mgr.GetScheme(),
+			mgr.GetConfig(),
+			ctrl.Log.WithName("NewBrokerAppReconciler"))
 
-	if err = appReconciler.SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "BrokerApp")
-		os.Exit(1)
+		if err = appReconciler.SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "BrokerApp")
+			os.Exit(1)
+		}
 	}
 
 	//+kubebuilder:scaffold:builder
