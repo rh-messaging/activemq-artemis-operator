@@ -70,7 +70,7 @@ spec:
         # Example: to disable deprecated controllers after migration:
         #- name: ENABLED_CONTROLLERS
         #  value: "BrokerCluster,Broker,BrokerApp,BrokerService"
-        image: registry.redhat.io/amq0/amq-broker-rhel9-operator@sha256:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        image: registry.redhat.io/amq8/amq-broker-rhel9-operator@sha256:42df9bb97130ad15fd1aa35579b15158fb4bab54aa35fc75e7d14b795e3e40fd
         # imagePullPolicy: Always
         name: manager
         ports:
