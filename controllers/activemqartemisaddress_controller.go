@@ -30,7 +30,6 @@ import (
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/namer"
 	"github.com/arkmq-org/arkmq-org-broker-operator/v2/pkg/utils/selectors"
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -193,7 +192,6 @@ func (r *ActiveMQArtemisAddressReconciler) SetupWithManager(mgr ctrl.Manager, ct
 	go r.setupAddressObserver(mgr, ctx)
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&brokerv1beta1.ActiveMQArtemisAddress{}).
-		Owns(&corev1.Pod{}).
 		Complete(r)
 }
 

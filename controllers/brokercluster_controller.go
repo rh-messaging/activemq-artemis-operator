@@ -131,7 +131,6 @@ func (r *BrokerClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	builder := ctrl.NewControllerManagedBy(mgr).
 		For(&v1beta2.BrokerCluster{}).
 		Owns(&appsv1.StatefulSet{}).
-		Owns(&corev1.Pod{}).
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Service{}).
