@@ -44,7 +44,7 @@ RUN CGO_ENABLED=1 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -ldfl
 # This OSBS Base Image is designed and engineered to be the base layer for
 # Red Hat products. This base image is only supported for approved Red Hat
 # products. This image is maintained by Red Hat and updated regularly.
-FROM registry.redhat.io/ubi9/ubi-minimal@sha256:a21d19f72557aa893a0f6ca1177bb1ffd91df6015e60470a116c50a6a05efcd9 as base-env
+FROM registry.redhat.io/ubi9/ubi-minimal@sha256:c4c285d42941ebb2bd4da878479008e1e4536bb599aad1dbe568f89de9053661 as base-env
 
 ENV BROKER_NAME=amq-broker
 ENV USER_UID=1000
