@@ -13,3 +13,23 @@ spec:
         # The *Kubernetes* values refer to the broker on openshift container that runs the broker itself.
         # NOTE: Below are the original image:tag values and equivalent SHA image references. The SHA values are unique to the specific
         #       container tag utilized during operator bundle build time.
+
+        # 8.0.0
+        - name: RELATED_IMAGE_BROKER_INIT_800
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-43414-20261020005158
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:6695ad30a23dbb30a0c31a6e374d97a455728b2b1c33e67c2369edc308be8d12
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-97868-20261020003431
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:ac1cc5c3dc5faa5601e8d72d22144e48574c097900adeb1aaa090d91241b5ebb
+        - name: RELATED_IMAGE_BROKER_INIT_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-43414-20261020005158
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:6695ad30a23dbb30a0c31a6e374d97a455728b2b1c33e67c2369edc308be8d12
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-97868-20261020003431
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:ac1cc5c3dc5faa5601e8d72d22144e48574c097900adeb1aaa090d91241b5ebb
+        - name: RELATED_IMAGE_BROKER_INIT_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-43414-20261020005158
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:6695ad30a23dbb30a0c31a6e374d97a455728b2b1c33e67c2369edc308be8d12
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-97868-20261020003431
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:ac1cc5c3dc5faa5601e8d72d22144e48574c097900adeb1aaa090d91241b5ebb
