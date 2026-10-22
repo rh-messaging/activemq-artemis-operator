@@ -1977,7 +1977,7 @@ var _ = Describe("artemis controller", func() {
 				createdSs.OwnerReferences[0].APIVersion = v2alpha5.GroupVersion.Identifier()
 
 				createdSs.OwnerReferences = append(createdSs.OwnerReferences, metav1.OwnerReference{
-					APIVersion: "v1test1", Kind: "TestKind", Name: "test-name", UID: "test-uid"})
+					APIVersion: "v1", Kind: "ConfigMap", Name: "test-name", UID: "test-uid"})
 
 				g.Expect(k8sClient.Update(ctx, createdSs)).Should(Succeed())
 
@@ -1996,8 +1996,9 @@ var _ = Describe("artemis controller", func() {
 
 				createdSecret.OwnerReferences[0].APIVersion = v2alpha5.GroupVersion.Identifier()
 
+				// it can be a fake reference but not a fake kind or kube GC won't be able to verify it does not exist
 				createdSecret.OwnerReferences = append(createdSecret.OwnerReferences, metav1.OwnerReference{
-					APIVersion: "v1test1", Kind: "TestKind", Name: "test-name", UID: "test-uid"})
+					APIVersion: "v1", Kind: "ConfigMap", Name: "test-name", UID: "test-uid"})
 
 				g.Expect(k8sClient.Update(ctx, createdSecret)).Should(Succeed())
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
@@ -2013,37 +2014,48 @@ var _ = Describe("artemis controller", func() {
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			By("waiting for owner references to be updated to v1beta1 on StatefulSet")
+			updatedSs := &appsv1.StatefulSet{}
 			Eventually(func(g Gomega) {
-				updatedSs := &appsv1.StatefulSet{}
 				g.Expect(k8sClient.Get(ctx, ssKey, updatedSs)).Should(Succeed())
 				g.Expect(len(updatedSs.OwnerReferences)).Should(BeEquivalentTo(2))
 				g.Expect(updatedSs.OwnerReferences[0].APIVersion).Should(Equal(brokerv1beta1.GroupVersion.Identifier()))
 				g.Expect(updatedSs.OwnerReferences[0].Kind).Should(Equal("ActiveMQArtemis"))
 				g.Expect(updatedSs.OwnerReferences[0].Name).Should(Equal(deployedBrokerCr.Name))
 
-				g.Expect(updatedSs.OwnerReferences[1].APIVersion).Should(Equal("v1test1"))
-				g.Expect(updatedSs.OwnerReferences[1].Kind).Should(Equal("TestKind"))
+				g.Expect(updatedSs.OwnerReferences[1].APIVersion).Should(Equal("v1"))
+				g.Expect(updatedSs.OwnerReferences[1].Kind).Should(Equal("ConfigMap"))
 				g.Expect(updatedSs.OwnerReferences[1].Name).Should(Equal("test-name"))
 				g.Expect(updatedSs.OwnerReferences[1].UID).Should(Equal(types.UID("test-uid")))
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			By("waiting for owner references to be updated to v1beta1 on Secret")
+			updatedSecret := &corev1.Secret{}
 			Eventually(func(g Gomega) {
-				updatedSecret := &corev1.Secret{}
 				g.Expect(k8sClient.Get(ctx, propsSecretKey, updatedSecret)).Should(Succeed())
 				g.Expect(len(updatedSecret.OwnerReferences)).Should(BeEquivalentTo(2))
 				g.Expect(updatedSecret.OwnerReferences[0].APIVersion).Should(Equal(brokerv1beta1.GroupVersion.Identifier()))
 				g.Expect(updatedSecret.OwnerReferences[0].Kind).Should(Equal("ActiveMQArtemis"))
 				g.Expect(updatedSecret.OwnerReferences[0].Name).Should(Equal(deployedBrokerCr.Name))
 
-				g.Expect(updatedSecret.OwnerReferences[1].APIVersion).Should(Equal("v1test1"))
-				g.Expect(updatedSecret.OwnerReferences[1].Kind).Should(Equal("TestKind"))
+				g.Expect(updatedSecret.OwnerReferences[1].APIVersion).Should(Equal("v1"))
+				g.Expect(updatedSecret.OwnerReferences[1].Kind).Should(Equal("ConfigMap"))
 				g.Expect(updatedSecret.OwnerReferences[1].Name).Should(Equal("test-name"))
 				g.Expect(updatedSecret.OwnerReferences[1].UID).Should(Equal(types.UID("test-uid")))
+
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			By("cleaning up")
 			Expect(k8sClient.Delete(ctx, deployedBrokerCr)).Should(Succeed())
+
+			By("waiting for StatefulSet deletion")
+			Eventually(func(g Gomega) {
+				notFound := errors.IsNotFound(k8sClient.Get(ctx, ssKey, updatedSs))
+				if verbose {
+					fmt.Printf("\n pending deletion ss status: %v\n Spec: %v\n", updatedSs.Status, updatedSs.Spec)
+				}
+				g.Expect(notFound).To(BeTrue())
+
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 		})
 	})
 
