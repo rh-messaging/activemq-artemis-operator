@@ -16,7 +16,7 @@ spec:
   selector:
     matchLabels:
       control-plane: controller-manager
-      name: amq-broker-operator
+      name: arkmq-org-broker-operator
   replicas: 1
   strategy:
     rollingUpdate:
@@ -27,7 +27,7 @@ spec:
     metadata:
       labels:
         control-plane: controller-manager
-        name: amq-broker-operator
+        name: arkmq-org-broker-operator
     spec:
       securityContext:
         runAsNonRoot: true
@@ -35,7 +35,7 @@ spec:
           type: RuntimeDefault
       containers:
       - command:
-        - /home/amq-broker-operator/bin/entrypoint
+        - /home/arkmq-org-broker-operator/bin/entrypoint
         args:
         # Explicitly set the logging level.
         # Valid values are debug, info, and error
@@ -70,7 +70,7 @@ spec:
         # Example: to disable deprecated controllers after migration:
         #- name: ENABLED_CONTROLLERS
         #  value: "BrokerCluster,Broker,BrokerApp,BrokerService"
-        image: registry.redhat.io/amq8/amq-broker-rhel9-operator@sha256:85bcaf539038d94ff54a31881951e9ad8906df4faa364e97cb33a1627af96ac8
+        image: controller:latest
         # imagePullPolicy: Always
         name: manager
         ports:
