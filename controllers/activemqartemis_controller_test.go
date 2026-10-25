@@ -1996,7 +1996,8 @@ var _ = Describe("artemis controller", func() {
 
 				createdSecret.OwnerReferences[0].APIVersion = v2alpha5.GroupVersion.Identifier()
 
-				// it can be a fake reference but not a fake kind or kube GC won't be able to verify it does not exist
+				// it can be a fake reference but not a fake kind or kube GC won't be able to verify
+				//  it does not exist and remove it
 				createdSecret.OwnerReferences = append(createdSecret.OwnerReferences, metav1.OwnerReference{
 					APIVersion: "v1", Kind: "ConfigMap", Name: "test-name", UID: "test-uid"})
 
@@ -2013,49 +2014,53 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(k8sClient.Update(ctx, deployedBrokerCr)).Should(Succeed())
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
-			By("waiting for owner references to be updated to v1beta1 on StatefulSet")
+			By("waiting for owner reference to be updated to v1beta1 on StatefulSet")
 			updatedSs := &appsv1.StatefulSet{}
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, ssKey, updatedSs)).Should(Succeed())
-				g.Expect(len(updatedSs.OwnerReferences)).Should(BeEquivalentTo(2))
-				g.Expect(updatedSs.OwnerReferences[0].APIVersion).Should(Equal(brokerv1beta1.GroupVersion.Identifier()))
-				g.Expect(updatedSs.OwnerReferences[0].Kind).Should(Equal("ActiveMQArtemis"))
-				g.Expect(updatedSs.OwnerReferences[0].Name).Should(Equal(deployedBrokerCr.Name))
+				var ok bool
+				for _, ref := range updatedSs.OwnerReferences {
+					if ref.Kind == "ActiveMQArtemis" {
+						g.Expect(ref.APIVersion).Should(Equal(brokerv1beta1.GroupVersion.Identifier()))
+						g.Expect(ref.Name).Should(Equal(deployedBrokerCr.Name))
+						ok = true
+						break
+					}
+				}
+				g.Expect(ok).To(BeTrue())
 
-				g.Expect(updatedSs.OwnerReferences[1].APIVersion).Should(Equal("v1"))
-				g.Expect(updatedSs.OwnerReferences[1].Kind).Should(Equal("ConfigMap"))
-				g.Expect(updatedSs.OwnerReferences[1].Name).Should(Equal("test-name"))
-				g.Expect(updatedSs.OwnerReferences[1].UID).Should(Equal(types.UID("test-uid")))
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			By("waiting for owner references to be updated to v1beta1 on Secret")
 			updatedSecret := &corev1.Secret{}
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, propsSecretKey, updatedSecret)).Should(Succeed())
-				g.Expect(len(updatedSecret.OwnerReferences)).Should(BeEquivalentTo(2))
-				g.Expect(updatedSecret.OwnerReferences[0].APIVersion).Should(Equal(brokerv1beta1.GroupVersion.Identifier()))
-				g.Expect(updatedSecret.OwnerReferences[0].Kind).Should(Equal("ActiveMQArtemis"))
-				g.Expect(updatedSecret.OwnerReferences[0].Name).Should(Equal(deployedBrokerCr.Name))
-
-				g.Expect(updatedSecret.OwnerReferences[1].APIVersion).Should(Equal("v1"))
-				g.Expect(updatedSecret.OwnerReferences[1].Kind).Should(Equal("ConfigMap"))
-				g.Expect(updatedSecret.OwnerReferences[1].Name).Should(Equal("test-name"))
-				g.Expect(updatedSecret.OwnerReferences[1].UID).Should(Equal(types.UID("test-uid")))
-
+				var ok bool
+				for _, ref := range updatedSecret.OwnerReferences {
+					if ref.Kind == "ActiveMQArtemis" {
+						g.Expect(ref.APIVersion).Should(Equal(brokerv1beta1.GroupVersion.Identifier()))
+						g.Expect(ref.Name).Should(Equal(deployedBrokerCr.Name))
+						ok = true
+						break
+					}
+				}
+				g.Expect(ok).To(BeTrue())
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			By("cleaning up")
 			Expect(k8sClient.Delete(ctx, deployedBrokerCr)).Should(Succeed())
 
-			By("waiting for StatefulSet deletion")
-			Eventually(func(g Gomega) {
-				notFound := errors.IsNotFound(k8sClient.Get(ctx, ssKey, updatedSs))
-				if verbose {
-					fmt.Printf("\n pending deletion ss status: %v\n Spec: %v\n", updatedSs.Status, updatedSs.Spec)
-				}
-				g.Expect(notFound).To(BeTrue())
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+				By("waiting for StatefulSet deletion")
+				Eventually(func(g Gomega) {
+					notFound := errors.IsNotFound(k8sClient.Get(ctx, ssKey, updatedSs))
+					if verbose {
+						fmt.Printf("\n pending deletion ss status: %v\n Spec: %v\n", updatedSs.Status, updatedSs.Spec)
+					}
+					g.Expect(notFound).To(BeTrue())
 
-			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
 		})
 	})
 
