@@ -13,3 +13,23 @@ spec:
         # The *Kubernetes* values refer to the broker on openshift container that runs the broker itself.
         # NOTE: Below are the original image:tag values and equivalent SHA image references. The SHA values are unique to the specific
         #       container tag utilized during operator bundle build time.
+
+        # 8.0.0
+        - name: RELATED_IMAGE_BROKER_INIT_800
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-23231-20261025002535
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:7b75677aa868b4106b14578021c06520222abdca87605e87c769b18fa63f1115
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-17150-20261025000939
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:4462cc26f7fc66c6cd4a9e072fb12cc82e8a77ed980c04f1f38fd4fe9d69f5d3
+        - name: RELATED_IMAGE_BROKER_INIT_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-23231-20261025002535
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:7b75677aa868b4106b14578021c06520222abdca87605e87c769b18fa63f1115
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-17150-20261025000939
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:4462cc26f7fc66c6cd4a9e072fb12cc82e8a77ed980c04f1f38fd4fe9d69f5d3
+        - name: RELATED_IMAGE_BROKER_INIT_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-23231-20261025002535
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:7b75677aa868b4106b14578021c06520222abdca87605e87c769b18fa63f1115
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-17150-20261025000939
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:4462cc26f7fc66c6cd4a9e072fb12cc82e8a77ed980c04f1f38fd4fe9d69f5d3
