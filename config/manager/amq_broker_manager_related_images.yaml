@@ -13,3 +13,23 @@ spec:
         # The *Kubernetes* values refer to the broker on openshift container that runs the broker itself.
         # NOTE: Below are the original image:tag values and equivalent SHA image references. The SHA values are unique to the specific
         #       container tag utilized during operator bundle build time.
+
+        # 8.0.0
+        - name: RELATED_IMAGE_BROKER_INIT_800
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-52382-20261103005215
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:b442ab5642451494188152d647db9346ea3d9d3fb1e90db37de8966690e0da55
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-31119-20261103003445
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:9e4e557210a64e586c3c82254b2b1813af60c0a8dbfcdc350d78b203b55b7972
+        - name: RELATED_IMAGE_BROKER_INIT_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-52382-20261103005215
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:b442ab5642451494188152d647db9346ea3d9d3fb1e90db37de8966690e0da55
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-31119-20261103003445
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:9e4e557210a64e586c3c82254b2b1813af60c0a8dbfcdc350d78b203b55b7972
+        - name: RELATED_IMAGE_BROKER_INIT_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-52382-20261103005215
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:b442ab5642451494188152d647db9346ea3d9d3fb1e90db37de8966690e0da55
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-31119-20261103003445
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:9e4e557210a64e586c3c82254b2b1813af60c0a8dbfcdc350d78b203b55b7972
