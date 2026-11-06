@@ -333,3 +333,23 @@ spec:
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7141_s390x
           #value: registry.redhat.io/amq7/amq-broker-rhel9:7.14.1-3
           value: registry.redhat.io/amq7/amq-broker-rhel9@sha256:d02ffb7c336dd020551f71a804d0063da0afc9e9314c89dd5162493b4b780096
+
+        # 7.13.6
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7136
+          #value: registry.redhat.io/amq7/amq-broker-init-rhel9:7.13.6-3.1791967415
+          value: registry.redhat.io/amq7/amq-broker-init-rhel9@sha256:66132478b3e2990fc861b0216e0b81aec8b242e452f7523e689b7db53daabfe8
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7136
+          #value: registry.redhat.io/amq7/amq-broker-rhel9:7.13.6-3.1791966708
+          value: registry.redhat.io/amq7/amq-broker-rhel9@sha256:aba49fa334f64b732a8bf17b0ff4ca7572d6a10ff737467e38f32b423f974f1b
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7136_ppc64le
+          #value: registry.redhat.io/amq7/amq-broker-init-rhel9:7.13.6-3.1791967415
+          value: registry.redhat.io/amq7/amq-broker-init-rhel9@sha256:66132478b3e2990fc861b0216e0b81aec8b242e452f7523e689b7db53daabfe8
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7136_ppc64le
+          #value: registry.redhat.io/amq7/amq-broker-rhel9:7.13.6-3.1791966708
+          value: registry.redhat.io/amq7/amq-broker-rhel9@sha256:aba49fa334f64b732a8bf17b0ff4ca7572d6a10ff737467e38f32b423f974f1b
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7136_s390x
+          #value: registry.redhat.io/amq7/amq-broker-init-rhel9:7.13.6-3.1791967415
+          value: registry.redhat.io/amq7/amq-broker-init-rhel9@sha256:66132478b3e2990fc861b0216e0b81aec8b242e452f7523e689b7db53daabfe8
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7136_s390x
+          #value: registry.redhat.io/amq7/amq-broker-rhel9:7.13.6-3.1791966708
+          value: registry.redhat.io/amq7/amq-broker-rhel9@sha256:aba49fa334f64b732a8bf17b0ff4ca7572d6a10ff737467e38f32b423f974f1b
