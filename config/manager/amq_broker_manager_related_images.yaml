@@ -353,3 +353,23 @@ spec:
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7136_s390x
           #value: registry.redhat.io/amq7/amq-broker-rhel9:7.13.6-3.1791966708
           value: registry.redhat.io/amq7/amq-broker-rhel9@sha256:aba49fa334f64b732a8bf17b0ff4ca7572d6a10ff737467e38f32b423f974f1b
+
+        # 7.14.2
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7142
+          #value: registry.redhat.io/amq7/amq-broker-init-rhel9:7.14.1-3.1793924244
+          value: registry.redhat.io/amq7/amq-broker-init-rhel9@sha256:e07c98c87b2933d45f354dbc735debe1689f6c9a6fb057df96b3c9a82b9a3057
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7142
+          #value: registry.redhat.io/amq7/amq-broker-rhel9:7.14.1-3.1793923394
+          value: registry.redhat.io/amq7/amq-broker-rhel9@sha256:68c0f8e7bda080b50e09a3fd65da387a9fd4918e1774b54a53106e97b711031f
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7142_ppc64le
+          #value: registry.redhat.io/amq7/amq-broker-init-rhel9:7.14.1-3.1793924244
+          value: registry.redhat.io/amq7/amq-broker-init-rhel9@sha256:e07c98c87b2933d45f354dbc735debe1689f6c9a6fb057df96b3c9a82b9a3057
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7142_ppc64le
+          #value: registry.redhat.io/amq7/amq-broker-rhel9:7.14.1-3.1793923394
+          value: registry.redhat.io/amq7/amq-broker-rhel9@sha256:68c0f8e7bda080b50e09a3fd65da387a9fd4918e1774b54a53106e97b711031f
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_7142_s390x
+          #value: registry.redhat.io/amq7/amq-broker-init-rhel9:7.14.1-3.1793924244
+          value: registry.redhat.io/amq7/amq-broker-init-rhel9@sha256:e07c98c87b2933d45f354dbc735debe1689f6c9a6fb057df96b3c9a82b9a3057
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_7142_s390x
+          #value: registry.redhat.io/amq7/amq-broker-rhel9:7.14.1-3.1793923394
+          value: registry.redhat.io/amq7/amq-broker-rhel9@sha256:68c0f8e7bda080b50e09a3fd65da387a9fd4918e1774b54a53106e97b711031f
