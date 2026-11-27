@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -67,11 +68,11 @@ var _ = Describe("brokerapp deployed condition", func() {
 					MatchLabels: map[string]string{"app": "broker"},
 				},
 				Addresses: []v1beta2.AddressType{
-					{Address: "conflicting-address", PubSub: func() *bool { b := true; return &b }()},
+					{Address: "conflicting-address", PubSub: ptr.To(true)},
 				},
 				Capabilities: []v1beta2.AppCapabilityType{{
 					ConsumerOf: []v1beta2.AddressRef{
-						{Address: "conflicting-address"},
+						{Address: "conflicting-address", PubSub: ptr.To(false)},
 					},
 				}},
 			},
@@ -86,7 +87,7 @@ var _ = Describe("brokerapp deployed condition", func() {
 					{
 						Type:   v1beta2.DeployedConditionType,
 						Status: metav1.ConditionTrue,
-						Reason: v1beta2.DeployedConditionProvisionedReason,
+						Reason: v1beta2.DeployedConditionBoundReason,
 					},
 					{
 						Type:   v1beta2.ValidConditionType,
@@ -135,7 +136,7 @@ var _ = Describe("brokerapp deployed condition", func() {
 		Expect(deployedCond).NotTo(BeNil())
 		Expect(deployedCond.Status).To(Equal(metav1.ConditionTrue),
 			"Deployed should remain True - validation failed but broker wasn't updated, old config still active")
-		Expect(deployedCond.Reason).To(Equal(v1beta2.DeployedConditionProvisionedReason))
+		Expect(deployedCond.Reason).To(Equal(v1beta2.DeployedConditionBoundReason))
 		Expect(deployedCond.ObservedGeneration < app.Generation).To(BeTrue(),
 			"Deployed observedGeneration should be less than current generation - it reflects old spec (may be 0 if condition predates observedGeneration)")
 
@@ -175,11 +176,11 @@ var _ = Describe("brokerapp deployed condition", func() {
 					MatchLabels: map[string]string{"app": "broker"},
 				},
 				Addresses: []v1beta2.AddressType{
-					{Address: "conflicting-address", PubSub: func() *bool { b := true; return &b }()},
+					{Address: "conflicting-address", PubSub: ptr.To(true)},
 				},
 				Capabilities: []v1beta2.AppCapabilityType{{
 					ConsumerOf: []v1beta2.AddressRef{
-						{Address: "conflicting-address"},
+						{Address: "conflicting-address", PubSub: ptr.To(false)},
 					},
 				}},
 			},
@@ -217,9 +218,8 @@ var _ = Describe("brokerapp deployed condition", func() {
 		Expect(validCond.Status).To(Equal(metav1.ConditionFalse), "Valid should be False due to address conflict")
 
 		deployedCond := meta.FindStatusCondition(updatedApp.Status.Conditions, v1beta2.DeployedConditionType)
-		Expect(deployedCond).NotTo(BeNil())
-		Expect(deployedCond.Status).To(Equal(metav1.ConditionFalse),
-			"Deployed should be False - never deployed and validation failed")
+		Expect(deployedCond).To(BeNil(),
+			"Deployed should not be set — validation error leaves it untouched, Valid carries the error")
 	})
 
 	It("validation error with previous deployed false stays false", Label(unitLabel), func() {
@@ -254,11 +254,11 @@ var _ = Describe("brokerapp deployed condition", func() {
 					MatchLabels: map[string]string{"app": "broker"},
 				},
 				Addresses: []v1beta2.AddressType{
-					{Address: "conflicting-address", PubSub: func() *bool { b := true; return &b }()},
+					{Address: "conflicting-address", PubSub: ptr.To(true)},
 				},
 				Capabilities: []v1beta2.AppCapabilityType{{
 					ConsumerOf: []v1beta2.AddressRef{
-						{Address: "conflicting-address"},
+						{Address: "conflicting-address", PubSub: ptr.To(false)},
 					},
 				}},
 			},
@@ -273,7 +273,7 @@ var _ = Describe("brokerapp deployed condition", func() {
 					{
 						Type:   v1beta2.DeployedConditionType,
 						Status: metav1.ConditionFalse,
-						Reason: v1beta2.DeployedConditionProvisioningPendingReason,
+						Reason: v1beta2.DeployedConditionBindingReason,
 					},
 					{
 						Type:   v1beta2.ValidConditionType,

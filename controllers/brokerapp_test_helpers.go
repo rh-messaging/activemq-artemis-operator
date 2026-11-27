@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -138,6 +139,11 @@ func (b *BrokerServiceBuilder) WithProvisionedApp(appIdentity string) *BrokerSer
 	return b
 }
 
+func (b *BrokerServiceBuilder) WithPendingEmpty(entries ...v1beta2.PendingEmptyAddressStatus) *BrokerServiceBuilder {
+	b.service.Status.PendingEmpty = append(b.service.Status.PendingEmpty, entries...)
+	return b
+}
+
 func (b *BrokerServiceBuilder) WithDeployedCondition(status metav1.ConditionStatus, reason string) *BrokerServiceBuilder {
 	for i := range b.service.Status.Conditions {
 		if b.service.Status.Conditions[i].Type == v1beta2.DeployedConditionType {
@@ -151,6 +157,11 @@ func (b *BrokerServiceBuilder) WithDeployedCondition(status metav1.ConditionStat
 		Status: status,
 		Reason: reason,
 	})
+	return b
+}
+
+func (b *BrokerServiceBuilder) WithAppSelectorExpression(expression string) *BrokerServiceBuilder {
+	b.service.Spec.AppSelectorExpression = expression
 	return b
 }
 
@@ -230,10 +241,20 @@ func (b *BrokerAppBuilder) WithCapabilities(capabilities ...v1beta2.AppCapabilit
 }
 
 func (b *BrokerAppBuilder) Build() *v1beta2.BrokerApp {
+	WithBoundSpec(b.app)
 	return b.app
 }
 
 // AddressRefBuilder builds AddressRef test fixtures
+func WithBoundSpec(app *v1beta2.BrokerApp) {
+	if app.Status.BoundSpec == nil {
+		app.Status.BoundSpec = &v1beta2.AppBoundSpec{
+			Spec:       *app.Spec.DeepCopy(),
+			Generation: app.Generation,
+		}
+	}
+}
+
 type AddressRefBuilder struct {
 	ref v1beta2.AddressRef
 }
@@ -282,7 +303,7 @@ func (a *AddressTypeBuilder) WithSubscriptions(subs ...string) *AddressTypeBuild
 }
 
 func (a *AddressTypeBuilder) WithPubSub(pubSub bool) *AddressTypeBuilder {
-	a.addr.PubSub = &pubSub
+	a.addr.PubSub = ptr.To(pubSub)
 	return a
 }
 
@@ -320,9 +341,36 @@ func CreateSecret(name, namespace string) *corev1.Secret {
 	}
 }
 
+// BrokerServiceInstanceReconcilerForTestWithInstance creates a reconciler with a BrokerService instance set.
+func BrokerServiceInstanceReconcilerForTestWithInstance(ns, svcName string) *BrokerServiceInstanceReconciler {
+	reconciler := BrokerServiceInstanceReconcilerForTest()
+	reconciler.instance = &v1beta2.BrokerService{
+		ObjectMeta: metav1.ObjectMeta{Name: svcName, Namespace: ns},
+	}
+	return reconciler
+}
+
 // BrokerServiceInstanceReconcilerForTest creates a reconciler for testing processCapabilities
 func BrokerServiceInstanceReconcilerForTest() *BrokerServiceInstanceReconciler {
-	return &BrokerServiceInstanceReconciler{}
+	scheme := runtime.NewScheme()
+	_ = v1beta2.AddToScheme(scheme)
+	_ = corev1.AddToScheme(scheme)
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithStatusSubresource(&v1beta2.BrokerApp{}).
+		Build()
+	return &BrokerServiceInstanceReconciler{
+		BrokerServiceReconciler: &BrokerServiceReconciler{
+			ReconcilerLoop: &ReconcilerLoop{
+				KubeBits: &KubeBits{
+					Client: cl,
+					Scheme: scheme,
+					log:    logr.New(log.NullLogSink{}),
+				},
+			},
+		},
+		status: &v1beta2.BrokerServiceStatus{},
+	}
 }
 
 // testSigningKey is generated once; RSA keygen dominates the cost of building

@@ -12,6 +12,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -19,13 +20,13 @@ import (
 
 var _ = Describe("brokerapp address capability consistency", func() {
 
-	It("rejects shared multicast address used as anycast", Label(unitLabel), func() {
+	It("inherits multicast for ProducerOf when address is declared multicast", Label(unitLabel), func() {
 		scheme := runtime.NewScheme()
 		_ = broker.AddToScheme(scheme)
 		_ = corev1.AddToScheme(scheme)
 
 		ns := "default"
-		appName := "inconsistent-app"
+		appName := "inherit-app"
 
 		app := &broker.BrokerApp{
 			ObjectMeta: v1.ObjectMeta{
@@ -63,7 +64,7 @@ var _ = Describe("brokerapp address capability consistency", func() {
 		r := NewBrokerAppReconciler(cl, scheme, nil, logr.New(log.NullLogSink{}))
 
 		req := ctrl.Request{NamespacedName: types.NamespacedName{Name: appName, Namespace: ns}}
-		_, err := r.Reconcile(context.TODO(), req)
+		_, _ = r.Reconcile(context.TODO(), req)
 
 		updatedApp := &broker.BrokerApp{}
 		getErr := cl.Get(context.TODO(), req.NamespacedName, updatedApp)
@@ -71,13 +72,8 @@ var _ = Describe("brokerapp address capability consistency", func() {
 
 		validCondition := meta.FindStatusCondition(updatedApp.Status.Conditions, broker.ValidConditionType)
 		Expect(validCondition).NotTo(BeNil(), "Valid condition should be set")
-		Expect(validCondition.Status).To(Equal(v1.ConditionFalse), "Valid condition should be False")
-		Expect(validCondition.Reason).To(Equal(broker.ValidConditionAddressTypeError), "Reason should be ValidConditionAddressTypeError")
-
-		if err != nil {
-			Expect(err.Error()).To(ContainSubstring("events"))
-			Expect(err.Error()).To(ContainSubstring("pubSub"))
-		}
+		Expect(validCondition.Status).To(Equal(v1.ConditionTrue),
+			"ProducerOf without PubSub should inherit multicast from declared address")
 	})
 
 	It("rejects shared anycast address used as multicast", Label(unitLabel), func() {
@@ -140,15 +136,14 @@ var _ = Describe("brokerapp address capability consistency", func() {
 		}
 	})
 
-	It("rejects private multicast address used as anycast", Label(unitLabel), func() {
+	It("inherits multicast for ProducerOf from PubSub-declared address", Label(unitLabel), func() {
 		scheme := runtime.NewScheme()
 		_ = broker.AddToScheme(scheme)
 		_ = corev1.AddToScheme(scheme)
 
 		ns := "default"
-		appName := "private-mismatch"
+		appName := "private-inherit"
 
-		pubSubTrue := true
 		app := &broker.BrokerApp{
 			ObjectMeta: v1.ObjectMeta{
 				Name:      appName,
@@ -161,7 +156,7 @@ var _ = Describe("brokerapp address capability consistency", func() {
 				Addresses: []broker.AddressType{
 					{
 						Address: "notifications",
-						PubSub:  &pubSubTrue,
+						PubSub:  ptr.To(true),
 					},
 				},
 				Capabilities: []broker.AppCapabilityType{
@@ -185,7 +180,7 @@ var _ = Describe("brokerapp address capability consistency", func() {
 		r := NewBrokerAppReconciler(cl, scheme, nil, logr.New(log.NullLogSink{}))
 
 		req := ctrl.Request{NamespacedName: types.NamespacedName{Name: appName, Namespace: ns}}
-		_, err := r.Reconcile(context.TODO(), req)
+		_, _ = r.Reconcile(context.TODO(), req)
 
 		updatedApp := &broker.BrokerApp{}
 		getErr := cl.Get(context.TODO(), req.NamespacedName, updatedApp)
@@ -193,12 +188,8 @@ var _ = Describe("brokerapp address capability consistency", func() {
 
 		validCondition := meta.FindStatusCondition(updatedApp.Status.Conditions, broker.ValidConditionType)
 		Expect(validCondition).NotTo(BeNil(), "Valid condition should be set")
-		Expect(validCondition.Status).To(Equal(v1.ConditionFalse), "Valid condition should be False")
-		Expect(validCondition.Reason).To(Equal(broker.ValidConditionAddressTypeError), "Reason should be ValidConditionAddressTypeError")
-
-		if err != nil {
-			Expect(err.Error()).To(ContainSubstring("notifications"))
-		}
+		Expect(validCondition.Status).To(Equal(v1.ConditionTrue),
+			"ProducerOf without PubSub should inherit multicast from PubSub-declared address")
 	})
 
 	It("accepts consistent multicast usage", Label(unitLabel), func() {
@@ -209,7 +200,6 @@ var _ = Describe("brokerapp address capability consistency", func() {
 		ns := "default"
 		appName := "valid-multicast"
 
-		pubSubTrue := true
 		app := &broker.BrokerApp{
 			ObjectMeta: v1.ObjectMeta{
 				Name:      appName,
@@ -230,7 +220,7 @@ var _ = Describe("brokerapp address capability consistency", func() {
 						ProducerOf: []broker.AddressRef{
 							{
 								Address: "events",
-								PubSub:  &pubSubTrue,
+								PubSub:  ptr.To(true),
 							},
 						},
 						ConsumerOf: []broker.AddressRef{
@@ -343,7 +333,6 @@ var _ = Describe("brokerapp address capability consistency", func() {
 		ns := "default"
 		appName := "mixed-addresses"
 
-		pubSubTrue := true
 		app := &broker.BrokerApp{
 			ObjectMeta: v1.ObjectMeta{
 				Name:      appName,
@@ -367,7 +356,7 @@ var _ = Describe("brokerapp address capability consistency", func() {
 						ProducerOf: []broker.AddressRef{
 							{
 								Address: "events",
-								PubSub:  &pubSubTrue,
+								PubSub:  ptr.To(true),
 							},
 							{
 								Address: "orders",
@@ -446,7 +435,6 @@ var _ = Describe("brokerapp address capability consistency", func() {
 		ns := "default"
 		appName := "invalid-declaration"
 
-		pubSubFalse := false
 		app := &broker.BrokerApp{
 			ObjectMeta: v1.ObjectMeta{
 				Name:      appName,
@@ -459,7 +447,7 @@ var _ = Describe("brokerapp address capability consistency", func() {
 				Addresses: []broker.AddressType{
 					{
 						Address:       "events",
-						PubSub:        &pubSubFalse,
+						PubSub:        ptr.To(false),
 						Subscriptions: []string{"sub1"},
 					},
 				},
