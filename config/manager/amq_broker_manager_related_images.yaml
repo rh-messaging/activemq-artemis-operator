@@ -13,3 +13,23 @@ spec:
         # The *Kubernetes* values refer to the broker on openshift container that runs the broker itself.
         # NOTE: Below are the original image:tag values and equivalent SHA image references. The SHA values are unique to the specific
         #       container tag utilized during operator bundle build time.
+
+        # 8.0.0
+        - name: RELATED_IMAGE_BROKER_INIT_800
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-33082-20261127004600
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:5e9cda29c1a92f8378a0db853fab2278f18b2c3679eac47ac57a0da598cce2c4
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-61383-20261127002706
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:99ac674c878607058093e3d0c709dda4e3cbb61028ebc875ab16c1539f3d5a0e
+        - name: RELATED_IMAGE_BROKER_INIT_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-33082-20261127004600
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:5e9cda29c1a92f8378a0db853fab2278f18b2c3679eac47ac57a0da598cce2c4
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_ppc64le
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-61383-20261127002706
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:99ac674c878607058093e3d0c709dda4e3cbb61028ebc875ab16c1539f3d5a0e
+        - name: RELATED_IMAGE_BROKER_INIT_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-init-rhel9:8.0.0-scratch-33082-20261127004600
+          value: registry.redhat.io/amq8/amq-broker-init-rhel9@sha256:5e9cda29c1a92f8378a0db853fab2278f18b2c3679eac47ac57a0da598cce2c4
+        - name: RELATED_IMAGE_BROKER_KUBERNETES_800_s390x
+          #value: registry.redhat.io/amq8/amq-broker-rhel9:8.0.0-scratch-61383-20261127002706
+          value: registry.redhat.io/amq8/amq-broker-rhel9@sha256:99ac674c878607058093e3d0c709dda4e3cbb61028ebc875ab16c1539f3d5a0e
